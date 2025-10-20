@@ -1,0 +1,37 @@
+/*
+Default CSS for the Data inspector
+see also: dataInspector.js, dataInspector.html
+*/
+.inspector {
+  display: inline-block;
+  font: normal 14px helvetica, sans-serif;
+  cursor: default;
+}
+
+.inspector table {
+  border-collapse: separate;
+  border-spacing: 2px;
+}
+
+.inspector td, th {
+  padding: 2px;
+}
+
+.inspector input {
+  background-color: #424242; /* Grey 800 */
+  color: #F5F5F5; /* Grey 100 */
+  font: normal 13px helvetica, sans-serif;
+  border: 0px;
+  padding: 2px;
+  width:120px;
+}
+
+.inspector input:disabled {
+  background-color: #BDBDBD; /* Grey 400 */
+  color: #616161; /* Grey 700 */
+}
+
+.inspector select {
+  background-color: #424242;
+
+}

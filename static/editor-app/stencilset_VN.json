@@ -1,0 +1,490 @@
+{
+  "title" : "Process editor",
+  "namespace" : "http://b3mn.org/stencilset/bpmn2.0#",
+  "description" : "BPMN process editor",
+  "propertyPackages" : [ {
+    "name" : "process_idpackage",
+    "properties" : [ {
+      "id" : "process_id",
+      "type" : "String",
+      "title" : "Process identifier",
+      "value" : "process",
+      "description" : "Unique identifier of the process definition.",
+      "popular" : true
+    } ]
+  }, {
+    "name" : "overrideidpackage",
+    "properties" : [ {
+      "id" : "overrideid",
+      "type" : "String",
+      "title" : "Id",
+      "value" : "",
+      "description" : "Unique identifier of the element.",
+      "popular" : true
+    } ]
+  }, {
+    "name" : "namepackage",
+    "properties" : [ {
+      "id" : "name",
+      "type" : "String",
+      "title" : "名称",
+      "value" : "",
+      "description" : "The descriptive name of the value element.",
+      "popular" : true,
+      "refToView" : "text_name"
+    } ]
+  },  {
+    "name" : "typepackage",
+    "properties" : [ {
+      "id" : "type",
+      "type" : "String",
+      "title" : "类型",
+      "value" : "",
+      "description" : "The descriptive name of the BPMN element.",
+      "popular" : true,
+      "refToView" : "title"
+    } ]
+  }, {
+    "name" : "annotationpackage",
+    "properties" : [ {
+      "id" : "annotation",
+      "type" : "String",
+      "title" : "注解",
+      "value" : "",
+      "description" : "The annotation name of the value element.",
+      "popular" : true
+    } ]
+  }],
+  "stencils" : [ {
+    "type" : "node",
+    "id" : "BPMNDiagram",
+    "title" : "BPMN-Diagram",
+    "description" : "A BPMN 2.0 diagram.",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<svg\n   xmlns=\"http://www.w3.org/2000/svg\"\n   xmlns:svg=\"http://www.w3.org/2000/svg\"\n   xmlns:oryx=\"http://www.b3mn.org/oryx\"\n   xmlns:xlink=\"http://www.w3.org/1999/xlink\"\n   width=\"800\"\n   height=\"600\"\n   version=\"1.0\">\n  <defs></defs>\n  <g pointer-events=\"fill\" >\n    <polygon stroke=\"black\" fill=\"black\" stroke-width=\"1\" points=\"0,0 0,590 9,599 799,599 799,9 790,0\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\" stroke-miterlimit=\"10\" />\n    <rect id=\"diagramcanvas\" oryx:resize=\"vertical horizontal\" x=\"0\" y=\"0\" width=\"790\" height=\"590\" stroke=\"black\" stroke-width=\"2\" fill=\"white\" />\n    \t<text font-size=\"22\" id=\"diagramtext\" x=\"400\" y=\"25\" oryx:align=\"top center\" stroke=\"#373e48\"></text>\n  </g>\n</svg>",
+    "icon" : "diagram.png",
+    "groups" : [ "Diagram" ],
+    "mayBeRoot" : true,
+    "hide" : true,
+    "propertyPackages" : [  "namepackage",  "annotationpackage"],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [ ]
+  }, {
+    "type" : "node",
+    "id" : "ValueActivity",
+    "title" : "价值活动",
+    "description" : "价值活动",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<svg\n   xmlns=\"http://www.w3.org/2000/svg\"\n   xmlns:oryx=\"http://www.b3mn.org/oryx\"\n   width=\"50\"\n   height=\"40\"\n   version=\"1.0\">\n  <defs></defs>\n  <oryx:magnets>\n  \t<oryx:magnet oryx:cx=\"16\" oryx:cy=\"16\" oryx:default=\"yes\" />\n  </oryx:magnets>\n  <g pointer-events=\"fill\">\n\n       <path\n       d=\"m7.178544,12.030334l7.038005,-8.635283l28.211163,0l0,43.248983l-35.249167,0l0,-34.613699z\"\n       id=\"triangle\"\n       stroke=\"#585858\"\n       style=\"fill:none;stroke-width:1.4;stroke-miterlimit:4;stroke-dasharray:none\" />\n\t<text font-size=\"11\" \n\t\tid=\"text_name\" \n\t\tx=\"16\" y=\"50\" \n\t\toryx:align=\"top center\" \n\t\tstroke=\"#373e48\"\n\t></text>\n  </g>\n</svg>",
+    "icon" : "vulemodelitem/vuleActivity.png",
+    "groups" : [ "价值网络模型元素" ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage",  "annotationpackage"],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [ "sequence_start", "sequence_end","Startevents_all", "StartEventsMorph", "all" ]
+  }, {
+    "type" : "node",
+    "id" : "ValueObject",
+    "title" : "价值对象",
+    "description" : "价值对象",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<svg\n   xmlns=\"http://www.w3.org/2000/svg\"\n   xmlns:oryx=\"http://www.b3mn.org/oryx\"\n   width=\"50\"\n   height=\"40\"\n   version=\"1.0\">\n  <defs></defs>\n  <oryx:magnets>\n  \t<oryx:magnet oryx:cx=\"16\" oryx:cy=\"16\" oryx:default=\"yes\" />\n  </oryx:magnets>\n  <g pointer-events=\"fill\">\n\n       <path\n       d=\"m5.34249,10.91776l0,0c0,-3.87919 2.032788,-7.02387 4.540362,-7.02387l2.063808,0l0,0l9.90625,0l18.574206,0c1.204185,0 2.359045,0.740009 3.21053,2.057236c0.851474,1.317228 1.329832,3.103781 1.329832,4.966633l0,17.559666l0,0l0,10.535813l0,0c0,3.879173 -2.032788,7.02387 -4.540362,7.02387l-18.574206,0l-9.90625,0l-2.063808,0c-2.507574,0 -4.540362,-3.144697 -4.540362,-7.02387l0,0l0,-10.535813l0,0l0,-17.559666z\"\n       id=\"triangle\"\n       stroke=\"#585858\"\n       style=\"fill:none;stroke-width:1.4;stroke-miterlimit:4;stroke-dasharray:none\" />\n\t<text font-size=\"11\" \n\t\tid=\"text_name\" \n\t\tx=\"16\" y=\"50\" \n\t\toryx:align=\"top center\" \n\t\tstroke=\"#373e48\"\n\t></text>\n  </g>\n</svg>",
+    "icon" : "vulemodelitem/vuleObject.png",
+    "groups" : [ "价值网络模型元素" ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage",  "annotationpackage"],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [ "sequence_start", "sequence_end","Startevents_all", "StartEventsMorph", "all" ]
+  }, {
+    "type" : "node",
+    "id" : "Resource",
+    "title" : "资源",
+    "description" : "资源",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<svg\n   xmlns=\"http://www.w3.org/2000/svg\"\n   xmlns:oryx=\"http://www.b3mn.org/oryx\"\n   width=\"50\"\n   height=\"40\"\n   version=\"1.0\">\n  <defs></defs>\n  <oryx:magnets>\n  \t<oryx:magnet oryx:cx=\"16\" oryx:cy=\"16\" oryx:default=\"yes\" />\n  </oryx:magnets>\n  <g pointer-events=\"fill\">\n\n       <path\n       d=\"m5.000003,3.572372l39.874992,0l0,42.624992l-39.874992,0l0,-42.624992z\"\n       id=\"triangle\"\n       stroke=\"#585858\"\n       style=\"fill:none;stroke-width:1.4;stroke-miterlimit:4;stroke-dasharray:none\" />\n    <path\n       d=\"m37.499998,3.697372l7.374999,7.749999\"\n       id=\"line1\"\n       stroke=\"#585858\"\n       style=\"fill:none;stroke-width:1.4;stroke-miterlimit:4;stroke-dasharray:none\" />\n <path\n       d=\"m12.250003,3.697372l-7.125,7.124999\"\n       id=\"line2\"\n       stroke=\"#585858\"\n       style=\"fill:none;stroke-width:1.4;stroke-miterlimit:4;stroke-dasharray:none\" />\n <path\n       d=\"m5.250003,39.072367l6.999999,7.249999\"\n       id=\"line3\"\n       stroke=\"#585858\"\n       style=\"fill:none;stroke-width:1.4;stroke-miterlimit:4;stroke-dasharray:none\" />\n<path\n       d=\"m37.499998,46.072365l7.124999,-7.124999\"\n       id=\"line4\"\n       stroke=\"#585858\"\n       style=\"fill:none;stroke-width:1.4;stroke-miterlimit:4;stroke-dasharray:none\" />\n\t<text font-size=\"11\" \n\t\tid=\"text_name\" \n\t\tx=\"16\" y=\"53\" \n\t\toryx:align=\"top center\" \n\t\tstroke=\"#373e48\"\n\t></text>\n  </g>\n</svg>",
+    "icon" : "vulemodelitem/resource.png",
+    "groups" : [ "价值网络模型元素" ],
+    "propertyPackages" : ["overrideidpackage",  "namepackage",  "annotationpackage"],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [ "sequence_start", "sequence_end", "Startevents_all", "StartEventsMorph", "all" ]
+  }, {
+    "type" : "node",
+    "id" : "Service",
+    "title" : "服务",
+    "description" : "服务",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<svg\n   xmlns=\"http://www.w3.org/2000/svg\"\n   xmlns:oryx=\"http://www.b3mn.org/oryx\"\n   width=\"50\"\n   height=\"40\"\n   version=\"1.0\">\n  <defs></defs>\n  <oryx:magnets>\n  \t<oryx:magnet oryx:cx=\"16\" oryx:cy=\"16\" oryx:default=\"yes\" />\n  </oryx:magnets>\n  <g pointer-events=\"fill\">\n\n       <path\n       d=\"m5.000003,3.572372l39.874992,0l0,42.624992l-39.874992,0l0,-42.624992z\"\n       id=\"triangle\"\n       stroke=\"#585858\"\n       style=\"fill:none;stroke-width:1.4;stroke-miterlimit:4;stroke-dasharray:none\" />\n    <path\n       d=\"m4.500003,7.197371l40.499994,-0.125\"\n       id=\"line1\"\n       stroke=\"#585858\"\n       style=\"fill:none;stroke-width:1.4;stroke-miterlimit:4;stroke-dasharray:none\" />\n <path\n       d=\"m8.750002,3.322372l-0.25,42.749993\"\n       id=\"line2\"\n       stroke=\"#585858\"\n       style=\"fill:none;stroke-width:1.4;stroke-miterlimit:4;stroke-dasharray:none\" />\n   \n\t<text font-size=\"11\" \n\t\tid=\"text_name\" \n\t\tx=\"16\" y=\"53\" \n\t\toryx:align=\"top center\" \n\t\tstroke=\"#373e48\"\n\t></text>\n  </g>\n</svg>",
+    "icon" : "vulemodelitem/service.png",
+    "groups" : [ "价值网络模型元素" ],
+    "propertyPackages" : [  "overrideidpackage","namepackage",  "annotationpackage"],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [ "sequence_start", "sequence_end","Startevents_all", "StartEventsMorph", "all" ]
+  }, {
+    "type" : "node",
+    "id" : "Objective",
+    "title" : "目标",
+    "description" : "目标",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<svg\n   xmlns=\"http://www.w3.org/2000/svg\"\n   xmlns:oryx=\"http://www.b3mn.org/oryx\"\n   width=\"40\"\n   height=\"40\"\n   version=\"1.0\">\n  <defs></defs>\n  <oryx:magnets>\n  \t<oryx:magnet oryx:cx=\"16\" oryx:cy=\"16\" oryx:default=\"yes\" />\n  </oryx:magnets>\n  <g pointer-events=\"fill\">\n    <circle id=\"bg_frame\" cx=\"16\" cy=\"16\" r=\"21\" stroke=\"#585858\" fill=\"#ffffff\" stroke-width=\"1\"/>\n\t<text font-size=\"11\" \n\t\tid=\"text_name\" \n\t\tx=\"16\" y=\"33\" \n\t\toryx:align=\"top center\" \n\t\tstroke=\"#373e48\"\n\t></text>\n  </g>\n</svg>",
+    "icon" : "vulemodelitem/objective.png",
+    "groups" : [ "价值网络模型元素" ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage",  "annotationpackage"],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [ "sequence_start", "sequence_end", "Startevents_all", "StartEventsMorph", "all" ]
+  }, {
+    "type" : "node",
+    "id" : "Role",
+    "title" : "角色",
+    "description" : "角色",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<svg\n   xmlns=\"http://www.w3.org/2000/svg\"\n   xmlns:oryx=\"http://www.b3mn.org/oryx\"\n   width=\"50\"\n   height=\"40\"\n   version=\"1.0\">\n  <defs></defs>\n  <oryx:magnets>\n  \t<oryx:magnet oryx:cx=\"16\" oryx:cy=\"16\" oryx:default=\"yes\" />\n  </oryx:magnets>\n  <g pointer-events=\"fill\">\n\n       <path\n       d=\"m 37.503569,24.060133c-1.451888,-2.060507 -3.228169,-3.728703 -5.009906,-4.89567c-2.079007,1.196148 -4.611125,1.924514 -7.371625,1.924514c-2.765921,0 -5.301681,-0.729785 -7.377022,-1.924514c-1.781733,1.166968 -3.559829,2.835163 -5.01528,4.89567c-3.378611,4.783907 -3.750176,9.690974 -0.832002,10.963312c1.306881,0.573147 2.677127,0.145956 4.092746,-0.92561c-0.248319,1.086501 -0.393332,2.264127 -0.393332,3.495891c0,5.472412 2.70615,9.905293 6.041187,9.905293c2.010139,0 3.005217,-1.614112 3.483705,-4.085439c0.476723,2.471328 1.471793,4.085439 3.474646,4.085439c3.340517,0 6.046692,-4.432882 6.046692,-9.905293c0,-1.231765 -0.145061,-2.40939 -0.398777,-3.495891c1.419212,1.071566 2.787655,1.498757 4.098164,0.92561c2.916377,-1.272337 2.539326,-6.179407 -0.839192,-10.963312l-0.000002,0zm-12.385099,-4.838003c5.611592,0 10.162885,-3.57563 10.162885,-7.986437s-4.551294,-7.986447 -10.162885,-7.986447c-5.613501,0 -10.168389,3.576341 -10.168389,7.986447s4.554888,7.986437 10.168389,7.986437 z\"\n       id=\"triangle\"\n       stroke=\"#585858\"\n       style=\"fill:none;stroke-width:1.4;stroke-miterlimit:4;stroke-dasharray:none\" />\n\t<text font-size=\"11\" \n\t\tid=\"text_name\" \n\t\tx=\"16\" y=\"50\" \n\t\toryx:align=\"top center\" \n\t\tstroke=\"#373e48\"\n\t></text>\n  </g>\n</svg>",
+    "icon" : "objectmodelitem/role.png",
+    "groups" : [ "价值网络模型元素" ],
+    "propertyPackages" : [  "overrideidpackage", "namepackage",  "annotationpackage"],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [ "sequence_start", "sequence_end","Startevents_all", "StartEventsMorph", "all" ]
+  },  {
+    "type" : "edge",
+    "id" : "RelyFlow",
+    "title" : "依赖",
+    "description" : "依赖",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<svg\r\n\txmlns=\"http://www.w3.org/2000/svg\"\r\n\txmlns:oryx=\"http://www.b3mn.org/oryx\"\r\n\tversion=\"1.0\"\r\n\toryx:edge=\"edge\" >\r\n\t<defs>\r\n\t  \t<marker id=\"start\" refX=\"1\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"17\" markerHeight=\"11\" orient=\"auto\">\r\n\t  \t\t<!-- <path id=\"conditional\"   d=\"M 0 6 L 8 1 L 15 5 L 8 9 L 1 5\" fill=\"white\" stroke=\"black\" stroke-width=\"1\" /> -->\r\n\t  \t</marker>\r\n\t  \t<marker id=\"end\" refX=\"8\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"15\" markerHeight=\"12\" orient=\"auto\">\r\n\t  \t\t<path id=\"arrowhead\" d=\"m5.246577,5.015102l-3.128418,-4.312497l5.624996,4.312497l-5.624996,4.312495l3.128418,-4.312495z\" fill=\"#585858\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\r\n\t  \t</marker>\r\n\t</defs>\r\n\t<g id=\"edge\">\r\n\t\t<path id=\"bg_frame\" d=\"M10 50 L210 50\" stroke=\"#585858\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" marker-start=\"url(#start)\" marker-end=\"url(#end)\" />\r\n\t\t<text id=\"text_name\" x=\"0\" y=\"0\" oryx:edgePosition=\"startTop\"/>\r\n\t</g>\r\n</svg>",
+    "icon" : "objectmodelconnection/sequenceflow.png",
+    "groups" : [ "价值网络模型关系" ],
+    "layout" : [ {
+      "type" : "layout.bpmn2_0.sequenceflow"
+    }],
+    "propertyPackages" : [ "overrideidpackage", "namepackage" ],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [ "EdgesMorph", "all" ]
+  }, {
+    "type" : "edge",
+    "id" : "MutexFlow",
+    "title" : "互斥",
+    "description" : "互斥",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<svg\r\n\txmlns=\"http://www.w3.org/2000/svg\"\r\n\txmlns:oryx=\"http://www.b3mn.org/oryx\"\r\n\tversion=\"1.0\"\r\n\toryx:edge=\"edge\" >\r\n\t<defs>\r\n\t  \t<marker id=\"start\" refX=\"1\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"17\" markerHeight=\"11\" orient=\"auto\">\r\n\t  \t\t<!-- <path id=\"conditional\"   d=\"M 0 6 L 8 1 L 15 5 L 8 9 L 1 5\" fill=\"white\" stroke=\"black\" stroke-width=\"1\" /> -->\r\n\t  \t</marker>\r\n\t  \t<marker id=\"end\" refX=\"6\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"15\" markerHeight=\"12\" orient=\"auto\">\r\n\t  \t\t<path id=\"arrowhead\" d=\"m1.500043,0.947418l6.999915,8.2499\" fill=\"#585858\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\n\t  \t\t<path id=\"arrowhead2\" d=\"m8.624957,0.947418l-7.249912,7.999903\"  fill=\"#585858\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\r\n\t  \t</marker>\r\n\t</defs>\r\n\t<g id=\"edge\">\r\n\t\t<path id=\"bg_frame\" d=\"M10 50 L210 50\" stroke=\"#585858\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" marker-start=\"url(#start)\" marker-end=\"url(#end)\" />\r\n\t\t<text id=\"text_name\" x=\"0\" y=\"0\" oryx:edgePosition=\"startTop\"/>\r\n\t</g>\r\n</svg>",
+    "icon" : "objectmodelconnection/sequenceflow5.png",
+    "groups" : [ "价值网络模型关系" ],
+    "layout" : [ {
+      "type" : "layout.bpmn2_0.sequenceflow"
+    } ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage" ],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [  "EdgesMorph", "all" ]
+  }, {
+    "type" : "edge",
+    "id" : "OrFlow",
+    "title" : "或",
+    "description" : "或",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<svg\r\n\txmlns=\"http://www.w3.org/2000/svg\"\r\n\txmlns:oryx=\"http://www.b3mn.org/oryx\"\r\n\tversion=\"1.0\"\r\n\toryx:edge=\"edge\" >\r\n\t<defs>\r\n\t  \t<marker id=\"start\" refX=\"1\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"17\" markerHeight=\"11\" orient=\"auto\">\r\n\t  \t\t<!-- <path id=\"conditional\"   d=\"M 0 6 L 8 1 L 15 5 L 8 9 L 1 5\" fill=\"white\" stroke=\"black\" stroke-width=\"1\" /> -->\r\n\t  \t</marker>\r\n\t  \t<marker id=\"end\" refX=\"2\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"15\" markerHeight=\"12\" orient=\"auto\">\r\n\t  \t\t<path id=\"arrowhead\" d=\"m1.126953,5.128254l0,0c0,-1.898446 1.70688,-3.437432 3.812427,-3.437432l0,0c1.011116,0 1.980825,0.362151 2.69579,1.006799c0.714975,0.644639 1.116637,1.518965 1.116637,2.430633l0,0c0,1.898446 -1.70688,3.437432 -3.812427,3.437432l0,0c-2.105547,0 -3.812427,-1.538987 -3.812427,-3.437432z\" fill=\"none\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\r\n\t  \t</marker>\r\n\t</defs>\r\n\t<g id=\"edge\">\r\n\t\t<path id=\"bg_frame\" d=\"M10 50 L210 50\" stroke=\"#585858\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" marker-start=\"url(#start)\" marker-end=\"url(#end)\" />\r\n\t\t<text id=\"text_name\" x=\"0\" y=\"0\" oryx:edgePosition=\"startTop\"/>\r\n\t</g>\r\n</svg>",
+    "icon" : "objectmodelconnection/sequenceflow6.png",
+    "groups" : [ "价值网络模型关系" ],
+    "layout" : [ {
+      "type" : "layout.bpmn2_0.sequenceflow"
+    } ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage"],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [  "EdgesMorph", "all" ]
+  }, {
+    "type" : "edge",
+    "id" : "AndFlow",
+    "title" : "与",
+    "description" : "与",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<svg\r\n\txmlns=\"http://www.w3.org/2000/svg\"\r\n\txmlns:oryx=\"http://www.b3mn.org/oryx\"\r\n\tversion=\"1.0\"\r\n\toryx:edge=\"edge\" >\r\n\t<defs>\r\n\t  \t<marker id=\"start\" refX=\"1\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"17\" markerHeight=\"11\" orient=\"auto\">\r\n\t  \t\t<!-- <path id=\"conditional\"   d=\"M 0 6 L 8 1 L 15 5 L 8 9 L 1 5\" fill=\"white\" stroke=\"black\" stroke-width=\"1\" /> -->\r\n\t  \t</marker>\r\n\t  \t<marker id=\"end\" refX=\"8\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"15\" markerHeight=\"12\" orient=\"auto\">\r\n\t  \t\t<path id=\"arrowhead\" d=\"m1.126953,5.128254l0,0c0,-1.898446 1.70688,-3.437432 3.812427,-3.437432l0,0c1.011116,0 1.980825,0.362151 2.69579,1.006799c0.714975,0.644639 1.116637,1.518965 1.116637,2.430633l0,0c0,1.898446 -1.70688,3.437432 -3.812427,3.437432l0,0c-2.105547,0 -3.812427,-1.538987 -3.812427,-3.437432z\" fill=\"#585858\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\r\n\t  \t</marker>\r\n\t</defs>\r\n\t<g id=\"edge\">\r\n\t\t<path id=\"bg_frame\" d=\"M10 50 L210 50\" stroke=\"#585858\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" marker-start=\"url(#start)\" marker-end=\"url(#end)\" />\r\n\t\t<text id=\"text_name\" x=\"0\" y=\"0\" oryx:edgePosition=\"startTop\"/>\r\n\t</g>\r\n</svg>",
+    "icon" : "objectmodelconnection/sequenceflow2.png",
+    "groups" : [ "价值网络模型关系" ],
+    "layout" : [ {
+      "type" : "layout.bpmn2_0.sequenceflow"
+    } ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage" ],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [  "EdgesMorph", "all" ]
+  }, {
+    "type" : "edge",
+    "id" : "PromoteFlow",
+    "title" : "促进",
+    "description" : "促进",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<svg\r\n\txmlns=\"http://www.w3.org/2000/svg\"\r\n\txmlns:oryx=\"http://www.b3mn.org/oryx\"\r\n\tversion=\"1.0\"\r\n\toryx:edge=\"edge\" >\r\n\t<defs>\r\n\t  \t<marker id=\"start\" refX=\"1\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"17\" markerHeight=\"11\" orient=\"auto\">\r\n\t  \t\t<!-- <path id=\"conditional\"   d=\"M 0 6 L 8 1 L 15 5 L 8 9 L 1 5\" fill=\"white\" stroke=\"black\" stroke-width=\"1\" /> -->\r\n\t  \t</marker>\r\n\t  \t<marker id=\"end\" refX=\"8\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"15\" markerHeight=\"12\" orient=\"auto\">\r\n\t  \t\t<path id=\"arrowhead\" d=\"m5.246577,5.015102l-3.128418,-4.312497l5.624996,4.312497l-5.624996,4.312495l3.128418,-4.312495z\" fill=\"#585858\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\n\t  \t\t<path id=\"arrowhead2\" d=\"m9.897284,5.073227l-2.572254,-4.249998l4.624996,4.249998l-4.624996,4.249996l2.572254,-4.249996z\" fill=\"#585858\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\r\n\t  \t</marker>\r\n\t</defs>\r\n\t<g id=\"edge\">\r\n\t\t<path id=\"bg_frame\" d=\"M10 50 L210 50\" stroke=\"#585858\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" marker-start=\"url(#start)\" marker-end=\"url(#end)\" />\r\n\t\t<text id=\"text_name\" x=\"0\" y=\"0\" oryx:edgePosition=\"startTop\"/>\r\n\t</g>\r\n</svg>",
+    "icon" : "objectmodelconnection/sequenceflow7.png",
+    "groups" : [ "价值网络模型关系" ],
+    "layout" : [ {
+      "type" : "layout.bpmn2_0.sequenceflow"
+    } ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage" ],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [  "EdgesMorph", "all" ]
+  }, {
+    "type" : "edge",
+    "id" : "BlockFlow",
+    "title" : "阻碍",
+    "description" : "阻碍",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<svg\r\n\txmlns=\"http://www.w3.org/2000/svg\"\r\n\txmlns:oryx=\"http://www.b3mn.org/oryx\"\r\n\tversion=\"1.0\"\r\n\toryx:edge=\"edge\" >\r\n\t<defs>\r\n\t  \t<marker id=\"start\" refX=\"1\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"17\" markerHeight=\"11\" orient=\"auto\">\r\n\t  \t\t<!-- <path id=\"conditional\"   d=\"M 0 6 L 8 1 L 15 5 L 8 9 L 1 5\" fill=\"white\" stroke=\"black\" stroke-width=\"1\" /> -->\r\n\t  \t</marker>\r\n\t  \t<marker id=\"end\" refX=\"8\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"15\" markerHeight=\"12\" orient=\"auto\">\r\n\t  \t\t<path id=\"arrowhead\" d=\"m1.126953,5.128254l0,0c0,-1.898446 1.70688,-3.437432 3.812427,-3.437432l0,0c1.011116,0 1.980825,0.362151 2.69579,1.006799c0.714975,0.644639 1.116637,1.518965 1.116637,2.430633l0,0c0,1.898446 -1.70688,3.437432 -3.812427,3.437432l0,0c-2.105547,0 -3.812427,-1.538987 -3.812427,-3.437432z\" fill=\"#585858\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\r\n\t  \t</marker>\r\n\t</defs>\r\n\t<g id=\"edge\">\r\n\t\t<path id=\"bg_frame\" d=\"M10 50 L210 50\" stroke=\"#585858\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" marker-start=\"url(#start)\" marker-end=\"url(#end)\" />\r\n\t\t<text id=\"text_name\" x=\"0\" y=\"0\" oryx:edgePosition=\"startTop\"/>\r\n\t</g>\r\n</svg>",
+    "icon" : "objectmodelconnection/sequenceflow3.png",
+    "groups" : [ "价值网络模型关系" ],
+    "layout" : [ {
+      "type" : "layout.bpmn2_0.sequenceflow"
+    } ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage" ],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [  "EdgesMorph", "all" ]
+  }, {
+    "type" : "edge",
+    "id" : "Multiple2oneFlow",
+    "title" : "多选一",
+    "description" : "多选一",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<svg\r\n\txmlns=\"http://www.w3.org/2000/svg\"\r\n\txmlns:oryx=\"http://www.b3mn.org/oryx\"\r\n\tversion=\"1.0\"\r\n\toryx:edge=\"edge\" >\r\n\t<defs>\r\n\t  \t<marker id=\"start\" refX=\"1\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"17\" markerHeight=\"11\" orient=\"auto\">\r\n\t  \t\t <path id=\"arrowstart\"   d=\"m1.126953,5.128254l0,0c0,-1.898446 1.70688,-3.437432 3.812427,-3.437432l0,0c1.011116,0 1.980825,0.362151 2.69579,1.006799c0.714975,0.644639 1.116637,1.518965 1.116637,2.430633l0,0c0,1.898446 -1.70688,3.437432 -3.812427,3.437432l0,0c-2.105547,0 -3.812427,-1.538987 -3.812427,-3.437432z\" fill=\"#585858\" stroke=\"black\" stroke-width=\"1\" /> \r\n\t  \t</marker>\r\n\t  \t<marker id=\"end\" refX=\"2\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"15\" markerHeight=\"12\" orient=\"auto\">\r\n\t  \t\t<path id=\"arrowhead\" d=\"m1.126953,5.128254l0,0c0,-1.898446 1.70688,-3.437432 3.812427,-3.437432l0,0c1.011116,0 1.980825,0.362151 2.69579,1.006799c0.714975,0.644639 1.116637,1.518965 1.116637,2.430633l0,0c0,1.898446 -1.70688,3.437432 -3.812427,3.437432l0,0c-2.105547,0 -3.812427,-1.538987 -3.812427,-3.437432z\" fill=\"none\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\r\n\t  \t</marker>\r\n\t</defs>\r\n\t<g id=\"edge\">\r\n\t\t<path id=\"bg_frame\" d=\"M10 50 L210 50\" stroke=\"#585858\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" marker-start=\"url(#start)\" marker-end=\"url(#end)\" />\r\n\t\t<text id=\"text_name\" x=\"0\" y=\"0\" oryx:edgePosition=\"startTop\"/>\r\n\t</g>\r\n</svg>",
+    "icon" : "objectmodelconnection/sequenceflow8.png",
+    "groups" : [ "价值网络模型关系" ],
+    "layout" : [ {
+      "type" : "layout.bpmn2_0.sequenceflow"
+    } ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage" ],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [  "EdgesMorph", "all" ]
+  }, {
+      "type" : "edge",
+      "id" : "Multiple2MultipleFlow",
+      "title" : "多对多",
+      "description" : "多对多",
+      "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<svg\r\n\txmlns=\"http://www.w3.org/2000/svg\"\r\n\txmlns:oryx=\"http://www.b3mn.org/oryx\"\r\n\tversion=\"1.0\"\r\n\toryx:edge=\"edge\" >\r\n\t<defs>\r\n\t  \t<marker id=\"start\" refX=\"1\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"17\" markerHeight=\"11\" orient=\"auto\">\r\n\t  \t\t <path id=\"arrowstart\"    fill=\"#585858\" stroke=\"black\" stroke-width=\"1\" /> \r\n\t  \t</marker>\r\n\t  \t<marker id=\"end\" refX=\"2\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"15\" markerHeight=\"12\" orient=\"auto\">\r\n\t  \t\t<path id=\"arrowhead\"  fill=\"none\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\r\n\t  \t</marker>\r\n\t</defs>\r\n\t<g id=\"edge\">\r\n\t\t<path id=\"bg_frame\" d=\"M10 50 L210 50\" stroke=\"#585858\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" marker-start=\"url(#start)\" marker-end=\"url(#end)\" />\r\n\t\t<text id=\"text_name\" x=\"0\" y=\"0\" oryx:edgePosition=\"startTop\"/>\r\n\t</g>\r\n</svg>",
+      "icon" : "objectmodelconnection/sequenceflow9.png",
+      "groups" : [ "价值网络模型关系" ],
+      "layout" : [ {
+        "type" : "layout.bpmn2_0.sequenceflow"
+      } ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage" ],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [  "EdgesMorph", "all" ]
+      }, {
+    "type" : "edge",
+    "id" : "CombinationFlow",
+    "title" : "组合",
+    "description" : "组合",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<svg\r\n\txmlns=\"http://www.w3.org/2000/svg\"\r\n\txmlns:oryx=\"http://www.b3mn.org/oryx\"\r\n\tversion=\"1.0\"\r\n\toryx:edge=\"edge\" >\r\n\t<defs>\r\n\t  \t<marker id=\"start\" refX=\"1\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"17\" markerHeight=\"11\" orient=\"auto\">\r\n\t  \t\t <path id=\"arrowstart\"    fill=\"#585858\" stroke=\"black\" stroke-width=\"1\" /> \r\n\t  \t</marker>\r\n\t  \t<marker id=\"end\" refX=\"9\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"15\" markerHeight=\"12\" orient=\"auto\">\r\n\t  \t\t<path id=\"arrowhead\"  d=\"m1.104435,5.130755l3.937473,-3.312476l3.937473,3.312476l-3.937473,3.312476l-3.937473,-3.312476z\"  fill=\"#585858\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\r\n\t  \t</marker>\r\n\t</defs>\r\n\t<g id=\"edge\">\r\n\t\t<path id=\"bg_frame\" d=\"M10 50 L210 50\" stroke=\"#585858\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" marker-start=\"url(#start)\" marker-end=\"url(#end)\" />\r\n\t\t<text id=\"text_name\" x=\"0\" y=\"0\" oryx:edgePosition=\"startTop\"/>\r\n\t</g>\r\n</svg>",
+    "icon" : "objectmodelconnection/sequenceflow10.png",
+    "groups" : [ "价值网络模型关系" ],
+    "layout" : [ {
+      "type" : "layout.bpmn2_0.sequenceflow"
+    } ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage" ],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [  "EdgesMorph", "all" ]
+  }, {
+    "type" : "edge",
+    "id" : "AggregationFlow",
+    "title" : "聚合",
+    "description" : "聚合",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<svg\r\n\txmlns=\"http://www.w3.org/2000/svg\"\r\n\txmlns:oryx=\"http://www.b3mn.org/oryx\"\r\n\tversion=\"1.0\"\r\n\toryx:edge=\"edge\" >\r\n\t<defs>\r\n\t  \t<marker id=\"start\" refX=\"1\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"17\" markerHeight=\"11\" orient=\"auto\">\r\n\t  \t\t <path id=\"arrowstart\"    fill=\"#585858\" stroke=\"black\" stroke-width=\"1\" /> \r\n\t  \t</marker>\r\n\t  \t<marker id=\"end\" refX=\"3\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"15\" markerHeight=\"12\" orient=\"auto\">\r\n\t  \t\t<path id=\"arrowhead\" d=\"m1.104435,5.130755l3.937473,-3.312476l3.937473,3.312476l-3.937473,3.312476l-3.937473,-3.312476z\" fill=\"none\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\r\n\t  \t</marker>\r\n\t</defs>\r\n\t<g id=\"edge\">\r\n\t\t<path id=\"bg_frame\" d=\"M10 50 L210 50\" stroke=\"#585858\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" marker-start=\"url(#start)\" marker-end=\"url(#end)\" />\r\n\t\t<text id=\"text_name\" x=\"0\" y=\"0\" oryx:edgePosition=\"startTop\"/>\r\n\t</g>\r\n</svg>",
+    "icon" : "objectmodelconnection/sequenceflow11.png",
+    "groups" : [ "价值网络模型关系" ],
+    "layout" : [ {
+      "type" : "layout.bpmn2_0.sequenceflow"
+    } ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage"],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [  "EdgesMorph", "all" ]
+  }, {
+    "type" : "edge",
+    "id" : "AssociatedFunctionalTargetFlow",
+    "title" : "关联功能目标",
+    "description" : "关联功能目标",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<svg\r\n\txmlns=\"http://www.w3.org/2000/svg\"\r\n\txmlns:oryx=\"http://www.b3mn.org/oryx\"\r\n\tversion=\"1.0\"\r\n\toryx:edge=\"edge\" >\r\n\t<defs>\r\n\t  \t<marker id=\"start\" refX=\"1\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"17\" markerHeight=\"11\" orient=\"auto\">\r\n\t  \t\t<!-- <path id=\"conditional\"   d=\"M 0 6 L 8 1 L 15 5 L 8 9 L 1 5\" fill=\"white\" stroke=\"black\" stroke-width=\"1\" /> -->\r\n\t  \t</marker>\r\n\t  \t<marker id=\"end\" refX=\"15\" refY=\"6\" markerUnits=\"userSpaceOnUse\" markerWidth=\"15\" markerHeight=\"12\" orient=\"auto\">\r\n\t  \t\t<path id=\"arrowhead\" d=\"M 0 1 L 15 6 L 0 11z\" fill=\"none\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\r\n\t  \t</marker>\r\n\t</defs>\r\n\t<g id=\"edge\">\r\n\t\t<path id=\"bg_frame\" d=\"M10 50 L210 50\" stroke=\"#585858\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" marker-start=\"url(#start)\" marker-end=\"url(#end)\" />\r\n\t\t<text id=\"text_name\" x=\"0\" y=\"0\" oryx:edgePosition=\"startTop\"/>\r\n\t</g>\r\n</svg>",
+    "icon" : "objectmodelconnection/sequenceflow13.png",
+    "groups" : [ "价值网络模型关系" ],
+    "layout" : [ {
+      "type" : "layout.bpmn2_0.sequenceflow"
+    } ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage" ],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [  "EdgesMorph", "all" ]
+  }, {
+    "type" : "edge",
+    "id" : "AssociatedTargetFlow",
+    "title" : "关联目标",
+    "description" : "关联目标",
+    "view" : "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<svg\r\n\txmlns=\"http://www.w3.org/2000/svg\"\r\n\txmlns:oryx=\"http://www.b3mn.org/oryx\"\r\n\tversion=\"1.0\"\r\n\toryx:edge=\"edge\" >\r\n\t<defs>\r\n\t  \t<marker id=\"start\" refX=\"1\" refY=\"5\" markerUnits=\"userSpaceOnUse\" markerWidth=\"17\" markerHeight=\"11\" orient=\"auto\">\r\n\t  \t\t<!-- <path id=\"conditional\"   d=\"M 0 6 L 8 1 L 15 5 L 8 9 L 1 5\" fill=\"white\" stroke=\"black\" stroke-width=\"1\" /> -->\r\n\t  \t</marker>\r\n\t  \t<marker id=\"end\" refX=\"15\" refY=\"6\" markerUnits=\"userSpaceOnUse\" markerWidth=\"15\" markerHeight=\"12\" orient=\"auto\">\r\n\t  \t\t<path id=\"arrowhead\" d=\"M 0 1 L 15 6 L 0 11z\" fill=\"#585858\" stroke=\"#585858\" stroke-linejoin=\"round\" stroke-width=\"2\" />\r\n\t  \t</marker>\r\n\t</defs>\r\n\t<g id=\"edge\">\r\n\t\t<path id=\"bg_frame\" d=\"M10 50 L210 50\" stroke=\"#585858\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" marker-start=\"url(#start)\" marker-end=\"url(#end)\" />\r\n\t\t<text id=\"text_name\" x=\"0\" y=\"0\" oryx:edgePosition=\"startTop\"/>\r\n\t</g>\r\n</svg>",
+    "icon" : "objectmodelconnection/sequenceflow12.png",
+    "groups" : [ "价值网络模型关系" ],
+    "layout" : [ {
+      "type" : "layout.bpmn2_0.sequenceflow"
+    } ],
+    "propertyPackages" : [ "overrideidpackage", "namepackage" ],
+    "hiddenPropertyPackages" : [ ],
+    "roles" : [  "EdgesMorph", "all" ]
+  }  ],
+  "rules" : {
+    "cardinalityRules" : [ {
+      "role" : "Startevents_all",
+      "incomingEdges" : [ {
+        "role" : "SequenceFlow",
+        "maximum" : 0
+      } ]
+    }, {
+      "role" : "Endevents_all",
+      "outgoingEdges" : [ {
+        "role" : "SequenceFlow",
+        "maximum" : 0
+      } ]
+    } ],
+    "connectionRules" : [ {
+      "role" : "SequenceFlow",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "sequence_end" ]
+      } ]
+    },{
+      "role" : "PromoteFlow",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "sequence_end" ]
+      } ]
+    },{
+      "role" : "OrFlow",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "sequence_end" ]
+      } ]
+    },{
+      "role" : "AndFlow",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "sequence_end" ]
+      } ]
+    },{
+      "role" : "BlockFlow",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "sequence_end" ]
+      } ]
+    },{
+      "role" : "MutexFlow",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "sequence_end" ]
+      } ]
+    },{
+      "role" : "RelyFlow",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "sequence_end" ]
+      } ]
+    },{
+      "role" : "Multiple2oneFlow",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "sequence_end" ]
+      } ]
+    },{
+      "role" : "Multiple2MultipleFlow",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "sequence_end" ]
+      } ]
+    },{
+      "role" : "CombinationFlow",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "sequence_end" ]
+      } ]
+    },{
+      "role" : "AggregationFlow",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "sequence_end" ]
+      } ]
+    },{
+      "role" : "AssociatedFunctionalTargetFlow",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "sequence_end" ]
+      } ]
+    },{
+      "role" : "AssociatedTargetFlow",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "sequence_end" ]
+      } ]
+    },{
+      "role" : "Association",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "TextAnnotation" ]
+      }, {
+        "from" : "sequence_end",
+        "to" : [ "TextAnnotation" ]
+      }, {
+        "from" : "TextAnnotation",
+        "to" : [ "sequence_end" ]
+      }, {
+        "from" : "BoundaryCompensationEvent",
+        "to" : [ "sequence_end" ]
+      }, {
+        "from" : "TextAnnotation",
+        "to" : [ "sequence_start" ]
+      }, {
+        "from" : "BoundaryCompensationEvent",
+        "to" : [ "sequence_start" ]
+      } ]
+    }, {
+      "role" : "DataAssociation",
+      "connects" : [ {
+        "from" : "sequence_start",
+        "to" : [ "DataStore" ]
+      }, {
+        "from" : "sequence_end",
+        "to" : [ "DataStore" ]
+      }, {
+        "from" : "DataStore",
+        "to" : [ "sequence_end" ]
+      }, {
+        "from" : "DataStore",
+        "to" : [ "sequence_start" ]
+      } ]
+    }, {
+      "role" : "IntermediateEventOnActivityBoundary",
+      "connects" : [ {
+        "from" : "Activity",
+        "to" : [ "IntermediateEventOnActivityBoundary" ]
+      } ]
+    } ],
+    "containmentRules" : [ {
+      "role" : "BPMNDiagram",
+      "contains" : [ "all" ]
+    }, {
+      "role" : "Rolelane",
+      "contains" : [ "sequence_start", "sequence_end", "from_task_event", "to_task_event", "EventSubProcess", "TextAnnotation", "DataStore" ]
+    }, {
+      "role" : "EventSubProcess",
+      "contains" : [ "sequence_start", "sequence_end", "from_task_event", "to_task_event", "TextAnnotation", "DataStore" ]
+    }, {
+      "role" : "Pool",
+      "contains" : [ "Lane" ]
+    }, {
+      "role" : "Lane",
+      "contains" : [ "sequence_start", "sequence_end", "EventSubProcess", "TextAnnotation", "DataStore" ]
+    } ],
+    "morphingRules" : [ {
+      "role" : "ActivitiesMorph",
+      "baseMorphs" : [ "UserTask" ],
+      "preserveBounds" : true
+    }, {
+      "role" : "GatewaysMorph",
+      "baseMorphs" : [ "ExclusiveGateway" ]
+    }, {
+      "role" : "StartEventsMorph",
+      "baseMorphs" : [ "StartNoneEvent" ]
+    }, {
+      "role" : "EndEventsMorph",
+      "baseMorphs" : [ "StartNoneEvent" ]
+    }, {
+      "role" : "CatchEventsMorph",
+      "baseMorphs" : [ "CatchTimerEvent" ]
+    }, {
+      "role" : "ThrowEventsMorph",
+      "baseMorphs" : [ "ThrowNoneEvent" ]
+    }, {
+      "role" : "BoundaryEventsMorph",
+      "baseMorphs" : [ "ThrowNoneEvent" ]
+    }, {
+      "role" : "BoundaryCompensationEvent",
+      "baseMorphs" : [ "BoundaryCompensationEvent" ]
+    }, {
+      "role" : "TextAnnotation",
+      "baseMorphs" : [ "TextAnnotation" ]
+    }, {
+      "role" : "DataStore",
+      "baseMorphs" : [ "DataStore" ]
+    } ]
+  }
+}

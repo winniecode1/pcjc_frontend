@@ -1,0 +1,33 @@
+/**
+ * Bootstrap dropdown multi-level menu enabler
+ * Bootstrap: http://twitter.github.com/bootstrap/javascript.html#dropdown
+ * yc@2011/12/01 <iyanchuan@gmail.com>
+ * demo: http://ichuan.net/static/test/dropdown/
+ */
+
+/* overrides */
+
+
+.open .menu-dropdown > .dropdown:hover > .dropdown-menu,
+.dropdown.open .menu-dropdown > .dropdown:hover > .dropdown-menu,
+.open .dropdown-menu > .dropdown:hover > .dropdown-menu,
+.dropdown.open .dropdown-menu > .dropdown:hover > .dropdown-menu{
+	display:block;
+}
+
+.menu-dropdown > .dropdown > .dropdown-toggle::after,
+.dropdown-menu > .dropdown > .dropdown-toggle::after {
+	border:none;
+}
+.menu-dropdown > .dropdown > .dropdown-menu ,
+.dropdown-menu > .dropdown > .dropdown-menu {
+	top: 0px;
+}
+.menu-dropdown > .dropdown.offset-left > .dropdown-menu,
+.dropdown-menu > .dropdown.offset-left > .dropdown-menu {
+	right: 100%;
+}
+.menu-dropdown > .dropdown.offset-right > .dropdown-menu,
+.dropdown-menu > .dropdown.offset-right > .dropdown-menu {
+	left: 100%;
+}
