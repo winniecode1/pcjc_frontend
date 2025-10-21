@@ -3,8 +3,8 @@
     <b-col class="custom-col">
     <div class="tool-card d-flex flex-column align-items-center">
       <div class="tool-text">
-        <h3>数字服务网络</h3>
-        <p>需求建模工具</p>
+        <h3>项目一</h3>
+        <p>目标检测</p>
       </div>
       <!-- <img :src="imageSrc" alt="Tool Image" class="tool-image" /> -->
        <img :src="require('@/assets/images/jianmo.png')" alt="Tool Image" class="tool-image"/>
@@ -15,8 +15,8 @@
   <b-col class="custom-col">
     <div class="tool-card d-flex flex-column align-items-center">
       <div class="tool-text">
-        <h3>数字服务网络</h3>
-        <p>需求冲突消解工具</p>
+        <h3>项目二</h3>
+        <p>先验知识</p>
       </div>
       <!-- <img :src="imageSrc" alt="Tool Image" class="tool-image" /> -->
        <img :src="require('@/assets/images/chongtu.png')" alt="Tool Image" class="tool-image"/>
@@ -27,8 +27,8 @@
   <b-col class="custom-col">
     <div class="tool-card d-flex flex-column align-items-center">
       <div class="tool-text">
-        <h3>数字服务网络</h3>
-        <p>人在环路数据标注工具</p>
+        <h3>项目三</h3>
+        <p>多智能体协商</p>
       </div>
       <!-- <img :src="imageSrc" alt="Tool Image" class="tool-image" /> -->
        <img :src="require('@/assets/images/biaozhu.png')" alt="Tool Image" class="tool-image"/>
@@ -39,8 +39,8 @@
   <b-col class="custom-col">
     <div class="tool-card d-flex flex-column align-items-center">
       <div class="tool-text">
-        <h3>数字服务网络</h3>
-        <p>编排设计工具</p>
+        <h3>项目四</h3>
+        <p>强化学习</p>
       </div>
       <!-- <img :src="imageSrc" alt="Tool Image" class="tool-image" /> -->
        <img :src="require('@/assets/images/bianpai.png')" alt="Tool Image" class="tool-image"/>
@@ -51,8 +51,8 @@
   <b-col class="custom-col">
     <div class="tool-card d-flex flex-column align-items-center">
       <div class="tool-text">
-        <h3>数字服务网络</h3>
-        <p>仿真工具</p>
+        <h3>项目五</h3>
+        <p>偏差检测</p>
       </div>
       <!-- <img :src="imageSrc" alt="Tool Image" class="tool-image" /> -->
        <img :src="require('@/assets/images/fangzhen.png')" alt="Tool Image" class="tool-image"/>

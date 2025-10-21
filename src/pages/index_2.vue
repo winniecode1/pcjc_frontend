@@ -31,9 +31,9 @@
           <!-- <b-col lg="2"></b-col> -->
           <b-col>
             <div class="title-container">
-            <p class="newsmall left">课题一</p>
+            <p class="newsmall left">课题</p>
             <div class="divider"></div>
-            <p class="newTitle text-left"><span class="first-half">数字服务网络智简设计工具</span></p>
+            <p class="newTitle text-left"><span class="first-half">人机协同——偏差检测项目群</span></p>
           </div>
           </b-col>
         </b-row>
