@@ -10,7 +10,7 @@
       <!-- <img :src="imageSrc" alt="Tool Image" class="tool-image" /> -->
        <img :src="require('@/assets/images/jianmo.png')" alt="Tool Image" class="tool-image"/>
       <div class="divider"></div> <!-- 横线 -->
-      <button class="enter-tool" @click="navigateToTargetPage">进入工具</button>
+      <button class="enter-tool" @click="navigateToTargetDetection">进入工具</button>
     </div>
   </b-col>
   <b-col class="custom-col">
@@ -75,6 +75,10 @@
         },
     },
     methods: {
+    navigateToTargetDetection() {
+      const routeData = this.$router.resolve({ path: '/target-detection' });
+      window.open(routeData.href, '_blank');
+    },
     navigateToTargetPage() {
       const routeData = this.$router.resolve({ path: '/index' });
       window.open(routeData.href, '_blank');
