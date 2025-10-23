@@ -21,9 +21,9 @@ export default new Router({
       pathMatch: 'full'
     },
     {
-      path: '/target-detection', // 目标检测
-      name: 'TargetDetection',
-      component: TargetDetection
+      path: '/target-detection', // 这个路径应该与 index.vue 中 router-link 的 to 属性一致
+      name: 'DomainModeling', // 给路由起一个名字
+      component: DomainModeling // 关联到导入的组件
     },
     {
       path: '/projects',

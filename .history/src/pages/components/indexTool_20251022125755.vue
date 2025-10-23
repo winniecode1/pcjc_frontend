@@ -3,7 +3,7 @@
     <b-col class="custom-col">
     <div class="tool-card d-flex flex-column align-items-center">
       <!-- <div class="tool-text"> -->
-      <router-link to="/target-detection" class="tool-text">
+      <router-link to="/domain-modeling" class="tool-text">
         <h3>项目一</h3>
         <p>目标检测</p>
       </router-link>

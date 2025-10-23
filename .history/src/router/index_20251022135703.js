@@ -21,7 +21,7 @@ export default new Router({
       pathMatch: 'full'
     },
     {
-      path: '/target-detection', // 目标检测
+      path: '/target-detection', // 这个路径应该与 index.vue 中 router-link 的 to 属性一致
       name: 'TargetDetection',
       component: TargetDetection
     },

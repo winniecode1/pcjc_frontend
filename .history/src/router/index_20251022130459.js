@@ -5,7 +5,7 @@ import index_2 from '../pages/index'
 import index from '../pages/index_2'
 import projects from '../pages/projects/projects'
 import workspace from '../pages/workspace/workspace'
-import TargetDetection from '../pages/TargetDetection.vue'
+import DomainModeling from '../pages/TargetDetection.vue'
 Vue.use(Router)
 
 export default new Router({
@@ -21,9 +21,9 @@ export default new Router({
       pathMatch: 'full'
     },
     {
-      path: '/target-detection', // 目标检测
-      name: 'TargetDetection',
-      component: TargetDetection
+      path: '/domain-modeling', // 这个路径应该与 index.vue 中 router-link 的 to 属性一致
+      name: 'DomainModeling', // 给路由起一个名字
+      component: DomainModeling // 关联到导入的组件
     },
     {
       path: '/projects',

@@ -5,7 +5,7 @@ import index_2 from '../pages/index'
 import index from '../pages/index_2'
 import projects from '../pages/projects/projects'
 import workspace from '../pages/workspace/workspace'
-import TargetDetection from '../pages/TargetDetection.vue'
+import DomainModeling from '../pages/DomainModeling.vue'
 Vue.use(Router)
 
 export default new Router({
@@ -20,11 +20,7 @@ export default new Router({
       component: index,
       pathMatch: 'full'
     },
-    {
-      path: '/target-detection', // 目标检测
-      name: 'TargetDetection',
-      component: TargetDetection
-    },
+
     {
       path: '/projects',
       component: projects
