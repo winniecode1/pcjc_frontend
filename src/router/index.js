@@ -6,6 +6,7 @@ import index from '../pages/index_2'
 import projects from '../pages/projects/projects'
 import workspace from '../pages/workspace/workspace'
 import TargetDetection from '../pages/TargetDetection.vue'
+import GroupNegotiation from '../pages/GroupNegotiation.vue'
 Vue.use(Router)
 
 export default new Router({
@@ -24,6 +25,11 @@ export default new Router({
       path: '/target-detection', // 目标检测
       name: 'TargetDetection',
       component: TargetDetection
+    },
+    {
+      path: '/group-negotiation', // 群体协商
+      name: 'GroupNegotiation',
+      component: GroupNegotiation
     },
     {
       path: '/projects',

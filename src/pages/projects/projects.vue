@@ -7,7 +7,7 @@
     <b-row class="pjtitle">
       <b-col lg="1" ></b-col>
      <b-col class="" lg="11">
-        <p class="newTitle">数字服务网络需求建模与冲突消解工具系统</p>
+        <p class="newTitle">人机协同的偏差检测</p>
       </b-col>
     </b-row>
     <b-row>

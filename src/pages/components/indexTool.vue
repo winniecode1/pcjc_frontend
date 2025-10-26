@@ -27,14 +27,14 @@
   </b-col>
   <b-col class="custom-col">
     <div class="tool-card d-flex flex-column align-items-center">
-      <div class="tool-text">
+      <router-link to="/group-negotiation" class="tool-text">
         <h3>项目三</h3>
-        <p>多智能体协商</p>
-      </div>
+        <p>群体协商</p>
+      </router-link>
       <!-- <img :src="imageSrc" alt="Tool Image" class="tool-image" /> -->
        <img :src="require('@/assets/images/biaozhu.png')" alt="Tool Image" class="tool-image"/>
       <div class="divider"></div> <!-- 横线 -->
-      <button class="enter-tool" @click="gotoBiaozhu">进入工具</button>
+      <button class="enter-tool" @click="navigateToGroupNegotiation">进入工具</button>
     </div>
   </b-col>
   <b-col class="custom-col">
@@ -77,6 +77,10 @@
     methods: {
     navigateToTargetDetection() {
       const routeData = this.$router.resolve({ path: '/target-detection' });
+      window.open(routeData.href, '_blank');
+    },
+    navigateToGroupNegotiation() {
+      const routeData = this.$router.resolve({ path: '/group-negotiation' });
       window.open(routeData.href, '_blank');
     },
     navigateToTargetPage() {
