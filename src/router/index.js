@@ -7,6 +7,7 @@ import projects from '../pages/projects/projects'
 import workspace from '../pages/workspace/workspace'
 import TargetDetection from '../pages/TargetDetection.vue'
 import GroupNegotiation from '../pages/GroupNegotiation.vue'
+import PriorKnowledge from '../pages/PriorKnowledge.vue'
 Vue.use(Router)
 
 export default new Router({
@@ -25,6 +26,11 @@ export default new Router({
       path: '/target-detection', // 目标检测
       name: 'TargetDetection',
       component: TargetDetection
+    },
+    {
+      path: '/prior-knowledge', // 先验知识
+      name: 'PriorKnowledge',
+      component: PriorKnowledge
     },
     {
       path: '/group-negotiation', // 群体协商
