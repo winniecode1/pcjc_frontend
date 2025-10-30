@@ -79,10 +79,13 @@
       const routeData = this.$router.resolve({ path: '/target-detection' });
       window.open(routeData.href, '_blank');
     },
+<<<<<<< HEAD
     navigateToGroupNegotiation() {
       const routeData = this.$router.resolve({ path: '/group-negotiation' });
       window.open(routeData.href, '_blank');
     },
+=======
+>>>>>>> 4de1f146f6e97537b001cafaaf7a7786dbed7797
     navigateToTargetPage() {
       const routeData = this.$router.resolve({ path: '/index' });
       window.open(routeData.href, '_blank');
