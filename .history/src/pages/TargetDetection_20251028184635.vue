@@ -4,7 +4,7 @@
     <div class="img_box" :style="{width: fullWidth+'px'}"></div>
     <b-row class="justify-content-center pt-5">
       <b-col cols="10" class="text-center">
-        <p class="newTitle text-center">目标检测</p>
+        <p class="newTitle text-center">视频内容智能分析</p>
       </b-col>
     </b-row>
 
@@ -94,7 +94,7 @@ import axios from 'axios';
 
 // 后端 API 基础路径，根据您的实际部署情况可能需要修改
 // 您的后端默认在 http://0.0.0.0:5236 启动
-const API_BASE_URL = 'http://10.109.253.71:5236';
+const API_BASE_URL = 'http://localhost:5236';
 
 export default {
   name: 'TargetDetection',
@@ -170,14 +170,11 @@ export default {
 
       try {
         // 步骤 1: 调用 /analyze_video 接口启动分析
-        const analyzeResponse = await axios.post(`${API_BASE_URL}/analyze_video`, formData
-        , {
+        const analyzeResponse = await axios.post(`${API_BASE_URL}/analyze_video`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
-          // headers: { 'Accept': 'application/json' }
-        }
-        );
+        });
 
         const analyzeData = analyzeResponse.data;
         if (analyzeData.status !== 'success') {
@@ -203,8 +200,7 @@ export default {
         this.fullResult.processing_time = analyzeData.processing_time;
 
         // 构造处理后视频的 URL
-        // this.processedVideoURL = fullData.video_path; // 例如: /output/video_analysis_.../detected_video.mp4
-        this.processedVideoURL = `${API_BASE_URL}${fullData.video_path}`;
+        this.processedVideoURL = fullData.video_path; // 例如: /output/video_analysis_.../detected_video.mp4
 
         this.resultMessage = "视频分析成功！结果已更新。";
         this.progressMessage = "分析完成";

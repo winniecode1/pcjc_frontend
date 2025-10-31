@@ -15,14 +15,14 @@
   </b-col>
   <b-col class="custom-col">
     <div class="tool-card d-flex flex-column align-items-center">
-      <router-link to="/prior-knowledge"  class="tool-text">
+      <div class="tool-text">
         <h3>项目二</h3>
         <p>先验知识</p>
-      </router-link>
+      </div>
       <!-- <img :src="imageSrc" alt="Tool Image" class="tool-image" /> -->
        <img :src="require('@/assets/images/chongtu.png')" alt="Tool Image" class="tool-image"/>
       <div class="divider"></div> <!-- 横线 -->
-      <button class="enter-tool" @click="navigateToPriorKnowledge">进入工具</button>
+      <button class="enter-tool" @click="navigateToTargetPage">进入工具</button>
     </div>
   </b-col>
   <b-col class="custom-col">
@@ -51,9 +51,9 @@
   </b-col>
   <b-col class="custom-col">
     <div class="tool-card d-flex flex-column align-items-center">
-      <router-link to="/attributiondiagnosis" class="tool-text">
+      <router-link to="/decisionmaking" class="tool-text">
         <h3>项目五</h3>
-        <p>归因诊断</p>
+        <p>偏差检测</p>
       </router-link>
       <!-- <img :src="imageSrc" alt="Tool Image" class="tool-image" /> -->
        <img :src="require('@/assets/images/fangzhen.png')" alt="Tool Image" class="tool-image"/>
@@ -77,10 +77,6 @@
     methods: {
     navigateToTargetDetection() {
       const routeData = this.$router.resolve({ path: '/target-detection' });
-      window.open(routeData.href, '_blank');
-    },
-    navigateToPriorKnowledge() {
-      const routeData = this.$router.resolve({ path: '/prior-knowledge' });
       window.open(routeData.href, '_blank');
     },
     navigateToGroupNegotiation() {

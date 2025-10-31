@@ -175,9 +175,7 @@ export default {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
-          // headers: { 'Accept': 'application/json' }
-        }
-        );
+        });
 
         const analyzeData = analyzeResponse.data;
         if (analyzeData.status !== 'success') {
@@ -203,8 +201,7 @@ export default {
         this.fullResult.processing_time = analyzeData.processing_time;
 
         // 构造处理后视频的 URL
-        // this.processedVideoURL = fullData.video_path; // 例如: /output/video_analysis_.../detected_video.mp4
-        this.processedVideoURL = `${API_BASE_URL}${fullData.video_path}`;
+        this.processedVideoURL = fullData.video_path; // 例如: /output/video_analysis_.../detected_video.mp4
 
         this.resultMessage = "视频分析成功！结果已更新。";
         this.progressMessage = "分析完成";

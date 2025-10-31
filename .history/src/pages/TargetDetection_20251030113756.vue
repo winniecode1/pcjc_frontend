@@ -98,6 +98,21 @@ const API_BASE_URL = 'http://10.109.253.71:5236';
 
 export default {
   name: 'TargetDetection',
+/*************  ✨ Windsurf Command ⭐  *************/
+/**
+ * Data containing the state of the component.
+ * @property {number} fullWidth - The full width of the window.
+ * @property {number} fullHeight - The full height of the window.
+ * @property {File|null} file - The uploaded video file.
+ * @property {string|null} originalVideoURL - The URL of the original video for client-side preview.
+ * @property {string|null} processedVideoURL - The URL of the processed video.
+ * @property {string|null} taskId - The task ID of the analysis.
+ * @property {boolean} isLoading - Whether the analysis is currently in progress.
+ * @property {string|null} progressMessage - The progress message of the analysis.
+ * @property {string|null} resultMessage - The result message of the analysis.
+ * @property {Object} fullResult - The full result of the analysis from the backend.
+ */
+/*******  b96b13b4-20ff-42b5-8850-8407742b4ab8  *******/
   data() {
     return {
       fullWidth: window.innerWidth,
@@ -203,8 +218,7 @@ export default {
         this.fullResult.processing_time = analyzeData.processing_time;
 
         // 构造处理后视频的 URL
-        // this.processedVideoURL = fullData.video_path; // 例如: /output/video_analysis_.../detected_video.mp4
-        this.processedVideoURL = `${API_BASE_URL}${fullData.video_path}`;
+        this.processedVideoURL = fullData.video_path; // 例如: /output/video_analysis_.../detected_video.mp4
 
         this.resultMessage = "视频分析成功！结果已更新。";
         this.progressMessage = "分析完成";

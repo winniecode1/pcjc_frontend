@@ -7,7 +7,6 @@ import projects from '../pages/projects/projects'
 import workspace from '../pages/workspace/workspace'
 import TargetDetection from '../pages/TargetDetection.vue'
 import GroupNegotiation from '../pages/GroupNegotiation.vue'
-import PriorKnowledge from '../pages/PriorKnowledge.vue'
 import DecisionMaking from '../pages/DecisionMaking.vue'
 import AttributionDiagnosis from '../pages/AttributionDiagnosis.vue'
 Vue.use(Router)
@@ -30,24 +29,19 @@ export default new Router({
       component: TargetDetection
     },
     {
-      path: '/prior-knowledge', // 先验知识
-      name: 'PriorKnowledge',
-      component: PriorKnowledge
-    },
-    {
       path: '/decisionmaking', // 决策选择
       name: 'DecisionMaking',
       component: DecisionMaking
     },
     {
+      path: '/attributionDiagnosis', // 决策选择
+      name: 'AttributionDiagnosis',
+      component: AttributionDiagnosis
+    },
+    {
       path: '/group-negotiation', // 群体协商
       name: 'GroupNegotiation',
       component: GroupNegotiation
-    },
-    {
-      path: '/attributiondiagnosis', // 归因诊断
-      name: 'AttributionDiagnosis',
-      component: AttributionDiagnosis
     },
     {
       path: '/projects',

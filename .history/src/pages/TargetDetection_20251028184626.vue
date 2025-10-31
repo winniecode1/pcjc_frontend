@@ -4,7 +4,7 @@
     <div class="img_box" :style="{width: fullWidth+'px'}"></div>
     <b-row class="justify-content-center pt-5">
       <b-col cols="10" class="text-center">
-        <p class="newTitle text-center">目标检测</p>
+        <p class="newTitle text-center">视频内容智能分析</p>
       </b-col>
     </b-row>
 
@@ -94,7 +94,7 @@ import axios from 'axios';
 
 // 后端 API 基础路径，根据您的实际部署情况可能需要修改
 // 您的后端默认在 http://0.0.0.0:5236 启动
-const API_BASE_URL = 'http://10.109.253.71:5236';
+const API_BASE_URL = 'http://localhost:5236'; 
 
 export default {
   name: 'TargetDetection',
@@ -170,14 +170,11 @@ export default {
 
       try {
         // 步骤 1: 调用 /analyze_video 接口启动分析
-        const analyzeResponse = await axios.post(`${API_BASE_URL}/analyze_video`, formData
-        , {
+        const analyzeResponse = await axios.post(`${API_BASE_URL}/analyze_video`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
-          // headers: { 'Accept': 'application/json' }
-        }
-        );
+        });
 
         const analyzeData = analyzeResponse.data;
         if (analyzeData.status !== 'success') {
@@ -187,27 +184,27 @@ export default {
         this.taskId = analyzeData.task_id;
         this.progressMessage = `分析任务 [${this.taskId}] 已启动，正在进行深度处理...`;
         this.resultMessage = `任务ID: ${this.taskId}。处理时间预计 ${analyzeData.processing_time.toFixed(2)}s。`;
-
+        
         // 步骤 2: 调用 /get_detection_results/<task_id> 接口获取完整结果
         const fullResultResponse = await axios.get(`${API_BASE_URL}/get_detection_results/${this.taskId}`);
         const fullData = fullResultResponse.data;
-
+        
         // 步骤 3: 更新结果
         this.fullResult.task_id = fullData.task_id;
         this.fullResult.video_description = fullData.video_description;
         this.fullResult.video_info = fullData.video_info;
         this.fullResult.accuracy_results = fullData.accuracy_results;
-
+        
         // 这里的 output_folder 和 processing_time 需要通过某种方式从后端获取或估算
         // 由于 fullData 中不包含 processing_time，我们使用 analyzeData 中的值
-        this.fullResult.processing_time = analyzeData.processing_time;
-
+        this.fullResult.processing_time = analyzeData.processing_time; 
+        
         // 构造处理后视频的 URL
-        // this.processedVideoURL = fullData.video_path; // 例如: /output/video_analysis_.../detected_video.mp4
-        this.processedVideoURL = `${API_BASE_URL}${fullData.video_path}`;
+        this.processedVideoURL = fullData.video_path; // 例如: /output/video_analysis_.../detected_video.mp4
 
         this.resultMessage = "视频分析成功！结果已更新。";
         this.progressMessage = "分析完成";
+
       } catch (error) {
         console.error("分析请求失败:", error);
         this.resultMessage = "分析失败: " + (error.response && error.response.data && error.response.data.error) || error.message;
@@ -289,7 +286,7 @@ export default {
   }
 
   /* 适配 video 标签 */
-  .video-placeholder video {
+  .video-placeholder video { 
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;

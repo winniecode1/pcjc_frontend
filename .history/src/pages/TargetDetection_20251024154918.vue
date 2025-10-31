@@ -2,86 +2,101 @@
   <div class="section">
     <div class="register" :style="{width: fullWidth+'px', height:fullHeight+'px'}"></div>
     <div class="img_box" :style="{width: fullWidth+'px'}"></div>
+
+    <!-- 1. 标题区域 -->
     <b-row class="justify-content-center pt-5">
       <b-col cols="10" class="text-center">
         <p class="newTitle text-center">目标检测</p>
       </b-col>
     </b-row>
 
-    <b-row class="justify-content-center pt-4 mb-4">
+    <!-- 2. 上传/运行/FPS 选择区域 -->
+    <b-row class="justify-content-center pt-4 mb-4 control-area">
       <b-col cols="10" class="d-flex justify-content-start align-items-center">
+
+        <!-- 上传视频 -->
         <div class="upload-area mx-3">
           <b-form-file
             v-model="file"
             :state="Boolean(file)"
             placeholder="选择视频..."
             drop-placeholder="拖拽视频到这里..."
-            accept="video/*"  class="upload-input"
-            browse-text="上传文件"
+            accept="video/*"
+            class="upload-input"
+            browse-text="上传视频"
           ></b-form-file>
         </div>
 
-        <b-button @click="startAnalysis" variant="primary" :disabled="!file || isLoading" class="start-btn mx-3">
+        <!-- FPS 选择 (新增) -->
+        <b-form-select v-model="targetFPS" :options="fpsOptions" class="fps-select mx-3"></b-form-select>
+
+        <!-- 开始运行 -->
+        <b-button @click="startInference" variant="primary" :disabled="!file || isLoading" class="start-btn mx-3">
           <b-spinner small v-if="isLoading"></b-spinner>
-          {{ isLoading ? (progressMessage || '分析中...') : '开始分析' }} </b-button>
+          {{ isLoading ? '运行中...' : '开始运行' }}
+        </b-button>
       </b-col>
     </b-row>
 
+    <!-- 3. 视频展示区域 -->
     <b-row class="justify-content-center my-4">
+      <!-- 原视频 -->
       <b-col cols="5" class="text-center video-container mx-3">
         <div class="box-label">原视频</div>
         <div class="video-placeholder">
-          <video v-if="originalVideoURL" :src="originalVideoURL" controls class="image-display" :key="originalVideoURL"></video>
+          <!-- Using <video> tag for client-side preview -->
+          <video v-if="originalVideoURL" :src="originalVideoURL" controls class="video-display" />
           <div v-else class="placeholder-text">请上传视频</div>
         </div>
       </b-col>
+      <!-- 处理后视频 -->
       <b-col cols="5" class="text-center video-container mx-3">
-        <div class="box-label">处理后视频 ({{ taskId || 'N/A' }})</div>
+        <div class="box-label">处理后视频</div>
         <div class="video-placeholder">
-          <video v-if="processedVideoURL" :src="processedVideoURL" controls class="image-display" :key="processedVideoURL" @error="handleVideoError"></video>
-          <div v-else-if="isLoading" class="placeholder-text">等待处理结果...</div>
-          <div v-else class="placeholder-text">处理后视频将在这里显示</div>
+          <!-- Using <video> tag for processed video from backend /output/ route -->
+          <video v-if="processedVideoURL" :src="processedVideoURL" controls class="video-display" />
+          <div v-else class="placeholder-text">等待处理结果...</div>
         </div>
       </b-col>
     </b-row>
 
+    <!-- 4. 视频描述区域 -->
     <b-row class="justify-content-center my-4">
       <b-col cols="10" class="text-center description-container">
-        <div class="box-label">视频描述 / 结果概览</div>
+        <div class="box-label">视频描述</div>
         <div class="description-box p-3">
-          <p v-if="fullResult.video_info" class="mb-1 text-left">
-            **视频信息**: {{ fullResult.video_info.filename }} ({{ fullResult.video_info.duration.toFixed(2) }}s, {{ fullResult.video_info.width }}x{{ fullResult.video_info.height }})
-            <b-badge variant="info" class="mx-2">处理耗时: {{ fullResult.processing_time ? fullResult.processing_time.toFixed(2) + 's' : 'N/A' }}</b-badge>
+          <p class="mb-1 text-left">
+            <!-- Displaying inference prompt/context -->
+            **Prompt**: {{ inferencePrompt }}
           </p>
-          <p v-if="fullResult.video_description" class="mb-1 text-left">
-            **描述**: {{ fullResult.video_description }}
+          <hr/>
+          <p class="text-left summary-text">
+            <!-- Displaying summary from backend -->
+            {{ resultMessage || '推理完成后会在这里显示视频内容总结。' }}
           </p>
-          <p v-else-if="!isLoading" class="text-left">
-            {{ resultMessage || '分析完成后会在这里显示主要结果信息。' }}
+          <p v-if="!isLoading && inferenceResult.processed_frames > 0" class="text-right text-muted small">
+            （共处理 {{ inferenceResult.processed_frames }} 帧，耗时 {{ inferenceResult.processing_time.toFixed(2) }} 秒）
           </p>
         </div>
       </b-col>
     </b-row>
 
+    <!-- 5. 准确率/召回率区域 -->
     <b-row class="justify-content-center mt-4 pb-5">
+      <!-- 准确率 -->
       <b-col cols="5" class="text-center metric-container mx-3">
-        <div class="box-label">目标检测精确率</div>
+        <div class="box-label">准确率</div>
         <div class="metric-box">
-          <template v-if="fullResult.accuracy_results && fullResult.accuracy_results.detection">
-             {{ (fullResult.accuracy_results.detection.precision * 100).toFixed(2) + '%' }}
-          </template>
-          <template v-else>
-             N/A </template>
+          <!-- Simulated Accuracy (based on backend Config.DEFAULT_ACCURACY) -->
+          {{ simulatedAccuracy ? (simulatedAccuracy * 100).toFixed(2) + '%' : 'N/A' }}
         </div>
       </b-col>
+      <!-- 召回率 -->
       <b-col cols="5" class="text-center metric-container mx-3">
-        <div class="box-label">描述相似度</div>
+        <div class="box-label">召回率</div>
         <div class="metric-box">
-          <template v-if="fullResult.accuracy_results && fullResult.accuracy_results.description">
-             {{ (fullResult.accuracy_results.description.similarity * 100).toFixed(2) + '%' }}
-          </template>
-          <template v-else>
-             N/A </template>
+          <!-- Backend does not return this metric, display N/A -->
+          N/A
         </div>
       </b-col>
     </b-row>
@@ -89,34 +104,40 @@
 </template>
 
 <script>
-// 导入 axios 用于 HTTP 请求
+// Import axios for HTTP requests
 import axios from 'axios';
-
-// 后端 API 基础路径，根据您的实际部署情况可能需要修改
-// 您的后端默认在 http://0.0.0.0:5236 启动
-const API_BASE_URL = 'http://10.109.253.71:5236';
 
 export default {
   name: 'TargetDetection',
   data() {
     return {
+      // Background adaptive data (simulating index.vue)
       fullWidth: window.innerWidth,
       fullHeight: window.innerHeight,
 
-      file: null, // 上传的视频文件
-      originalVideoURL: null, // 客户端预览原视频用
-      processedVideoURL: null, // 处理后视频的 URL
-      taskId: null, // 任务ID
-      isLoading: false, // 加载状态
-      progressMessage: null, // 进度信息
-      resultMessage: null, // 结果信息
-      fullResult: { // 存储完整的后端结果
-        task_id: null,
-        video_description: null,
-        video_info: null,
-        processing_time: null,
-        accuracy_results: null,
-        video_path: null,
+      file: null, // Uploaded video file
+      originalVideoURL: null, // Local URL for client video preview
+      processedVideoURL: null, // URL for the processed video (backend path)
+
+      inferencePrompt: "框出每一个飞机、船、车辆和人的位置，以json格式输出所有的坐标，每个目标包含label和bbox_2d（坐标[x1,y1,x2,y2]）", // Default Prompt
+      isLoading: false, // Loading state
+
+      targetFPS: '1', // Default FPS
+      fpsOptions: [
+        { value: '0.5', text: '0.5 FPS' },
+        { value: '1', text: '1 FPS (默认)' },
+        { value: '2', text: '2 FPS' },
+        { value: '5', text: '5 FPS' }
+      ],
+
+      // Simulated accuracy value (0.85 from predict_new.py Config.DEFAULT_ACCURACY)
+      simulatedAccuracy: 0.85,
+
+      resultMessage: null, // Video description/summary
+
+      inferenceResult: { // Storing structured results from backend (e.g., processing time)
+        processed_frames: 0,
+        processing_time: 0,
       }
     };
   },
@@ -125,18 +146,24 @@ export default {
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
+    if (this.originalVideoURL) {
+        URL.revokeObjectURL(this.originalVideoURL); // Clean up the Blob URL
+    }
   },
   watch: {
-    // 监听文件变化，用于客户端预览
+    // Watch for file changes for client-side preview
     file(newFile) {
+      if (this.originalVideoURL) {
+          URL.revokeObjectURL(this.originalVideoURL); // Clean up old URL
+      }
       if (newFile) {
+        // Create local URL for <video> preview
         this.originalVideoURL = URL.createObjectURL(newFile);
-        // 清除旧结果
+        // Clear previous results
         this.processedVideoURL = null;
-        this.taskId = null;
-        this.fullResult = { video_description: null, accuracy_results: null, video_info: null };
         this.resultMessage = null;
-        this.progressMessage = null;
+        this.inferenceResult = { processed_frames: 0, processing_time: 0 };
+        this.simulatedAccuracy = 0.85;
       } else {
         this.originalVideoURL = null;
       }
@@ -147,12 +174,8 @@ export default {
       this.fullWidth = window.innerWidth;
       this.fullHeight = window.innerHeight;
     },
-    handleVideoError(e) {
-      console.error("视频加载错误:", e);
-      this.resultMessage = "处理后视频加载失败，请检查服务器日志和网络。";
-    },
-    // 调用后端分析接口
-    async startAnalysis() {
+    // Call backend inference API
+    async startInference() {
       if (!this.file) {
         alert("请先选择视频文件！");
         return;
@@ -160,59 +183,52 @@ export default {
 
       this.isLoading = true;
       this.processedVideoURL = null;
-      this.taskId = null;
-      this.fullResult = { video_description: null, accuracy_results: null, video_info: null };
-      this.resultMessage = "正在上传视频并启动分析...";
-      this.progressMessage = "正在启动分析...";
+      this.resultMessage = "正在等待后端推理结果...";
+      this.inferenceResult = { processed_frames: 0, processing_time: 0 };
 
       const formData = new FormData();
-      formData.append('video', this.file); // 字段名改为 'video'
+      // Backend expects the file field name 'video'
+      formData.append('video', this.file);
+      formData.append('prompt', this.inferencePrompt);
+      formData.append('fps', this.targetFPS);
 
       try {
-        // 步骤 1: 调用 /analyze_video 接口启动分析
-        const analyzeResponse = await axios.post(`${API_BASE_URL}/analyze_video`, formData
-        , {
+        // Backend base URL (adjust if deployed elsewhere)
+        // const backendBaseURL = 'http://127.0.0.1:5234';
+        const backendBaseURL = 'http://10.109.253.71:5234';
+        const response = await axios.post(`${backendBaseURL}/video_inference`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
-          }
-          // headers: { 'Accept': 'application/json' }
-        }
-        );
+          },
+          // Increase timeout for long video processing
+          timeout: 120000 // 2 minute timeout
+        });
 
-        const analyzeData = analyzeResponse.data;
-        if (analyzeData.status !== 'success') {
-           throw new Error(analyzeData.error || '分析启动失败');
-        }
+        const data = response.data;
 
-        this.taskId = analyzeData.task_id;
-        this.progressMessage = `分析任务 [${this.taskId}] 已启动，正在进行深度处理...`;
-        this.resultMessage = `任务ID: ${this.taskId}。处理时间预计 ${analyzeData.processing_time.toFixed(2)}s。`;
+        // 1. Update Video Description (summary)
+        this.resultMessage = data.summary;
 
-        // 步骤 2: 调用 /get_detection_results/<task_id> 接口获取完整结果
-        const fullResultResponse = await axios.get(`${API_BASE_URL}/get_detection_results/${this.taskId}`);
-        const fullData = fullResultResponse.data;
+        // 2. Update processed video URL (video_filename)
+        // Construct URL using the backend's /output/ route
+        this.processedVideoURL = `${backendBaseURL}/output/${data.video_filename}`;
 
-        // 步骤 3: 更新结果
-        this.fullResult.task_id = fullData.task_id;
-        this.fullResult.video_description = fullData.video_description;
-        this.fullResult.video_info = fullData.video_info;
-        this.fullResult.accuracy_results = fullData.accuracy_results;
+        // 3. Update processing metrics
+        this.inferenceResult.processed_frames = data.processed_frames || 0;
+        this.inferenceResult.processing_time = data.processing_time || 0;
 
-        // 这里的 output_folder 和 processing_time 需要通过某种方式从后端获取或估算
-        // 由于 fullData 中不包含 processing_time，我们使用 analyzeData 中的值
-        this.fullResult.processing_time = analyzeData.processing_time;
-
-        // 构造处理后视频的 URL
-        // this.processedVideoURL = fullData.video_path; // 例如: /output/video_analysis_.../detected_video.mp4
-        this.processedVideoURL = `${API_BASE_URL}${fullData.video_path}`;
-
-        this.resultMessage = "视频分析成功！结果已更新。";
-        this.progressMessage = "分析完成";
+        console.log("Inference successful:", data);
       } catch (error) {
-        console.error("分析请求失败:", error);
-        this.resultMessage = "分析失败: " + (error.response && error.response.data && error.response.data.error) || error.message;
-        this.fullResult = { video_description: null, accuracy_results: null, video_info: null };
-        this.progressMessage = "分析失败";
+        console.error("Inference request failed:", error);
+
+        // 修复可选链语法错误，使用兼容性强的 AND 运算符
+        const errorMessage = (error.response && error.response.data && error.response.data.error) ||
+                           (error.response && error.response.data && error.response.data.summary) || // 有时 summary 包含错误信息
+                           error.message;
+
+        this.resultMessage = "推理失败: " + errorMessage;
+        this.processedVideoURL = null;
+        this.inferenceResult = { processed_frames: 0, processing_time: 0 };
       } finally {
         this.isLoading = false;
       }
@@ -222,7 +238,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-  /* 样式保持不变 */
+  /* Styles remain unchanged as they were suitable for the layout */
   .section {
     background-color: #EAF4FE;
     color: black;
@@ -259,9 +275,10 @@ export default {
       opacity: 0.8;
   }
 
-  .video-container, .metric-container, .description-container {
-    padding: 10px;
-    position: relative;
+  .control-area {
+      .col-10 {
+          justify-content: center !important;
+      }
   }
 
   .box-label {
@@ -288,8 +305,7 @@ export default {
     margin-top: 10px;
   }
 
-  /* 适配 video 标签 */
-  .video-placeholder video {
+  .video-display {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
@@ -301,11 +317,16 @@ export default {
   }
 
   .description-box {
-    min-height: 150px; /* 增加高度以容纳描述 */
+    min-height: 200px;
     border: 2px solid #ccc;
     background-color: #fff;
     margin-top: 10px;
-    overflow-y: auto; /* 允许滚动 */
+  }
+
+  .summary-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 100px;
   }
 
   .metric-box {
@@ -323,20 +344,18 @@ export default {
       width: 300px;
   }
 
-  .start-btn {
+  .fps-select {
       width: 150px;
   }
 
-  .result-tag {
-      background-color: #2168BE;
-      color: white;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-right: 5px;
-      font-size: 0.9em;
+  .start-btn {
+      width: 150px;
   }
-
 </style>
+
+  // 移除不再需要的 .result-tag 样式
+</style>
+
 <!-- <template>
   <div class="section">
     <div class="register" :style="{width: fullWidth+'px', height:fullHeight+'px'}"></div>

@@ -14,9 +14,8 @@ module.exports = {
       '/api': {
         // target: 'http://localhost:8091',47.92.214.105:8091   罗：192.168.31.26   刘：192.168.31.73
         //  zju
-        // target: 'http://113.44.9.247:8092/',
-        target: 'http://10.109.253.71:5234/', 
-        // changeOrigin: true,
+        target: 'http://113.44.9.247:8092/',
+        chan
         // target: 'http://127.0.0.1:8092',
         // target:'http://125.220.157.117:8092/',
         pathRewrite: {'^/api': ''}
