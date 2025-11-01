@@ -1,72 +1,55 @@
 <template>
   <div class="section">
-    <div class="register" :style="{width: fullWidth+'px', height:fullHeight+'px'}"></div>
-    <div class="img_box" :style="{width: fullWidth+'px'}"></div>
+    
+    <!-- 标题 -->
     <b-row class="justify-content-center pt-5">
-      <b-col cols="10" class="text-center">
+      <b-col cols="12" class="text-center">
         <p class="newTitle text-center">先验知识</p>
       </b-col>
     </b-row>
 
-    <b-row class="justify-content-center my-4" >
-      <b-col cols="5" class="text-center video-container mx-3" style="border: 2px solid #ccc;">
-        <!-- <div class="box-label">原视频</div> -->
-        <div class="video-placeholder">
-          <img v-if="originalImageURL" :src="originalImageURL" alt="图片" class="image-display" />
-          <div v-else class="placeholder-text">图片</div>
+    <!-- 主要内容区域 新布局：左(图片+按钮) 中(D3图) 右(标签/预测信息) -->
+    <div class="main-layout">
+      <!-- 左侧 -->
+      <div class="left-panel">
+        <div class="image-box">
+          <img v-if="originalImageURL" :src="originalImageURL" alt="图片" class="aircraft-image" />
+          <div v-else class="placeholder-image"><span>图片</span></div>
         </div>
-        <!-- <div class="box-label">视频描述 / JSON 结果概览</div> -->
-        <div class="description-box p-3">
-          <p class="mb-1 text-left">
-            {{ stepOneTextRes }}
-          </p>
+        <div class="negotiation-box large">
+          <button class="negotiation-btn" @click="startNegotiation">
+            <span class="play-icon">▶</span>
+            <span class="negotiation-text">开始检测</span>
+          </button>
         </div>
-      </b-col>
-      <b-col cols="1" style="width: 120px;">
-        <img src="../assets/images/step2/lxtl.png" alt="" style="width: 120px;margin-top: 200px;">
-      </b-col>
-      <b-col cols="5" class="text-center video-container mx-3">
-        <div class="description-box p-3" style="margin-bottom: 20px;height: 180px;">
-          <p class="mb-1 text-center" style="line-height: 150px;">
-            {{ infoShow }}
-          </p>
+      </div>
+      <!-- 中间图谱 -->
+      <div class="graph-panel">
+        <div class="graph-container" ref="graphContainer">
+          <div class="graph-title">知识图谱先验信息</div>
+          <svg ref="graphSvg"></svg>
         </div>
-        <div class="description-box p-3" style="margin-bottom: 20px;height: 180px;">
-          <p class="mb-1 text-center" style="line-height: 150px;">
-            {{ midResShow }}
-          </p>
+      </div>
+      <!-- 右侧信息 -->
+      <div class="right-panel">
+        <div class="info-box tag-box">
+          <div class="info-title">标签信息</div>
+          <ul class="info-list">
+            <li v-for="(item, idx) in tagInfoList" :key="'tag-' + idx">{{ item }}</li>
+          </ul>
         </div>
-        <b-button @click="startInfer" variant="primary" class="start-btn mx-3" style="">
-          <b-spinner small v-if="isLoading"></b-spinner>
-          {{ isLoading ? '推理中...' : '基于先验知识开始推理' }}
-        </b-button>
-      </b-col>
-    </b-row>
-
-    <b-row class="justify-content-center my-4">
-        <b-col cols="5" class="text-center description-container">
-        <div class="description-box p-3" style="height: 200px;">
-          <p class="mb-1 text-center" style="height: 200px;line-height: 160px;">
-            {{ finalRes }}
-          </p>
+        <div class="info-box predict-box">
+          <div class="info-title">预测信息</div>
+          <ul class="info-list">
+            <li v-for="(item, idx) in predictInfoList" :key="'pre-' + idx">{{ item }}</li>
+          </ul>
+          <div class="accuracy-box small">
+            <span class="accuracy-label">偏差识别准确率：</span>
+            <span class="accuracy-value">{{ accuracyRate }}</span>
+          </div>
         </div>
-      </b-col>
-      <b-col cols="1" style="width: 120px;">
-        <img src="../assets/images/step3/final.png" alt="" style="width: 120px;margin-top: 80px;">
-      </b-col>
-      <b-col cols="5" class="text-center description-container">
-        <!-- <div class="box-label">视频描述 / JSON 结果概览</div> -->
-        <div class="description-box p-3" style="height: 230px;margin-right: -20px;margin-top: -50px;">
-          <p class="mb-1 text-left" style="height: 200px;">
-            {{ process }}
-          </p>
-          <div style="display: flex; gap: 460px;">
-            <p style="width: 150px;margin-top: 15px;">准确率：{{ accuracy }}</p>
-            <p style="width: 150px;margin-top: 15px;">偏差率：{{ piancha }}</p>
-          </div>        
-        </div>
-      </b-col>
-    </b-row>
+      </div>
+    </div>
 
   </div>
 </template>
@@ -76,29 +59,21 @@
 import axios from 'axios';
 
 export default {
-  name: 'TargetDetection',
+  name: 'PriorKnowledge',
   data() {
     return {
-      // 模拟 index.vue 中的背景自适应数据
       fullWidth: window.innerWidth,
       fullHeight: window.innerHeight,
-
-      originalImageURL: null, // 第二阶段的图片
-      processedImageBase64: null, // 处理后视频的 Base64 编码
-      stepOneTextRes: "第一阶段给出的文字信息",
-      infoShow: "知识图谱匹配信息展示",
-      midResShow: "基于知识图谱的模型推理中间结果展示",
-      agentThirdRes: "Agent3 给出的型号推理结果",
-      process: "基于先验知识的模型推理最终结果展示",
-      finalRes: "基于先验信息识别后的结果展示（小类信息）",
-      accuracy: "95%",
-      piancha: "2%",
-      isLoading: false, // 加载状态
-      
+      originalImageURL: null,
+      tagInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
+      predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
+  isLoading: false,
+  accuracyRate: '—'
     };
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);
+    this.renderGraph();
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
@@ -111,30 +86,145 @@ export default {
       this.fullWidth = window.innerWidth;
       this.fullHeight = window.innerHeight;
     },
-    // 调用后端推理接口
+    startNegotiation() {
+      console.log("开始群体协商");
+      // 这里可以添加群体协商的逻辑
+      this.startInfer();
+    },
+    renderGraph() {
+      // 基于 D3 绘制一个简单的有向图占位
+      const d3 = require('d3');
+      const container = this.$refs.graphContainer;
+      const svgEl = this.$refs.graphSvg;
+      if (!container || !svgEl) return;
+      const width = container.clientWidth - 40;
+      const height = container.clientHeight - 60;
+      const svg = d3.select(svgEl)
+        .attr('width', width)
+        .attr('height', height);
+      svg.selectAll('*').remove();
+
+      const nodes = [
+        { id: '飞机', fx: width * 0.25, fy: height * 0.5 },
+        { id: '战斗机' },
+        { id: '无人机' },
+        { id: '运输机' }
+      ];
+      const links = [
+        { source: '飞机', target: '战斗机' },
+        { source: '飞机', target: '无人机' },
+        { source: '飞机', target: '运输机' }
+      ];
+
+      // 预定义锚点（环形分布）用于拖拽结束时吸附
+      const anchorMap = {
+        '飞机': { x: width * 0.30, y: height * 0.50 },
+        '战斗机': { x: width * 0.55, y: height * 0.30 },
+        '无人机': { x: width * 0.55, y: height * 0.70 },
+        '运输机': { x: width * 0.75, y: height * 0.50 }
+      };
+
+      const simulation = d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links).id(d => d.id).distance(160))
+        .force('charge', d3.forceManyBody().strength(-600)) // 增强排斥力
+        .force('collide', d3.forceCollide().radius(55).strength(1)) // 防重叠
+        .force('center', d3.forceCenter(width * 0.55, height / 2))
+        .on('tick', ticked);
+
+      // 箭头
+      svg.append('defs').append('marker')
+        .attr('id', 'arrow')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 16)
+        .attr('refY', 0)
+        .attr('markerWidth', 6)
+        .attr('markerHeight', 6)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', '#333');
+
+      const link = svg.append('g')
+        .attr('stroke', '#333')
+        .attr('stroke-width', 1.5)
+        .selectAll('line')
+        .data(links)
+        .enter().append('line')
+        .attr('marker-end', 'url(#arrow)');
+
+      const node = svg.append('g')
+        .selectAll('g')
+        .data(nodes)
+        .enter().append('g')
+        .style('cursor','move')
+        .call(d3.drag()
+          .on('start', dragstarted)
+          .on('drag', dragged)
+          .on('end', dragended));
+
+      node.append('circle')
+        .attr('r', 30)
+        .attr('fill', '#fff')
+        .attr('stroke', '#333');
+
+      node.append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dy', 5)
+        .style('font-size', '14px')
+        .text(d => d.id);
+
+      function ticked() {
+        // 缓动：如果节点有 snapTarget，逐步向目标移动（线性插值）
+        nodes.forEach(n => {
+          if (n.snapTarget) {
+            const easeFactor = 0.15; // 缓动系数，可调
+            n.x += (n.snapTarget.x - n.x) * easeFactor;
+            n.y += (n.snapTarget.y - n.y) * easeFactor;
+          }
+        });
+        link
+          .attr('x1', d => d.source.x)
+          .attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x)
+          .attr('y2', d => d.target.y);
+        node.attr('transform', d => `translate(${d.x},${d.y})`);
+      }
+      // D3 v5 drag event doesn't pass event as first arg when using function keyword and relies on d3.event
+      function dragstarted(d) {
+        if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x; d.fy = d.y;
+      }
+      function dragged(d) {
+        d.fx = d3.event.x; d.fy = d3.event.y;
+      }
+      function dragended(d) {
+        if (!d3.event.active) simulation.alphaTarget(0);
+        // 设置缓动目标，不直接硬性跳转
+        const anchor = anchorMap[d.id];
+        if (anchor) {
+          d.snapTarget = { x: anchor.x, y: anchor.y };
+          // 释放 fx/fy 让 force 继续计算，但位置会在 ticked 中缓动过去
+          d.fx = null; d.fy = null;
+        } else {
+          d.snapTarget = null;
+          d.fx = null; d.fy = null;
+        }
+      }
+    },
     async startInfer() {
-
       this.isLoading = true;
-      this.process = "正在等待后端推理结果...";
-
       const formData = new FormData();
-    //   formData.append('image', this.file);
-    //   formData.append('prompt', this.inferencePrompt);
-
       try {
-        // 后端接口地址：HOST + PORT + /inference，默认为 http://0.0.0.0:5234/inference
-        // 实际部署时可能需要修改为正确的IP和端口
         const response = await axios.post('http://10.109.253.71:5234/inference', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         });
-
         const data = response.data;
-        this.process = data;
+        this.finalResult = data;
       } catch (error) {
         console.error("推理请求失败:", error);
-        this.process = "推理失败: " + (error.response && error.response.data && error.response.data.error) || error.message;
+        this.finalResult = "推理失败: " + (error.response && error.response.data && error.response.data.error) || error.message;
       } finally {
         this.isLoading = false;
       }
@@ -144,123 +234,61 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-  .section {
-    background-color: #EAF4FE;
-    color: black;
-    font-size: 100%;
-    width: 100%;
-    min-height: 100vh; /* 至少一个视口高度 */
-    font-family: "Helvetica Neue";
-    z-index: 2;
-  }
+.section {
+  background-color: #D7E7D5;
+  color: black;
+  font-size: 100%;
+  width: 100%;
+  min-height: 100vh;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  z-index: 2;
+  position: relative;
+}
 
-  .newTitle {
-    // 标题样式
-    font-size: calc(2vw + 1rem);
-    color: #2168BE;
-    font-weight: bolder;
-    letter-spacing: 0.1em;
-  }
+.newTitle {
+  font-size: 2.5rem;
+  color: black;
+  letter-spacing: 0.1em;
+  font-weight: bold;
+  margin-bottom: 40px;
+}
 
-  // 背景自适应样式
-  .register {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: -1;
-  }
-  .img_box {
-      position: absolute;
-      // 假设背景图路径与 index.vue 相同
-      background-image: url('../assets/images/newBackGound.png');
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-position: center center;
-      width: 100%;
-      height: 100%;
-      opacity: 0.8; /* 调整透明度以适应背景 */
-  }
+/* 去除覆盖背景层，保留各子组件自身背景 */
 
-  // 截图中的红色边框元素样式
-  .video-container, .metric-container, .description-container {
-    padding: 10px;
-    position: relative;
+/* 新布局 */
+.main-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr 340px;
+  gap: 30px;
+  padding: 20px 40px 40px;
+  align-items: stretch;
+}
 
-    // 模拟截图中的红色边框
-    // border: 2px solid red;
-  }
+/* 左侧 */
+.left-panel { display: flex; flex-direction: column; gap: 30px; }
+.image-box { border:3px solid #7BA3D1; background:#fff; padding:10px; height:360px; }
+.aircraft-image, .placeholder-image { width:100%; height:100%; object-fit:contain; }
+.placeholder-image { display:flex; align-items:center; justify-content:center; color:#666; font-size:18px; }
+.negotiation-box { border:3px solid #7BA3D1; background:#D3E4F7; padding:25px 20px; display:flex; align-items:center; justify-content:center; }
+.negotiation-box.large { height:120px; }
+.negotiation-btn { background:none; border:none; display:flex; align-items:center; gap:18px; cursor:pointer; font-size:22px; font-weight:bold; }
+.play-icon { width:46px; height:46px; background:#2168BE; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; }
 
-  .box-label {
-    // 模拟截图中的文字位置
-    position: absolute;
-    top: -15px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #EAF4FE;
-    padding: 0 10px;
-    color: red;
-    font-size: 14px;
-    font-weight: bold;
-    z-index: 10;
-  }
+/* 中间图谱 */
+.graph-panel { position:relative; }
+.graph-container { position:relative; border:3px solid #E6B877; background:#FFF4E0; border-radius:60px; padding:30px 20px 20px; height:100%; min-height:480px; }
+.graph-title { position:absolute; top:20px; left:40px; font-weight:bold; font-size:20px; }
+.graph-container svg { width:100%; height:100%; }
 
-  .video-placeholder {
-    height: 400px; /* 预设高度 */
-    border: 2px solid #ccc;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    background-color: #fff;
-    margin-top: 10px;
-  }
-
-  .image-display {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-  }
-
-  .placeholder-text {
-    color: #999;
-    font-size: 1.2rem;
-  }
-
-  .description-box {
-    min-height: 100px;
-    border: 2px solid #ccc;
-    background-color: #fff;
-    margin-top: 10px;
-  }
-
-  .metric-box {
-    height: 150px;
-    line-height: 150px;
-    border: 2px solid #ccc;
-    font-size: 2rem;
-    font-weight: bold;
-    color: #2168BE;
-    background-color: #fff;
-    margin-top: 10px;
-  }
-
-  .upload-area {
-      width: 300px; /* 调整上传组件的宽度 */
-  }
-
-  .start-btn {
-      width: 150px;
-  }
-
-  .result-tag {
-      background-color: #2168BE;
-      color: white;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-right: 5px;
-      font-size: 0.9em;
-  }
-
+/* 右侧信息 */
+.right-panel { display:flex; flex-direction:column; gap:30px; }
+.info-box { border:3px solid #C9A8D4; background:#E8D9EF; padding:20px 25px; }
+.info-title { font-weight:bold; font-size:18px; margin-bottom:15px; }
+.info-list { list-style:none; padding:0; margin:0 0 20px; }
+.info-list li { position:relative; padding-left:16px; line-height:28px; }
+.info-list li:before { content:""; width:8px; height:8px; background:#000; border-radius:50%; position:absolute; left:0; top:10px; }
+.accuracy-box { background:#fff; border:2px solid #000; padding:10px 12px; display:inline-flex; gap:6px; font-size:14px; font-weight:bold; }
+.accuracy-box.small { margin-top:auto; }
+.accuracy-label { color:#333; }
+.accuracy-value { color:#000; }
 </style>

@@ -2,73 +2,88 @@
   <div class="section">
     <div class="register" :style="{width: fullWidth+'px', height:fullHeight+'px'}"></div>
     <div class="img_box" :style="{width: fullWidth+'px'}"></div>
+    
+    <!-- 标题 -->
     <b-row class="justify-content-center pt-5">
-      <b-col cols="10" class="text-center">
+      <b-col cols="12" class="text-center">
         <p class="newTitle text-center">群体协商</p>
       </b-col>
     </b-row>
 
-    <b-row class="justify-content-center my-4" >
-      <b-col cols="5" class="text-center video-container mx-3" style="border: 2px solid #ccc;">
-        <!-- <div class="box-label">原视频</div> -->
-        <div class="video-placeholder">
-          <img v-if="originalImageURL" :src="originalImageURL" alt="图片" class="image-display" />
-          <div v-else class="placeholder-text">图片</div>
+    <!-- 主要内容区域 -->
+    <b-row class="justify-content-center main-content-row">
+      <!-- 左侧：图片和属性信息 -->
+      <b-col cols="3" class="left-column">
+        <!-- 图片区域 -->
+        <div class="image-box">
+          <!-- <div class="image-label">飞机</div> -->
+          <img v-if="originalImageURL" :src="originalImageURL" alt="飞机图片" class="aircraft-image" />
+          <div v-else class="placeholder-image">
+            <span>图片</span>
+          </div>
         </div>
-        <!-- <div class="box-label">视频描述 / JSON 结果概览</div> -->
-        <div class="description-box p-3">
-          <p class="mb-1 text-left">
-            {{ stepTwoTextRes }}
-          </p>
+        
+        <!-- 属性信息框 -->
+        <div class="attribute-box">
+          <p class="attribute-text">{{ attributeInfo }}</p>
         </div>
-      </b-col>
-      <b-col cols="1" style="width: 120px;">
-        <img src="../assets/images/step3/xhtl.png" alt="" style="width: 120px;margin-top: 200px;">
-      </b-col>
-      <b-col cols="5" class="text-center video-container mx-3">
-        <div class="description-box p-3" style="margin-bottom: 20px;">
-          <p class="mb-1 text-center" style="line-height: 100px;">
-            {{ agentOneRes }}
-          </p>
-        </div>
-        <div class="description-box p-3" style="margin-bottom: 20px;">
-          <p class="mb-1 text-center" style="line-height: 100px;">
-            {{ agentTwoRes }}
-          </p>
-        </div>
-        <div class="description-box p-3" style="margin-bottom: 20px;">
-          <p class="mb-1 text-center" style="line-height: 100px;">
-            {{ agentThirdRes }}
-          </p>
-        </div>
-        <b-button @click="startNeogotiation" variant="primary" class="start-btn mx-3" style="">
-          <b-spinner small v-if="isLoading"></b-spinner>
-          {{ isLoading ? '协商中...' : '开始群体协商' }}
-        </b-button>
-      </b-col>
-    </b-row>
 
-    <b-row class="justify-content-center my-4">
-        <b-col cols="5" class="text-center description-container">
-        <div class="description-box p-3" style="height: 200px;">
-          <p class="mb-1 text-center" style="height: 200px;line-height: 160px;">
-            {{ finalRes }}
-          </p>
+        <!-- 群体协商按钮 -->
+        <div class="negotiation-box">
+          <button class="negotiation-btn" @click="startNegotiation">
+            <span class="play-icon">▶</span>
+            <span class="negotiation-text">群体协商</span>
+          </button>
         </div>
       </b-col>
-      <b-col cols="1" style="width: 120px;">
-        <img src="../assets/images/step3/final.png" alt="" style="width: 120px;margin-top: 80px;">
+
+      <!-- 中间：智能体推理 -->
+      <b-col cols="5" class="middle-column">
+        <div class="reasoning-container">
+          <div class="reasoning-title">智能体推理</div>
+          
+          <!-- 智能体A推理结果 -->
+          <div class="reasoning-box">
+            <div class="reasoning-content">
+              <!-- <p class="reasoning-label">智能体A的推理结果</p> -->
+              <p class="reasoning-result">{{ agentAResult }}</p>
+            </div>
+          </div>
+
+          <!-- 智能体B推理结果 -->
+          <div class="reasoning-box">
+            <div class="reasoning-content">
+              <!-- <p class="reasoning-label">智能体B的推理结果</p> -->
+              <p class="reasoning-result">{{ agentBResult }}</p>
+            </div>
+          </div>
+
+          <!-- 智能体C推理结果 -->
+          <div class="reasoning-box">
+            <div class="reasoning-content">
+              <!-- <p class="reasoning-label">智能体C的推理结果</p> -->
+              <p class="reasoning-result">{{ agentCResult }}</p>
+            </div>
+          </div>
+        </div>
       </b-col>
-      <b-col cols="5" class="text-center description-container">
-        <!-- <div class="box-label">视频描述 / JSON 结果概览</div> -->
-        <div class="description-box p-3" style="height: 200px;margin-right: -20px;">
-          <p class="mb-1 text-left" style="height: 200px;">
-            {{ process }}
-          </p>
-          <div style="display: flex; gap: 460px;">
-            <p style="width: 100px;;">准确率：{{ accuracy }}</p>
-            <p style="width: 100px;;">偏差率：{{ piancha }}</p>
-          </div>        
+
+      <!-- 右侧：协商结果 -->
+      <b-col cols="3" class="right-column">
+        <!-- 过程偏差展示 -->
+        <div class="deviation-box">
+          <p class="deviation-title">群体协商的过程偏差的体现</p>
+          <p class="deviation-content">{{ deviationProcess }}</p>
+        </div>
+
+        <!-- 最终结果 -->
+        <div class="final-result-box">
+          <p class="final-result-title">群体协商之后的结果</p>
+          <p class="final-result-content">{{ finalResult }}</p>
+          <div class="accuracy-box">
+            <span class="accuracy-label">偏差识别准确率：</span>
+            <span class="accuracy-value">{{ accuracyRate }}</span>
+          </div>
         </div>
       </b-col>
     </b-row>
@@ -81,25 +96,20 @@
 import axios from 'axios';
 
 export default {
-  name: 'TargetDetection',
+  name: 'PriorKnowledge',
   data() {
     return {
-      // 模拟 index.vue 中的背景自适应数据
       fullWidth: window.innerWidth,
       fullHeight: window.innerHeight,
-
-      originalImageURL: null, // 第二阶段的图片
-      processedImageBase64: null, // 处理后视频的 Base64 编码
-      stepTwoTextRes: "第二阶段给出的文字信息",
-      agentOneRes: "Agent1 给出的型号推理结果",
-      agentTwoRes: "Agent2 给出的型号推理结果",
-      agentThirdRes: "Agent3 给出的型号推理结果",
-      process: "群体协商过程的详细描述信息",
-      finalRes: "群体协商之后的型号展示",
-      accuracy: "95%",
-      piancha: "2%",
-      isLoading: false, // 加载状态
-      
+      originalImageURL: null, // 飞机图片
+      attributeInfo: "各种属性信息的文本显示",
+      agentAResult: "智能体A的推理结果\n文本框显示",
+      agentBResult: "智能体B的推理结果\n文本框显示",
+      agentCResult: "智能体C的推理结果\n文本框显示",
+      deviationProcess: "群体协商的过程偏差的体现\n文本框显示",
+      finalResult: "群体协商之后的结果",
+  isLoading: false,
+  accuracyRate: '—'
     };
   },
   mounted() {
@@ -116,30 +126,25 @@ export default {
       this.fullWidth = window.innerWidth;
       this.fullHeight = window.innerHeight;
     },
-    // 调用后端推理接口
-    async startNeogotiation() {
-
+    startNegotiation() {
+      console.log("开始群体协商");
+      // 这里可以添加群体协商的逻辑
+      this.startInfer();
+    },
+    async startInfer() {
       this.isLoading = true;
-      this.process = "正在等待后端推理结果...";
-
       const formData = new FormData();
-    //   formData.append('image', this.file);
-    //   formData.append('prompt', this.inferencePrompt);
-
       try {
-        // 后端接口地址：HOST + PORT + /inference，默认为 http://0.0.0.0:5234/inference
-        // 实际部署时可能需要修改为正确的IP和端口
         const response = await axios.post('http://10.109.253.71:5234/inference', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         });
-
         const data = response.data;
-        this.process = data;
+        this.finalResult = data;
       } catch (error) {
         console.error("推理请求失败:", error);
-        this.process = "推理失败: " + (error.response && error.response.data && error.response.data.error) || error.message;
+        this.finalResult = "推理失败: " + (error.response && error.response.data && error.response.data.error) || error.message;
       } finally {
         this.isLoading = false;
       }
@@ -149,123 +154,308 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-  .section {
-    background-color: #EAF4FE;
-    color: black;
-    font-size: 100%;
-    width: 100%;
-    min-height: 100vh; /* 至少一个视口高度 */
-    font-family: "Helvetica Neue";
-    z-index: 2;
-  }
+.section {
+  background-color: #D7E7D5;
+  color: black;
+  font-size: 100%;
+  width: 100%;
+  min-height: 100vh;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  z-index: 2;
+  position: relative;
+}
 
-  .newTitle {
-    // 标题样式
-    font-size: calc(2vw + 1rem);
-    color: #2168BE;
-    font-weight: bolder;
-    letter-spacing: 0.1em;
-  }
+.newTitle {
+  font-size: 2.5rem;
+  color: black;
+  letter-spacing: 0.1em;
+  font-weight: bold;
+  margin-bottom: 40px;
+}
 
-  // 背景自适应样式
-  .register {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: -1;
-  }
-  .img_box {
-      position: absolute;
-      // 假设背景图路径与 index.vue 相同
-      background-image: url('../assets/images/newBackGound.png');
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-position: center center;
-      width: 100%;
-      height: 100%;
-      opacity: 0.8; /* 调整透明度以适应背景 */
-  }
+.register {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+}
 
-  // 截图中的红色边框元素样式
-  .video-container, .metric-container, .description-container {
-    padding: 10px;
-    position: relative;
+.img_box {
+  position: absolute;
+  background-color: rgb(215,231,213);
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+  width: 100%;
+  height: 100%;
+  opacity: 0.8;
+}
 
-    // 模拟截图中的红色边框
-    // border: 2px solid red;
+.main-content-row {
+  padding: 20px 60px;
+  margin-top: 20px;
+}
+
+// 左侧列样式
+.left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.image-box {
+  border: 3px solid #7BA3D1;
+  background-color: white;
+  padding: 10px;
+  position: relative;
+  height: 280px;
+}
+
+.image-label {
+  position: absolute;
+  top: -15px;
+  left: 20px;
+  background-color: #D7E7D5;
+  padding: 2px 15px;
+  font-size: 16px;
+  font-weight: bold;
+  z-index: 10;
+}
+
+.aircraft-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.placeholder-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 18px;
+}
+
+.attribute-box {
+  border: 3px solid black;
+  background-color: white;
+  padding: 30px 20px;
+  min-height: 180px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attribute-text {
+  font-size: 16px;
+  text-align: center;
+  margin: 0;
+  line-height: 1.8;
+}
+
+.negotiation-box {
+  border: 3px solid #7BA3D1;
+  background-color: #D3E4F7;
+  padding: 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+}
+
+.negotiation-btn {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  
+  &:hover {
+    transform: scale(1.05);
   }
+}
 
-  .box-label {
-    // 模拟截图中的文字位置
-    position: absolute;
-    top: -15px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #EAF4FE;
-    padding: 0 10px;
-    color: red;
-    font-size: 14px;
-    font-weight: bold;
-    z-index: 10;
+.play-icon {
+  width: 50px;
+  height: 50px;
+  background-color: #5A87C7;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+}
+
+.negotiation-text {
+  font-size: 24px;
+  font-weight: bold;
+  color: black;
+}
+
+// 中间列样式
+.middle-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.reasoning-container {
+  border: 3px solid #E6B877;
+  background-color: #FFF4E0;
+  padding: 20px;
+  border-radius: 10px;
+  height: 100%;
+}
+
+.reasoning-title {
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 25px;
+  color: black;
+}
+
+.reasoning-box {
+  margin-bottom: 40px;
+  min-height: 140px;
+  &:last-child {
+    margin-bottom: 0;
   }
+}
 
-  .video-placeholder {
-    height: 400px; /* 预设高度 */
-    border: 2px solid #ccc;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    background-color: #fff;
-    margin-top: 10px;
+.reasoning-content {
+  border: 2px solid black;
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* 垂直居中内容 */
+}
+
+.reasoning-label {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.reasoning-result {
+  font-size: 14px;
+  text-align: center;
+  margin: 0;
+  white-space: pre-line;
+  line-height: 1.4;
+}
+
+// 右侧列样式
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.deviation-box {
+  border: 3px solid #C9A8D4;
+  background-color: #E8D9EF;
+  padding: 25px 20px;
+  border-radius: 5px;
+  min-height: 320px;
+}
+
+.deviation-title {
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.deviation-content {
+  font-size: 14px;
+  text-align: center;
+  margin: 0;
+  white-space: pre-line;
+  line-height: 1.8;
+}
+
+.final-result-box {
+  border: 3px solid #C9A8D4;
+  background-color: #E8D9EF;
+  padding: 25px 20px;
+  border-radius: 5px;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.final-result-title {
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.final-result-content {
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 20px;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.accuracy-btn {
+  background-color: white;
+  border: 2px solid black;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover:not(:disabled) {
+    background-color: #f0f0f0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   }
-
-  .image-display {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
+  
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
   }
+}
+/* 静态准确率显示框 */
+.accuracy-box {
+  background-color: white;
+  border: 2px solid black;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
 
-  .placeholder-text {
-    color: #999;
-    font-size: 1.2rem;
-  }
+.accuracy-label {
+  color: #333;
+}
 
-  .description-box {
-    min-height: 100px;
-    border: 2px solid #ccc;
-    background-color: #fff;
-    margin-top: 10px;
-  }
-
-  .metric-box {
-    height: 150px;
-    line-height: 150px;
-    border: 2px solid #ccc;
-    font-size: 2rem;
-    font-weight: bold;
-    color: #2168BE;
-    background-color: #fff;
-    margin-top: 10px;
-  }
-
-  .upload-area {
-      width: 300px; /* 调整上传组件的宽度 */
-  }
-
-  .start-btn {
-      width: 150px;
-  }
-
-  .result-tag {
-      background-color: #2168BE;
-      color: white;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-right: 5px;
-      font-size: 0.9em;
-  }
-
+.accuracy-value {
+  color: #000;
+}
 </style>
