@@ -222,11 +222,21 @@ export default {
     async startInfer() {
       this.isLoading = true;
       const formData = new FormData();
+      // 按后端要求把参数放到表单字段里。这里假设后端接收 img_path 和 device_type 两个字段。
+      formData.append('img_path', '/home/wuzhixuan/Project/PCJC/module2/images/img10.png');
+      formData.append('device_type', '%E9%A3%9E%E6%9C%BA');
+
       try {
-        const response = await axios.post('http://10.109.253.71:8001/module2/list?img_path=/home/wuzhixuan/Project/PCJC/module2/images/img9.png,/home/wuzhixuan/Project/PCJC/module2/images/img9.png&device_type=飞机,飞机',{
-          headers: {
-            'Content-Type': 'multipart/form-data'
+        // axios.post(url, data, config)
+        axios.get('/module2/list', {
+          params: {
+            img_path: '/home/wuzhixuan/Project/PCJC/module2/images/img10.png',
+            device_type: '%E9%A3%9E%E6%9C%BA'
           }
+        }).then(res => {
+          console.log(res.data);
+        }).catch(err => {
+          console.error(err.response && err.response.data || err);
         });
         console.log("推理响应:", response);
         const data = response.data;
