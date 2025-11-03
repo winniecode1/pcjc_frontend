@@ -67,8 +67,9 @@ export default {
       originalImageURL: null,
       tagInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
       predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
-  isLoading: false,
-  accuracyRate: '—'
+      isLoading: false,
+      accuracyRate: '—',
+      finalResult: null
     };
   },
   mounted() {
@@ -85,6 +86,10 @@ export default {
     handleResize() {
       this.fullWidth = window.innerWidth;
       this.fullHeight = window.innerHeight;
+      // 重新渲染以适应新尺寸（简单做法：完全重绘）
+      this.$nextTick(() => {
+        this.renderGraph();
+      });
     },
     startNegotiation() {
       console.log("开始群体协商");
@@ -92,23 +97,25 @@ export default {
       this.startInfer();
     },
     renderGraph() {
-      // 基于 D3 绘制一个简单的有向图占位
       const d3 = require('d3');
       const container = this.$refs.graphContainer;
       const svgEl = this.$refs.graphSvg;
       if (!container || !svgEl) return;
+      
       const width = container.clientWidth - 40;
       const height = container.clientHeight - 60;
+      
       const svg = d3.select(svgEl)
         .attr('width', width)
         .attr('height', height);
+      
       svg.selectAll('*').remove();
 
       const nodes = [
-        { id: '飞机', fx: width * 0.25, fy: height * 0.5 },
-        { id: '战斗机' },
-        { id: '无人机' },
-        { id: '运输机' }
+        { id: '飞机', x: width * 0.3, y: height * 0.5, color: '#87CEEB' },
+        { id: '战斗机', x: width * 0.6, y: height * 0.3, color: '#FF6B6B' },
+        { id: '无人机', x: width * 0.6, y: height * 0.7, color: '#95E1D3' },
+        { id: '运输机', x: width * 0.8, y: height * 0.5, color: '#FFD93D' }
       ];
       const links = [
         { source: '飞机', target: '战斗机' },
@@ -116,110 +123,112 @@ export default {
         { source: '飞机', target: '运输机' }
       ];
 
-      // 预定义锚点（环形分布）用于拖拽结束时吸附
-      const anchorMap = {
-        '飞机': { x: width * 0.30, y: height * 0.50 },
-        '战斗机': { x: width * 0.55, y: height * 0.30 },
-        '无人机': { x: width * 0.55, y: height * 0.70 },
-        '运输机': { x: width * 0.75, y: height * 0.50 }
-      };
-
       const simulation = d3.forceSimulation(nodes)
-        .force('link', d3.forceLink(links).id(d => d.id).distance(160))
-        .force('charge', d3.forceManyBody().strength(-600)) // 增强排斥力
-        .force('collide', d3.forceCollide().radius(55).strength(1)) // 防重叠
-        .force('center', d3.forceCenter(width * 0.55, height / 2))
-        .on('tick', ticked);
+        .force('link', d3.forceLink(links).id(d => d.id).distance(150))
+        .force('charge', d3.forceManyBody().strength(-500))
+        .force('x', d3.forceX(width / 2))
+        .force('y', d3.forceY(height / 2))
+        .force('collide', d3.forceCollide().radius(40));
 
-      // 箭头
-      svg.append('defs').append('marker')
+      // 添加箭头标记
+      const defs = svg.append('defs');
+      defs.append('marker')
         .attr('id', 'arrow')
-        .attr('viewBox', '0 -5 10 10')
-        .attr('refX', 16)
-        .attr('refY', 0)
-        .attr('markerWidth', 6)
-        .attr('markerHeight', 6)
         .attr('orient', 'auto')
+        .attr('markerUnits', 'strokeWidth')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 36)
+        .attr('refY', 0)
+        .attr('markerWidth', 8)
+        .attr('markerHeight', 8)
         .append('path')
-        .attr('d', 'M0,-5L10,0L0,5')
-        .attr('fill', '#333');
+        .attr('d', 'M3 5 L8 0 L3 -5')
+        .attr('fill', '#999');
 
       const link = svg.append('g')
-        .attr('stroke', '#333')
-        .attr('stroke-width', 1.5)
+        .attr('class', 'links')
         .selectAll('line')
         .data(links)
         .enter().append('line')
+        .attr('stroke', '#999')
+        .attr('stroke-width', 2)
         .attr('marker-end', 'url(#arrow)');
 
-      const node = svg.append('g')
+      const nodeGroup = svg.append('g')
+        .attr('class', 'nodes')
         .selectAll('g')
         .data(nodes)
         .enter().append('g')
-        .style('cursor','move')
-        .call(d3.drag()
-          .on('start', dragstarted)
-          .on('drag', dragged)
-          .on('end', dragended));
+        .style('cursor', 'move');
 
-      node.append('circle')
+      nodeGroup.append('circle')
         .attr('r', 30)
-        .attr('fill', '#fff')
-        .attr('stroke', '#333');
+        .attr('fill', d => d.color || '#fff')
+        .attr('stroke', '#333')
+        .attr('stroke-width', 2);
 
-      node.append('text')
+      nodeGroup.append('text')
         .attr('text-anchor', 'middle')
         .attr('dy', 5)
         .style('font-size', '14px')
+        .style('pointer-events', 'none')
         .text(d => d.id);
 
-      function ticked() {
-        // 缓动：如果节点有 snapTarget，逐步向目标移动（线性插值）
-        nodes.forEach(n => {
-          if (n.snapTarget) {
-            const easeFactor = 0.15; // 缓动系数，可调
-            n.x += (n.snapTarget.x - n.x) * easeFactor;
-            n.y += (n.snapTarget.y - n.y) * easeFactor;
-          }
+      // 拖拽功能 (兼容当前使用的 D3 v5：通过 d3.event 获取事件)
+      const dragBehavior = d3.drag()
+        .on('start', function(d) {
+          if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+          d.fx = d.x;
+          d.fy = d.y;
+        })
+        .on('drag', function(d) {
+          const radius = 30;
+          // d3.event.x / y 为拖拽时的最新坐标
+          d.fx = Math.max(radius, Math.min(width - radius, d3.event.x));
+          d.fy = Math.max(radius, Math.min(height - radius, d3.event.y));
+        })
+        .on('end', function(d) {
+          if (!d3.event.active) simulation.alphaTarget(0);
+          d.fx = null;
+          d.fy = null;
         });
+
+      nodeGroup.call(dragBehavior);
+
+      // 节点点击事件（点击圆或文字所在的父 g）
+      nodeGroup.on('click', (d) => {
+        // 这里可根据需要触发更多交互
+        console.log('节点被点击:', d.id);
+        this.$emit('node-click', d);
+      });
+
+      simulation.on('tick', () => {
+        // 限制节点在边界内
+        nodes.forEach(d => {
+          const radius = 30;
+          d.x = Math.max(radius, Math.min(width - radius, d.x));
+          d.y = Math.max(radius, Math.min(height - radius, d.y));
+        });
+
         link
           .attr('x1', d => d.source.x)
           .attr('y1', d => d.source.y)
           .attr('x2', d => d.target.x)
           .attr('y2', d => d.target.y);
-        node.attr('transform', d => `translate(${d.x},${d.y})`);
-      }
-      // D3 v5 drag event doesn't pass event as first arg when using function keyword and relies on d3.event
-      function dragstarted(d) {
-        if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x; d.fy = d.y;
-      }
-      function dragged(d) {
-        d.fx = d3.event.x; d.fy = d3.event.y;
-      }
-      function dragended(d) {
-        if (!d3.event.active) simulation.alphaTarget(0);
-        // 设置缓动目标，不直接硬性跳转
-        const anchor = anchorMap[d.id];
-        if (anchor) {
-          d.snapTarget = { x: anchor.x, y: anchor.y };
-          // 释放 fx/fy 让 force 继续计算，但位置会在 ticked 中缓动过去
-          d.fx = null; d.fy = null;
-        } else {
-          d.snapTarget = null;
-          d.fx = null; d.fy = null;
-        }
-      }
+
+        nodeGroup.attr('transform', d => `translate(${d.x},${d.y})`);
+      });
     },
     async startInfer() {
       this.isLoading = true;
       const formData = new FormData();
       try {
-        const response = await axios.post('http://10.109.253.71:5234/inference', formData, {
+        const response = await axios.post('http://10.109.253.71:8001/module2/list?img_path=/home/wuzhixuan/Project/PCJC/module2/images/img9.png,/home/wuzhixuan/Project/PCJC/module2/images/img9.png&device_type=飞机,飞机',{
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         });
+        console.log("推理响应:", response);
         const data = response.data;
         this.finalResult = data;
       } catch (error) {
