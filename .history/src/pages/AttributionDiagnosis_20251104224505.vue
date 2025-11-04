@@ -5,47 +5,47 @@
 
     <b-row class="justify-content-center pt-5">
       <b-col cols="10" class="text-center">
-        <p class="newTitle text-center">归因诊断</p>
+        [cite_start]<p class="newTitle text-center">归因诊断 [cite: 4]</p>
       </b-col>
     </b-row>
     
     <b-row class="justify-content-center pt-4 mb-4">
       <b-col cols="10" style="position: relative;">
-        <div class="box-label">结果汇总</div>
+        [cite_start]<div class="box-label">结果汇总 [cite: 5]</div>
         
         <div class="results-summary-container p-3">
           
           <b-row>
             <b-col cols="6" class="pr-2">
               <div class="module-box">
-                <p class="module-title">多模态目标检测</p>
+                [cite_start]<p class="module-title">多模态目标检测 [cite: 3]</p>
                 
                 <div class="sub-box">
                   <div class="sub-box-content">
-                    <p><strong>输出:</strong> 参考多模态目标检测页面的结果内容和展示形式(多行文本)</p>
-                    <p><strong>真值:</strong> 参考多模态目标检测页面的结果内容和展示形式(多行文本)</p>
+                    [cite_start]<p><strong>输出:</strong> 参考多模态目标检测页面的结果内容和展示形式(多行文本) [cite: 9]</p>
+                    [cite_start]<p><strong>真值:</strong> 参考多模态目标检测页面的结果内容和展示形式(多行文本) [cite: 10]</p>
                   </div>
                 </div>
                 
                 <div class="sub-box mt-2">
-                  <div class="sub-box-title">认知传播偏差测试结果</div>
-                  <div class="deviation-header">偏差值: 数值</div>
+                  [cite_start]<div class="sub-box-title">认知传播偏差测试结果 [cite: 12]</div>
+                  [cite_start]<div class="deviation-header">偏差值: 数值 [cite: 13]</div>
                   <div class="sub-box-content d-flex justify-content-between">
                     <div>
-                      <p><strong>阶段二输出:</strong></p>
+                      [cite_start]<p><strong>阶段二输出:</strong> [cite: 14]</p>
                       <ul>
-                        <li>属性名: 属性值</li>
-                        <li>属性名: 属性值</li>
-                        <li>属性名: 属性值</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 17]</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 17]</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 17]</li>
                       </ul>
                     </div>
                     <div>
-                      <p><strong>阶段三输出:</strong></p>
-                      <p>协商后的结果</p>
+                      [cite_start]<p><strong>阶段三输出:</strong> [cite: 15]</p>
+                      [cite_start]<p>协商后的结果 [cite: 18]</p>
                     </div>
                     <div>
-                      <p><strong>阶段四输出:</strong></p>
-                      <p>危险等级</p>
+                      [cite_start]<p><strong>阶段四输出:</strong> [cite: 16]</p>
+                      [cite_start]<p>危险等级 [cite: 19]</p>
                     </div>
                   </div>
                 </div>
@@ -55,64 +55,64 @@
             
             <b-col cols="6" class="pl-2">
               <div class="module-box">
-                <p class="module-title">先验知识</p>
+                [cite_start]<p class="module-title">先验知识 [cite: 6]</p>
                 
                 <div class="sub-box">
-                  <div class="deviation-header">偏差值: 数值</div>
+                  [cite_start]<div class="deviation-header">偏差值: 数值 [cite: 7]</div>
                   <div class="sub-box-content d-flex justify-content-around">
                     <div class="image-placeholder">
-                      <p><strong>阶段二输出</strong></p>
+                      [cite_start]<p><strong>阶段二输出</strong> [cite: 8]</p>
                       <ul>
-                        <li>属性名: 属性值</li>
-                        <li>属性名: 属性值</li>
-                        <li>属性名: 属性值</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 48]</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 48]</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 48]</li>
                       </ul>
                     </div>
                     <div class="image-placeholder">
-                      <p><strong>阶段二真值</strong></p>
+                      [cite_start]<p><strong>阶段二真值</strong> [cite: 49]</p>
                       <ul>
-                        <li>属性名: 属性值</li>
-                        <li>属性名: 属性值</li>
-                        <li>属性名: 属性值</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 50]</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 50]</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 50]</li>
                       </ul>
                     </div>
                   </div>
                 </div>
                 
                 <div class="sub-box mt-2">
-                  <div class="sub-box-title">模块偏差测试结果</div>
-                  <div class="deviation-header">偏差值: 数值</div>
+                  [cite_start]<div class="sub-box-title">模块偏差测试结果 [cite: 11]</div>
+                  [cite_start]<div class="deviation-header">偏差值: 数值 [cite: 68]</div>
                   <div class="sub-box-content d-flex justify-content-around">
                     <div>
-                      <p><strong>阶段二输出</strong></p>
+                      [cite_start]<p><strong>阶段二输出</strong> [cite: 51]</p>
                       <ul>
-                        <li>属性名: 属性值</li>
-                        <li>属性名: 属性值</li>
-                        <li>属性名: 属性值</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 52]</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 52]</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 52]</li>
                       </ul>
                     </div>
                     <div>
-                      <p><strong>阶段二真值</strong></p>
+                      [cite_start]<p><strong>阶段二真值</strong> [cite: 53]</p>
                       <ul>
-                        <li>属性名: 属性值</li>
-                        <li>属性名: 属性值</li>
-                        <li>属性名: 属性值</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 54]</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 54]</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 54]</li>
                       </ul>
                     </div>
                   </div>
                 </div>
                 
                 <div class="sub-box mt-2">
-                  <div class="sub-box-title">认知传播偏差测试结果</div>
-                  <div class="deviation-header">偏差值: 数值</div>
+                  [cite_start]<div class="sub-box-title">认知传播偏差测试结果 [cite: 39]</div>
+                  [cite_start]<div class="deviation-header">偏差值: 数值 [cite: 67]</div>
                   <div class="sub-box-content d-flex justify-content-around">
                     <div>
-                      <p><strong>阶段三输出:</strong></p>
-                      <p>群体协商后的结果</p>
+                      [cite_start]<p><strong>阶段三输出:</strong> [cite: 55]</p>
+                      [cite_start]<p>群体协商后的结果 [cite: 56]</p>
                     </div>
                     <div>
-                      <p><strong>阶段四输出:</strong></p>
-                      <p>危险等级</p>
+                      [cite_start]<p><strong>阶段四输出:</strong> [cite: 57]</p>
+                      [cite_start]<p>危险等级 [cite: 57]</p>
                     </div>
                   </div>
                 </div>
@@ -124,54 +124,54 @@
           <b-row class="mt-3">
             <b-col cols="6" class="pr-2">
               <div class="module-box">
-                <p class="module-title">多智能体协商</p>
+                [cite_start]<p class="module-title">多智能体协商 [cite: 20]</p>
                 
                 <div class="sub-box">
-                  <div class="deviation-header">偏差值: 数值</div>
+                  [cite_start]<div class="deviation-header">偏差值: 数值 [cite: 36]</div>
                   <div class="sub-box-content">
-                    <p><strong>阶段三输入:</strong></p>
+                    [cite_start]<p><strong>阶段三输入:</strong> [cite: 21]</p>
                     <ul>
-                      <li>属性名: 属性值</li>
-                      <li>属性名: 属性值</li>
-                      <li>属性名: 属性值</li>
+                      [cite_start]<li>属性名: 属性值 [cite: 22]</li>
+                      [cite_start]<li>属性名: 属性值 [cite: 22]</li>
+                      [cite_start]<li>属性名: 属性值 [cite: 22]</li>
                     </ul>
                   </div>
                 </div>
                 
                 <div class="sub-box mt-2">
-                  <div class="sub-box-title">模块偏差测试结果</div>
-                  <div class="deviation-header">偏差值: 数值</div>
+                  [cite_start]<div class="sub-box-title">模块偏差测试结果 [cite: 23]</div>
+                  [cite_start]<div class="deviation-header">偏差值: 数值 [cite: 27]</div>
                   <div class="sub-box-content d-flex justify-content-between">
                     <div>
-                      <p><strong>阶段三输入:</strong></p>
+                      [cite_start]<p><strong>阶段三输入:</strong> [cite: 24]</p>
                       <ul>
-                        <li>属性名: 属性值</li>
-                        <li>属性名: 属性值</li>
-                        <li>属性名: 属性值</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 25]</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 25]</li>
+                        [cite_start]<li>属性名: 属性值 [cite: 25]</li>
                       </ul>
                     </div>
                     <div>
-                      <p><strong>阶段三真值:</strong></p>
-                      <p>协商后的结果</p>
+                      [cite_start]<p><strong>阶段三真值:</strong> [cite: 29]</p>
+                      [cite_start]<p>协商后的结果 [cite: 30]</p>
                     </div>
                     <div>
-                      <p><strong>阶段三输出:</strong></p>
-                      <p>协商后的结果</p>
+                      [cite_start]<p><strong>阶段三输出:</strong> [cite: 31]</p>
+                      [cite_start]<p>协商后的结果 [cite: 33]</p>
                     </div>
                   </div>
                 </div>
                 
                 <div class="sub-box mt-2">
-                  <div class="sub-box-title">认知传播偏差测试结果</div>
-                  <div class="deviation-header">偏差值: 数值</div>
+                  [cite_start]<div class="sub-box-title">认知传播偏差测试结果 [cite: 26]</div>
+                  [cite_start]<div class="deviation-header">偏差值: 数值 [cite: 44]</div>
                   <div class="sub-box-content d-flex justify-content-between">
                     <div>
-                      <p><strong>阶段三输出:</strong></p>
-                      <p>协商后的结果</p>
+                      [cite_start]<p><strong>阶段三输出:</strong> [cite: 28]</p>
+                      [cite_start]<p>协商后的结果 [cite: 32]</p>
                     </div>
                     <div>
-                      <p><strong>阶段四输出:</strong></p>
-                      <p>危险等级</p>
+                      [cite_start]<p><strong>阶段四输出:</strong> [cite: 42]</p>
+                      [cite_start]<p>危险等级 [cite: 43]</p>
                     </div>
                   </div>
                 </div>
@@ -181,23 +181,23 @@
             
             <b-col cols="6" class="pl-2">
               <div class="module-box">
-                <p class="module-title">决策选择</p>
+                [cite_start]<p class="module-title">决策选择 [cite: 37]</p>
                 
                 <div class="sub-box mt-2">
-                  <div class="sub-box-title">模块偏差测试结果</div>
-                  <div class="deviation-header">偏差值: 数值</div>
+                  [cite_start]<div class="sub-box-title">模块偏差测试结果 [cite: 38]</div>
+                  [cite_start]<div class="deviation-header">偏差值: 数值 [cite: 69]</div>
                   <div class="sub-box-content d-flex justify-content-around">
                     <div>
-                      <p><strong>阶段三输出:</strong></p>
-                      <p>协商后的结果</p>
+                      [cite_start]<p><strong>阶段三输出:</strong> [cite: 58]</p>
+                      [cite_start]<p>协商后的结果 [cite: 59]</p>
                     </div>
                     <div>
-                      <p><strong>阶段四输出:</strong></p>
-                      <p>危险等级</p>
+                      [cite_start]<p><strong>阶段四输出:</strong> [cite: 60]</p>
+                      [cite_start]<p>危险等级 [cite: 60]</p>
                     </div>
                     <div>
-                      <p><strong>阶段四真值:</strong></p>
-                      <p>危险等级</p>
+                      [cite_start]<p><strong>阶段四真值:</strong> [cite: 61]</p>
+                      [cite_start]<p>危险等级 [cite: 61]</p>
                     </div>
                   </div>
                 </div>
@@ -214,26 +214,26 @@
     
     <b-row class="justify-content-center mt-4 pb-5">
       <b-col cols="10" style="position: relative;">
-        <div class="box-label">诊断结果</div>
+        [cite_start]<div class="box-label">诊断结果 [cite: 45]</div>
         
         <div class="diagnosis-results-container p-3">
           <b-row>
             <b-col cols="4" class="text-center">
               <div class="diagnosis-card-pdf">
-                <p class="diagnosis-label-pdf">准确率</p>
-                <p class="diagnosis-value-pdf">86%</p>
+                [cite_start]<p class="diagnosis-label-pdf">准确率 [cite: 40]</p>
+                [cite_start]<p class="diagnosis-value-pdf">86% [cite: 41]</p>
               </div>
             </b-col>
             <b-col cols="4" class="text-center">
               <div class="diagnosis-card-pdf">
-                <p class="diagnosis-label-pdf">偏差模块</p>
-                <p class="diagnosis-value-pdf">模块名称</p>
+                [cite_start]<p class="diagnosis-label-pdf">偏差模块 [cite: 46]</p>
+                [cite_start]<p class="diagnosis-value-pdf">模块名称 [cite: 47]</p>
               </div>
             </b-col>
             <b-col cols="4" class="text-center">
               <div class="diagnosis-card-pdf">
-                <p class="diagnosis-label-pdf">不一致性根因召回率</p>
-                <p class="diagnosis-value-pdf">73%</p>
+                [cite_start]<p class="diagnosis-label-pdf">不一致性根因召回率 [cite: 65]</p>
+                [cite_start]<p class="diagnosis-value-pdf">73% [cite: 66]</p>
               </div>
             </b-col>
           </b-row>

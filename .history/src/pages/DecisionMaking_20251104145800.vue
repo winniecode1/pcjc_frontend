@@ -97,7 +97,7 @@
 
 <script>
 import axios from 'axios';
-const API_BASE_URL = 'http://10.109.253.71:12356';
+const API_BASE_URL = 'http://10.109.253.71:5236';
 
 export default {
   name: 'DecisionMaking',
