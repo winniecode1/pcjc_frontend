@@ -541,7 +541,7 @@ export default {
   transform: translateX(-50%);
   background-color: #EAF4FE;
   padding: 0 6px;
-  color: black;
+  color: red;
   font-size: 0.8rem;
   font-weight: bold;
   z-index: 10;

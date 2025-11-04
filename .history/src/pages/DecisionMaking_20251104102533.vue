@@ -5,7 +5,7 @@
 
     <!-- 标题（严格匹配图片标题） -->
     <div class="title-container">
-      <h1 class="newTitle">决策选择认知偏差检测</h1>
+      <h1 class="newTitle">决策选择认知偏差检测 多时序图像数据</h1>
     </div>
 
     <!-- 核心布局：左列（3份）+ 右列（9份），满屏分布 -->
@@ -97,7 +97,6 @@
 
 <script>
 import axios from 'axios';
-const API_BASE_URL = 'http://10.109.253.71:12356';
 
 export default {
   name: 'DecisionMaking',
@@ -145,7 +144,7 @@ export default {
     async fetchBackendData() {
       this.isLoading = true;
       try {
-        const response = await axios.post(`${API_BASE_URL}/analyze-weapon`, {
+        const response = await axios.post('/analyze-weapon', {
           weapon_model: this.apiConfig.weaponModel,
           model_img_dir: this.apiConfig.imgDir,
           txt_file_path: this.apiConfig.txtPath,

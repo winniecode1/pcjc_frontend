@@ -3,138 +3,132 @@
     <div class="register" :style="{width: fullWidth+'px', height:fullHeight+'px'}"></div>
     <div class="img_box" :style="{width: fullWidth+'px'}"></div>
     
-    <!-- 标题区域（紧凑无多余空白） -->
-    <b-row class="justify-content-center pt-2">
+    <!-- 标题区域 -->
+    <b-row class="justify-content-center pt-5">
       <b-col cols="12" class="text-center">
         <p class="newTitle text-center">多模态信息认知偏差检测</p>
       </b-col>
     </b-row>
 
-    <!-- 核心三列布局（统一高度+上下对齐） -->
-    <b-row class="justify-content-center pt-1 px-2">
-      <!-- 左边列：文件选择 + 开始检测按钮（统一高度+紧凑布局） -->
-      <b-col cols="3" class="left-column px-1">
-        <div class="column-inner">
-          <!-- 文件选择列表 -->
-          <div class="file-select-container mb-1">
-            <span class="select-label">选择数据 (1-100个)：</span>
-            <div class="server-video-list overflow-auto">
-              <div 
-                v-for="video in serverVideos" 
-                :key="video.index"
-                class="video-item"
-                :class="{ 'selected': isSelected(video) }"
-                @click="toggleSelectVideo(video)"
-              >
-                {{ video.name }}
-              </div>
-            </div>
-          </div>
-          
-          <!-- 已选择数据 -->
-          <div class="selected-files-container mb-1">
-            <span class="selected-label">已选择：</span>
-            <div class="selected-video-list overflow-auto">
-              <div class="selected-item" v-for="(video, idx) in selectedFiles" :key="idx">
-                {{ video.name }}
-                <span class="close-icon" @click.stop="removeSelectedVideo(idx)">×</span>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 上传与开始检测按钮（靠下排列，无多余空白） -->
-          <div class="action-buttons">
-            <div class="upload-area mb-1">
-              <b-form-file
-                v-model="uploadedFile"
-                :state="Boolean(uploadedFile)"
-                placeholder="选择视频"
-                drop-placeholder="拖拽至此"
-                accept="video/*"
-                class="upload-input"
-                browse-text="上传"
-              ></b-form-file>
-            </div>
-            <b-button 
-              @click="startDetection" 
-              variant="primary" 
-              :disabled="selectedFiles.length === 0 || isLoading"
-              class="start-btn w-100"
+    <!-- 核心三列布局：左-中-右 -->
+    <b-row class="justify-content-center pt-4 px-4">
+      <!-- 左边列：文件选择 + 开始检测按钮 -->
+      <b-col cols="3" class="left-column">
+        <!-- 文件选择列表 -->
+        <div class="file-select-container">
+          <span class="select-label">选择数据 (1到100个文件)：</span>
+          <div class="server-video-list overflow-auto">
+            <div 
+              v-for="video in serverVideos" 
+              :key="video.index"
+              class="video-item"
+              :class="{ 'selected': isSelected(video) }"
+              @click="toggleSelectVideo(video)"
             >
-              <b-spinner small v-if="isLoading"></b-spinner>
-              {{ isLoading ? (progressMessage || '检测中') : '开始检测' }}
-            </b-button>
+              {{ video.name }}
+            </div>
+          </div>
+        </div>
+        
+        <!-- 已选择数据 -->
+        <div class="selected-files-container mt-4">
+          <span class="selected-label">已选择的数据：</span>
+          <div class="selected-video-list overflow-auto">
+            <div class="selected-item" v-for="(video, idx) in selectedFiles" :key="idx">
+              {{ video.name }}
+              <span class="close-icon" @click.stop="removeSelectedVideo(idx)">×</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 上传与开始检测按钮 -->
+        <div class="action-buttons mt-4">
+          <div class="upload-area mb-3">
+            <b-form-file
+              v-model="uploadedFile"
+              :state="Boolean(uploadedFile)"
+              placeholder="选择视频..."
+              drop-placeholder="拖拽视频到这里..."
+              accept="video/*"
+              class="upload-input"
+              browse-text="上传文件"
+            ></b-form-file>
+          </div>
+          <b-button 
+            @click="startDetection" 
+            variant="primary" 
+            :disabled="selectedFiles.length === 0 || isLoading"
+            class="start-btn w-100"
+          >
+            <b-spinner small v-if="isLoading"></b-spinner>
+            {{ isLoading ? (progressMessage || '检测中...') : '开始检测' }}
+          </b-button>
+        </div>
+      </b-col>
+
+      <!-- 中间列：原视频 + 处理后视频 -->
+      <b-col cols="5" class="middle-column mx-4">
+        <!-- 原视频 -->
+        <div class="video-container mb-5">
+          <div class="box-label">原视频</div>
+          <div class="video-placeholder">
+            <video 
+              v-if="selectedFiles.length > 0" 
+              :src="selectedFiles[0].url" 
+              controls 
+              class="image-display"
+              @error="handleVideoError"
+            ></video>
+            <div v-else class="placeholder-text">请选择视频</div>
+          </div>
+        </div>
+        
+        <!-- 处理后视频 -->
+        <div class="video-container">
+          <div class="box-label">多模态检测结果 ({{ taskId || 'N/A' }})</div>
+          <div class="video-placeholder">
+            <video 
+              v-if="processedVideoURL" 
+              :src="processedVideoURL" 
+              controls 
+              class="image-display"
+              :key="processedVideoURL"
+              @error="handleVideoError"
+            ></video>
+            <div v-else-if="isLoading" class="placeholder-text">检测进行中...</div>
+            <div v-else class="placeholder-text">检测结果将在这里显示</div>
           </div>
         </div>
       </b-col>
 
-      <!-- 中间列：原视频 + 处理后视频（与左右列高度对齐） -->
-      <b-col cols="5" class="middle-column mx-1 px-1">
-        <div class="column-inner">
-          <!-- 原视频 -->
-          <div class="video-container mb-2">
-            <div class="box-label">原视频</div>
-            <div class="video-placeholder">
-              <video 
-                v-if="selectedFiles.length > 0" 
-                :src="selectedFiles[0].url" 
-                controls 
-                class="image-display"
-                @error="handleVideoError"
-              ></video>
-              <div v-else class="placeholder-text">请选择视频</div>
-            </div>
-          </div>
-          
-          <!-- 处理后视频（无底部空白） -->
-          <div class="video-container">
-            <div class="box-label">多模态检测结果 ({{ taskId || 'N/A' }})</div>
-            <div class="video-placeholder">
-              <video 
-                v-if="processedVideoURL" 
-                :src="processedVideoURL" 
-                controls 
-                class="image-display"
-                :key="processedVideoURL"
-                @error="handleVideoError"
-              ></video>
-              <div v-else-if="isLoading" class="placeholder-text">检测进行中...</div>
-              <div v-else class="placeholder-text">检测结果将在这里显示</div>
-            </div>
+      <!-- 右边列：偏差检测结果文本 + 准确率 -->
+      <b-col cols="3" class="right-column">
+        <!-- 偏差检测结果文本 -->
+        <div class="description-container mb-5">
+          <div class="box-label">偏差检测结果</div>
+          <div class="description-box p-3 overflow-auto">
+            <p v-if="fullResult.video_description" class="mb-1 text-left">
+              {{ fullResult.video_description }}
+            </p>
+            <p v-if="fullResult.key_frame_detection" class="mb-1 text-left">
+              <span class="text-red">id:{{ fullResult.key_frame_detection.frame_idx }} {{ getMainObject() }} {{ getMainConfidence().toFixed(2) }}</span>
+            </p>
+            <p v-else-if="!isLoading" class="text-left">
+              {{ resultMessage || '检测完成后会在这里显示结果信息。' }}
+            </p>
           </div>
         </div>
-      </b-col>
-
-      <!-- 右边列：偏差检测结果文本（拉长） + 准确率（无空白） -->
-      <b-col cols="3" class="right-column px-1">
-        <div class="column-inner">
-          <!-- 偏差检测结果文本（拉长填充空间） -->
-          <div class="description-container flex-grow-1">
-            <div class="box-label">偏差检测结果</div>
-            <div class="description-box p-2 overflow-auto">
-              <p v-if="fullResult.video_description" class="mb-1 text-left small-text">
-                {{ fullResult.video_description }}
-              </p>
-              <p v-if="fullResult.key_frame_detection" class="mb-1 text-left">
-                <span class="text-red">id:{{ fullResult.key_frame_detection.frame_idx }} {{ getMainObject() }} {{ getMainConfidence().toFixed(2) }}</span>
-              </p>
-              <p v-else-if="!isLoading" class="text-left small-text">
-                {{ resultMessage || '检测完成后显示结果' }}
-              </p>
-            </div>
-          </div>
-          
-          <!-- 偏差检测准确率（紧接结果框，无空白） -->
-          <div class="metric-container mt-1">
-            <div class="box-label">偏差检测准确率</div>
-            <div class="metric-box">
-              <template v-if="fullResult.accuracy_results && fullResult.accuracy_results.detection">
-                 {{ (fullResult.accuracy_results.detection.accuracy * 100).toFixed(2) + '%' }}
-              </template>
-              <template v-else>
-                 N/A
-              </template>
-            </div>
+        
+        <!-- 偏差检测准确率 -->
+        <div class="metric-container">
+          <div class="box-label">偏差检测准确率</div>
+          <div class="metric-box">
+            <template v-if="fullResult.accuracy_results && fullResult.accuracy_results.detection">
+               {{ (fullResult.accuracy_results.detection.accuracy * 100).toFixed(2) + '%' }}
+            </template>
+            <template v-else>
+               N/A
+            </template>
           </div>
         </div>
       </b-col>
@@ -226,7 +220,7 @@ export default {
       if (isExist) {
         this.selectedFiles = this.selectedFiles.filter(item => item.name !== video.name);
       } else {
-        // 限制最多选择100个文件（符合要求）
+        // 限制最多选择100个文件（符合图片要求）
         if (this.selectedFiles.length < 100) {
           this.selectedFiles.push(video);
         } else {
@@ -263,7 +257,7 @@ export default {
     async fetchServerVideos() {
       try {
         this.isLoading = true;
-        this.progressMessage = "加载视频列表...";
+        this.progressMessage = "正在加载视频列表...";
         const response = await axios.get(LIST_API_URL);
         const filenames = response.data.filenames || [];
         // 构造视频列表（包含可访问URL）
@@ -273,7 +267,7 @@ export default {
           index: index
         }));
         this.progressMessage = null;
-        this.resultMessage = `加载 ${this.serverVideos.length} 个视频`;
+        this.resultMessage = `成功加载 ${this.serverVideos.length} 个视频文件`;
       } catch (error) {
         console.error("获取服务器视频列表失败:", error);
         this.resultMessage = "获取视频列表失败，请检查服务器连接";
@@ -284,7 +278,7 @@ export default {
     // 上传视频到服务器（真实接口对接）
     async uploadFileToServer(fileObject) {
       this.isLoading = true;
-      this.progressMessage = "上传中...";
+      this.progressMessage = "正在上传文件...";
       const formData = new FormData();
       formData.append('video', fileObject); // 字段名与后端一致
 
@@ -298,7 +292,7 @@ export default {
         });
 
         if (response.data.status === 'success') {
-          this.progressMessage = "上传成功，刷新列表...";
+          this.progressMessage = "上传成功，刷新视频列表...";
           await this.fetchServerVideos(); // 刷新列表
           // 自动选中新上传的视频
           const newVideo = this.serverVideos.find(v => v.name === fileObject.name);
@@ -310,7 +304,7 @@ export default {
         }
       } catch (error) {
         console.error("文件上传失败:", error);
-        this.resultMessage = "上传失败：" + error.message;
+        this.resultMessage = "文件上传失败：" + error.message;
         this.uploadedFile = null; // 重置上传框
       } finally {
         this.isLoading = false;
@@ -325,7 +319,7 @@ export default {
       // 目前支持单个视频检测（可扩展批量）
       const targetVideo = this.selectedFiles[0];
       this.isLoading = true;
-      this.progressMessage = `检测 ${targetVideo.name}...`;
+      this.progressMessage = `正在对 ${targetVideo.name} 进行检测...`;
       this.resultMessage = "检测进行中...";
 
       try {
@@ -339,7 +333,7 @@ export default {
         }
 
         this.taskId = analyzeResponse.data.task_id;
-        this.progressMessage = `任务ID: ${this.taskId} 处理中...`;
+        this.progressMessage = `任务ID: ${this.taskId}，处理中...`;
 
         // 步骤2：获取检测结果（轮询直到完成）
         const getResult = async () => {
@@ -393,17 +387,14 @@ export default {
   min-height: 100vh;
   font-family: "Helvetica Neue";
   z-index: 2;
-  padding: 0 5px 10px;
-  margin: 0;
+  padding-bottom: 50px;
 }
 
 .newTitle {
-  font-size: calc(1.5vw + 0.8rem);
+  font-size: calc(2vw + 1rem);
   color: #2168BE;
   font-weight: bolder;
   letter-spacing: 0.1em;
-  margin: 0;
-  padding: 3px 0;
 }
 
 .register {
@@ -427,51 +418,28 @@ export default {
   z-index: -1;
 }
 
-/* 三列布局核心样式（统一高度+上下对齐） */
-.left-column, .middle-column, .right-column {
-  display: flex;
-  height: calc(100vh - 80px); // 统一三列高度，确保上下对齐
-  padding: 0 !important;
-}
-
-.column-inner {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: 8px;
-}
-
-/* 左边列样式（紧凑无空白） */
-.file-select-container, .selected-files-container {
-  background-color: #fff;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 8px;
-  flex-shrink: 0;
-}
-
+/* 选择数据区域样式 */
 .select-label, .selected-label {
   font-weight: bold;
   color: #2168BE;
-  font-size: 0.85rem;
+  font-size: 1rem;
   white-space: nowrap;
 }
 
-.server-video-list, .selected-video-list {
-  max-height: 140px;
-  margin-top: 6px;
-  padding-right: 4px;
+.server-video-list {
+  max-width: calc(100% - 150px);
+  overflow-x: auto;
+  padding-bottom: 5px;
 }
 
 .video-item {
-  padding: 3px 6px;
-  margin: 0 0 3px 0;
+  padding: 6px 12px;
+  margin: 0 8px 8px 0;
   background-color: #fff;
   border: 1px solid #ccc;
-  border-radius: 3px;
+  border-radius: 20px;
   cursor: pointer;
   transition: all 0.3s;
-  font-size: 0.8rem;
 }
 
 .video-item.selected {
@@ -480,82 +448,69 @@ export default {
   border-color: #2168BE;
 }
 
+.selected-video-list {
+  max-width: calc(100% - 150px);
+  overflow-x: auto;
+  padding-bottom: 5px;
+}
+
 .selected-item {
-  padding: 2px 6px;
-  margin: 0 0 3px 0;
+  padding: 6px 12px;
+  margin: 0 8px 8px 0;
   background-color: #e1f0ff;
   border: 1px solid #2168BE;
-  border-radius: 3px;
+  border-radius: 20px;
   position: relative;
-  padding-right: 18px;
-  font-size: 0.8rem;
+  padding-right: 25px;
 }
 
 .close-icon {
   position: absolute;
-  right: 4px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
   color: #2168BE;
   cursor: pointer;
   font-weight: bold;
-  font-size: 0.8rem;
 }
 
-.action-buttons {
-  margin-top: auto; // 靠下排列，填充底部空间
-  flex-shrink: 0;
-}
-
+/* 上传区域样式 */
 .upload-area {
-  width: 100%;
-  margin-bottom: 6px !important;
-}
-
-.upload-input {
-  font-size: 0.8rem;
-  padding: 4px;
+  width: 300px;
 }
 
 .start-btn {
-  width: 100%;
-  font-size: 0.85rem;
-  padding: 6px 0;
+  width: 150px;
 }
 
-/* 中间列样式（与左右列高度对齐，无空白） */
-.middle-column .column-inner {
-  justify-content: center;
-}
-
-.video-container {
-  width: 100%;
-  flex-shrink: 0;
+/* 视频容器样式 */
+.video-container, .metric-container, .description-container {
+  padding: 10px;
   position: relative;
 }
 
 .box-label {
   position: absolute;
-  top: -10px;
+  top: -15px;
   left: 50%;
   transform: translateX(-50%);
   background-color: #EAF4FE;
-  padding: 0 6px;
-  color: black;
-  font-size: 0.8rem;
+  padding: 0 10px;
+  color: red;
+  font-size: 14px;
   font-weight: bold;
   z-index: 10;
 }
 
 .video-placeholder {
-  height: 290px; // 优化高度，与左右列对齐
+  height: 400px;
   border: 2px solid #ccc;
   display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
   background-color: #fff;
-  margin-top: 6px;
+  margin-top: 10px;
 }
 
 .video-placeholder video {
@@ -566,104 +521,60 @@ export default {
 
 .placeholder-text {
   color: #999;
-  font-size: 0.9rem;
+  font-size: 1.2rem;
 }
 
-/* 右边列样式（结果框拉长，无空白） */
-.right-column .column-inner {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.description-container {
-  flex-grow: 1; // 自动拉长，填充垂直空间
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
+/* 描述区域样式 */
 .description-box {
-  flex-grow: 1; // 跟随容器拉长
+  min-height: 200px;
   border: 2px solid #ccc;
   background-color: #fff;
-  margin-top: 6px;
+  margin-top: 10px;
   overflow-y: auto;
   text-align: left;
-  line-height: 1.5;
-  padding: 6px !important;
-}
-
-.small-text {
-  font-size: 0.8rem;
+  line-height: 1.8;
 }
 
 .text-red {
   color: red;
   font-weight: bold;
-  font-size: 0.85rem;
 }
 
-.metric-container {
-  flex-shrink: 0; // 不压缩准确率模块
-  position: relative;
-}
-
+/* 准确率区域样式 */
 .metric-box {
-  height: 100px;
-  line-height: 100px;
+  height: 150px;
+  line-height: 150px;
   border: 2px solid #ccc;
-  font-size: 1.8rem;
+  font-size: 3rem;
   font-weight: bold;
   color: #2168BE;
   background-color: #fff;
-  margin-top: 6px;
-  text-align: center;
+  margin-top: 10px;
 }
 
-/* 响应式调整（保持紧凑对齐） */
+/* 响应式调整 */
 @media (max-width: 1200px) {
-  .b-row.justify-content-center.pt-1.px-2 {
-    flex-direction: column;
-  }
-  
-  .left-column, .middle-column, .right-column {
-    width: 100%;
+  .b-col[cols="5"] {
+    flex: 0 0 100%;
     max-width: 100%;
-    margin: 0 0 10px 0 !important;
-    height: auto;
-  }
-  
-  .server-video-list, .selected-video-list {
-    max-height: 120px;
-  }
-  
-  .video-placeholder {
-    height: 220px;
-  }
-  
-  .description-box {
-    min-height: 180px;
-  }
-  
-  .metric-box {
-    height: 80px;
-    line-height: 80px;
-    font-size: 1.5rem;
+    margin-bottom: 20px;
   }
 }
 
 @media (max-width: 768px) {
+  .server-video-list, .selected-video-list {
+    max-width: calc(100% - 120px);
+  }
+  .upload-area {
+    width: 200px;
+  }
   .video-placeholder {
-    height: 180px;
+    height: 300px;
   }
-  
-  .description-box {
-    min-height: 150px;
-  }
-  
   .metric-box {
-    font-size: 1.3rem;
+    font-size: 2rem;
+    height: 120px;
+    line-height: 120px;
   }
 }
 </style>

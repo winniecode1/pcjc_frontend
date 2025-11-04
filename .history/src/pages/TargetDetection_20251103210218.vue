@@ -3,138 +3,132 @@
     <div class="register" :style="{width: fullWidth+'px', height:fullHeight+'px'}"></div>
     <div class="img_box" :style="{width: fullWidth+'px'}"></div>
     
-    <!-- 标题区域（紧凑无多余空白） -->
-    <b-row class="justify-content-center pt-2">
+    <!-- 标题区域（紧凑布局） -->
+    <b-row class="justify-content-center pt-3">
       <b-col cols="12" class="text-center">
         <p class="newTitle text-center">多模态信息认知偏差检测</p>
       </b-col>
     </b-row>
 
-    <!-- 核心三列布局（统一高度+上下对齐） -->
-    <b-row class="justify-content-center pt-1 px-2">
-      <!-- 左边列：文件选择 + 开始检测按钮（统一高度+紧凑布局） -->
-      <b-col cols="3" class="left-column px-1">
-        <div class="column-inner">
-          <!-- 文件选择列表 -->
-          <div class="file-select-container mb-1">
-            <span class="select-label">选择数据 (1-100个)：</span>
-            <div class="server-video-list overflow-auto">
-              <div 
-                v-for="video in serverVideos" 
-                :key="video.index"
-                class="video-item"
-                :class="{ 'selected': isSelected(video) }"
-                @click="toggleSelectVideo(video)"
-              >
-                {{ video.name }}
-              </div>
-            </div>
-          </div>
-          
-          <!-- 已选择数据 -->
-          <div class="selected-files-container mb-1">
-            <span class="selected-label">已选择：</span>
-            <div class="selected-video-list overflow-auto">
-              <div class="selected-item" v-for="(video, idx) in selectedFiles" :key="idx">
-                {{ video.name }}
-                <span class="close-icon" @click.stop="removeSelectedVideo(idx)">×</span>
-              </div>
-            </div>
-          </div>
-          
-          <!-- 上传与开始检测按钮（靠下排列，无多余空白） -->
-          <div class="action-buttons">
-            <div class="upload-area mb-1">
-              <b-form-file
-                v-model="uploadedFile"
-                :state="Boolean(uploadedFile)"
-                placeholder="选择视频"
-                drop-placeholder="拖拽至此"
-                accept="video/*"
-                class="upload-input"
-                browse-text="上传"
-              ></b-form-file>
-            </div>
-            <b-button 
-              @click="startDetection" 
-              variant="primary" 
-              :disabled="selectedFiles.length === 0 || isLoading"
-              class="start-btn w-100"
+    <!-- 核心三列布局（紧凑排列，一页展示） -->
+    <b-row class="justify-content-center pt-2 px-3">
+      <!-- 左边列：文件选择 + 开始检测按钮（紧凑布局） -->
+      <b-col cols="3" class="left-column px-2">
+        <!-- 文件选择列表 -->
+        <div class="file-select-container">
+          <span class="select-label">选择数据 (1-100个)：</span>
+          <div class="server-video-list overflow-auto">
+            <div 
+              v-for="video in serverVideos" 
+              :key="video.index"
+              class="video-item"
+              :class="{ 'selected': isSelected(video) }"
+              @click="toggleSelectVideo(video)"
             >
-              <b-spinner small v-if="isLoading"></b-spinner>
-              {{ isLoading ? (progressMessage || '检测中') : '开始检测' }}
-            </b-button>
+              {{ video.name }}
+            </div>
+          </div>
+        </div>
+        
+        <!-- 已选择数据 -->
+        <div class="selected-files-container mt-2">
+          <span class="selected-label">已选择：</span>
+          <div class="selected-video-list overflow-auto">
+            <div class="selected-item" v-for="(video, idx) in selectedFiles" :key="idx">
+              {{ video.name }}
+              <span class="close-icon" @click.stop="removeSelectedVideo(idx)">×</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 上传与开始检测按钮（紧凑排列） -->
+        <div class="action-buttons mt-2">
+          <div class="upload-area mb-2">
+            <b-form-file
+              v-model="uploadedFile"
+              :state="Boolean(uploadedFile)"
+              placeholder="选择视频"
+              drop-placeholder="拖拽至此"
+              accept="video/*"
+              class="upload-input"
+              browse-text="上传"
+            ></b-form-file>
+          </div>
+          <b-button 
+            @click="startDetection" 
+            variant="primary" 
+            :disabled="selectedFiles.length === 0 || isLoading"
+            class="start-btn w-100"
+          >
+            <b-spinner small v-if="isLoading"></b-spinner>
+            {{ isLoading ? (progressMessage || '检测中') : '开始检测' }}
+          </b-button>
+        </div>
+      </b-col>
+
+      <!-- 中间列：原视频 + 处理后视频（紧凑尺寸） -->
+      <b-col cols="5" class="middle-column mx-2 px-2">
+        <!-- 原视频 -->
+        <div class="video-container mb-3">
+          <div class="box-label">原视频</div>
+          <div class="video-placeholder">
+            <video 
+              v-if="selectedFiles.length > 0" 
+              :src="selectedFiles[0].url" 
+              controls 
+              class="image-display"
+              @error="handleVideoError"
+            ></video>
+            <div v-else class="placeholder-text">请选择视频</div>
+          </div>
+        </div>
+        
+        <!-- 处理后视频 -->
+        <div class="video-container">
+          <div class="box-label">多模态检测结果 ({{ taskId || 'N/A' }})</div>
+          <div class="video-placeholder">
+            <video 
+              v-if="processedVideoURL" 
+              :src="processedVideoURL" 
+              controls 
+              class="image-display"
+              :key="processedVideoURL"
+              @error="handleVideoError"
+            ></video>
+            <div v-else-if="isLoading" class="placeholder-text">检测进行中...</div>
+            <div v-else class="placeholder-text">检测结果将在这里显示</div>
           </div>
         </div>
       </b-col>
 
-      <!-- 中间列：原视频 + 处理后视频（与左右列高度对齐） -->
-      <b-col cols="5" class="middle-column mx-1 px-1">
-        <div class="column-inner">
-          <!-- 原视频 -->
-          <div class="video-container mb-2">
-            <div class="box-label">原视频</div>
-            <div class="video-placeholder">
-              <video 
-                v-if="selectedFiles.length > 0" 
-                :src="selectedFiles[0].url" 
-                controls 
-                class="image-display"
-                @error="handleVideoError"
-              ></video>
-              <div v-else class="placeholder-text">请选择视频</div>
-            </div>
-          </div>
-          
-          <!-- 处理后视频（无底部空白） -->
-          <div class="video-container">
-            <div class="box-label">多模态检测结果 ({{ taskId || 'N/A' }})</div>
-            <div class="video-placeholder">
-              <video 
-                v-if="processedVideoURL" 
-                :src="processedVideoURL" 
-                controls 
-                class="image-display"
-                :key="processedVideoURL"
-                @error="handleVideoError"
-              ></video>
-              <div v-else-if="isLoading" class="placeholder-text">检测进行中...</div>
-              <div v-else class="placeholder-text">检测结果将在这里显示</div>
-            </div>
+      <!-- 右边列：偏差检测结果文本 + 准确率（紧凑布局） -->
+      <b-col cols="3" class="right-column px-2">
+        <!-- 偏差检测结果文本 -->
+        <div class="description-container mb-3">
+          <div class="box-label">偏差检测结果</div>
+          <div class="description-box p-2 overflow-auto">
+            <p v-if="fullResult.video_description" class="mb-1 text-left small-text">
+              {{ fullResult.video_description }}
+            </p>
+            <p v-if="fullResult.key_frame_detection" class="mb-1 text-left">
+              <span class="text-red">id:{{ fullResult.key_frame_detection.frame_idx }} {{ getMainObject() }} {{ getMainConfidence().toFixed(2) }}</span>
+            </p>
+            <p v-else-if="!isLoading" class="text-left small-text">
+              {{ resultMessage || '检测完成后显示结果' }}
+            </p>
           </div>
         </div>
-      </b-col>
-
-      <!-- 右边列：偏差检测结果文本（拉长） + 准确率（无空白） -->
-      <b-col cols="3" class="right-column px-1">
-        <div class="column-inner">
-          <!-- 偏差检测结果文本（拉长填充空间） -->
-          <div class="description-container flex-grow-1">
-            <div class="box-label">偏差检测结果</div>
-            <div class="description-box p-2 overflow-auto">
-              <p v-if="fullResult.video_description" class="mb-1 text-left small-text">
-                {{ fullResult.video_description }}
-              </p>
-              <p v-if="fullResult.key_frame_detection" class="mb-1 text-left">
-                <span class="text-red">id:{{ fullResult.key_frame_detection.frame_idx }} {{ getMainObject() }} {{ getMainConfidence().toFixed(2) }}</span>
-              </p>
-              <p v-else-if="!isLoading" class="text-left small-text">
-                {{ resultMessage || '检测完成后显示结果' }}
-              </p>
-            </div>
-          </div>
-          
-          <!-- 偏差检测准确率（紧接结果框，无空白） -->
-          <div class="metric-container mt-1">
-            <div class="box-label">偏差检测准确率</div>
-            <div class="metric-box">
-              <template v-if="fullResult.accuracy_results && fullResult.accuracy_results.detection">
-                 {{ (fullResult.accuracy_results.detection.accuracy * 100).toFixed(2) + '%' }}
-              </template>
-              <template v-else>
-                 N/A
-              </template>
-            </div>
+        
+        <!-- 偏差检测准确率 -->
+        <div class="metric-container">
+          <div class="box-label">偏差检测准确率</div>
+          <div class="metric-box">
+            <template v-if="fullResult.accuracy_results && fullResult.accuracy_results.detection">
+               {{ (fullResult.accuracy_results.detection.accuracy * 100).toFixed(2) + '%' }}
+            </template>
+            <template v-else>
+               N/A
+            </template>
           </div>
         </div>
       </b-col>
@@ -393,7 +387,7 @@ export default {
   min-height: 100vh;
   font-family: "Helvetica Neue";
   z-index: 2;
-  padding: 0 5px 10px;
+  padding: 0 10px 20px;
   margin: 0;
 }
 
@@ -403,7 +397,7 @@ export default {
   font-weight: bolder;
   letter-spacing: 0.1em;
   margin: 0;
-  padding: 3px 0;
+  padding: 5px 0;
 }
 
 .register {
@@ -427,51 +421,44 @@ export default {
   z-index: -1;
 }
 
-/* 三列布局核心样式（统一高度+上下对齐） */
+/* 三列布局基础样式 */
 .left-column, .middle-column, .right-column {
   display: flex;
-  height: calc(100vh - 80px); // 统一三列高度，确保上下对齐
-  padding: 0 !important;
-}
-
-.column-inner {
-  width: 100%;
-  display: flex;
   flex-direction: column;
-  padding: 8px;
+  height: calc(100vh - 80px); // 基于页面高度自适应，确保一页展示
 }
 
-/* 左边列样式（紧凑无空白） */
+/* 左边列样式（紧凑） */
 .file-select-container, .selected-files-container {
   background-color: #fff;
   border: 1px solid #ccc;
   border-radius: 6px;
-  padding: 8px;
+  padding: 10px;
   flex-shrink: 0;
 }
 
 .select-label, .selected-label {
   font-weight: bold;
   color: #2168BE;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   white-space: nowrap;
 }
 
 .server-video-list, .selected-video-list {
-  max-height: 140px;
-  margin-top: 6px;
-  padding-right: 4px;
+  max-height: 150px; // 紧凑高度，确保一页展示
+  margin-top: 8px;
+  padding-right: 5px;
 }
 
 .video-item {
-  padding: 3px 6px;
-  margin: 0 0 3px 0;
+  padding: 4px 8px;
+  margin: 0 0 4px 0;
   background-color: #fff;
   border: 1px solid #ccc;
-  border-radius: 3px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 
 .video-item.selected {
@@ -481,81 +468,81 @@ export default {
 }
 
 .selected-item {
-  padding: 2px 6px;
-  margin: 0 0 3px 0;
+  padding: 3px 8px;
+  margin: 0 0 4px 0;
   background-color: #e1f0ff;
   border: 1px solid #2168BE;
-  border-radius: 3px;
+  border-radius: 4px;
   position: relative;
-  padding-right: 18px;
-  font-size: 0.8rem;
+  padding-right: 20px;
+  font-size: 0.85rem;
 }
 
 .close-icon {
   position: absolute;
-  right: 4px;
+  right: 5px;
   top: 50%;
   transform: translateY(-50%);
   color: #2168BE;
   cursor: pointer;
   font-weight: bold;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 
 .action-buttons {
-  margin-top: auto; // 靠下排列，填充底部空间
+  margin-top: auto; // 固定在左边列底部
   flex-shrink: 0;
 }
 
 .upload-area {
   width: 100%;
-  margin-bottom: 6px !important;
+  margin-bottom: 8px !important;
 }
 
 .upload-input {
-  font-size: 0.8rem;
-  padding: 4px;
+  font-size: 0.85rem;
+  padding: 6px;
 }
 
 .start-btn {
   width: 100%;
-  font-size: 0.85rem;
-  padding: 6px 0;
+  font-size: 0.9rem;
+  padding: 8px 0;
 }
 
-/* 中间列样式（与左右列高度对齐，无空白） */
-.middle-column .column-inner {
+/* 中间列样式（紧凑） */
+.middle-column {
   justify-content: center;
 }
 
 .video-container {
   width: 100%;
   flex-shrink: 0;
-  position: relative;
 }
 
 .box-label {
   position: absolute;
-  top: -10px;
+  top: -12px;
   left: 50%;
   transform: translateX(-50%);
   background-color: #EAF4FE;
-  padding: 0 6px;
-  color: black;
-  font-size: 0.8rem;
+  padding: 0 8px;
+  color: red;
+  font-size: 0.85rem;
   font-weight: bold;
   z-index: 10;
 }
 
 .video-placeholder {
-  height: 290px; // 优化高度，与左右列对齐
+  height: 280px; // 紧凑视频高度，确保两个视频一页展示
   border: 2px solid #ccc;
   display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
   background-color: #fff;
-  margin-top: 6px;
+  margin-top: 8px;
+  position: relative;
 }
 
 .video-placeholder video {
@@ -566,71 +553,66 @@ export default {
 
 .placeholder-text {
   color: #999;
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
-/* 右边列样式（结果框拉长，无空白） */
-.right-column .column-inner {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
+/* 右边列样式（紧凑） */
 .description-container {
-  flex-grow: 1; // 自动拉长，填充垂直空间
+  flex-shrink: 0;
   position: relative;
-  display: flex;
-  flex-direction: column;
 }
 
 .description-box {
-  flex-grow: 1; // 跟随容器拉长
+  min-height: 220px;
+  max-height: 220px; // 紧凑高度，确保一页展示
   border: 2px solid #ccc;
   background-color: #fff;
-  margin-top: 6px;
+  margin-top: 8px;
   overflow-y: auto;
   text-align: left;
-  line-height: 1.5;
-  padding: 6px !important;
+  line-height: 1.6;
+  padding: 8px !important;
 }
 
 .small-text {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 
 .text-red {
   color: red;
   font-weight: bold;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
 .metric-container {
-  flex-shrink: 0; // 不压缩准确率模块
+  margin-top: auto; // 固定在右边列底部
   position: relative;
+  flex-shrink: 0;
 }
 
 .metric-box {
-  height: 100px;
-  line-height: 100px;
+  height: 120px; // 紧凑高度
+  line-height: 120px;
   border: 2px solid #ccc;
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: bold;
   color: #2168BE;
   background-color: #fff;
-  margin-top: 6px;
+  margin-top: 8px;
   text-align: center;
 }
 
-/* 响应式调整（保持紧凑对齐） */
+/* 响应式调整（小屏幕堆叠，仍保证一页展示） */
 @media (max-width: 1200px) {
-  .b-row.justify-content-center.pt-1.px-2 {
+  .b-row.justify-content-center.pt-2.px-3 {
     flex-direction: column;
+    height: auto;
   }
   
   .left-column, .middle-column, .right-column {
     width: 100%;
     max-width: 100%;
-    margin: 0 0 10px 0 !important;
+    margin: 0 0 15px 0 !important;
     height: auto;
   }
   
@@ -644,12 +626,13 @@ export default {
   
   .description-box {
     min-height: 180px;
+    max-height: 180px;
   }
   
   .metric-box {
-    height: 80px;
-    line-height: 80px;
-    font-size: 1.5rem;
+    height: 100px;
+    line-height: 100px;
+    font-size: 1.8rem;
   }
 }
 
@@ -660,10 +643,11 @@ export default {
   
   .description-box {
     min-height: 150px;
+    max-height: 150px;
   }
   
   .metric-box {
-    font-size: 1.3rem;
+    font-size: 1.5rem;
   }
 }
 </style>
