@@ -1,197 +1,193 @@
 <template>
-  <div class="section" :style="{height: `${windowHeight}px`}">
-    <div class="register" :style="{width: `${windowWidth}px`, height: `${windowHeight}px`}"></div>
-    <div class="img_box" :style="{width: `${windowWidth}px`, height: `${windowHeight}px`}"></div>
+  <div class="section">
+    <div class="register" :style="{width: fullWidth+'px', height:fullHeight+'px'}"></div>
+    <div class="img_box" :style="{width: fullWidth+'px'}"></div>
 
-    <!-- 标题（严格匹配图片标题） -->
-    <div class="title-container">
-      <h1 class="newTitle">决策选择认知偏差检测</h1>
-    </div>
+    <!-- 标题区域 -->
+    <b-row class="justify-content-center pt-2">
+      <b-col cols="12" class="text-center">
+        <p class="newTitle">决策选择</p>
+      </b-col>
+    </b-row>
 
-    <!-- 核心布局：左列（3份）+ 右列（9份），满屏分布 -->
-    <div class="core-layout">
+    <!-- 核心布局：左列 + 右列（上图像+下信息） -->
+    <b-row class="justify-content-center pt-1 mb-1">
       <!-- 左列：上-第三阶段文本 → 中-推理按钮 → 下-本阶段文本 -->
-      <div class="left-column">
-        <!-- 第三阶段给出的文字信息 -->
-        <div class="left-module top-module">
-          <div class="module-label">第三阶段给出的文字信息</div>
-          <div class="module-content">
-            <p class="text-content">{{ thirdStageText }}</p>
-          </div>
+      <b-col cols="3" class="mx-2 d-flex flex-column">
+        <!-- 第三阶段文字信息 -->
+        <div class="left-box top-box p-2 mb-1">
+          <div class="box-label">第三阶段给出的文字信息</div>
+          <p class="text-content">{{ previousStageText }}</p>
         </div>
 
-        <!-- 信息推理按键（仅触发接口，无其他功能） -->
-        <div class="button-container">
-          <b-button @click="fetchBackendData" variant="primary" :disabled="isLoading" class="inference-btn">
-            <b-spinner small v-if="isLoading"></b-spinner>
-            {{ isLoading ? '获取数据中...' : '信息推理' }}
-          </b-button>
-        </div>
+        <!-- 信息推理按键 -->
+        <b-button @click="startInference" variant="primary" :disabled="isLoading" class="inference-btn my-1">
+          <b-spinner small v-if="isLoading"></b-spinner>
+          {{ isLoading ? '推理中...' : '信息推理' }}
+        </b-button>
 
-        <!-- 本阶段产生的文本信息 -->
-        <div class="left-module bottom-module">
-          <div class="module-label">本阶段产生的文本信息</div>
-          <div class="module-content">
-            <p class="text-content">{{ currentStageText }}</p>
-          </div>
+        <!-- 本阶段文本信息 -->
+        <div class="left-box bottom-box p-2 mt-1">
+          <div class="box-label">本阶段产生的文本信息</div>
+          <p class="text-content">{{ currentStageText }}</p>
         </div>
-      </div>
+      </b-col>
 
-      <!-- 右列：上-多时序图像 → 下-设备描述+四大指标 -->
-      <div class="right-column">
+      <!-- 右列：上-图像 → 下-设备描述+四个指标 -->
+      <b-col cols="8" class="mx-2 d-flex flex-column">
         <!-- 右上角：多时序图像数据 -->
-        <div class="right-module image-module">
-          <div class="module-label">多时序图像数据</div>
-          <div class="image-grid">
-            <div class="image-item" v-for="(img, idx) in imageList" :key="idx">
-              <img :src="img" alt="多时序图像" class="image-display" v-if="img">
-              <div class="image-placeholder" v-else>图像 {{ idx + 1 }}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 右下角：上-设备描述 → 下-四大指标 -->
-        <div class="right-module bottom-right-module">
-          <!-- 设备描述（严格匹配图片文本） -->
-          <div class="device-desc">
-            <div class="module-label">设备描述</div>
-            <p class="desc-content">对此设备信息进行描述,为模型进行危险评级做铺垫</p>
-          </div>
-
-          <!-- 四大指标：从左到右 → 偏差检测准确率、模型评估危险等级、专家评估危险等级、等级制定 -->
-          <div class="indicators-grid">
-            <!-- 偏差检测准确率（仅数字，图片标注100%） -->
-            <div class="indicator-item">
-              <div class="indicator-label">偏差检测准确率</div>
-              <div class="indicator-value">{{ deviationDetectionAccuracy }}%</div>
-            </div>
-
-            <!-- 模型评估危险等级（后端返回） -->
-            <div class="indicator-item">
-              <div class="indicator-label">模型评估危险等级</div>
-              <div class="indicator-value">{{ modelDangerLevel }}</div>
-            </div>
-
-            <!-- 专家评估危险等级（后端返回，默认与模型一致） -->
-            <div class="indicator-item">
-              <div class="indicator-label">专家评估危险等级</div>
-              <div class="indicator-value">{{ expertDangerLevel }}</div>
-            </div>
-
-            <!-- 等级制定（严格匹配图片：四级→一级战备，带数字） -->
-            <div class="indicator-item level-selection-item">
-              <div class="indicator-label">等级制定</div>
-              <div class="level-list">
-                <div class="level-item" :class="{'active-level': currentLevel === 4}">四级战备</div>
-                <div class="level-item" :class="{'active-level': currentLevel === 3}">三级战备 <span class="level-num">3</span></div>
-                <div class="level-item" :class="{'active-level': currentLevel === 2}">二级战备 <span class="level-num">2</span></div>
-                <div class="level-item" :class="{'active-level': currentLevel === 1}">一级战备 <span class="level-num">1</span></div>
+        <div class="right-top-box p-1 mb-1">
+          <div class="box-label">多时序图像数据</div>
+          <b-row class="image-container">
+            <b-col v-for="(url, index) in multiFrameImageURLs" :key="index" cols="3" class="p-1">
+              <div class="image-placeholder">
+                <img :src="url" alt="多帧行为图" class="image-display" v-if="url">
+                <div v-else class="placeholder-text">图片 {{ index + 1 }}</div>
               </div>
-            </div>
-          </div>
+            </b-col>
+          </b-row>
         </div>
-      </div>
-    </div>
+
+        <!-- 右下角：上-设备描述 → 下-四个指标（准确率+模型等级+专家等级+等级制定） -->
+        <div class="right-bottom-box p-1">
+          <!-- 设备描述 -->
+          <div class="device-desc-box mb-1">
+            <div class="box-label">设备描述</div>
+            <p class="desc-content">对此设备信息进行描述，为模型进行危险评级做铺垫</p>
+          </div>
+
+          <!-- 四个指标横向排列 -->
+          <b-row class="indicators-container">
+            <!-- 准确率（仅数字） -->
+            <b-col cols="2" class="indicator-item text-center">
+              <div class="indicator-label">准确率</div>
+              <div class="indicator-value">{{ accuracyValue }}%</div>
+            </b-col>
+
+            <!-- 模型危险等级 -->
+            <b-col cols="2" class="indicator-item text-center">
+              <div class="indicator-label">模型危险等级</div>
+              <div class="indicator-value">{{ modelDangerLevel }}</div>
+            </b-col>
+
+            <!-- 专家危险等级 -->
+            <b-col cols="2" class="indicator-item text-center">
+              <div class="indicator-label">专家危险等级</div>
+              <div class="indicator-value">{{ expertDangerLevel }}</div>
+            </b-col>
+
+            <!-- 等级制定（战备等级选择） -->
+            <b-col cols="4" class="indicator-item text-center">
+              <div class="indicator-label">等级制定</div>
+              <div class="level-selection">
+                <div v-for="item in dangerLevels" :key="item.level" 
+                     :class="{'active-level': item.level === selectedLevel}"
+                     class="level-item" @click="selectLevel(item.level)">
+                  {{ item.name }}
+                </div>
+              </div>
+            </b-col>
+          </b-row>
+        </div>
+      </b-col>
+    </b-row>
   </div>
 </template>
 
 <script>
 import axios from 'axios';
-const API_BASE_URL = 'http://10.109.253.71:12356';
 
 export default {
   name: 'DecisionMaking',
   data() {
     return {
-      // 窗口尺寸（满屏用）
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
+      // 自适应数据
+      fullWidth: window.innerWidth,
+      fullHeight: window.innerHeight,
       isLoading: false,
 
-      // 后端接口参数（通过环境变量配置，无前端输入）
-      apiConfig: {
-        weaponModel: process.env.VUE_APP_WEAPON_MODEL || 'B-2',
-        imgDir: process.env.VUE_APP_IMG_DIR || '/home/img/B-2',
-        txtPath: process.env.VUE_APP_TXT_PATH || '/home/txt/plane.txt',
-        apiKey: process.env.VUE_APP_DASHSCOPE_API_KEY
-      },
+      // 左列文本信息
+      previousStageText: '发现目标武器装备，位于指定区域，行为模式与已知威胁匹配',
+      currentStageText: '设备信息已描述完成，危险评级准备就绪',
 
-      // 页面所有数据（初始为空，全从后端获取）
-      thirdStageText: '', // 第三阶段文本（后端返回或前端缓存）
-      currentStageText: '', // 本阶段总结（后端summary）
-      imageList: [], // 多时序图像（后端返回图片URL列表）
-      deviationDetectionAccuracy: 100, // 偏差检测准确率（图片固定100%）
-      modelDangerLevel: '', // 模型危险等级（后端model_analysis_danger_level转换）
-      expertDangerLevel: '', // 专家危险等级（后端local_txt_danger_level转换）
-      currentLevel: 4 // 当前激活的战备等级（后端危险等级对应）
+      // 右上角多帧图片
+      multiFrameImageURLs: [
+        '/api/decision_image/frame_01.png',
+        '/api/decision_image/frame_02.png',
+        '/api/decision_image/frame_03.png',
+        '/api/decision_image/frame_04.png'
+      ],
+
+      // 右下角指标数据
+      accuracyValue: 100, // 准确率（仅数字）
+      modelDangerLevel: '四级战备',
+      expertDangerLevel: '四级战备',
+
+      // 等级制定（战备等级）
+      dangerLevels: [
+        { level: 1, name: '一级战备' },
+        { level: 2, name: '二级战备' },
+        { level: 3, name: '三级战备' },
+        { level: 4, name: '四级战备' }
+      ],
+      selectedLevel: 4 // 当前选中等级
     };
   },
   mounted() {
-    // 监听窗口 resize，保持满屏
     window.addEventListener('resize', this.handleResize);
-    // 初始加载一次数据
-    this.fetchBackendData();
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
   },
   methods: {
     handleResize() {
-      this.windowWidth = window.innerWidth;
-      this.windowHeight = window.innerHeight;
+      this.fullWidth = window.innerWidth;
+      this.fullHeight = window.innerHeight;
     },
 
-    // 从后端获取所有数据
-    async fetchBackendData() {
+    // 选择等级制定的战备等级
+    selectLevel(level) {
+      this.selectedLevel = level;
+      // 同步更新危险等级显示
+      const selected = this.dangerLevels.find(item => item.level === level);
+      this.modelDangerLevel = selected.name;
+      this.expertDangerLevel = selected.name;
+    },
+
+    // 信息推理接口调用
+    async startInference() {
       this.isLoading = true;
       try {
-        const response = await axios.post(`${API_BASE_URL}/analyze-weapon`, {
-          weapon_model: this.apiConfig.weaponModel,
-          model_img_dir: this.apiConfig.imgDir,
-          txt_file_path: this.apiConfig.txtPath,
-          api_key: this.apiConfig.apiKey
+        // 接口参数通过环境变量配置（无前端输入框）
+        const response = await axios.post('/analyze-weapon', {
+          weapon_model: process.env.VUE_APP_DEFAULT_WEAPON_MODEL || 'B-2',
+          model_img_dir: process.env.VUE_APP_DEFAULT_IMG_DIR || '/home/img/B-2',
+          txt_file_path: process.env.VUE_APP_DEFAULT_TXT_PATH || '/home/txt/plane.txt',
+          api_key: process.env.VUE_APP_DASHSCOPE_API_KEY
         });
 
         const result = response.data;
         if (result.status === 'success') {
-          this.parseBackendData(result.data);
-        } else {
-          console.error('后端返回错误：', result.error.message);
-          this.currentStageText = `数据获取失败：${result.error.message}`;
+          const data = result.data;
+          // 更新本阶段文本
+          this.currentStageText = data.summary;
+          // 更新准确率（保留1位小数）
+          this.accuracyValue = Math.round(data.comprehensive_accuracy * 100 * 10) / 10;
+          // 更新危险等级（后端危险等级转战备等级）
+          const combatLevel = this.convertToCombatLevel(data.model_analysis_danger_level);
+          this.modelDangerLevel = combatLevel;
+          this.expertDangerLevel = combatLevel;
+          // 同步选中等级
+          this.selectedLevel = this.dangerLevels.find(item => item.name === combatLevel).level;
         }
       } catch (error) {
         console.error('接口调用失败：', error);
-        this.currentStageText = '接口调用失败，请检查网络或配置';
       } finally {
         this.isLoading = false;
       }
     },
 
-    // 解析后端数据并更新页面
-    parseBackendData(backendData) {
-      // 1. 第三阶段文本（假设后端未返回，用固定场景文本，可替换为前端缓存数据）
-      this.thirdStageText = `发现目标武器型号：${backendData.weapon_model}，位于指定区域，行为模式初步匹配已知威胁，待进一步分析验证`;
-
-      // 2. 本阶段文本（后端summary）
-      this.currentStageText = backendData.summary || '设备性能分析完成，危险等级已评估';
-
-      // 3. 多时序图像（从后端imgDir读取，这里用模拟URL，实际可通过后端返回图片列表）
-      this.imageList = [
-        `${this.apiConfig.imgDir}/frame_1.png`,
-        `${this.apiConfig.imgDir}/frame_2.png`,
-        `${this.apiConfig.imgDir}/frame_3.png`,
-        `${this.apiConfig.imgDir}/frame_4.png`
-      ];
-
-      // 4. 模型/专家危险等级（后端危险等级→战备等级转换）
-      this.modelDangerLevel = this.convertToCombatLevel(backendData.model_analysis_danger_level);
-      this.expertDangerLevel = this.convertToCombatLevel(backendData.local_txt_danger_level);
-
-      // 5. 激活当前战备等级（对应后端危险等级）
-      this.currentLevel = this.getLevelNum(backendData.model_analysis_danger_level);
-    },
-
-    // 后端危险等级（危险等级1-4）→ 战备等级（一级-四级战备）
+    // 后端危险等级（危险等级1-4）转战备等级（一级-四级战备）
     convertToCombatLevel(backendLevel) {
       const levelMap = {
         '危险等级1': '一级战备',
@@ -200,267 +196,185 @@ export default {
         '危险等级4': '四级战备'
       };
       return levelMap[backendLevel] || '四级战备';
-    },
-
-    // 后端危险等级→数字等级（1-4）
-    getLevelNum(backendLevel) {
-      const numMap = {
-        '危险等级1': 1,
-        '危险等级2': 2,
-        '危险等级3': 3,
-        '危险等级4': 4
-      };
-      return numMap[backendLevel] || 4;
     }
   }
 };
 </script>
 
 <style lang="scss" scoped>
-/* 基础样式：满屏无滚动 */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* 基础样式（紧凑+一页展示） */
 .section {
   background-color: #EAF4FE;
   color: #333;
-  font-family: "Helvetica Neue", sans-serif;
+  width: 100%;
+  min-height: 100vh;
+  font-family: "Helvetica Neue";
+  padding: 0 8px;
   overflow: hidden;
-  position: relative;
 }
-.register, .img_box {
+.newTitle {
+  font-size: calc(1.2vw + 0.7rem);
+  color: #2168BE;
+  font-weight: bolder;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+.register {
   position: fixed;
   top: 0;
   left: 0;
+  right: 0;
+  bottom: 0;
   z-index: -1;
+}
+.img_box {
+  position: absolute;
+  background-image: url('../assets/images/newBackGound.png');
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
-}
-.img_box {
-  background-image: url('../assets/images/newBackGound.png');
+  width: 100%;
+  height: 100%;
   opacity: 0.8;
+  z-index: -1;
 }
 
-/* 标题样式（严格匹配图片） */
-.title-container {
-  text-align: center;
-  padding: 15px 0;
-  border-bottom: 2px solid #ccc;
-  margin-bottom: 10px;
-}
-.newTitle {
-  font-size: calc(1vw + 0.9rem);
-  color: #2168BE;
-  font-weight: bolder;
-  letter-spacing: 0.03em;
-}
-
-/* 核心布局：左3右9，满屏分布 */
-.core-layout {
-  display: flex;
-  height: calc(100% - 80px); /* 减去标题高度 */
-  padding: 0 15px;
-  gap: 15px;
-}
-.left-column {
-  width: 25%; /* 3/12 */
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.right-column {
-  width: 75%; /* 9/12 */
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* 模块通用样式 */
-.module-label {
-  font-size: 0.9rem;
-  color: black;
+/* 通用标签样式 */
+.box-label {
+  font-size: 0.85rem;
+  color: red;
   font-weight: bold;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   text-align: center;
-  background-color: #EAF4FE;
-  padding: 0 8px;
-  display: inline-block;
-  position: relative;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
 }
-.module-content {
+
+/* 左列布局（上-文本 → 中-按钮 → 下-文本） */
+.left-box {
   border: 2px solid #ccc;
   background-color: #fff;
-  padding: 15px 10px;
+  padding: 6px;
   flex: 1;
-  height: 100%;
-  display: flex;
-  align-items: center;
-}
-.text-content {
-  font-size: 0.85rem;
-  line-height: 1.4;
-  text-align: left;
-  width: 100%;
-}
-
-/* 左列模块：上下等高，填充左列 */
-.left-module {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 150px;
-}
-.top-module, .bottom-module {
-  height: 45%; /* 上下模块各占左列45%，中间按钮占10% */
-}
-
-/* 按钮容器：居中，占左列10%高度 */
-.button-container {
-  display: flex;
-  align-items: center;
   justify-content: center;
-  height: 10%;
+}
+.top-box { min-height: 120px; }
+.bottom-box { min-height: 120px; }
+.text-content {
+  font-size: 0.8rem;
+  line-height: 1.3;
+  margin: 0;
+  text-align: left;
 }
 .inference-btn {
-  width: 80%;
-  font-size: 0.95rem;
-  padding: 6px 0;
+  width: 100%;
+  font-size: 0.9rem;
+  padding: 5px 0;
   font-weight: bold;
 }
 
-/* 右列图像模块：占右列45%高度 */
-.image-module {
-  height: 45%;
-  display: flex;
-  flex-direction: column;
-}
-.image-grid {
+/* 右列布局（上-图像 → 下-设备描述+指标） */
+.right-top-box {
   border: 2px solid #ccc;
   background-color: #fff;
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  padding: 10px;
+  padding: 6px;
+  margin-bottom: 8px;
 }
-.image-item {
+.image-container {
+  min-height: 200px;
+  align-items: center;
+  margin: 0;
+}
+.image-placeholder {
+  height: 180px;
   border: 1px dashed #ddd;
-  background-color: #f9f9f9;
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100%;
+  background-color: #f9f9f9;
 }
 .image-display {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
 }
-.image-placeholder {
+.placeholder-text {
   color: #999;
   font-size: 0.9rem;
 }
 
-/* 右列底部模块：占右列55%高度 */
-.bottom-right-module {
-  height: 55%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.device-desc {
+/* 右下角设备描述 */
+.device-desc-box {
   border: 2px solid #ccc;
   background-color: #fff;
-  padding: 10px;
-  text-align: center;
-}
-.desc-content {
-  font-size: 0.85rem;
-  color: #333;
-  margin: 0;
-}
-
-/* 四大指标网格：严格横向排列 */
-.indicators-grid {
-  border: 2px solid #ccc;
-  background-color: #fff;
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 2fr; /* 最后一列占2份，匹配图片布局 */
-  gap: 10px;
-  padding: 15px;
-}
-.indicator-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-.indicator-label {
-  font-size: 0.85rem;
-  color: #2168BE;
-  font-weight: bold;
+  padding: 6px;
   margin-bottom: 8px;
 }
+.desc-content {
+  font-size: 0.8rem;
+  margin: 0;
+  text-align: center;
+}
+
+/* 右下角四个指标横向布局 */
+.indicators-container {
+  border: 2px solid #ccc;
+  background-color: #fff;
+  padding: 8px 4px;
+  margin: 0;
+}
+.indicator-item {
+  padding: 4px;
+}
+.indicator-label {
+  font-size: 0.8rem;
+  color: #2168BE;
+  font-weight: bold;
+  margin-bottom: 3px;
+}
 .indicator-value {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: bold;
   color: #FF4500;
 }
 
-/* 等级制定样式（严格匹配图片） */
-.level-selection-item {
-  padding: 0 10px;
-}
-.level-list {
+/* 等级制定样式 */
+.level-selection {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
+  justify-content: space-around;
+  align-items: center;
+  height: 100%;
 }
 .level-item {
-  font-size: 0.9rem;
-  padding: 5px 0;
+  font-size: 0.85rem;
+  padding: 3px 6px;
   border: 2px solid #ccc;
   border-radius: 3px;
+  cursor: pointer;
   background-color: #f9f9f9;
-  color: #333;
-  font-weight: 500;
-}
-.level-num {
-  color: #FF0000;
-  font-weight: bold;
-  margin-left: 5px;
+  transition: all 0.2s;
 }
 .active-level {
   background-color: #FF4500;
   color: white;
   border-color: #FF0000;
-  font-weight: bold;
+  transform: scale(1.05);
 }
 
-/* 响应式优化：确保所有屏幕满屏无滚动 */
-@media (max-width: 1440px) {
-  .newTitle { font-size: calc(0.9vw + 0.8rem); }
-  .text-content, .desc-content, .indicator-label, .level-item { font-size: 0.8rem; }
-  .indicator-value { font-size: 1rem; }
-}
+/* 响应式优化（确保各屏幕一页展示） */
 @media (max-width: 1200px) {
-  .core-layout { padding: 0 10px; gap: 10px; }
-  .image-grid { gap: 8px; padding: 8px; }
-  .indicators-grid { padding: 10px; gap: 8px; }
+  .image-container { min-height: 180px; }
+  .image-placeholder { height: 160px; }
+  .top-box, .bottom-box { min-height: 100px; }
 }
 @media (max-width: 992px) {
-  .left-column { width: 30%; }
-  .right-column { width: 70%; }
-  .image-grid { grid-template-columns: repeat(2, 1fr); }
+  .indicator-value { font-size: 0.9rem; }
+  .level-item { font-size: 0.8rem; padding: 2px 5px; }
+}
+@media (max-width: 768px) {
+  .image-container { min-height: 150px; }
+  .image-placeholder { height: 130px; }
+  .text-content { font-size: 0.75rem; }
 }
 </style>
 

@@ -97,7 +97,6 @@
 
 <script>
 import axios from 'axios';
-const API_BASE_URL = 'http://10.109.253.71:12356';
 
 export default {
   name: 'DecisionMaking',
@@ -145,7 +144,7 @@ export default {
     async fetchBackendData() {
       this.isLoading = true;
       try {
-        const response = await axios.post(`${API_BASE_URL}/analyze-weapon`, {
+        const response = await axios.post('/analyze-weapon', {
           weapon_model: this.apiConfig.weaponModel,
           model_img_dir: this.apiConfig.imgDir,
           txt_file_path: this.apiConfig.txtPath,
@@ -348,7 +347,7 @@ export default {
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   padding: 10px;
-}
+}service
 .image-item {
   border: 1px dashed #ddd;
   background-color: #f9f9f9;

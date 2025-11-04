@@ -1,23 +1,19 @@
 <template>
-  <div class="section" :style="{ minHeight: fullHeight + 'px' }">
-    <div class="register" :style="{width: fullWidth+'px', height:fullHeight+'px'}"></div>
+  <div class="section" :style="{ height: fullHeight + 'px' }"> <div class="register" :style="{width: fullWidth+'px', height:fullHeight+'px'}"></div>
     <div class="img_box" :style="{width: fullWidth+'px'}"></div>
 
-    <b-row class="justify-content-center pt-5">
-      <b-col cols="10" class="text-center">
-        <p class="newTitle text-center">归因诊断</p>
+    <b-row class="pt-5"> <b-col cols="12" class="text-center"> <p class="newTitle text-center">归因诊断</p>
       </b-col>
     </b-row>
     
-    <b-row class="justify-content-center pt-4 mb-4">
-      <b-col cols="10" style="position: relative;">
-        <div class="box-label">结果汇总</div>
+    <b-row class="pt-4 mb-4 flex-grow-1">
+      <b-col cols="12" class="h-100"> <div class="box-label">结果汇总</div>
         
-        <div class="results-summary-container p-3">
+        <div class="results-summary-container p-3 h-100 d-flex flex-column">
           
-          <b-row>
-            <b-col cols="6" class="pr-2">
-              <div class="module-box">
+          <b-row class="flex-grow-1">
+            <b-col cols="6" class="pr-2 h-100">
+              <div class="module-box h-100">
                 <p class="module-title">多模态目标检测</p>
                 
                 <div class="sub-box">
@@ -53,8 +49,8 @@
               </div>
             </b-col>
             
-            <b-col cols="6" class="pl-2">
-              <div class="module-box">
+            <b-col cols="6" class="pl-2 h-100">
+              <div class="module-box h-100">
                 <p class="module-title">先验知识</p>
                 
                 <div class="sub-box">
@@ -121,9 +117,9 @@
             </b-col>
           </b-row>
           
-          <b-row class="mt-3">
-            <b-col cols="6" class="pr-2">
-              <div class="module-box">
+          <b-row class="mt-3 flex-grow-1">
+            <b-col cols="6" class="pr-2 h-100">
+              <div class="module-box h-100">
                 <p class="module-title">多智能体协商</p>
                 
                 <div class="sub-box">
@@ -179,8 +175,8 @@
               </div>
             </b-col>
             
-            <b-col cols="6" class="pl-2">
-              <div class="module-box">
+            <b-col cols="6" class="pl-2 h-100">
+              <div class="module-box h-100">
                 <p class="module-title">决策选择</p>
                 
                 <div class="sub-box mt-2">
@@ -212,9 +208,7 @@
       </b-col>
     </b-row>
     
-    <b-row class="justify-content-center mt-4 pb-5">
-      <b-col cols="10" style="position: relative;">
-        <div class="box-label">诊断结果</div>
+    <b-row class="mt-4 pb-5"> <b-col cols="12" style="position: relative;"> <div class="box-label">诊断结果</div>
         
         <div class="diagnosis-results-container p-3">
           <b-row>
@@ -278,10 +272,15 @@ export default {
     color: black;
     font-size: 100%;
     width: 100%;
-    min-height: 100vh;
+    /* 1. 改为 height 
+       2. 移除 overflow-y: auto
+       3. 添加 flex 布局 */
+    height: 100vh;
     font-family: "Helvetica Neue";
     z-index: 2;
-    overflow-y: auto; /* 允许滚动 */
+    overflow: hidden; /* 2. 禁止滚动 */
+    display: flex; /* 3. 启用 flex */
+    flex-direction: column; /* 3. 垂直排列 */
   }
 
   .newTitle {
@@ -340,14 +339,19 @@ export default {
     margin-top: 10px;
     position: relative;
     width: 100%;
+    /* 5. 确保它能撑满 flex 容器 */
+    height: 100%;
   }
 
   /* 四个主模块的容器 */
   .module-box {
     border: 1px solid #999;
     padding: 10px;
-    height: 100%;
     background-color: #fdfdfd;
+    /* 5. 确保它能撑满 flex 容器 */
+    height: 100%;
+    display: flex; /* 内部也用 flex 布局 */
+    flex-direction: column;
   }
   
   .module-title {
