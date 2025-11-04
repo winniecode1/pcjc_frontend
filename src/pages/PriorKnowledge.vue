@@ -1,12 +1,16 @@
 <template>
   <div class="section">
-    
     <!-- 标题 -->
     <b-row class="justify-content-center pt-5">
       <b-col cols="12" class="text-center">
         <p class="newTitle text-center">先验知识</p>
       </b-col>
     </b-row>
+
+    <!-- 加载遮罩 -->
+    <div v-if="isLoading" class="loading-mask">
+      <div class="loading-spinner">加载中...</div>
+    </div>
 
     <!-- 主要内容区域 新布局：左(图片+按钮) 中(D3图) 右(标签/预测信息) -->
     <div class="main-layout">
@@ -17,7 +21,7 @@
           <div v-else class="placeholder-image"><span>图片</span></div>
         </div>
         <div class="negotiation-box large">
-          <button class="negotiation-btn" @click="startNegotiation">
+          <button class="negotiation-btn" @click="startNegotiation" :disabled="isLoading">
             <span class="play-icon">▶</span>
             <span class="negotiation-text">开始检测</span>
           </button>
@@ -69,7 +73,9 @@ export default {
       predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
       isLoading: false,
       accuracyRate: '—',
-      finalResult: null
+      finalResult: null,
+      nodes: [], // 用于存储后端返回的节点数据
+      links: []  // 用于存储后端返回的链接数据
     };
   },
   mounted() {
@@ -79,21 +85,17 @@ export default {
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
   },
-  watch: {
-   
-  },
   methods: {
     handleResize() {
       this.fullWidth = window.innerWidth;
       this.fullHeight = window.innerHeight;
-      // 重新渲染以适应新尺寸（简单做法：完全重绘）
+      // 重新渲染以适应新尺寸
       this.$nextTick(() => {
         this.renderGraph();
       });
     },
     startNegotiation() {
-      console.log("开始群体协商");
-      // 这里可以添加群体协商的逻辑
+      console.log("开始先验知识");
       this.startInfer();
     },
     renderGraph() {
@@ -111,20 +113,22 @@ export default {
       
       svg.selectAll('*').remove();
 
-      const nodes = [
+      // 使用从后端获取的nodes和links，如果没有则使用默认数据
+      const renderNodes = this.nodes.length ? this.nodes : [
         { id: '飞机', x: width * 0.3, y: height * 0.5, color: '#87CEEB' },
         { id: '战斗机', x: width * 0.6, y: height * 0.3, color: '#FF6B6B' },
         { id: '无人机', x: width * 0.6, y: height * 0.7, color: '#95E1D3' },
         { id: '运输机', x: width * 0.8, y: height * 0.5, color: '#FFD93D' }
       ];
-      const links = [
+
+      const renderLinks = this.links.length ? this.links : [
         { source: '飞机', target: '战斗机' },
         { source: '飞机', target: '无人机' },
         { source: '飞机', target: '运输机' }
       ];
-
-      const simulation = d3.forceSimulation(nodes)
-        .force('link', d3.forceLink(links).id(d => d.id).distance(150))
+      
+      const simulation = d3.forceSimulation(renderNodes)
+        .force('link', d3.forceLink(renderLinks).id(d => d.id).distance(150))
         .force('charge', d3.forceManyBody().strength(-500))
         .force('x', d3.forceX(width / 2))
         .force('y', d3.forceY(height / 2))
@@ -148,16 +152,16 @@ export default {
       const link = svg.append('g')
         .attr('class', 'links')
         .selectAll('line')
-        .data(links)
+        .data(renderLinks)
         .enter().append('line')
-        .attr('stroke', '#999')
+        .attr('stroke', d => d.color || '#999')  // 使用链接自身的颜色，如果没有则使用默认颜色
         .attr('stroke-width', 2)
         .attr('marker-end', 'url(#arrow)');
 
       const nodeGroup = svg.append('g')
         .attr('class', 'nodes')
         .selectAll('g')
-        .data(nodes)
+        .data(renderNodes)
         .enter().append('g')
         .style('cursor', 'move');
 
@@ -174,7 +178,7 @@ export default {
         .style('pointer-events', 'none')
         .text(d => d.id);
 
-      // 拖拽功能 (兼容当前使用的 D3 v5：通过 d3.event 获取事件)
+      // 拖拽功能
       const dragBehavior = d3.drag()
         .on('start', function(d) {
           if (!d3.event.active) simulation.alphaTarget(0.3).restart();
@@ -183,7 +187,6 @@ export default {
         })
         .on('drag', function(d) {
           const radius = 30;
-          // d3.event.x / y 为拖拽时的最新坐标
           d.fx = Math.max(radius, Math.min(width - radius, d3.event.x));
           d.fy = Math.max(radius, Math.min(height - radius, d3.event.y));
         })
@@ -195,16 +198,15 @@ export default {
 
       nodeGroup.call(dragBehavior);
 
-      // 节点点击事件（点击圆或文字所在的父 g）
+      // 节点点击事件
       nodeGroup.on('click', (d) => {
-        // 这里可根据需要触发更多交互
         console.log('节点被点击:', d.id);
         this.$emit('node-click', d);
       });
 
       simulation.on('tick', () => {
         // 限制节点在边界内
-        nodes.forEach(d => {
+        renderNodes.forEach(d => {
           const radius = 30;
           d.x = Math.max(radius, Math.min(width - radius, d.x));
           d.y = Math.max(radius, Math.min(height - radius, d.y));
@@ -219,34 +221,121 @@ export default {
         nodeGroup.attr('transform', d => `translate(${d.x},${d.y})`);
       });
     },
-    async startInfer() {
+    startInfer() {
       this.isLoading = true;
-      const formData = new FormData();
-      // 按后端要求把参数放到表单字段里。这里假设后端接收 img_path 和 device_type 两个字段。
-      formData.append('img_path', '/home/wuzhixuan/Project/PCJC/module2/images/img10.png');
-      formData.append('device_type', '%E9%A3%9E%E6%9C%BA');
+      this.tagInfoList = [];
+      this.predictInfoList = [];
+      this.nodes = [];
+      this.links = [];
 
-      try {
-        // axios.post(url, data, config)
-        axios.get('/module2/list', {
-          params: {
-            img_path: '/home/wuzhixuan/Project/PCJC/module2/images/img10.png',
-            device_type: '%E9%A3%9E%E6%9C%BA'
-          }
-        }).then(res => {
-          console.log(res.data);
-        }).catch(err => {
-          console.error(err.response && err.response.data || err);
+      axios.get('/module2/list', {
+        params: {
+          img_path: '/home/wuzhixuan/Project/PCJC/module2/images/img10.png',
+          device_type: '%E9%A3%9E%E6%9C%BA'
+        }
+      }).then(res => {
+        console.log('Backend response:', res.data);
+        const data = res.data;
+        
+        // 处理图谱数据
+        if (data.knowledge_info && data.knowledge_info.length > 0) {
+          // this.nodes = data.knowledge_info[0].nodes || [];
+          // this.links = data.knowledge_info[0].links || [];
+           // 创建节点数据
+          const propertyNodes = [];
+          const mainNodes = [];
+          
+          // 处理主要节点（飞机、型号等）
+          const aircraft = data.knowledge_info[0][0];
+          mainNodes.push(
+            { id: aircraft.type, color: '#FFD93D', is_property: false },
+            { id: aircraft.kind, color: '#FFD93D', is_property: false },
+            { id: aircraft.model, color: '#FFD93D', is_property: false }
+          );
+          
+          // 处理属性节点
+          const properties = [
+            { id: aircraft.color, type: 'color' },
+            { id: aircraft.size, type: 'size' },
+            { id: aircraft.firepower, type: 'firepower' },
+            { id: aircraft.scene, type: 'scene' },
+            { id: aircraft.shape, type: 'shape' },
+            { id: aircraft.power, type: 'power' },
+            { id: aircraft.country, type: 'country' }
+          ];
+          
+          properties.forEach(prop => {
+            if (prop.id) {
+              propertyNodes.push({
+                id: prop.id,
+                color: '#FFD93D',
+                is_property: true,
+                content: prop.type
+              });
+            }
+          });
+          
+          // 合并所有节点
+          this.nodes = [...mainNodes, ...propertyNodes];
+          
+          // 创建连接
+          this.links = [
+            { source: aircraft.type, target: aircraft.kind, color: '#FFD93D' },
+            { source: aircraft.kind, target: aircraft.model, color: '#FFD93D' },
+            ...properties.filter(p => p.id).map(p => ({
+              source: aircraft.model,
+              target: p.id,
+              color: '#FFD93D'
+            }))
+          ];
+        }
+        
+        // 处理标签信息
+        if (data.label_info && data.label_info.length > 0 && data.label_info[0].length > 0) {
+          const labelData = data.label_info[0][0];
+          this.tagInfoList = [
+            // `类型：${labelData.type || '未知'}`,
+            `小类信息：${labelData.model || '未知'}`,
+            // `种类：${labelData.kind || '未知'}`,
+            // `国家：${labelData.country || '未知'}`,
+            `火力信息：${labelData.firepower || '未知'}`,
+            `颜色信息：${labelData.color || '未知'}`,         
+            `形状信息：${labelData.shape || '未知'}`,
+            `尺寸信息：${labelData.size || '未知'}`,
+            `动力信息：${labelData.power || '未知'}`,
+            // `场景：${labelData.scene || '未知'}`
+          ];
+        }
+        
+        // 处理预测信息
+        if (data.result && data.result.length > 0 && data.result[0].length > 0) {
+          const predictData = data.result[0][0];
+          this.predictInfoList = [
+            `小类信息：${predictData.model || '未知'}`,
+            // `种类：${predictData.kind || '未知'}`,
+            // `国家：${predictData.country || '未知'}`,
+            `火力信息：${predictData.firepower || '未知'}`,
+            `颜色信息：${predictData.color || '未知'}`,
+            `形状信息：${predictData.shape || '未知'}`,
+            `尺寸信息：${predictData.size || '未知'}`,
+            `动力信息：${predictData.power || '未知'}`,
+            // `场景：${predictData.scene || '未知'}`
+          ];
+        }
+        
+        // 处理准确率
+        this.accuracyRate = data.accuracy !== undefined ? (data.accuracy * 100) + '%' : '—';
+        
+        // 重新渲染图谱
+        this.$nextTick(() => {
+          this.renderGraph();
         });
-        console.log("推理响应:", response);
-        const data = response.data;
-        this.finalResult = data;
-      } catch (error) {
-        console.error("推理请求失败:", error);
-        this.finalResult = "推理失败: " + (error.response && error.response.data && error.response.data.error) || error.message;
-      } finally {
+      }).catch(err => {
+        console.error(err.response && err.response.data || err);
+        this.accuracyRate = '—';
+      }).finally(() => {
         this.isLoading = false;
-      }
+      });
     }
   }
 };
@@ -272,7 +361,28 @@ export default {
   margin-bottom: 40px;
 }
 
-/* 去除覆盖背景层，保留各子组件自身背景 */
+/* 加载遮罩样式 */
+.loading-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.loading-spinner {
+  padding: 20px 40px;
+  background-color: white;
+  border: 3px solid #7BA3D1;
+  border-radius: 8px;
+}
 
 /* 新布局 */
 .main-layout {
@@ -290,7 +400,20 @@ export default {
 .placeholder-image { display:flex; align-items:center; justify-content:center; color:#666; font-size:18px; }
 .negotiation-box { border:3px solid #7BA3D1; background:#D3E4F7; padding:25px 20px; display:flex; align-items:center; justify-content:center; }
 .negotiation-box.large { height:120px; }
-.negotiation-btn { background:none; border:none; display:flex; align-items:center; gap:18px; cursor:pointer; font-size:22px; font-weight:bold; }
+.negotiation-btn { 
+  background:none; 
+  border:none; 
+  display:flex; 
+  align-items:center; 
+  gap:18px; 
+  cursor:pointer; 
+  font-size:22px; 
+  font-weight:bold; 
+}
+.negotiation-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .play-icon { width:46px; height:46px; background:#2168BE; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; }
 
 /* 中间图谱 */
