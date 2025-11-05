@@ -104,6 +104,10 @@ export default {
       const svgEl = this.$refs.graphSvg;
       if (!container || !svgEl) return;
       
+      // 1. 新增：验证数据中的color字段
+      console.log("渲染节点数据（含color）：", this.nodes);
+      console.log("渲染链接数据（含color）：", this.links);
+
       const width = container.clientWidth - 40;
       const height = container.clientHeight - 60;
       
@@ -154,7 +158,11 @@ export default {
         .selectAll('line')
         .data(renderLinks)
         .enter().append('line')
-        .attr('stroke', d => d.color || '#999')  // 使用链接自身的颜色，如果没有则使用默认颜色
+        .attr('stroke', d => {
+          // 新增：打印链接color，确认是否读取到
+          console.log("链接颜色：", d.color);
+          return d.color || '#999'
+        })  // 使用链接自身的颜色，如果没有则使用默认颜色
         .attr('stroke-width', 2)
         .attr('marker-end', 'url(#arrow)');
 
@@ -167,7 +175,11 @@ export default {
 
       nodeGroup.append('circle')
         .attr('r', 30)
-        .attr('fill', d => d.color || '#fff')
+        .attr('fill', d => {  
+          // 新增：打印节点color，确认是否读取到
+          console.log("节点颜色：", d.color);
+          return d.color || '#69b3a2'; 
+        })  // 使用节点自身的颜色，如果没有则使用默认颜色
         .attr('stroke', '#333')
         .attr('stroke-width', 2);
 
@@ -223,10 +235,6 @@ export default {
     },
     startInfer() {
       this.isLoading = true;
-      this.tagInfoList = [];
-      this.predictInfoList = [];
-      this.nodes = [];
-      this.links = [];
 
       axios.get('/module2/list', {
         params: {
@@ -239,55 +247,8 @@ export default {
         
         // 处理图谱数据
         if (data.knowledge_info && data.knowledge_info.length > 0) {
-          // this.nodes = data.knowledge_info[0].nodes || [];
-          // this.links = data.knowledge_info[0].links || [];
-           // 创建节点数据
-          const propertyNodes = [];
-          const mainNodes = [];
-          
-          // 处理主要节点（飞机、型号等）
-          const aircraft = data.knowledge_info[0][0];
-          mainNodes.push(
-            { id: aircraft.type, color: '#FFD93D', is_property: false },
-            { id: aircraft.kind, color: '#FFD93D', is_property: false },
-            { id: aircraft.model, color: '#FFD93D', is_property: false }
-          );
-          
-          // 处理属性节点
-          const properties = [
-            { id: aircraft.color, type: 'color' },
-            { id: aircraft.size, type: 'size' },
-            { id: aircraft.firepower, type: 'firepower' },
-            { id: aircraft.scene, type: 'scene' },
-            { id: aircraft.shape, type: 'shape' },
-            { id: aircraft.power, type: 'power' },
-            { id: aircraft.country, type: 'country' }
-          ];
-          
-          properties.forEach(prop => {
-            if (prop.id) {
-              propertyNodes.push({
-                id: prop.id,
-                color: '#FFD93D',
-                is_property: true,
-                content: prop.type
-              });
-            }
-          });
-          
-          // 合并所有节点
-          this.nodes = [...mainNodes, ...propertyNodes];
-          
-          // 创建连接
-          this.links = [
-            { source: aircraft.type, target: aircraft.kind, color: '#FFD93D' },
-            { source: aircraft.kind, target: aircraft.model, color: '#FFD93D' },
-            ...properties.filter(p => p.id).map(p => ({
-              source: aircraft.model,
-              target: p.id,
-              color: '#FFD93D'
-            }))
-          ];
+          this.nodes = data.knowledge_info[0].nodes || [];
+          this.links = data.knowledge_info[0].links || [];
         }
         
         // 处理标签信息
@@ -331,7 +292,7 @@ export default {
           this.renderGraph();
         });
       }).catch(err => {
-        console.error(err.response && err.response.data || err);
+        console.log(err);
         this.accuracyRate = '—';
       }).finally(() => {
         this.isLoading = false;
