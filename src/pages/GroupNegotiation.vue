@@ -217,7 +217,7 @@ export default {
 
 <style lang="scss" scoped>
 .section {
-  background-color: #D7E7D5;
+  background-color: #EAF4FE;
   color: black;
   font-size: 100%;
   width: 100%;
