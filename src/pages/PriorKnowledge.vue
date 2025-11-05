@@ -236,7 +236,7 @@ export default {
     startInfer() {
       this.isLoading = true;
 
-      axios.get('/module2/list', {
+      axios.get('http://10.109.253.71:8001/module2/list', {
         params: {
           img_path: '/home/wuzhixuan/Project/PCJC/module2/images/img10.png',
           device_type: '%E9%A3%9E%E6%9C%BA'

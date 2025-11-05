@@ -196,7 +196,7 @@ export default {
       formData.append('img_path', 'data/82.png');
       formData.append('ground_truth', this.ground_truth);
       try {
-        const response = await axios.post('/module3/refine', formData, {
+        const response = await axios.post('http://10.109.253.71:8877/refine', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
