@@ -92,7 +92,8 @@
       window.open(routeData.href, '_blank');
     },
     gotoFangzhen(){
-      window.open('http://opik.dev.jianmucloud.com/default/home', '_blank')
+      const routeData = this.$router.resolve({ path: '/attributiondiagnosis' });
+      window.open(routeData.href, '_blank');
     },
     gotoSheji(){
       window.open('http://10.109.252.86:3380', '_blank')
