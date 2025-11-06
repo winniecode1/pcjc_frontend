@@ -94,6 +94,7 @@
 <script>
 // 导入 axios 用于 HTTP 请求
 import axios from 'axios';
+import { color } from 'd3';
 
 export default {
   name: 'PriorKnowledge',
@@ -108,12 +109,67 @@ export default {
       agentCResult: "智能体C的推理结果\n文本框显示",
       deviationProcess: "群体协商的过程偏差的体现\n文本框显示",
       finalResult: "群体协商之后的结果",
-  isLoading: false,
-  accuracyRate: '—'
+      isLoading: false,
+      accuracyRate: '—',
+      color:'',
+      kind:'',
+      shape:'',
+      ground_truth:'',
     };
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);
+    axios.get('/module2/list', {
+        params: {
+          img_path: '/home/wuzhixuan/Project/PCJC/module2/images/img10.png',
+          device_type: '%E9%A3%9E%E6%9C%BA'
+        }
+      }).then(res => {
+        // console.log('Backend response:', res.data);
+        const data = res.data;
+     
+        // 处理标签信息
+        // if (data.label_info && data.label_info.length > 0 && data.label_info[0].length > 0) {
+        //   const labelData = data.label_info[0][0];
+        //   this.tagInfoList = [
+        //     // `类型：${labelData.type || '未知'}`,
+        //     `小类信息：${labelData.model || '未知'}`,
+        //     // `种类：${labelData.kind || '未知'}`,
+        //     // `国家：${labelData.country || '未知'}`,
+        //     `火力信息：${labelData.firepower || '未知'}`,
+        //     `颜色信息：${labelData.color || '未知'}`,         
+        //     `形状信息：${labelData.shape || '未知'}`,
+        //     `尺寸信息：${labelData.size || '未知'}`,
+        //     `动力信息：${labelData.power || '未知'}`,
+        //     // `场景：${labelData.scene || '未知'}`
+        //   ];
+        // }
+        
+        // 处理预测信息
+        if (data.result && data.result.length > 0 && data.result[0].length > 0) {
+          const predictData = data.result[0][0];
+          this.attributeInfo = [
+            `小类信息：${predictData.model || '未知'}`,
+            // `种类：${predictData.kind || '未知'}`,
+            // `国家：${predictData.country || '未知'}`,
+            `火力信息：${predictData.firepower || '未知'}`,
+            `颜色信息：${predictData.color || '未知'}`,
+            `形状信息：${predictData.shape || '未知'}`,
+            `尺寸信息：${predictData.size || '未知'}`,
+            `动力信息：${predictData.power || '未知'}`,
+            // `场景：${predictData.scene || '未知'}`
+          ];
+          this.color=predictData.color;
+          this.kind=predictData.kind;
+          this.shape=predictData.shape; 
+          this.ground_truth=predictData.model;
+        }
+        // 数组转字符串（用 \n 分隔，实现换行）
+        this.attributeInfo = this.attributeInfo.join('\n');
+        
+      }).catch(err => {
+        console.error(err.response && err.response.data || err);
+      });
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
@@ -134,13 +190,19 @@ export default {
     async startInfer() {
       this.isLoading = true;
       const formData = new FormData();
+      formData.append('color', this.color);
+      formData.append('kind', this.kind);
+      formData.append('shape', this.shape);
+      formData.append('img_path', 'data/82.png');
+      formData.append('ground_truth', this.ground_truth);
       try {
-        const response = await axios.post('http://10.109.253.71:5234/inference', formData, {
+        const response = await axios.post('http://10.109.253.71:8877/refine', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         });
-        const data = response.data;
+        const data = response;
+        console.log("推理请求成功，结果:", response);
         this.finalResult = data;
       } catch (error) {
         console.error("推理请求失败:", error);
@@ -155,7 +217,7 @@ export default {
 
 <style lang="scss" scoped>
 .section {
-  background-color: #D7E7D5;
+  background-color: #EAF4FE;
   color: black;
   font-size: 100%;
   width: 100%;
@@ -252,8 +314,10 @@ export default {
 }
 
 .attribute-text {
+/* 核心样式：识别 \n 并换行，同时自动处理多余空格 */
+  white-space: pre-line; 
   font-size: 16px;
-  text-align: center;
+  text-align: left;
   margin: 0;
   line-height: 1.8;
 }
