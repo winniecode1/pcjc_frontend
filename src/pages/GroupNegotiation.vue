@@ -105,7 +105,9 @@
 
 <script>
 import axios from 'axios';
-
+// img_path地址（模块一传参）
+const IMG_PATH_URL = '/home/wuzhixuan/Project/PCJC/1/output/task_20251106_202327/MIG-25/key_frame.jpg';
+const DEVICE_TYPE = '飞机';
 export default {
   name: 'PriorKnowledge',
   data() {
@@ -133,10 +135,12 @@ export default {
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);
+    // 页面加载时获取图像
+    this.fetchImageFromBackend();
     axios.get('http://10.109.253.71:8001/module2/list', {
         params: {
-          img_path: '/home/wuzhixuan/Project/PCJC/module2/images/img10.png',
-          device_type: '%E9%A3%9E%E6%9C%BA'
+          img_path: `${IMG_PATH_URL}`,
+          device_type: `${DEVICE_TYPE}`
         }
       }).then(res => {
         const data = res.data;
@@ -232,7 +236,36 @@ export default {
       } finally {
         this.isLoading = false;
       }
-    }
+    },
+    // 新增：获取图像的函数
+    async fetchImageFromBackend() {
+      try {
+        const response = await axios.get('http://10.109.253.71:8001/module2/get_image_base64', {
+          params: {
+            img_path: `${IMG_PATH_URL}`
+          },
+          responseType: 'text'
+        });
+        // console.log('图像Base64原始数据类型:', typeof response.data);
+        console.log('图像数据类型:', typeof response.data);
+        console.log('图像数据内容:', response.data);
+
+        // 处理base64数据并设置到图片URL
+        const data = response.data;
+    
+        // 新增：处理图像Base64数据
+        if (data.result && typeof data.result === 'string') {
+          // 拼接完整的Base64图片格式（假设是PNG，若为其他格式需修改MIME类型）
+          this.originalImageURL = `data:image/png;base64,${data.result}`;
+          console.log('图像加载完成');
+        } else {
+          console.error('图像数据格式错误:', data.result);
+          this.originalImageURL = null;
+        }
+      } catch (error) {
+        console.error('获取图像失败:', error);
+      }
+    },
   }
 };
 </script>

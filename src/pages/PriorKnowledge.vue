@@ -61,7 +61,9 @@
 <script>
 // 导入 axios 用于 HTTP 请求
 import axios from 'axios';
-
+// img_path地址（模块一传参）
+const IMG_PATH_URL = '/home/wuzhixuan/Project/PCJC/1/output/task_20251106_202327/MIG-25/key_frame.jpg';
+const DEVICE_TYPE = '飞机';
 export default {
   name: 'PriorKnowledge',
   data() {
@@ -81,6 +83,9 @@ export default {
   mounted() {
     window.addEventListener('resize', this.handleResize);
     this.renderGraph();
+    // 页面加载时获取图像和下载JSON
+    this.fetchImageFromBackend();
+    this.downloadJsonData();
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
@@ -238,8 +243,8 @@ export default {
 
       axios.get('http://10.109.253.71:8001/module2/list', {
         params: {
-          img_path: '/home/wuzhixuan/Project/PCJC/module2/images/img10.png',
-          device_type: '%E9%A3%9E%E6%9C%BA'
+          img_path: `${IMG_PATH_URL}`,
+          device_type: `${DEVICE_TYPE}`
         }
       }).then(res => {
         console.log('Backend response:', res.data);
@@ -255,16 +260,12 @@ export default {
         if (data.label_info && data.label_info.length > 0 && data.label_info[0].length > 0) {
           const labelData = data.label_info[0][0];
           this.tagInfoList = [
-            // `类型：${labelData.type || '未知'}`,
             `小类信息：${labelData.model || '未知'}`,
-            // `种类：${labelData.kind || '未知'}`,
-            // `国家：${labelData.country || '未知'}`,
             `火力信息：${labelData.firepower || '未知'}`,
             `颜色信息：${labelData.color || '未知'}`,         
             `形状信息：${labelData.shape || '未知'}`,
             `尺寸信息：${labelData.size || '未知'}`,
             `动力信息：${labelData.power || '未知'}`,
-            // `场景：${labelData.scene || '未知'}`
           ];
         }
         
@@ -273,14 +274,11 @@ export default {
           const predictData = data.result[0][0];
           this.predictInfoList = [
             `小类信息：${predictData.model || '未知'}`,
-            // `种类：${predictData.kind || '未知'}`,
-            // `国家：${predictData.country || '未知'}`,
             `火力信息：${predictData.firepower || '未知'}`,
             `颜色信息：${predictData.color || '未知'}`,
             `形状信息：${predictData.shape || '未知'}`,
             `尺寸信息：${predictData.size || '未知'}`,
             `动力信息：${predictData.power || '未知'}`,
-            // `场景：${predictData.scene || '未知'}`
           ];
         }
         
@@ -297,12 +295,67 @@ export default {
       }).finally(() => {
         this.isLoading = false;
       });
+    },
+    // 新增：获取图像的函数
+    async fetchImageFromBackend() {
+      try {
+        const response = await axios.get('http://10.109.253.71:8001/module2/get_image_base64', {
+          params: {
+            img_path: `${IMG_PATH_URL}`
+          },
+          responseType: 'text'
+        });
+        // console.log('图像Base64原始数据类型:', typeof response.data);
+        console.log('图像数据类型:', typeof response.data);
+        console.log('图像数据内容:', response.data);
+
+        // 处理base64数据并设置到图片URL
+        const data = response.data;
+    
+        // 新增：处理图像Base64数据
+        if (data.result && typeof data.result === 'string') {
+          // 拼接完整的Base64图片格式（假设是PNG，若为其他格式需修改MIME类型）
+          this.originalImageURL = `data:image/png;base64,${data.result}`;
+          console.log('图像加载完成');
+        } else {
+          console.error('图像数据格式错误:', data.result);
+          this.originalImageURL = null;
+        }
+      } catch (error) {
+        console.error('获取图像失败:', error);
+      }
+    },
+    // 新增：下载JSON数据的函数
+    async downloadJsonData() {
+      try {
+        const response = await axios.get('http://10.109.253.71:8001/module2/export');
+        const dataToExport = response.data.result_list;
+        console.log('获取到的JSON数据:', dataToExport);
+
+        // 转换为JSON字符串并创建下载链接
+        const jsonStr = JSON.stringify(dataToExport, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'my_data.json';
+        document.body.appendChild(link);
+        link.click();
+
+        // 清理资源
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('获取并下载JSON失败:', error);
+      }
     }
   }
 };
 </script>
 
 <style lang="scss" scoped>
+/* 原有样式保持不变 */
 .section {
   background-color: #EAF4FE;
   color: black;
