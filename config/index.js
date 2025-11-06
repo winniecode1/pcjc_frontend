@@ -27,7 +27,7 @@ module.exports = {
         pathRewrite: {'^/module2': '/module2'}
       },
       '/module3': {
-        target: 'http://10.109.253.71:8888/', 
+        target: 'http://10.109.253.71:8877/', 
         changeOrigin: true,
         pathRewrite: {'^/module3': ''}
       },
