@@ -21,11 +21,16 @@ module.exports = {
         // target:'http://125.220.157.117:8092/',
         pathRewrite: {'^/api': ''}
       },
-      '/module2': {
-        target: 'http://10.109.253.71:8001/', 
-        changeOrigin: true,
-        pathRewrite: {'^/module2': '/module2'}
-      }
+    '/module2': {
+      target: 'http://10.109.253.71:8001/', 
+      changeOrigin: true,
+      pathRewrite: {'^/module2': '/module2'}
+    },
+    '/module5': {
+      target: 'http://10.109.253.71:4399/',
+      changeOrigin: true,
+      pathRewrite: {'^/module5': ''}
+    }
     },
     
     
