@@ -45,7 +45,7 @@
         <div class="right-module bottom-right-module">
           <div class="device-desc">
             <div class="module-label">设备描述</div>
-            <p class="desc-content">{{ currentStageText }}</p>
+            <p class="desc-content">对此设备信息进行描述,为模型进行危险评级做铺垫</p>
           </div>
 
           <div class="indicators-grid">
@@ -82,12 +82,11 @@
 
 <script>
 import axios from 'axios';
+// 确保已安装 'bootstrap-vue' 和 'bootstrap'，或根据需要替换 b-button 和 b-spinner
 import { BButton, BSpinner } from 'bootstrap-vue';
 
-// 后端 API 地址 (分析接口，端口 12357)
-const API_BASE_URL = 'http://10.109.253.71:12357'; 
-// 图片接口基础地址（端口 12358）
-const IMAGE_API_BASE_URL = 'http://10.109.253.71:12358';
+// 后端 API 地址 (更新为新的端口 12357)
+const API_BASE_URL = 'http://10.109.253.71:12357';
 
 export default {
   name: 'DecisionMaking',
@@ -97,12 +96,13 @@ export default {
   },
   data() {
     return {
-      // 窗口尺寸
+      // 窗口尺寸（满屏用）
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
       isLoading: false,
 
-      // 后端接口参数
+      // 后端接口参数（通过环境变量配置，无前端输入）
+      // 注意：imgDir, txtPath, apiKey 仅用于前端（如图片路径），不再发送给后端
       apiConfig: {
         weaponModel: process.env.VUE_APP_WEAPON_MODEL || 'B-2',
         imgDir: process.env.VUE_APP_IMG_DIR || '/home/img/B-2',
@@ -110,18 +110,20 @@ export default {
         apiKey: process.env.VUE_APP_DASHSCOPE_API_KEY
       },
 
-      // 页面所有数据
-      thirdStageText: '', 
+      // 页面所有数据（初始为空，全从后端获取）
+      thirdStageText: '', // 第三阶段文本（后端返回或前端缓存）
       currentStageText: '', // 本阶段总结（后端summary）
-      imageList: [], // 多时序图像（拼接后的图片URL列表）
-      deviationDetectionAccuracy: 100, 
-      modelDangerLevel: 'N/A', 
-      expertDangerLevel: 'N/A', 
-      currentLevel: 4 
+      imageList: [], // 多时序图像（后端返回图片URL列表）
+      deviationDetectionAccuracy: 100, // 偏差检测准确率（图片固定100%）
+      modelDangerLevel: 'N/A', // 模型危险等级（例如 "1 !"）
+      expertDangerLevel: 'N/A', // 专家危险等级（例如 "1 !"）
+      currentLevel: 4 // 当前激活的战备等级（数字 1-4）
     };
   },
   mounted() {
+    // 监听窗口 resize，保持满屏
     window.addEventListener('resize', this.handleResize);
+    // 初始加载一次数据
     this.fetchBackendData();
   },
   beforeDestroy() {
@@ -133,90 +135,98 @@ export default {
       this.windowHeight = window.innerHeight;
     },
 
-    // 从后端获取所有数据 (调用分析接口和图片接口)
+    // 从后端获取所有数据
     async fetchBackendData() {
       this.isLoading = true;
-      const model = this.apiConfig.weaponModel;
-      console.log('开始获取数据，武器型号：', model);
 
+      /*
+      // --- START: 模拟数据块（已移除） ---
+      // setTimeout(() => { ... }, 2000);
+      // --- END: 模拟数据块（已移除） ---
+      */
+
+      // --- START: 激活的真实网络请求 ---
+      this.isLoading = true;
       try {
-        // 1. 调用主分析接口 (POST 请求)
-        console.log('开始调用分析接口：', `${API_BASE_URL}/analyze-weapon`);
-        const requestBody = { weapon_model: model };
-        console.log('分析接口请求参数：', requestBody);
-        
-        const mainResponse = await axios.post(`${API_BASE_URL}/analyze-weapon`, requestBody);
-        console.log('分析接口响应状态：', mainResponse.status, mainResponse.statusText);
-        console.log('分析接口响应数据：', mainResponse.data);
+        // 根据后端 Policy_Decision.py，请求体只需要 weapon_model
+        const requestBody = {
+          weapon_model: this.apiConfig.weaponModel
+        };
 
-        const result = mainResponse.data;
+        // 发送 POST 请求到新的 12357 端口
+        const response = await axios.post(`${API_BASE_URL}/analyze-weapon`, requestBody);
 
+        const result = response.data;
         if (result.status === 'success') {
-          // 2. 解析主接口数据
+          // 调用解析函数
           this.parseBackendData(result.data);
-          
-          // 3. 调用图片列表接口
-          console.log('开始调用图片列表接口：', `${IMAGE_API_BASE_URL}/weapon-all-images`);
-          const imageResponse = await axios.get(`${IMAGE_API_BASE_URL}/weapon-all-images`, {
-            params: { weapon_model: model }
-          });
-          console.log('图片接口响应状态：', imageResponse.status, imageResponse.statusText);
-          console.log('图片接口响应数据：', imageResponse.data);
-
-          // 处理图片URL列表
-          if (imageResponse.data && imageResponse.data.images) {
-            this.imageList = imageResponse.data.images.map(img => img.url);
-            console.log('生成的图片URL列表：', this.imageList);
-          } else {
-            console.error('图片列表数据格式不正确，缺少images字段');
-            this.imageList = [];
-          }
         } else {
-          console.error('后端返回错误：', (result.error && result.error.message) || '未知错误');
-          this.currentStageText = `分析接口数据获取失败：${(result.error && result.error.message) || '未知错误'}`;
+          // 处理后端返回的错误（例如 status: "error"）
+          console.error('后端返回错误：', result.error.message);
+          this.currentStageText = `数据获取失败：${result.error.message}`;
         }
       } catch (error) {
         // 处理网络层或 axios 错误
         console.error('接口调用失败：', error);
-        if (error.response) {
-          console.error('错误响应状态：', error.response.status);
-          console.error('错误响应数据：', error.response.data);
-        } else if (error.request) {
-          console.error('无响应数据：', error.request);
-        } else {
-          console.error('请求配置错误：', error.message);
-        }
         this.currentStageText = '接口调用失败，请检查网络、CORS配置或后端服务';
       } finally {
         this.isLoading = false;
-        console.log('数据获取流程结束');
       }
+      // --- END: 激活的真实网络请求 ---
     },
-    
+
     // 解析后端数据并更新页面
     parseBackendData(backendData) {
-      console.log('开始解析主接口返回数据：', backendData);
-      
-      // 1. 第三阶段文本
+      // 1. 第三阶段文本（假设后端未返回，用固定场景文本，可替换为前端缓存数据）
       this.thirdStageText = `发现目标武器型号：${backendData.weapon_model}，位于指定区域，行为模式初步匹配已知威胁，待进一步分析验证`;
-      console.log('第三阶段文本设置为：', this.thirdStageText);
 
       // 2. 本阶段文本（后端summary）
       this.currentStageText = backendData.summary || '设备性能分析完成，危险等级已评估';
-      console.log('本阶段文本设置为：', this.currentStageText);
-      
-      // 4. 模型/专家危险等级
+
+      // 3. 多时序图像（这里用模拟URL，实际应由后端返回完整可访问的URL列表）
+      const backendHost = API_BASE_URL; 
+      const model = backendData.weapon_model || this.apiConfig.weaponModel; // 使用后端返回的型号，如果为空则使用默认 B-2
+
+      const imageNames = [
+        'Snipaste_2025-11-02_18-31-11.png', // 第一张的实际文件名
+        'Snipaste_2025-11-02_18-31-12.png', // 第二张的实际文件名
+        'Snipaste_2025-11-02_18-31-13.png', // 第三张的实际文件名
+        'Snipaste_2025-11-02_18-31-14.png'  // 第四张的实际文件名
+      ];
+      // 构建完整的绝对路径列表
+    this.imageList = imageNames.map(name => 
+        `${backendHost}/static_images/${model}/${name}`
+    );
+  // 完整的绝对路径 = 后端地址 + 静态文件挂载点 + 图片相对路径
+      this.imageList = [
+        `${backendHost}/static_images/${model}/frame_1.png`,
+        `${backendHost}/static_images/${model}/frame_2.png`,
+        `${backendHost}/static_images/${model}/frame_3.png`,
+        `${backendHost}/static_images/${model}/frame_4.png`
+      ];
+
+      // 4. 模型/专家危险等级（后端危险等级→数字）
+      // *** 匹配 "1 !" 样式 ***
       const modelLevelNum = this.getLevelNum(backendData.model_analysis_danger_level);
       const expertLevelNum = this.getLevelNum(backendData.local_txt_danger_level);
-      console.log('模型危险等级：', backendData.model_analysis_danger_level, '转换后：', modelLevelNum);
-      console.log('专家危险等级：', backendData.local_txt_danger_level, '转换后：', expertLevelNum);
 
       this.modelDangerLevel = `${modelLevelNum} !`;
       this.expertDangerLevel = `${expertLevelNum} !`;
 
-      // 5. 激活当前战备等级
+      // 5. 激活当前战备等级（使用模型等级的数字）
       this.currentLevel = modelLevelNum;
-      console.log('当前战备等级设置为：', this.currentLevel);
+    },
+
+    // 后端危险等级（危险等级1-4）→ 战备等级（一级-四级战备）
+    // (此函数在当前版本中未用于显示，但保留)
+    convertToCombatLevel(backendLevel) {
+      const levelMap = {
+        '危险等级1': '一级战备',
+        '危险等级2': '二级战备',
+        '危险等级3': '三级战备',
+        '危险等级4': '四级战备'
+      };
+      return levelMap[backendLevel] || '四级战备';
     },
 
     // 后端危险等级→数字等级（1-4）
@@ -227,16 +237,14 @@ export default {
         '危险等级3': 3,
         '危险等级4': 4
       };
-      const result = numMap[backendLevel] || 4;
-      console.log('等级转换：', backendLevel, '→', result);
-      return result;
+      return numMap[backendLevel] || 4; // 默认为4
     }
   }
 };
 </script>
 
 <style lang="scss" scoped>
-/* 样式（Style）部分与原文件完全相同 */
+/* 样式（Style）部分与你提供的文件完全相同，此处省略以保持简洁 */
 /* 基础样式：满屏无滚动 */
 * {
   margin: 0;

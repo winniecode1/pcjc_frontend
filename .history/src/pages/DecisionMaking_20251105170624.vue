@@ -173,7 +173,7 @@ export default {
           }
         } else {
           console.error('后端返回错误：', (result.error && result.error.message) || '未知错误');
-          this.currentStageText = `分析接口数据获取失败：${(result.error && result.error.message) || '未知错误'}`;
+this.currentStageText = `分析接口数据获取失败：${(result.error && result.error.message) || '未知错误'}`;
         }
       } catch (error) {
         // 处理网络层或 axios 错误

@@ -84,10 +84,11 @@
 import axios from 'axios';
 import { BButton, BSpinner } from 'bootstrap-vue';
 
+// **********************************************
+// 修正：将 API_BASE_URL 移到顶层，解决 ReferenceError 问题
+// **********************************************
 // 后端 API 地址 (分析接口，端口 12357)
 const API_BASE_URL = 'http://10.109.253.71:12357'; 
-// 图片接口基础地址（端口 12358）
-const IMAGE_API_BASE_URL = 'http://10.109.253.71:12358';
 
 export default {
   name: 'DecisionMaking',
@@ -133,90 +134,68 @@ export default {
       this.windowHeight = window.innerHeight;
     },
 
-    // 从后端获取所有数据 (调用分析接口和图片接口)
+    // 从后端获取所有数据 (仅调用 12357 POST 接口)
     async fetchBackendData() {
       this.isLoading = true;
       const model = this.apiConfig.weaponModel;
-      console.log('开始获取数据，武器型号：', model);
 
       try {
         // 1. 调用主分析接口 (POST 请求)
-        console.log('开始调用分析接口：', `${API_BASE_URL}/analyze-weapon`);
         const requestBody = { weapon_model: model };
-        console.log('分析接口请求参数：', requestBody);
-        
         const mainResponse = await axios.post(`${API_BASE_URL}/analyze-weapon`, requestBody);
-        console.log('分析接口响应状态：', mainResponse.status, mainResponse.statusText);
-        console.log('分析接口响应数据：', mainResponse.data);
 
         const result = mainResponse.data;
 
         if (result.status === 'success') {
-          // 2. 解析主接口数据
+          // 2. 解析所有数据，并在 parseBackendData 中构造图片 URL
           this.parseBackendData(result.data);
-          
-          // 3. 调用图片列表接口
-          console.log('开始调用图片列表接口：', `${IMAGE_API_BASE_URL}/weapon-all-images`);
-          const imageResponse = await axios.get(`${IMAGE_API_BASE_URL}/weapon-all-images`, {
-            params: { weapon_model: model }
-          });
-          console.log('图片接口响应状态：', imageResponse.status, imageResponse.statusText);
-          console.log('图片接口响应数据：', imageResponse.data);
-
-          // 处理图片URL列表
-          if (imageResponse.data && imageResponse.data.images) {
-            this.imageList = imageResponse.data.images.map(img => img.url);
-            console.log('生成的图片URL列表：', this.imageList);
-          } else {
-            console.error('图片列表数据格式不正确，缺少images字段');
-            this.imageList = [];
-          }
         } else {
-          console.error('后端返回错误：', (result.error && result.error.message) || '未知错误');
-          this.currentStageText = `分析接口数据获取失败：${(result.error && result.error.message) || '未知错误'}`;
+          console.error('后端返回错误：', result.error.message);
+          this.currentStageText = `分析接口数据获取失败：${result.error.message}`;
         }
       } catch (error) {
         // 处理网络层或 axios 错误
         console.error('接口调用失败：', error);
-        if (error.response) {
-          console.error('错误响应状态：', error.response.status);
-          console.error('错误响应数据：', error.response.data);
-        } else if (error.request) {
-          console.error('无响应数据：', error.request);
-        } else {
-          console.error('请求配置错误：', error.message);
-        }
         this.currentStageText = '接口调用失败，请检查网络、CORS配置或后端服务';
       } finally {
         this.isLoading = false;
-        console.log('数据获取流程结束');
       }
     },
     
     // 解析后端数据并更新页面
     parseBackendData(backendData) {
-      console.log('开始解析主接口返回数据：', backendData);
-      
       // 1. 第三阶段文本
       this.thirdStageText = `发现目标武器型号：${backendData.weapon_model}，位于指定区域，行为模式初步匹配已知威胁，待进一步分析验证`;
-      console.log('第三阶段文本设置为：', this.thirdStageText);
 
       // 2. 本阶段文本（后端summary）
       this.currentStageText = backendData.summary || '设备性能分析完成，危险等级已评估';
-      console.log('本阶段文本设置为：', this.currentStageText);
+      
+      // !!! 3. 多时序图像 (使用绝对路径拼接：BASE_URL + /static_images + /型号 + /文件名)
+      const backendHost = API_BASE_URL; 
+      const model = backendData.weapon_model || this.apiConfig.weaponModel;
+      
+      // 使用之前确定的图片文件名列表
+      const imageNames = [
+        'Snipaste_2025-11-02_18-31-11.png', 
+        'Snipaste_2025-11-02_18-31-23.png', 
+        'Snipaste_2025-11-02_18-31-46.png', 
+        'Snipaste_2025-11-02_18-32-03.png'  
+      ];
+
+      // 构建完整的绝对路径列表 (例如: http://10.109.253.71:12357/static_images/B-2/Snipaste_....png)
+      this.imageList = imageNames.map(name => 
+        `${backendHost}/static_images/${model}/${name}`
+      );
       
       // 4. 模型/专家危险等级
       const modelLevelNum = this.getLevelNum(backendData.model_analysis_danger_level);
       const expertLevelNum = this.getLevelNum(backendData.local_txt_danger_level);
-      console.log('模型危险等级：', backendData.model_analysis_danger_level, '转换后：', modelLevelNum);
-      console.log('专家危险等级：', backendData.local_txt_danger_level, '转换后：', expertLevelNum);
 
       this.modelDangerLevel = `${modelLevelNum} !`;
       this.expertDangerLevel = `${expertLevelNum} !`;
 
       // 5. 激活当前战备等级
       this.currentLevel = modelLevelNum;
-      console.log('当前战备等级设置为：', this.currentLevel);
     },
 
     // 后端危险等级→数字等级（1-4）
@@ -227,16 +206,14 @@ export default {
         '危险等级3': 3,
         '危险等级4': 4
       };
-      const result = numMap[backendLevel] || 4;
-      console.log('等级转换：', backendLevel, '→', result);
-      return result;
+      return numMap[backendLevel] || 4; // 默认为4
     }
   }
 };
 </script>
 
 <style lang="scss" scoped>
-/* 样式（Style）部分与原文件完全相同 */
+/* 样式（Style）部分与你提供的文件完全相同，此处省略以保持简洁 */
 /* 基础样式：满屏无滚动 */
 * {
   margin: 0;
