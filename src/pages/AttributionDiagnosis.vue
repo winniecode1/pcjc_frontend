@@ -394,12 +394,12 @@ export default {
         if (statusCode === 200) {
           // 200: Pipeline已启动
           console.log('Pipeline已启动:', data);
-          this.showAlertMessage('success', 'Pipeline已启动，正在处理数据...');
+          this.showAlertMessage('success', '不一致性根因诊断已启动，正在诊断中...');
           this.startPolling();
         } else if (statusCode === 409) {
           // 409: 正在运行中（不报错，继续轮询）
           console.log('Pipeline正在运行中');
-          this.showAlertMessage('info', 'Pipeline正在运行中，正在获取数据...');
+          this.showAlertMessage('info', '不一致性根因诊断已启动，正在诊断中...');
           this.startPolling();
         }
         
@@ -411,7 +411,7 @@ export default {
         if (statusCode === 409) {
           // axios会把409当作error，这里特殊处理
           console.log('Pipeline正在运行中（409）');
-          this.showAlertMessage('info', 'Pipeline正在运行中，正在获取数据...');
+          this.showAlertMessage('info', '不一致性根因诊断已启动，正在诊断中...');
           this.startPolling();
         } else {
           // 其他错误：显示错误信息，不进行轮询
@@ -463,7 +463,7 @@ export default {
           // 检查是否运行结束
           if (!data.running) {
             this.stopPolling();
-            this.showAlertMessage('success', '数据处理完成');
+            this.showAlertMessage('success', '诊断完成');
           }
         }
         
