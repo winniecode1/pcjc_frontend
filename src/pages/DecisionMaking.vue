@@ -26,7 +26,7 @@
         <div class="left-module bottom-module">
           <div class="module-label">本阶段产生的文本信息</div>
           <div class="module-content">
-            <p class="text-content" v-html="highlightedCurrentStageText"></p>
+            <p class="text-content" v-html="performanceData"></p>
           </div>
         </div>
       </div>
@@ -113,6 +113,7 @@ export default {
       // 页面所有数据
       thirdStageText: '', 
       currentStageText: '', // 本阶段总结（后端summary）
+      performanceData: '', // 【新增】用于存储性能数据
       imageList: [], // 多时序图像（拼接后的图片URL列表）
       deviationDetectionAccuracy: 100, 
       modelDangerLevel: 'N/A', 
@@ -273,6 +274,10 @@ export default {
       // 增加示例文本以保证有内容可高亮
       this.currentStageText = backendData.summary || '设备性能分析完成，危险等级已评估。根据多时序图像数据和模型评估结果，综合判定目标具备高威胁等级。决策制定需充分考虑当前信息，避免认知偏差。';
       console.log('本阶段文本设置为：', this.currentStageText);
+
+      const rawPerformanceData = backendData.performance_data || '暂无性能数据。';
+      this.performanceData = this.highlightRandomWords(rawPerformanceData, 1, 3);
+      console.log('性能数据设置为（已高亮）：', this.performanceData);
       
       // 4. 模型/专家危险等级
       const modelLevelNum = this.getLevelNum(backendData.model_analysis_danger_level);
@@ -402,9 +407,10 @@ export default {
   flex-grow: 1; /* 占据剩余空间 */
   height: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   position: relative;
   top: -10px; /* 向上移动以覆盖 label 的下半部分 */
+  overflow-y: auto;
 }
 .text-content {
   font-size: 0.85rem;
