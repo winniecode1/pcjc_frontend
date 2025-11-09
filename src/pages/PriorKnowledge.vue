@@ -1,9 +1,16 @@
 <template>
-  <div class="section">
-    <!-- 标题 -->
-    <b-row class="justify-content-center pt-5">
-      <b-col cols="12" class="text-center">
-        <p class="newTitle text-center">先验知识</p>
+  <div class="container-fluid bg-dark text-white min-vh-100">
+    <!-- 顶部导航栏 -->
+    <b-row class="header-bar align-item-s-center no-gutters">
+      <b-col cols="4" class="d-flex align-items-center">
+        <button class="header-btn btn-home" @click="navigateHome">首页</button>
+        <button class="header-btn btn-back" @click="navigateBack">返回</button>
+      </b-col>
+      <b-col cols="4" class="d-flex justify-content-center align-items-center">
+        <h1 class="header-title">先验知识和偏差检测模型</h1>
+      </b-col>
+      <b-col cols="4" class="d-flex justify-content-end align-items-center">
+        <button class="header-btn btn-next" @click="navigateNext">下一步</button>
       </b-col>
     </b-row>
 
@@ -12,65 +19,104 @@
       <div class="loading-spinner">加载中...</div>
     </div>
 
-    <!-- 主要内容区域 新布局：左(图片+按钮) 中(D3图) 右(标签/预测信息) -->
-    <div class="main-layout">
-      <!-- 左侧 -->
-      <div class="left-panel">
-        <div class="image-box">
-          <div class="video-content-wrapper">
-            <video v-if="videoUrl" :src="videoUrl" controls class="video-player" @error="handleVideoError"></video>
-            <div v-else class="video-placeholder-text">
-              {{ videoMessage }}
+    <!-- 主要内容区域 -->
+    <div class="row content-row">
+      <!-- 左侧视频和按钮区域 -->
+      <div class="col-md-3 left-column">
+        <div class="panel-left h-100">
+          <div class="panel-header">
+            <span>视频演示</span>
+          </div>
+          <div class="panel-content">
+            <div class="video-frame mb-4">
+              <video v-if="videoUrl" :src="videoUrl" controls class="video-display" @error="handleVideoError"></video>
+              <div v-else class="placeholder-text">
+                {{ videoMessage }}
+              </div>
+            </div>
+            <div class="panel-header">
+              <span>视频理解内容</span>
+            </div>
+            <div class="panel-content">
+            <div class="description-box">
+              <ul class="info-list">
+                <p v-if="VIDEO_DESCRIPTION" class="video-description-text">{{ VIDEO_DESCRIPTION }}</p>
+                <p v-else class="text-muted">暂无视频描述信息</p>
+              </ul>
+            </div>
+          </div>
+            <div class="action-buttons">
+              <button @click="startNegotiation" class="btn-start-detect" :disabled="isLoading">
+                <img src="~@/assets/images/step1/-s-按钮-开始测试.png" alt="开始" width="24" height="24">
+                <span>开始检测</span>
+              </button>
+              <button @click="downloadJsonData" class="btn-export-result mt-3" :disabled="isLoading">
+                导出结果
+              </button>
             </div>
           </div>
         </div>
-        <div class="negotiation-box large">
-          <button class="negotiation-btn" @click="startNegotiation" :disabled="isLoading">
-            <span class="play-icon">▶</span>
-            <span class="negotiation-text">开始检测</span>
-          </button>
-        </div>
-        <div class="negotiation-box large">
-          <button class="negotiation-btn" @click="downloadJsonData" :disabled="isLoading">
-            <span class="play-icon">⤓</span>
-            <span class="negotiation-text">导出</span>
-          </button>
+      </div>
+
+      <!-- 中间知识图谱区域 -->
+      <div class="col-md-6 middle-column">
+        <div class="panel-left h-100">
+          <div class="panel-header">
+            <span>知识图谱</span>
+          </div>
+          <div class="panel-content">
+            <div class="graph-container" ref="graphContainer" style="height: calc(100% - 40px);">
+              <div class="graph-title">知识图谱先验信息</div>
+              <svg ref="graphSvg" style="width: 100%; height: calc(100% - 30px);"></svg>
+            </div>
+          </div>
         </div>
       </div>
-      <!-- 中间图谱 -->
-      <div class="graph-panel">
-        <div class="graph-container" ref="graphContainer">
-          <div class="graph-title">知识图谱先验信息</div>
-          <svg ref="graphSvg"></svg>
+
+      <!-- 右侧标签和预测信息区域 -->
+      <div class="col-md-3 right-column">
+        <div class="panel-right-top">
+          <div class="panel-header">
+            <span>标签信息</span>
+          </div>
+          <div class="panel-content">
+            <div class="description-box">
+              <ul class="info-list">
+                <li v-for="(item, idx) in tagInfoList" :key="'tag-' + idx">{{ item }}</li>
+              </ul>
+            </div>
+          </div>
         </div>
-      </div>
-      <!-- 右侧信息 -->
-      <div class="right-panel">
-        <div class="info-box tag-box">
-          <div class="info-title">标签信息</div>
-          <ul class="info-list">
-            <li v-for="(item, idx) in tagInfoList" :key="'tag-' + idx">{{ item }}</li>
-          </ul>
-        </div>
-        <div class="info-box predict-box">
-          <div class="info-title">预测信息</div>
-          <ul class="info-list">
-            <li v-for="(item, idx) in predictInfoList" :key="'pre-' + idx">
-              <span v-if="typeof item === 'object'">
-                {{ item.label }}
-                <span :style="{ color: item.color }">{{ item.value }}</span>
-              </span>
-              <span v-else>{{ item }}</span>
-            </li>
-          </ul>
-          <div class="accuracy-box small">
-            <span class="accuracy-label">偏差识别准确率：</span>
-            <span class="accuracy-value">{{ accuracyRate }}</span>
+
+        <div class="panel-right-bottom">
+          <div class="panel-header">
+            <span>预测信息</span>
+          </div>
+          <div class="panel-content">
+            <div class="description-box mb-4">
+              <ul class="info-list">
+                <li v-for="(item, idx) in predictInfoList" :key="'pre-' + idx">
+                  <span v-if="typeof item === 'object'">
+                    {{ item.label }}
+                    <span :style="{ color: item.color || '#00e5ff' }">{{ item.value }}</span>
+                  </span>
+                  <span v-else>{{ item }}</span>
+                </li>
+              </ul>
+            </div>
+            <div class="panel-header header-accuracy">偏差检测准确率</div>
+            <div class="metric-box">
+              <template v-if="accuracyRate !== '—'">
+                {{ accuracyRate }}
+              </template>
+              <template v-else>
+                N/A
+              </template>
+            </div>
           </div>
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -80,8 +126,6 @@ import axios from 'axios';
   // 从localStorage获取module1Res对象并解析所需属性
   let IMG_PATH_URL = '/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png';
   let DEVICE_TYPE = '飞机';
-  let VIDEO_PATH = null;
-  let VIDEO_DESCRIPTION = null;
   
   try {
     const module1ResStr = localStorage.getItem('module1Res');
@@ -99,35 +143,33 @@ import axios from 'axios';
       if (module1Res.originalVideoPath) {
         VIDEO_PATH = module1Res.originalVideoPath.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
       }
-      // 获取并清理video_description
-      if (module1Res.video_description) {
-        VIDEO_DESCRIPTION = module1Res.video_description.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
-      }
     }
   } catch (e) {
     console.error('解析module1Res时出错:', e);
   }
-   console.log('IMG_PATH_URL:', IMG_PATH_URL, 'DEVICE_TYPE:', DEVICE_TYPE, 'VIDEO_PATH:', VIDEO_PATH, 'VIDEO_DESCRIPTION:', VIDEO_DESCRIPTION)
+   console.log('IMG_PATH_URL:', IMG_PATH_URL, 'DEVICE_TYPE:', DEVICE_TYPE)
 export default {
-  name: 'PriorKnowledge',
-  data() {
-      return {
-        fullWidth: window.innerWidth,
-        fullHeight: window.innerHeight,
-        originalImageURL: null,
-        tagInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
-        predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
-        propertyColors: {}, // 用于存储属性颜色
-        isLoading: false,
-        accuracyRate: '—',
-        finalResult: null,
-        nodes: [], // 用于存储后端返回的节点数据
-        links: [],  // 用于存储后端返回的链接数据
-        // 视频相关数据
-        videoUrl: null,
-        videoMessage: '正在从 LocalStorage 加载视频...'
-      };
-    },
+    name: 'PriorKnowledge',
+    data() {
+        return {
+          fullWidth: window.innerWidth,
+          fullHeight: window.innerHeight,
+          originalImageURL: null,
+          tagInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
+          predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
+          propertyColors: {}, // 用于存储属性颜色
+          isLoading: false,
+          accuracyRate: '—',
+          finalResult: null,
+          nodes: [], // 用于存储后端返回的节点数据
+          links: [],  // 用于存储后端返回的链接数据
+          // 视频相关数据
+          videoUrl: null,
+          videoMessage: '正在从 LocalStorage 加载视频...',
+          // 视频描述信息
+          VIDEO_DESCRIPTION: ''
+        };
+      },
   mounted() {
     window.addEventListener('resize', this.handleResize);
     this.renderGraph();
@@ -139,6 +181,60 @@ export default {
     window.removeEventListener('resize', this.handleResize);
   },
   methods: {
+    // 导航到首页
+    navigateHome() {
+      this.$router.push('/');
+    },
+    // 返回上一页
+    navigateBack() {
+      this.$router.back();
+    },
+    // 导航到下一页
+    navigateNext() {
+      this.$router.push('/group-negotiation');
+    },
+    // 从本地存储加载视频信息
+    loadVideoFromStorage() {
+      try {
+        // 获取完整的module1Res对象
+        const module1ResStr = localStorage.getItem('module1Res');
+        if (module1ResStr) {
+          const module1Res = JSON.parse(module1ResStr);
+          
+          // 提取视频路径并清理
+          if (module1Res.originalVideoPath) {
+            this.videoUrl = module1Res.originalVideoPath.replace(/^\"|\"$/g, '').trim();
+            this.videoMessage = "视频已加载";
+            console.log('成功加载视频:', this.videoUrl);
+          }
+          
+          // 提取关键帧路径并清理
+          if (module1Res.key_frame_path) {
+            this.keyFramePath = module1Res.key_frame_path.replace(/^\"|\"$/g, '').trim();
+            console.log('成功加载关键帧路径:', this.keyFramePath);
+          }
+          
+          // 提取设备类型并清理
+          if (module1Res.deviceType) {
+            this.deviceType = module1Res.deviceType.replace(/^\"|\"$/g, '').trim();
+            console.log('成功加载设备类型:', this.deviceType);
+          }
+          
+          // 提取视频描述并清理
+          if (module1Res.video_description) {
+            this.videoDescription = module1Res.video_description.replace(/^\"|\"$/g, '').trim();
+            console.log('成功加载视频描述:', this.videoDescription);
+          }
+        } else {
+          console.warn('未找到视频信息');
+          this.videoMessage = "未找到视频信息";
+        }
+      } catch (error) {
+        console.error('加载视频信息时出错:', error);
+        this.videoMessage = "视频加载失败";
+      }
+    },
+    // 处理窗口大小变化
     handleResize() {
       this.fullWidth = window.innerWidth;
       this.fullHeight = window.innerHeight;
@@ -392,6 +488,12 @@ export default {
             this.videoMessage = '未在 module1Res 中找到有效 "originalVideoPath"。';
             console.warn(this.videoMessage);
           }
+          
+          // 提取视频描述并清理
+          if (module1Res.video_description) {
+            this.VIDEO_DESCRIPTION = module1Res.video_description.replace(/^"|"$/g, '').trim();
+            console.log('成功加载视频描述:', this.VIDEO_DESCRIPTION);
+          }
         } else {
           this.videoMessage = '未在 LocalStorage 中找到 "module1Res"。';
           console.warn(this.videoMessage);
@@ -437,25 +539,353 @@ export default {
 };
 </script>
 
-<style lang="scss" scoped>
-/* 原有样式保持不变 */
-.section {
-  background-color: #EAF4FE;
-  color: black;
-  font-size: 100%;
-  width: 100%;
-  min-height: 100vh;
-  font-family: "Helvetica Neue", Arial, sans-serif;
-  z-index: 2;
-  position: relative;
+<style>
+/* 1. 全局样式 */
+body {
+  background-color: #0a1120;
+  color: #e8f4ff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
-.newTitle {
-  font-size: 2.5rem;
-  color: black;
+.bg-dark {
+  background-color: #0a1120 !important;
+}
+
+.text-white {
+  color: #e8f4ff !important;
+}
+
+/* 2. 顶部标题栏 */
+.header-bar {
+  width: 100%;
+  flex-shrink: 0;
+  padding: 0 20px;
+  height: 60px;
+  background-color: rgba(10, 17, 32, 0.95);
+  border-bottom: 2px solid #00e5ff;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+}
+
+.header-title {
+  font-size: calc(1.2vw + 0.8rem);
+  color: #00e5ff;
+  font-weight: bolder;
   letter-spacing: 0.1em;
+  margin: 0;
+  text-shadow: 0 0 5px #00e5ff;
+}
+
+.header-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 120px;
+  height: 40px;
+  color: #fff;
+  font-size: 0.9rem;
   font-weight: bold;
-  margin-bottom: 40px;
+  margin: 0 5px;
+  background: linear-gradient(135deg, #0f1a2e, #1a2942);
+  border: 1px solid #00e5ff;
+  border-radius: 4px;
+  box-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, #1a2942, #0f1a2e);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+}
+
+.btn {
+  background: linear-gradient(135deg, #0f1a2e, #1a2942);
+  border: 1px solid #00e5ff;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100px;
+  height: 36px;
+  margin-left: 10px;
+  color: #fff;
+  font-size: 1rem;
+  box-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, #1a2942, #0f1a2e);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  font-weight: bold;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-home {
+  background-image: url('~@/assets/images/step1/-s-按钮-蓝色.png');
+}
+
+.btn-back {
+  background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png');
+}
+
+.btn-next {
+  background-image: url('~@/assets/images/step1/-s-按钮-绿色.png');
+}
+
+/* 3. 核心内容区 */
+.content-row {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+}
+
+/* 三列通用高度 */
+.left-column, .middle-column, .right-column {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 80px); /* 减去顶部栏高度 */
+  padding: 0 !important;
+}
+
+/* 面板通用样式 */
+[class^="panel-"] {
+  width: 100%;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  padding: 20px 30px 30px 30px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 特定面板的高度和边距 */
+.panel-left {
+  flex-grow: 1;
+  height: 100%;
+  background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
+}
+
+.panel-right-top {
+  height: 55%;
+  flex-shrink: 0;
+  background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
+  margin-bottom: 15px;
+}
+
+.panel-right-bottom {
+  flex-grow: 1;
+  height: 100%;
+  background-image: url('~@/assets/images/step1/-s-弹窗-偏差检测准确率.png');
+}
+
+.panel-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 面板标题 */
+.panel-header {
+  height: 35px;
+  background-image: url('~@/assets/images/step1/-s-二级标题.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  flex-shrink: 0;
+
+  color: #fff;
+  font-size: 1rem;
+  font-weight: bold;
+  padding-left: 0;
+  margin-bottom: 10px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 视频框架 */
+.video-frame {
+  width: 95%;
+  height: 250px;
+  background-image: url('~@/assets/images/step1/-s-框-小视频.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  padding: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.video-display {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.placeholder-text {
+  color: #88a;
+  font-size: 1rem;
+  text-align: center;
+  padding: 20px;
+}
+
+/* 知识图谱容器样式 */
+.graph-container {
+  position: relative;
+  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  padding: 15px;
+  flex-grow: 1;
+}
+
+.graph-title {
+  color: #00e5ff;
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* 信息列表样式 */
+.description-box {
+  flex-grow: 1;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  color: #eee;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  padding: 15px !important;
+  overflow-y: auto;
+}
+
+.description-box::-webkit-scrollbar {
+  width: 6px;
+}
+
+.description-box::-webkit-scrollbar-thumb {
+  background: #00e5ff;
+  border-radius: 3px;
+}
+
+.description-box::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.info-list li {
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 10px;
+  line-height: 1.5;
+  color: #e8f4ff;
+}
+
+.info-list li:before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: #00e5ff;
+  border-radius: 50%;
+  position: absolute;
+  left: 0;
+  top: 8px;
+  box-shadow: 0 0 8px #00e5ff;
+}
+
+.text-red {
+  color: #ff4d4d;
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+
+/* 准确率显示 */
+.metric-box {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 3.5rem;
+  font-weight: bold;
+  color: #00e5ff;
+  text-shadow: 0 0 10px #00e5ff;
+}
+
+/* 按钮样式 */
+.action-buttons {
+  margin-top: auto;
+  flex-shrink: 0;
+  padding-top: 15px;
+  text-align: center;
+}
+
+.btn-start-detect {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 220px;
+  height: 50px;
+  background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: bold;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+
+  &:disabled {
+    filter: grayscale(80%);
+    cursor: not-allowed;
+  }
+
+  span {
+    margin-left: 8px;
+  }
+}
+
+.btn-export-result {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 200px;
+  height: 48px;
+  background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: bold;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+
+  &:disabled {
+    filter: grayscale(80%);
+    cursor: not-allowed;
+  }
 }
 
 /* 加载遮罩样式 */
@@ -465,7 +895,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: rgba(10, 17, 32, 0.8);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -476,59 +906,72 @@ export default {
 
 .loading-spinner {
   padding: 20px 40px;
-  background-color: white;
-  border: 3px solid #7BA3D1;
+  background-color: rgba(0, 0, 0, 0.7);
+  border: 3px solid #00e5ff;
   border-radius: 8px;
+  color: #00e5ff;
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
 }
 
-/* 新布局 */
-.main-layout {
-  display: grid;
-  grid-template-columns: 320px 1fr 340px;
-  gap: 30px;
-  padding: 20px 40px 40px;
-  align-items: stretch;
+.text-muted {
+  color: #888888;
+  font-style: italic;
 }
 
-/* 左侧 */
-.left-panel { display: flex; flex-direction: column; gap: 30px; }
-.image-box { border:3px solid #7BA3D1; background:#fff; padding:10px; height:360px; }
-.video-content-wrapper { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
-.video-player { width:100%; height:100%; object-fit:contain; }
-.video-placeholder-text { color:#666; font-size:16px; text-align:center; padding:20px; }
-.negotiation-box { border:3px solid #7BA3D1; background:#D3E4F7; padding:25px 20px; display:flex; align-items:center; justify-content:center; }
-.negotiation-box.large { height:120px; }
-.negotiation-btn { 
-  background:none; 
-  border:none; 
-  display:flex; 
-  align-items:center; 
-  gap:18px; 
-  cursor:pointer; 
-  font-size:22px; 
-  font-weight:bold; 
+.video-description-text {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.6;
+  margin: 0;
+  padding: 10px 0;
 }
-.negotiation-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+
+/* 响应式调整 */
+@media (max-width: 1400px) {
+  .video-frame {
+    height: 200px;
+  }
+  
+  .metric-box {
+    font-size: 2.8rem;
+  }
+  
+  [class^="panel-"] {
+    padding: 20px;
+  }
+  
+  .panel-header {
+    height: 35px;
+  }
 }
-.play-icon { width:46px; height:46px; background:#2168BE; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; }
 
-/* 中间图谱 */
-.graph-panel { position:relative; }
-.graph-container { position:relative; border:3px solid #E6B877; background:#FFF4E0; border-radius:60px; padding:30px 20px 20px; height:100%; min-height:480px; }
-.graph-title { position:absolute; top:20px; left:40px; font-weight:bold; font-size:20px; }
-.graph-container svg { width:100%; height:100%; }
-
-/* 右侧信息 */
-.right-panel { display:flex; flex-direction:column; gap:30px; }
-.info-box { border:3px solid #C9A8D4; background:#E8D9EF; padding:20px 25px; }
-.info-title { font-weight:bold; font-size:18px; margin-bottom:15px; }
-.info-list { list-style:none; padding:0; margin:0 0 20px; }
-.info-list li { position:relative; padding-left:16px; line-height:28px; }
-.info-list li:before { content:""; width:8px; height:8px; background:#000; border-radius:50%; position:absolute; left:0; top:10px; }
-.accuracy-box { background:#fff; border:2px solid #000; padding:10px 12px; display:inline-flex; gap:6px; font-size:14px; font-weight:bold; }
-.accuracy-box.small { margin-top:auto; }
-.accuracy-label { color:#333; }
-.accuracy-value { color:#000; }
+@media (max-width: 1200px) {
+  .left-column, .middle-column, .right-column {
+    height: auto;
+    margin-bottom: 20px;
+  }
+  
+  .content-row {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .left-column, .right-column {
+    width: 80% !important;
+    max-width: 80% !important;
+  }
+  
+  .middle-column {
+    width: 90% !important;
+    max-width: 90% !important;
+  }
+  
+  .right-column {
+    min-height: 600px;
+  }
+  
+  .panel-left { min-height: 400px; }
+  .panel-right-top { min-height: 250px; height: auto; }
+  .panel-right-bottom { min-height: 150px; }
+}
 </style>
