@@ -10,6 +10,7 @@ import GroupNegotiation from '../pages/GroupNegotiation.vue'
 import PriorKnowledge from '../pages/PriorKnowledge.vue'
 import DecisionMaking from '../pages/DecisionMaking.vue'
 import AttributionDiagnosis from '../pages/AttributionDiagnosis.vue'
+import AttributionDiagnosisV2 from '../pages/AttributionDiagnosisV2.vue'
 Vue.use(Router)
 
 export default new Router({
@@ -45,9 +46,9 @@ export default new Router({
       component: GroupNegotiation
     },
     {
-      path: '/attributiondiagnosis', // 归因诊断
+      path: '/attributiondiagnosis', // 根因诊断
       name: 'AttributionDiagnosis',
-      component: AttributionDiagnosis
+      component: AttributionDiagnosisV2
     },
     {
       path: '/projects',
