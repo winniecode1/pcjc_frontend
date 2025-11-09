@@ -282,6 +282,7 @@ export default {
         this.fullResult.video_description = fullData.video_description;
         this.fullResult.video_info = fullData.video_info;
         this.fullResult.accuracy_results = fullData.accuracy_results;
+        this.fullResult.deviceType = fullData.deviceType;
 
         this.fullResult.key_frame_detection = fullData.key_frame_detection;
         const key_frame_path_url = fullData.key_frame_path; // 假设为 /output/task_id/key_frame.jpg
@@ -296,9 +297,7 @@ export default {
           localStorage.setItem('videoDescription', videoDescription);
 
           // 2. 设备类型
-          const deviceType = (this.fullResult.key_frame_detection && this.fullResult.key_frame_detection.most_common_class)
-                            ? this.fullResult.key_frame_detection.most_common_class
-                            : 'N/A';
+          const deviceType = this.fullResult.deviceType || "N/A";
           localStorage.setItem('deviceType', deviceType);
 
           // 3. 图像路径 (来自 key_frame_path_url)
