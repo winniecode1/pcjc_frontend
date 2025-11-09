@@ -558,7 +558,7 @@ export default {
       
       const singleTask = module3.single_task_stage;
       if (singleTask) {
-        this.module3BiasTestResult = this.safeGet(singleTask, 'prediction.caption', '');
+        this.module3BiasTestResult = this.safeGet(singleTask, 'prediction.final_review', '');
       }
       
       const moduleTestStage = module3.module_test_stage;
@@ -632,10 +632,10 @@ export default {
      * 高亮双括号内容（标红并移除括号）
      */
     highlightBrackets(text) {
-      if (!text) return '';
-      
-      // 将 {{xxx}} 替换为 <span class="highlight">xxx</span>
-      return text.replace(/\{\{([^}]+)\}\}/g, '<span class="highlight-text">$1</span>');
+      if (text === null || text === undefined) return '';
+      const str = String(text);
+      // 跨行、非贪婪匹配；使用内联样式确保在 scoped/深度选择器受限时也能生效
+      return str.replace(/\{\{([\s\S]*?)\}\}/g, '<span class="highlight-text" style="color:#dc2626;font-weight:700;">$1</span>');
     },
     
     /**
@@ -851,6 +851,8 @@ export default {
   background-color: #fee;
   padding: 0 2px;
 }
+
+/* 注：仅保留 ::v-deep，避免 sass 对 /deep/ 与 >>> 的解析报错 */
 
 /* =========== 根因诊断结果卡片 =========== */
 .diagnosis-result-card {
