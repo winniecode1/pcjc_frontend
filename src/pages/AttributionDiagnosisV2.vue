@@ -299,6 +299,27 @@ export default {
         try {
           module1Data = JSON.parse(module1Str);
           console.log('✅ module1Res 解析成功:', module1Data);
+          
+          // 提取 key_frame_path 并处理：去掉最后一个/及其后面的内容
+          const keyFramePath = module1Data.key_frame_path;
+          if (!keyFramePath) {
+            console.error('❌ module1Res 中缺少 key_frame_path 字段');
+            return {
+              success: false,
+              message: '模块一数据中缺少 key_frame_path 字段'
+            };
+          }
+          
+          // 去掉最后一个/及其后面的内容，得到文件夹路径
+          const lastSlashIndex = keyFramePath.lastIndexOf('/');
+          const folderPath = lastSlashIndex > 0 ? keyFramePath.substring(0, lastSlashIndex) : keyFramePath;
+          
+          console.log('📁 提取的文件夹路径:', folderPath);
+          
+          // 重新构建 module1Data，只保留 path 字段
+          module1Data = {
+            path: folderPath
+          };
         } catch (e) {
           console.error('❌ module1Res 解析失败:', e);
           return {
