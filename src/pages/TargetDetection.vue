@@ -1,32 +1,47 @@
 <template>
   <div class="section">
     <div class="img_box"></div>
+
     <b-row class="header-bar align-item-s-center no-gutters">
       <b-col cols="3" class="text-left">
-        <button class="header-btn btn-home">首页</button>
-        <button class="header-btn btn-back">返回</button>
+        <button class="header-btn btn-home" @click="navigateHome">首页</button>
+        <button class="header-btn btn-back" @click="navigateHome">返回</button>
       </b-col>
       <b-col cols="6" class="text-center">
         <h1 class="header-title">多模态信息认知偏差检测模型</h1>
       </b-col>
       <b-col cols="3" class="text-right">
-        <button class="header-btn btn-next">下个页面</button>
+        <button class="header-btn btn-next" @click="navigateNextPage">下个页面</button>
       </b-col>
     </b-row>
+
     <b-row class="justify-content-center content-row no-gutters">
+
       <b-col cols="3" class="left-column px-2">
         <div class="panel-header header-select-data">选择数据</div>
+
         <div class="panel-left">
           <div class="panel-content">
             <div class="server-video-list overflow-auto">
               <!-- 视频列表 -->
-              <div v-for="video in videoList" :key="video.id" class="video-item" @click="selectVideo(video)">
+              <div
+                v-for="video in videoList"
+                :key="video.id"
+                class="video-item"
+                @click="selectVideo(video)"
+                :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }"
+              >
                 <span>{{ video.name }}</span>
-                <span class="selector-circle" :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }"></span>
+                <span class="selector-circle"></span>
               </div>
             </div>
+
             <div class="action-buttons">
-              <button @click="startDetection" :disabled="!selectedVideo || isLoading" class="btn-start-detect" >
+              <button
+                @click="startDetection"
+                :disabled="!selectedVideo || isLoading"
+                class="btn-start-detect"
+              >
                 <b-spinner small v-if="isLoading"></b-spinner>
                 <span>{{ isLoading ? (progressMessage || '检测中...') : '开始检测' }}</span>
               </button>
@@ -34,25 +49,43 @@
           </div>
         </div>
       </b-col>
+
       <b-col cols="5" class="middle-column mx-2 px-1">
         <div class="video-section">
           <div class="video-label label-original">原视频</div>
           <div class="video-frame">
-            <video v-if="originalVideoURL" :src="originalVideoURL" controls class="video-display" @error="handleVideoError" ></video>
+            <video
+              v-if="originalVideoURL"
+              :src="originalVideoURL"
+              controls
+              class="video-display"
+              @error="handleVideoError"
+            ></video>
             <div v-else class="placeholder-text">请选择视频</div>
           </div>
         </div>
+
         <div class="video-section">
           <div class="video-label label-processed">多模态检测结果 ({{ taskId || 'N/A' }})</div>
           <div class="video-frame">
-            <video v-if="processedVideoURL" :src="processedVideoURL" controls class="video-display" :key="processedVideoURL" @error="handleVideoError" ></video>
+            <video
+              v-if="processedVideoURL"
+              :src="processedVideoURL"
+              controls
+              class="video-display"
+              :key="processedVideoURL"
+              @error="handleVideoError"
+            ></video>
             <div v-else-if="isLoading" class="placeholder-text">等待处理结果...</div>
             <div v-else class="placeholder-text">检测结果将在这里显示</div>
           </div>
         </div>
       </b-col>
+
       <b-col cols="3" class="right-column px-2">
+
         <div class="panel-header header-results">偏差检测结果</div>
+
         <div class="panel-right-top">
           <div class="panel-content">
             <div class="description-box p-2 overflow-auto">
@@ -68,24 +101,33 @@
             </div>
           </div>
         </div>
+
         <div class="panel-header header-accuracy">偏差检测准确率</div>
+
         <div class="panel-right-bottom">
           <div class="panel-content">
             <div class="metric-box">
               <template v-if="fullResult.accuracy_results && fullResult.accuracy_results.detection">
-                {{ (fullResult.accuracy_results.detection.precision * 100).toFixed(2) + '%' }}
+                 {{ (fullResult.accuracy_results.detection.precision * 100).toFixed(2) + '%' }}
               </template>
               <template v-else>
-                N/A
+                 N/A
               </template>
             </div>
-          </div>
+            </div>
         </div>
+
         <div class="action-buttons-right">
-          <button class="btn-export-result">
+          <!-- 【更改】添加了 @click 和 :disabled 绑定 -->
+          <button
+            class="btn-export-result"
+            @click="exportResults"
+            :disabled="!taskId || isLoading"
+          >
             <span>结果导出</span>
           </button>
         </div>
+
       </b-col>
     </b-row>
   </div>
@@ -95,8 +137,10 @@
 import axios from 'axios';
 import { BIcon, BIconPlayCircleFill, BIconPlayFill, BSpinner } from 'bootstrap-vue';
 
+// API 基础地址
 const API_BASE_URL = 'http://10.109.253.71:5236';
-
+const FRONTEND_BASE_URL = 'http://10.109.253.71:8889';
+const BASE_DIR = "/home/wuzhixuan/Project/PCJC/1"
 export default {
   name: 'TargetDetection',
   components: {
@@ -133,6 +177,14 @@ export default {
     window.removeEventListener('resize', this.handleResize);
   },
   methods: {
+    navigateHome() {
+      // "首页" 和 "返回" 都跳转到根路径
+      window.location.href = `${FRONTEND_BASE_URL}/`;
+    },
+    navigateNextPage() {
+      // "下个页面" 跳转到指定页面
+      window.location.href = `${FRONTEND_BASE_URL}/prior-knowledge`;
+    },
     handleResize() {
       this.fullWidth = window.innerWidth;
       this.fullHeight = window.innerHeight;
@@ -142,7 +194,7 @@ export default {
       this.resultMessage = "处理后视频加载失败，请检查服务器日志和网络。";
     },
     getMainObject() {
-      if (!this.fullResult.key_frame_detection || !this.fullResult.key_frame_detection.detections.length) {
+      if (!this.fullResult.key_frame_detection || !this.fullResult.key_frame_detection.detections || !this.fullResult.key_frame_detection.detections.length) {
         return 'N/A';
       }
       const maxConfDet = this.fullResult.key_frame_detection.detections.reduce((prev, curr) => {
@@ -151,7 +203,7 @@ export default {
       return maxConfDet.class;
     },
     getMainConfidence() {
-      if (!this.fullResult.key_frame_detection || !this.fullResult.key_frame_detection.detections.length) {
+      if (!this.fullResult.key_frame_detection || !this.fullResult.key_frame_detection.detections || !this.fullResult.key_frame_detection.detections.length) {
         return 0;
       }
       const maxConfDet = this.fullResult.key_frame_detection.detections.reduce((prev, curr) => {
@@ -170,23 +222,23 @@ export default {
       }
     },
     selectVideo(video) {
-    this.selectedVideo = video;
+      this.selectedVideo = video;
 
       // 正确构造原视频URL
-  try {
-    // 确保API_BASE_URL末尾没有斜杠
-    const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
-    // 构造正确的视频URL
-    this.originalVideoURL = `${baseUrl}/video/${encodeURIComponent(video.name)}`;
-    console.log("原视频URL:", this.originalVideoURL); // 用于调试
-  } catch (error) {
-    console.error("构造视频URL失败:", error);
-    this.originalVideoURL = null;
-  }
+      try {
+        // 确保API_BASE_URL末尾没有斜杠
+        const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+        // 构造正确的视频URL
+        this.originalVideoURL = `${baseUrl}/video/${encodeURIComponent(video.name)}`;
+        console.log("原视频URL:", this.originalVideoURL); // 用于调试
+      } catch (error) {
+        console.error("构造视频URL失败:", error);
+        this.originalVideoURL = null;
+      }
 
-    // 2. 确保圆圈亮起（已通过v-bind:class实现）
-    console.log("已选择视频:", video.name);
-  },
+      // 2. 确保圆圈亮起（已通过v-bind:class实现）
+      console.log("已选择视频:", video.name);
+    },
     async startDetection() {
       if (!this.selectedVideo) {
         alert("请先选择视频文件！");
@@ -205,8 +257,9 @@ export default {
       this.resultMessage = "正在启动分析...";
       this.progressMessage = "正在启动分析...";
       console.log("Selected video name:", this.selectedVideo.name);
+
       try {
-        // 调用后端分析接口，发送视频文件名
+        // 1. 调用后端分析接口
         const analyzeResponse = await axios.post(`${API_BASE_URL}/analyze_video`, {
           video_name: this.selectedVideo.name
         });
@@ -220,22 +273,71 @@ export default {
         this.progressMessage = `分析任务 [${this.taskId}] 已启动，正在进行深度处理...`;
         this.resultMessage = `任务ID: ${this.taskId}。处理时间预计 ${analyzeData.processing_time.toFixed(2)}s。`;
 
-        // 获取检测结果
+        // 2. 获取检测结果
         const fullResultResponse = await axios.get(`${API_BASE_URL}/get_detection_results/${this.taskId}`);
         const fullData = fullResultResponse.data;
 
-        // 更新结果
+        // 3. 更新界面结果
         this.fullResult.task_id = fullData.task_id;
         this.fullResult.video_description = fullData.video_description;
         this.fullResult.video_info = fullData.video_info;
         this.fullResult.accuracy_results = fullData.accuracy_results;
+
         this.fullResult.key_frame_detection = fullData.key_frame_detection;
+        const key_frame_path_url = fullData.key_frame_path; // 假设为 /output/task_id/key_frame.jpg
 
         // 构造处理后视频的 URL
         this.processedVideoURL = `${API_BASE_URL}${fullData.video_path}`;
 
-        // 保存结果到 localStorage
-        localStorage.setItem(`video_analysis_${this.taskId}`, JSON.stringify(fullData));
+        // 4. 【新增】按要求存储到 localStorage
+        try {
+          // 1. 视频理解文本描述
+          const videoDescription = this.fullResult.video_description || "无描述";
+          localStorage.setItem('videoDescription', videoDescription);
+
+          // 2. 设备类型
+          const deviceType = (this.fullResult.key_frame_detection && this.fullResult.key_frame_detection.most_common_class)
+                            ? this.fullResult.key_frame_detection.most_common_class
+                            : 'N/A';
+          localStorage.setItem('deviceType', deviceType);
+
+          // 3. 图像路径 (来自 key_frame_path_url)
+          let fullImagePath = "无图像路径";
+
+          if (key_frame_path_url && key_frame_path_url !== "无图像路径") {
+          // 确保基础 URL 末尾没有斜杠
+            const baseUrl = BASE_DIR.replace(/\/$/, '');
+
+          // 确保返回的路径开头有斜杠
+            const relativePath = key_frame_path_url.startsWith('/')
+                     ? key_frame_path_url
+                     : '/' + key_frame_path_url;
+
+          // 拼接完整的 URL
+            fullImagePath = baseUrl + relativePath;
+          }
+
+          // 现在存储到 localStorage 中的是完整的、可直接访问的 URL
+          localStorage.setItem('imagePath', fullImagePath);
+
+          // 4. 原视频路径
+          const originalVideoPath = this.originalVideoURL || "无原视频路径";
+          localStorage.setItem('originalVideoPath', originalVideoPath);
+
+          // 【新增】方便调试：打印 localStorage
+          console.log("--- localStorage 已更新 (模块一) ---");
+          console.log("videoDescription:", localStorage.getItem('videoDescription'));
+          console.log("deviceType:", localStorage.getItem('deviceType'));
+          console.log("imagePath:", localStorage.getItem('imagePath'));
+          console.log("originalVideoPath:", localStorage.getItem('originalVideoPath'));
+          console.log("---------------------------------");
+        } catch (e) {
+          console.error("保存到 localStorage 失败:", e);
+        }
+
+        // 【删除】旧的 localStorage 存储方式，替换为新的
+        // localStorage.setItem(`video_analysis_${this.taskId}`, JSON.stringify(fullData));
+        // console.log("保存模块一结果到 localStorage");
 
         this.resultMessage = "视频分析成功！结果已更新。";
         this.progressMessage = "分析完成";
@@ -245,6 +347,61 @@ export default {
         this.progressMessage = "分析失败";
       } finally {
         this.isLoading = false;
+      }
+    },
+
+    /**
+     * 【新增】: 导出结果
+     */
+    async exportResults() {
+      if (!this.taskId) {
+        alert("请先完成一次检测再导出结果。");
+        return;
+      }
+
+      console.log(`正在请求导出任务: ${this.taskId}`);
+
+      try {
+        const response = await axios.get(`${API_BASE_URL}/export_results/${this.taskId}`, {
+          responseType: 'blob', // 关键：告诉 axios 期望一个 Blob
+        });
+
+        // 从 response 中创建 Blob
+        const blob = new Blob([response.data], { type: 'application/zip' });
+
+        // 创建一个临时的 URL
+        const downloadUrl = window.URL.createObjectURL(blob);
+
+        // 创建一个 <a> 标签来触发下载
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+
+        // 设置下载的文件名 (后端已设置 Content-Disposition, 但这里是备用)
+        link.download = `${this.taskId}_results.zip`;
+
+        // 将 <a> 标签添加到 DOM 中 (在某些浏览器中是必需的)
+        document.body.appendChild(link);
+
+        // 触发点击
+        link.click();
+
+        // 清理
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+      } catch (error) {
+        console.error("导出结果失败:", error);
+        // 尝试将 blob 错误转换为 JSON 文本
+        if (error.response && error.response.data && error.response.data.type === 'application/json') {
+          try {
+            const errorJson = await error.response.data.text();
+            const errorObj = JSON.parse(errorJson);
+            alert(`导出失败: ${errorObj.error || '未知错误'}`);
+          } catch (e) {
+            alert("导出失败，且无法解析错误详情。");
+          }
+        } else {
+          alert("导出结果失败，请查看控制台日志。");
+        }
       }
     }
   }
@@ -343,33 +500,28 @@ export default {
   padding: 0 !important;
 }
 
-/* 【修改】面板通用样式 */
+/* 面板通用样式 (不变) */
 [class^="panel-"] {
   width: 100%;
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  /* 【修改】移除了 padding-top: 40px，因为标题拿出去了 */
   padding: 20px 30px 30px 30px;
   display: flex;
   flex-direction: column;
-  /* 【修改】移除了 height 属性，交由 flex-grow 或具体类控制 */
 }
 
-/* 【修改】特定面板的高度和边距 */
+/* 特定面板的高度和边距 (不变) */
 .panel-left {
-  /* 【修改】自动填充剩余高度 */
   flex-grow: 1;
   height: 100%;
 }
 .panel-right-top {
-  /* 【修改】保持原有高度比例，但会收缩 */
   height: 55%;
   flex-shrink: 0;
 }
 .panel-right-bottom {
-  /* 【修改】自动填充剩余空间 */
   flex-grow: 1;
-  height: 100%; /* 允许 flex-grow 生效 */
+  height: 100%;
 }
 
 .panel-content {
@@ -379,7 +531,7 @@ export default {
   overflow: hidden;
 }
 
-/* 【修改】面板标题 (-s-二级标题.png) */
+/* 面板标题 (不变) */
 .panel-header {
   height: 35px;
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
@@ -391,14 +543,12 @@ export default {
   font-size: 1rem;
   font-weight: bold;
   padding-left: 0;
-  /* 【修改】标题之间增加间距 */
   margin-bottom: 10px;
 
   display: flex;
   justify-content: center;
   align-items: center;
 }
-/* 【修改】右侧两个标题之间增加额外间距 */
 .header-accuracy {
   margin-top: 15px;
 }
@@ -437,32 +587,9 @@ export default {
   border-color: #00e5ff;
 }
 
-/* 【新增/修改】为了让 b-form-file 融入样式 */
+/* 隐藏 b-form-file (如果不再使用) */
 .upload-area {
-  padding: 0; /* 移除内边距 */
-  background-color: transparent; /* 移除背景色 */
-  border: none; /* 移除边框 */
-
-  /* 强制样式穿透 */
-  ::v-deep .custom-file {
-    .custom-file-label {
-      background-color: rgba(0, 100, 150, 0.2);
-      border: 1px solid rgba(0, 229, 255, 0.3);
-      border-radius: 4px;
-      color: #fff; /* 更改文字颜色 */
-      height: 45px;
-      line-height: 30px;
-    }
-    .custom-file-input:focus ~ .custom-file-label {
-      border-color: #00e5ff;
-      box-shadow: 0 0 0 0.2rem rgba(0, 229, 255, 0.25);
-    }
-    .custom-file-label::after {
-      background-color: rgba(0, 229, 255, 0.4);
-      color: #fff;
-      border-left: 1px solid rgba(0, 229, 255, 0.3);
-    }
-  }
+  display: none;
 }
 
 .selector-circle {
@@ -596,9 +723,8 @@ export default {
   font-size: 0.95rem;
 }
 
-/* 【修改】右下方面板 */
+/* 右下方面板 (不变) */
 .panel-right-bottom {
-  /* 【修改】更换背景图 */
   background-image: url('~@/assets/images/step1/-s-弹窗-偏差检测准确率.png');
 }
 
@@ -614,14 +740,13 @@ export default {
   text-shadow: 0 0 10px #00e5ff;
 }
 
-/* 【修改】导出按钮的容器 */
+/* 导出按钮的容器 (不变) */
 .action-buttons-right {
-  flex-shrink: 0; /* 不压缩 */
-  text-align: right; /* 按钮靠右 */
-  /* 【修改】自动推到底部 */
+  flex-shrink: 0;
+  text-align: right;
   margin-top: auto;
-  padding-top: 15px; /* 与上方元素的间距 */
-  padding-bottom: 10px; /* 距离列底部的间距 */
+  padding-top: 15px;
+  padding-bottom: 10px;
 }
 
 .btn-export-result {
@@ -640,6 +765,12 @@ export default {
   display: inline-flex;
   justify-content: center;
   align-items: center;
+
+  /* 【新增】导出按钮的 disabled 样式 */
+  &:disabled {
+    filter: grayscale(80%);
+    cursor: not-allowed;
+  }
 }
 
 /* 7. 响应式调整 (不变) */
@@ -651,7 +782,6 @@ export default {
     font-size: 2.8rem;
   }
   [class^="panel-"] {
-    /* 【修改】调整内边距 */
     padding: 20px;
   }
   .panel-header {
@@ -676,12 +806,11 @@ export default {
     width: 90% !important;
     max-width: 90% !important;
   }
-  /* 【修改】为右侧列设置最小高度以容纳新布局 */
   .right-column {
     min-height: 600px;
   }
   .panel-left { min-height: 400px; }
-  .panel-right-top { min-height: 250px; height: auto; } /* 响应式时改回 auto */
+  .panel-right-top { min-height: 250px; height: auto; }
   .panel-right-bottom { min-height: 150px; }
 }
 </style>
