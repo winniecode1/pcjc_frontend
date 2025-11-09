@@ -277,61 +277,86 @@ export default {
         const fullResultResponse = await axios.get(`${API_BASE_URL}/get_detection_results/${this.taskId}`);
         const fullData = fullResultResponse.data;
 
-        // 3. 更新界面结果
+        // 3. 更新界面结果 (确保所有字段都已从 fullData 复制过来)
         this.fullResult.task_id = fullData.task_id;
         this.fullResult.video_description = fullData.video_description;
         this.fullResult.video_info = fullData.video_info;
         this.fullResult.accuracy_results = fullData.accuracy_results;
+        this.fullResult.overall_accuracy = fullData.overall_accuracy;      // 新增字段
+        this.fullResult.low_similarity_aspects = fullData.low_similarity_aspects; // 新增字段
+        this.fullResult.video_path = fullData.video_path;                  // 新增字段
         this.fullResult.deviceType = fullData.deviceType;
-
+        this.fullResult.key_frame_path = fullData.key_frame_path;          // 新增字段
         this.fullResult.key_frame_detection = fullData.key_frame_detection;
-        const key_frame_path_url = fullData.key_frame_path; // 假设为 /output/task_id/key_frame.jpg
 
-        // 构造处理后视频的 URL
-        this.processedVideoURL = `${API_BASE_URL}${fullData.video_path}`;
+        const key_frame_path_url = fullData.key_frame_path;
+        const video_path_url = fullData.video_path; // 获取后端返回的 video_path
 
-        // 4. 【新增】按要求存储到 localStorage
+        // 构造处理后视频的 URL (这个保留，用于播放器)
+        this.processedVideoURL = `${API_BASE_URL}${video_path_url}`;
+
+
+        // 4. 【关键修改】：整合所有后端结果并以 module1Res 的格式存储到 localStorage
         try {
-          // 1. 视频理解文本描述
-          const videoDescription = this.fullResult.video_description || "无描述";
-          localStorage.setItem('videoDescription', videoDescription);
-
-          // 2. 设备类型
-          const deviceType = this.fullResult.deviceType || "N/A";
-          localStorage.setItem('deviceType', deviceType);
-
-          // 3. 图像路径 (来自 key_frame_path_url)
+          // --- 1. 路径处理（将相对路径转换为完整的 URL） ---
+          const baseUrl = BASE_DIR.replace(/\/$/, '');
+          
+          // 关键帧路径处理
           let fullImagePath = "无图像路径";
-
           if (key_frame_path_url && key_frame_path_url !== "无图像路径") {
-          // 确保基础 URL 末尾没有斜杠
-            const baseUrl = BASE_DIR.replace(/\/$/, '');
-
-          // 确保返回的路径开头有斜杠
-            const relativePath = key_frame_path_url.startsWith('/')
-                     ? key_frame_path_url
-                     : '/' + key_frame_path_url;
-
-          // 拼接完整的 URL
+            const relativePath = key_frame_path_url.startsWith('/') ? key_frame_path_url : '/' + key_frame_path_url;
             fullImagePath = baseUrl + relativePath;
           }
 
-          // 现在存储到 localStorage 中的是完整的、可直接访问的 URL
-          localStorage.setItem('imagePath', fullImagePath);
+          // 处理后视频路径处理
+          let fullProcessedVideoPath = "无视频路径";
+          if (video_path_url && video_path_url !== "无视频路径") {
+            const relativePath = video_path_url.startsWith('/') ? video_path_url : '/' + video_path_url;
+            fullProcessedVideoPath = baseUrl + relativePath;
+          }
+          
+          // --- 2. 构建 module1Res 最终对象 ---
+          // 直接使用 fullData 的所有字段，并用完整的 URL 覆盖路径字段
+          const module1Res = {
+            ...fullData, // 复制所有后端返回的字段
+            
+            // 覆盖字段为完整的 URL 或确保有默认值
+            videoDescription: fullData.video_description || "无描述",
+            deviceType: fullData.deviceType || "N/A",
+            
+            // 使用处理后的完整 URL 覆盖原有的相对路径
+            key_frame_path: fullImagePath, 
+            video_path: fullProcessedVideoPath,
+            
+            // 额外添加 originalVideoPath 字段 (如果前端需要)
+            originalVideoPath: this.originalVideoURL || "无原视频路径"
+          };
+          
+          // 3. 将对象转换为 JSON 字符串并存储
+          localStorage.setItem('module1Res', JSON.stringify(module1Res));
 
-          // 4. 原视频路径
-          const originalVideoPath = this.originalVideoURL || "无原视频路径";
-          localStorage.setItem('originalVideoPath', originalVideoPath);
+          // 4. 方便调试：【格式化打印】存储的 module1Res 数据
+          console.groupCollapsed("%c✅ Module 1 结果已存储 (module1Res)", "color: #17a2b8; font-weight: bold;");
+          
+          // 打印原始 JSON 字符串
+          console.log("%c原始 JSON 字符串:", "font-weight: bold; color: #ffc107;", localStorage.getItem('module1Res'));
 
-          // 【新增】方便调试：打印 localStorage
-          console.log("--- localStorage 已更新 (模块一) ---");
-          console.log("videoDescription:", localStorage.getItem('videoDescription'));
-          console.log("deviceType:", localStorage.getItem('deviceType'));
-          console.log("imagePath:", localStorage.getItem('imagePath'));
-          console.log("originalVideoPath:", localStorage.getItem('originalVideoPath'));
-          console.log("---------------------------------");
+          // 打印对象所有键值对的表格
+          const tableData = Object.entries(module1Res).map(([key, value]) => ({
+              Key: key,
+              Value: (typeof value === 'object' && value !== null) ? JSON.stringify(value).substring(0, 50) + '...' : value
+          }));
+          
+          console.log("%c对象内容 (表格展示):", "font-weight: bold; color: #28a745;");
+          console.table(tableData);
+
+          // 特别打印 video_description (长文本)
+          console.log("%c视频描述 (videoDescription):", "font-weight: bold; color: #00e5ff;", module1Res.videoDescription);
+          
+          console.groupEnd(); // 结束分组
+          
         } catch (e) {
-          console.error("保存到 localStorage 失败:", e);
+          console.error("保存 module1Res 到 localStorage 失败:", e);
         }
 
         // 【删除】旧的 localStorage 存储方式，替换为新的
