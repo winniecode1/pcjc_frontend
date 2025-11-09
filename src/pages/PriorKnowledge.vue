@@ -17,13 +17,23 @@
       <!-- 左侧 -->
       <div class="left-panel">
         <div class="image-box">
-          <img v-if="originalImageURL" :src="originalImageURL" alt="图片" class="aircraft-image" />
-          <div v-else class="placeholder-image"><span>图片</span></div>
+          <div class="video-content-wrapper">
+            <video v-if="videoUrl" :src="videoUrl" controls class="video-player" @error="handleVideoError"></video>
+            <div v-else class="video-placeholder-text">
+              {{ videoMessage }}
+            </div>
+          </div>
         </div>
         <div class="negotiation-box large">
           <button class="negotiation-btn" @click="startNegotiation" :disabled="isLoading">
             <span class="play-icon">▶</span>
             <span class="negotiation-text">开始检测</span>
+          </button>
+        </div>
+        <div class="negotiation-box large">
+          <button class="negotiation-btn" @click="downloadJsonData" :disabled="isLoading">
+            <span class="play-icon">⤓</span>
+            <span class="negotiation-text">导出</span>
           </button>
         </div>
       </div>
@@ -45,7 +55,13 @@
         <div class="info-box predict-box">
           <div class="info-title">预测信息</div>
           <ul class="info-list">
-            <li v-for="(item, idx) in predictInfoList" :key="'pre-' + idx">{{ item }}</li>
+            <li v-for="(item, idx) in predictInfoList" :key="'pre-' + idx">
+              <span v-if="typeof item === 'object'">
+                {{ item.label }}
+                <span :style="{ color: item.color }">{{ item.value }}</span>
+              </span>
+              <span v-else>{{ item }}</span>
+            </li>
           </ul>
           <div class="accuracy-box small">
             <span class="accuracy-label">偏差识别准确率：</span>
@@ -61,31 +77,42 @@
 <script>
 // 导入 axios 用于 HTTP 请求
 import axios from 'axios';
-// img_path地址（模块一传参）
-const IMG_PATH_URL = '/home/wuzhixuan/Project/PCJC/1/output/task_20251106_202327/MIG-25/key_frame.jpg';
-const DEVICE_TYPE = '飞机';
+  // img_path地址（模块一传参）
+  // const IMG_PATH_URL = localStorage.getItem('imagePath') || '/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png';
+  const IMG_PATH_URL = '/home/wuzhixuan/Project/PCJC/1/output/task_20251108_191931/A330-MRTT/key_frame.jpg';
+
+  const DEVICE_TYPE = localStorage.getItem('deviceType') || '飞机';
+  const VIDEO_PATH = localStorage.getItem('originalVideoPath');
+  const VIDEO_DESCRIPTION = localStorage.getItem('videoDescription');
 export default {
   name: 'PriorKnowledge',
   data() {
-    return {
-      fullWidth: window.innerWidth,
-      fullHeight: window.innerHeight,
-      originalImageURL: null,
-      tagInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
-      predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
-      isLoading: false,
-      accuracyRate: '—',
-      finalResult: null,
-      nodes: [], // 用于存储后端返回的节点数据
-      links: []  // 用于存储后端返回的链接数据
-    };
-  },
+      return {
+        fullWidth: window.innerWidth,
+        fullHeight: window.innerHeight,
+        originalImageURL: null,
+        tagInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
+        predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
+        propertyColors: {}, // 用于存储属性颜色
+        isLoading: false,
+        accuracyRate: '—',
+        finalResult: null,
+        nodes: [], // 用于存储后端返回的节点数据
+        links: [],  // 用于存储后端返回的链接数据
+        // 视频相关数据
+        videoUrl: null,
+        videoMessage: '正在从 LocalStorage 加载视频...'
+      };
+    },
   mounted() {
+    
+  console.log('IMG_PATH_URL:', IMG_PATH_URL, 'DEVICE_TYPE:', DEVICE_TYPE, 'VIDEO_PATH:', VIDEO_PATH, 'VIDEO_DESCRIPTION:', VIDEO_DESCRIPTION)
+
     window.addEventListener('resize', this.handleResize);
     this.renderGraph();
-    // 页面加载时获取图像和下载JSON
-    this.fetchImageFromBackend();
-    this.downloadJsonData();
+    // 页面加载时加载视频
+    this.loadVideoFromStorage();
+    // this.downloadJsonData();
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
@@ -123,12 +150,23 @@ export default {
       svg.selectAll('*').remove();
 
       // 使用从后端获取的nodes和links，如果没有则使用默认数据
-      const renderNodes = this.nodes.length ? this.nodes : [
+      let renderNodes = this.nodes.length ? this.nodes : [
         { id: '飞机', x: width * 0.3, y: height * 0.5, color: '#87CEEB' },
         { id: '战斗机', x: width * 0.6, y: height * 0.3, color: '#FF6B6B' },
         { id: '无人机', x: width * 0.6, y: height * 0.7, color: '#95E1D3' },
         { id: '运输机', x: width * 0.8, y: height * 0.5, color: '#FFD93D' }
       ];
+      
+      // 确保中心节点在中间位置
+      // 默认将id为'飞机'的节点放在中央，如果不存在则将第一个节点放在中央
+      const centerNode = renderNodes.find(node => node.id === '飞机') || renderNodes[0];
+      if (centerNode) {
+        centerNode.x = width / 2;
+        centerNode.y = height / 2;
+        // 为中心节点设置更强的固定力
+        centerNode.fx = width / 2;
+        centerNode.fy = height / 2;
+      }
 
       const renderLinks = this.links.length ? this.links : [
         { source: '飞机', target: '战斗机' },
@@ -260,7 +298,7 @@ export default {
         if (data.label_info && data.label_info.length > 0 && data.label_info[0].length > 0) {
           const labelData = data.label_info[0][0];
           this.tagInfoList = [
-            `小类信息：${labelData.model || '未知'}`,
+            `小类信息：${labelData.kind || '未知'}`,
             `火力信息：${labelData.firepower || '未知'}`,
             `颜色信息：${labelData.color || '未知'}`,         
             `形状信息：${labelData.shape || '未知'}`,
@@ -269,17 +307,32 @@ export default {
           ];
         }
         
+        // 处理属性颜色
+        if (data.property_color && data.property_color.length > 0 && data.property_color[0].length > 0) {
+          this.propertyColors = data.property_color[0][0];
+        }
+        
         // 处理预测信息
         if (data.result && data.result.length > 0 && data.result[0].length > 0) {
           const predictData = data.result[0][0];
           this.predictInfoList = [
-            `小类信息：${predictData.model || '未知'}`,
-            `火力信息：${predictData.firepower || '未知'}`,
-            `颜色信息：${predictData.color || '未知'}`,
-            `形状信息：${predictData.shape || '未知'}`,
-            `尺寸信息：${predictData.size || '未知'}`,
-            `动力信息：${predictData.power || '未知'}`,
+            { label: '小类信息：', value: predictData.kind || '未知', color: this.propertyColors.kind || '#000' },
+            { label: '火力信息：', value: predictData.firepower || '未知', color: this.propertyColors.firepower || '#000' },
+            { label: '颜色信息：', value: predictData.color || '未知', color: this.propertyColors.color || '#000' },
+            { label: '形状信息：', value: predictData.shape || '未知', color: this.propertyColors.shape || '#000' },
+            { label: '尺寸信息：', value: predictData.size || '未知', color: this.propertyColors.size || '#000' },
+            { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
           ];
+          // 将预测信息存入localStorage，供群体协商界面使用
+          localStorage.setItem('predictInfoList', JSON.stringify(this.predictInfoList));
+          localStorage.setItem('module2Res', JSON.stringify(res.data));
+          console.log('预测信息、模块2返回值已存入localStorage');
+
+          // 【新增】方便调试：打印 localStorage
+          console.log("--- localStorage 已更新 (模块二) ---");
+          console.log("predictInfoList:", localStorage.getItem('predictInfoList'));
+          console.log("module2Res:", localStorage.getItem('module2Res'));
+          console.log("---------------------------------");
         }
         
         // 处理准确率
@@ -296,34 +349,29 @@ export default {
         this.isLoading = false;
       });
     },
-    // 新增：获取图像的函数
-    async fetchImageFromBackend() {
+    // 从 LocalStorage 加载视频
+    loadVideoFromStorage() {
       try {
-        const response = await axios.get('http://10.109.253.71:8001/module2/get_image_base64', {
-          params: {
-            img_path: `${IMG_PATH_URL}`
-          },
-          responseType: 'text'
-        });
-        // console.log('图像Base64原始数据类型:', typeof response.data);
-        console.log('图像数据类型:', typeof response.data);
-        console.log('图像数据内容:', response.data);
-
-        // 处理base64数据并设置到图片URL
-        const data = response.data;
-    
-        // 新增：处理图像Base64数据
-        if (data.result && typeof data.result === 'string') {
-          // 拼接完整的Base64图片格式（假设是PNG，若为其他格式需修改MIME类型）
-          this.originalImageURL = `data:image/png;base64,${data.result}`;
-          console.log('图像加载完成');
+        const videoPath = localStorage.getItem('originalVideoPath');
+        console.log("从 LocalStorage 读取 'originalVideoPath':", videoPath);
+        
+        if (videoPath && videoPath !== '无原视频路径') {
+          this.videoUrl = videoPath;
         } else {
-          console.error('图像数据格式错误:', data.result);
-          this.originalImageURL = null;
+          this.videoMessage = '未在 LocalStorage 中找到 "originalVideoPath"。';
+          console.warn(this.videoMessage);
         }
-      } catch (error) {
-        console.error('获取图像失败:', error);
+      } catch (e) {
+        console.error('加载视频失败:', e);
+        this.videoMessage = '加载视频时出错。';
       }
+    },
+
+    // 处理视频加载错误
+    handleVideoError(e) {
+      console.error("视频加载失败:", e);
+      this.videoMessage = "视频加载失败，请检查 LocalStorage 中的 URL 是否正确。";
+      this.videoUrl = null;
     },
     // 新增：下载JSON数据的函数
     async downloadJsonData() {
@@ -410,8 +458,9 @@ export default {
 /* 左侧 */
 .left-panel { display: flex; flex-direction: column; gap: 30px; }
 .image-box { border:3px solid #7BA3D1; background:#fff; padding:10px; height:360px; }
-.aircraft-image, .placeholder-image { width:100%; height:100%; object-fit:contain; }
-.placeholder-image { display:flex; align-items:center; justify-content:center; color:#666; font-size:18px; }
+.video-content-wrapper { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+.video-player { width:100%; height:100%; object-fit:contain; }
+.video-placeholder-text { color:#666; font-size:16px; text-align:center; padding:20px; }
 .negotiation-box { border:3px solid #7BA3D1; background:#D3E4F7; padding:25px 20px; display:flex; align-items:center; justify-content:center; }
 .negotiation-box.large { height:120px; }
 .negotiation-btn { 

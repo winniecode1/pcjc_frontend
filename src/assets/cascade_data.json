@@ -1,12 +1,6 @@
 {
     "stage1": {
-        "prediction": {
-            "caption": "该视频展示了一辆黄褐色的二战时期德国四号坦克（Panzer IV）在户外场地行驶的场景。视频时长7.43秒，共223帧，画面稳定，视角固定，主要聚焦于坦克的正面和侧面。",
-            "class": "truck",
-            "bbox": [277, 154, 1461, 904],
-            "image_path": "/home/wuzhixuan/Project/PCJC/5/result/cascade_test/stage1_cropped.jpg",
-            "negotiation_basis": 0.6124057036909771
-        }
+            "path": "/home/wuzhixuan/Project/PCJC/1/output/task_20251108_191931/F-16"
     },
     "stage2": {
         "result": [
