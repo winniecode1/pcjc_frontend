@@ -131,7 +131,7 @@ export default {
 
       // 页面所有数据
       // thirdStageText 将在 mounted 中被 module3Res.final_review 覆盖
-      thirdStageText: '正在加载第三阶段文字信息...', 
+      thirdStageText: '正在加载第三阶段文字信息...',
       currentStageText: '', // 本阶段总结（后端summary）
       performanceData: '', // 用于存储性能数据
       imageList: [], // 多时序图像（拼接后的图片URL列表）
@@ -154,7 +154,7 @@ export default {
   mounted() {
     window.addEventListener('resize', this.handleResize);
     // 1. 初始化数据：从 localStorage 读取第三阶段信息和武器型号
-    this.initializeDataFromStorage(); 
+    this.initializeDataFromStorage();
     // 2. 加载视频
     this.loadVideoFromStorage();
     // 3. 获取后端数据（使用更新后的武器型号）
@@ -275,7 +275,7 @@ export default {
     async fetchBackendData() {
       this.isLoading = true;
       // 使用 data 中已经更新的 weaponModel
-      const model = this.apiConfig.weaponModel; 
+      const model = this.apiConfig.weaponModel;
       console.log('开始获取数据，武器型号：', model);
 
       try {
@@ -363,7 +363,7 @@ export default {
         this.thirdStageText = `发现目标武器型号：${backendData.weapon_model}，位于指定区域，行为模式初步匹配已知威胁，待进一步分析验证`;
         console.log('第三阶段文本被后端数据补充设置为：', this.thirdStageText);
       }
-      
+
       // 2. 本阶段文本（后端summary）
       // 增加示例文本以保证有内容可高亮
       this.currentStageText = backendData.summary || '设备性能分析完成，危险等级已评估。根据多时序图像数据和模型评估结果，综合判定目标具备高威胁等级。决策制定需充分考虑当前信息，避免认知偏差。';
@@ -405,18 +405,29 @@ export default {
      */
     loadVideoFromStorage() {
       try {
-        const videoPath = localStorage.getItem('originalVideoPath');
-        console.log("【测试】从 LocalStorage 读取 'originalVideoPath':", videoPath);
+        // 【关键修改 1】：从 LocalStorage 读取 module1Res 整个对象
+        const module1ResStr = localStorage.getItem('module1Res');
+        
+        if (module1ResStr) {
+          const module1Res = JSON.parse(module1ResStr);
+          // 【关键修改 2】：从解析后的对象中获取 originalVideoPath 属性
+          const videoPath = module1Res.originalVideoPath; 
 
-        if (videoPath && videoPath !== '无原视频路径') {
-          this.testVideoUrl = videoPath;
+          console.log("【测试】从 module1Res 对象中读取 'originalVideoPath':", videoPath);
+
+          if (videoPath && videoPath !== '无原视频路径') {
+            this.testVideoUrl = videoPath;
+          } else {
+            this.testVideoMessage = '在 module1Res 中未找到或路径无效。';
+            console.warn(this.testVideoMessage);
+          }
         } else {
-          this.testVideoMessage = '未在 LocalStorage 中找到 "originalVideoPath"。';
+          this.testVideoMessage = '未在 LocalStorage 中找到 "module1Res" 对象。';
           console.warn(this.testVideoMessage);
         }
       } catch (e) {
         console.error('加载测试视频失败:', e);
-        this.testVideoMessage = '加载视频时出错。';
+        this.testVideoMessage = '加载视频时出错，请检查 module1Res 格式。';
       }
     },
 

@@ -108,7 +108,7 @@
           <div class="panel-content">
             <div class="metric-box">
               <template v-if="fullResult.accuracy_results && fullResult.accuracy_results.detection">
-                 {{ (fullResult.accuracy_results.detection.precision * 100).toFixed(2) + '%' }}
+                 {{ (fullResult.accuracy_results.detection.accuracy * 100).toFixed(2) + '%' }}
               </template>
               <template v-else>
                  N/A
@@ -314,26 +314,25 @@ export default {
             const relativePath = video_path_url.startsWith('/') ? video_path_url : '/' + video_path_url;
             fullProcessedVideoPath = baseUrl + relativePath;
           }
-          
+          const originalVideoPath = this.originalVideoURL || "无原视频路径";
           // --- 2. 构建 module1Res 最终对象 ---
           // 直接使用 fullData 的所有字段，并用完整的 URL 覆盖路径字段
           const module1Res = {
             ...fullData, // 复制所有后端返回的字段
             
             // 覆盖字段为完整的 URL 或确保有默认值
-            videoDescription: fullData.video_description || "无描述",
             deviceType: fullData.deviceType || "N/A",
             
             // 使用处理后的完整 URL 覆盖原有的相对路径
             key_frame_path: fullImagePath, 
             video_path: fullProcessedVideoPath,
-            
-            // 额外添加 originalVideoPath 字段 (如果前端需要)
-            originalVideoPath: this.originalVideoURL || "无原视频路径"
+
+            originalVideoPath: originalVideoPath
           };
           
           // 3. 将对象转换为 JSON 字符串并存储
           localStorage.setItem('module1Res', JSON.stringify(module1Res));
+
 
           // 4. 方便调试：【格式化打印】存储的 module1Res 数据
           console.groupCollapsed("%c✅ Module 1 结果已存储 (module1Res)", "color: #17a2b8; font-weight: bold;");
