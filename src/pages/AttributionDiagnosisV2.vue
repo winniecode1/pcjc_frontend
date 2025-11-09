@@ -167,12 +167,14 @@
 
 <script>
 import axios from 'axios';
-import cascadeData from '@/assets/cascade_data.json';
+import cascadeDataMock from '@/assets/cascade_data.json';
 
 export default {
   name: 'AttributionDiagnosisV2',
   data() {
     return {
+      // 级联数据（从LocalStorage构建）
+      cascadeData: null,
       // 样式控制
       fullWidth: window.innerWidth,
       fullHeight: window.innerHeight,
@@ -239,26 +241,127 @@ export default {
      * 初始化偏差分析流程
      */
     async initBiasAnalysis() {
-      if (!this.validateCascadeData()) {
-        this.showAlertMessage('error', '前4个阶段的数据不完整，无法进行归因诊断');
-        return;
+      // 从LocalStorage构建级联数据
+      const buildResult = this.buildCascadeDataFromLocalStorage();
+      
+      if (!buildResult.success) {
+        // 使用Mock数据作为降级方案
+        console.warn('⚠️ LocalStorage数据不完整，使用Mock数据');
+        console.warn('缺失原因：', buildResult.message);
+        this.cascadeData = cascadeDataMock;
+        this.showAlertMessage('warning', `${buildResult.message}，当前使用固定Mock数据进行调试`);
+      } else {
+        // 使用从LocalStorage构建的数据
+        this.cascadeData = buildResult.data;
+        this.showAlertMessage('success', '成功从LocalStorage加载前四个模块的结果');
       }
+      
+      console.log('✅ 最终使用的级联数据：', JSON.parse(JSON.stringify(this.cascadeData)));
+      
       await this.startBiasAnalysis();
     },
     
     /**
-     * 验证级联数据完整性
+     * 从LocalStorage构建级联数据
      */
-    validateCascadeData() {
-      if (!cascadeData) return false;
-      const requiredStages = ['stage1', 'stage2', 'stage3', 'stage4'];
-      for (const stage of requiredStages) {
-        if (!cascadeData[stage]) {
-          console.error(`缺少${stage}数据`);
-          return false;
+    buildCascadeDataFromLocalStorage() {
+      try {
+        console.log('📦 开始从LocalStorage读取四个模块的结果...');
+        
+        // 从LocalStorage中读取四个模块的结果
+        const module1Str = localStorage.getItem('module1Res');
+        const module2Str = localStorage.getItem('module2Res');
+        const module3Str = localStorage.getItem('module3Res');
+        const module4Str = localStorage.getItem('module4Res');
+        
+        console.log('📄 module1Res 原始数据:', module1Str ? '已获取' : '❌ 未找到');
+        console.log('📄 module2Res 原始数据:', module2Str ? '已获取' : '❌ 未找到');
+        console.log('📄 module3Res 原始数据:', module3Str ? '已获取' : '❌ 未找到');
+        console.log('📄 module4Res 原始数据:', module4Str ? '已获取' : '❌ 未找到');
+        
+        // 检查是否所有模块都已执行
+        const missingModules = [];
+        if (!module1Str) missingModules.push('模块一（多模态目标检测）');
+        if (!module2Str) missingModules.push('模块二（先验知识）');
+        if (!module3Str) missingModules.push('模块三（多智能体协商）');
+        if (!module4Str) missingModules.push('模块四（决策选择）');
+        
+        if (missingModules.length > 0) {
+          return {
+            success: false,
+            message: `请先执行前四个模块，缺失：${missingModules.join('、')}`
+          };
         }
+        
+        // JSON反序列化
+        let module1Data, module2Data, module3Data, module4Data;
+        
+        try {
+          module1Data = JSON.parse(module1Str);
+          console.log('✅ module1Res 解析成功:', module1Data);
+        } catch (e) {
+          console.error('❌ module1Res 解析失败:', e);
+          return {
+            success: false,
+            message: '模块一数据格式错误，无法解析JSON'
+          };
+        }
+        
+        try {
+          module2Data = JSON.parse(module2Str);
+          console.log('✅ module2Res 解析成功:', module2Data);
+        } catch (e) {
+          console.error('❌ module2Res 解析失败:', e);
+          return {
+            success: false,
+            message: '模块二数据格式错误，无法解析JSON'
+          };
+        }
+        
+        try {
+          module3Data = JSON.parse(module3Str);
+          console.log('✅ module3Res 解析成功:', module3Data);
+        } catch (e) {
+          console.error('❌ module3Res 解析失败:', e);
+          return {
+            success: false,
+            message: '模块三数据格式错误，无法解析JSON'
+          };
+        }
+        
+        try {
+          module4Data = JSON.parse(module4Str);
+          console.log('✅ module4Res 解析成功:', module4Data);
+        } catch (e) {
+          console.error('❌ module4Res 解析失败:', e);
+          return {
+            success: false,
+            message: '模块四数据格式错误，无法解析JSON'
+          };
+        }
+        
+        // 构建级联数据结构
+        const cascadeData = {
+          stage1: module1Data,
+          stage2: module2Data,
+          stage3: module3Data,
+          stage4: module4Data
+        };
+        
+        console.log('🎉 级联数据构建成功:', cascadeData);
+        
+        return {
+          success: true,
+          data: cascadeData
+        };
+        
+      } catch (error) {
+        console.error('❌ 构建级联数据失败：', error);
+        return {
+          success: false,
+          message: `构建级联数据时发生错误：${error.message}`
+        };
       }
-      return true;
     },
     
     /**
@@ -266,7 +369,7 @@ export default {
      */
     async startBiasAnalysis() {
       try {
-        const response = await axios.post('/module5/api/bias-analysis', cascadeData, {
+        const response = await axios.post('/module5/api/bias-analysis', this.cascadeData, {
           params: {
             id: this.taskId,
             async: true
