@@ -77,13 +77,37 @@
 <script>
 // 导入 axios 用于 HTTP 请求
 import axios from 'axios';
-  // img_path地址（模块一传参）
-  // const IMG_PATH_URL = localStorage.getItem('imagePath') || '/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png';
-  const IMG_PATH_URL = '/home/wuzhixuan/Project/PCJC/1/output/task_20251108_191931/A330-MRTT/key_frame.jpg';
-
-  const DEVICE_TYPE = localStorage.getItem('deviceType') || '飞机';
-  const VIDEO_PATH = localStorage.getItem('originalVideoPath');
-  const VIDEO_DESCRIPTION = localStorage.getItem('videoDescription');
+  // 从localStorage获取module1Res对象并解析所需属性
+  let IMG_PATH_URL = '/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png';
+  let DEVICE_TYPE = '飞机';
+  let VIDEO_PATH = null;
+  let VIDEO_DESCRIPTION = null;
+  
+  try {
+    const module1ResStr = localStorage.getItem('module1Res');
+    if (module1ResStr) {
+      const module1Res = JSON.parse(module1ResStr);
+      // 获取并清理key_frame_path
+      if (module1Res.key_frame_path) {
+        // IMG_PATH_URL = module1Res.key_frame_path.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
+      }
+      // 获取并清理deviceType
+      if (module1Res.deviceType) {
+        DEVICE_TYPE = module1Res.deviceType.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
+      }
+      // 获取并清理originalVideoPath
+      if (module1Res.originalVideoPath) {
+        VIDEO_PATH = module1Res.originalVideoPath.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
+      }
+      // 获取并清理video_description
+      if (module1Res.video_description) {
+        VIDEO_DESCRIPTION = module1Res.video_description.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
+      }
+    }
+  } catch (e) {
+    console.error('解析module1Res时出错:', e);
+  }
+   console.log('IMG_PATH_URL:', IMG_PATH_URL, 'DEVICE_TYPE:', DEVICE_TYPE, 'VIDEO_PATH:', VIDEO_PATH, 'VIDEO_DESCRIPTION:', VIDEO_DESCRIPTION)
 export default {
   name: 'PriorKnowledge',
   data() {
@@ -106,7 +130,7 @@ export default {
     },
   mounted() {
     
-  console.log('IMG_PATH_URL:', IMG_PATH_URL, 'DEVICE_TYPE:', DEVICE_TYPE, 'VIDEO_PATH:', VIDEO_PATH, 'VIDEO_DESCRIPTION:', VIDEO_DESCRIPTION)
+ 
 
     window.addEventListener('resize', this.handleResize);
     this.renderGraph();
@@ -352,18 +376,32 @@ export default {
     // 从 LocalStorage 加载视频
     loadVideoFromStorage() {
       try {
-        const videoPath = localStorage.getItem('originalVideoPath');
-        console.log("从 LocalStorage 读取 'originalVideoPath':", videoPath);
+        // 先获取整个module1Res对象
+        const module1ResStr = localStorage.getItem('module1Res');
+        console.log("从 LocalStorage 读取 'module1Res':", module1ResStr ? '存在' : '不存在');
         
-        if (videoPath && videoPath !== '无原视频路径') {
-          this.videoUrl = videoPath;
+        if (module1ResStr) {
+          const module1Res = JSON.parse(module1ResStr);
+          // 从对象中获取originalVideoPath
+          const videoPath = module1Res.originalVideoPath;
+          console.log("从 module1Res 中获取 originalVideoPath:", videoPath);
+          
+          // 清理可能存在的空格和反引号
+          const cleanedVideoPath = videoPath ? videoPath.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '') : null;
+          
+          if (cleanedVideoPath && cleanedVideoPath !== '无原视频路径') {
+            this.videoUrl = cleanedVideoPath;
+          } else {
+            this.videoMessage = '未在 module1Res 中找到有效 "originalVideoPath"。';
+            console.warn(this.videoMessage);
+          }
         } else {
-          this.videoMessage = '未在 LocalStorage 中找到 "originalVideoPath"。';
+          this.videoMessage = '未在 LocalStorage 中找到 "module1Res"。';
           console.warn(this.videoMessage);
         }
       } catch (e) {
         console.error('加载视频失败:', e);
-        this.videoMessage = '加载视频时出错。';
+        this.videoMessage = '加载视频时出错: ' + e.message;
       }
     },
 
