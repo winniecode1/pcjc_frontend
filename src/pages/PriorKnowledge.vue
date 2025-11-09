@@ -129,9 +129,6 @@ export default {
       };
     },
   mounted() {
-    
- 
-
     window.addEventListener('resize', this.handleResize);
     this.renderGraph();
     // 页面加载时加载视频
@@ -183,7 +180,7 @@ export default {
       
       // 确保中心节点在中间位置
       // 默认将id为'飞机'的节点放在中央，如果不存在则将第一个节点放在中央
-      const centerNode = renderNodes.find(node => node.id === '飞机') || renderNodes[0];
+      const centerNode = renderNodes.find(node => node.is_center === true) || renderNodes[0];
       if (centerNode) {
         centerNode.x = width / 2;
         centerNode.y = height / 2;
