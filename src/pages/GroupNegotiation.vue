@@ -388,18 +388,32 @@ export default {
     // 从 LocalStorage 加载视频
     loadVideoFromStorage() {
       try {
-        const videoPath = localStorage.getItem('originalVideoPath');
-        console.log("从 LocalStorage 读取 'originalVideoPath':", videoPath);
+        // 先获取整个module1Res对象
+        const module1ResStr = localStorage.getItem('module1Res');
+        console.log("从 LocalStorage 读取 'module1Res':", module1ResStr ? '存在' : '不存在');
         
-        if (videoPath && videoPath !== '无原视频路径') {
-          this.videoUrl = videoPath;
+        if (module1ResStr) {
+          const module1Res = JSON.parse(module1ResStr);
+          // 从对象中获取originalVideoPath
+          const videoPath = module1Res.originalVideoPath;
+          console.log("从 module1Res 中获取 originalVideoPath:", videoPath);
+          
+          // 清理可能存在的空格和反引号
+          const cleanedVideoPath = videoPath ? videoPath.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '') : null;
+          
+          if (cleanedVideoPath && cleanedVideoPath !== '无原视频路径') {
+            this.videoUrl = cleanedVideoPath;
+          } else {
+            this.videoMessage = '未在 module1Res 中找到有效 "originalVideoPath"。';
+            console.warn(this.videoMessage);
+          }
         } else {
-          this.videoMessage = '未在 LocalStorage 中找到 "originalVideoPath"。';
+          this.videoMessage = '未在 LocalStorage 中找到 "module1Res"。';
           console.warn(this.videoMessage);
         }
       } catch (e) {
         console.error('加载视频失败:', e);
-        this.videoMessage = '加载视频时出错。';
+        this.videoMessage = '加载视频时出错: ' + e.message;
       }
     },
 
