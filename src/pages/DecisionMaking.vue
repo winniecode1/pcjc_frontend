@@ -77,6 +77,18 @@
         </div>
       </div>
     </div>
+
+    <!-- 【新增】测试视频显示框 -->
+    <div class="test-video-container">
+      <div class="module-label video-label">原视频 (来自 LocalStorage)</div>
+      <div class="video-content-wrapper">
+        <video v-if="testVideoUrl" :src="testVideoUrl" controls class="test-video-player" @error="handleVideoError"></video>
+        <div v-else class="video-placeholder-text">
+          {{ testVideoMessage }}
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -118,7 +130,11 @@ export default {
       deviationDetectionAccuracy: 100, 
       modelDangerLevel: 'N/A', 
       expertDangerLevel: 'N/A', 
-      currentLevel: 4 
+      currentLevel: 4,
+
+      // 【新增】用于测试视频
+      testVideoUrl: null,
+      testVideoMessage: '正在从 LocalStorage 加载视频...'
     };
   },
   computed: {
@@ -131,6 +147,7 @@ export default {
   mounted() {
     window.addEventListener('resize', this.handleResize);
     this.fetchBackendData();
+    this.loadVideoFromStorage(); // 【新增】
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
@@ -304,6 +321,35 @@ export default {
       const result = numMap[backendLevel] || 4;
       console.log('等级转换：', backendLevel, '→', result);
       return result;
+    },
+
+    /**
+     * 【新增】: 从 LocalStorage 加载测试视频
+     */
+    loadVideoFromStorage() {
+      try {
+        const videoPath = localStorage.getItem('originalVideoPath');
+        console.log("【测试】从 LocalStorage 读取 'originalVideoPath':", videoPath);
+        
+        if (videoPath && videoPath !== '无原视频路径') {
+          this.testVideoUrl = videoPath;
+        } else {
+          this.testVideoMessage = '未在 LocalStorage 中找到 "originalVideoPath"。';
+          console.warn(this.testVideoMessage);
+        }
+      } catch (e) {
+        console.error('加载测试视频失败:', e);
+        this.testVideoMessage = '加载视频时出错。';
+      }
+    },
+
+    /**
+     * 【新增】: 处理视频加载错误
+     */
+    handleVideoError(e) {
+      console.error("测试视频加载失败:", e);
+      this.testVideoMessage = "视频加载失败，请检查 LocalStorage 中的 URL 是否正确。";
+      this.testVideoUrl = null;
     }
   }
 };
@@ -363,8 +409,9 @@ export default {
 /* 核心布局：左3右9，满屏分布 */
 .core-layout {
   display: flex;
-  height: calc(100% - 80px); /* 减去标题高度 */
-  padding: 0 15px 15px 15px; /* 增加底部内边距 */
+  /* 【修改】为视频框腾出空间 */
+  height: calc(100% - 80px - 220px); /* 减去标题和视频框的高度 */
+  padding: 0 15px 0 15px; /* 增加底部内边距, 移除底部 padding */
   gap: 15px;
 }
 .left-column {
@@ -584,7 +631,7 @@ export default {
   .indicator-value { font-size: 1.3rem; }
 }
 @media (max-width: 1200px) {
-  .core-layout { padding: 0 10px 10px 10px; gap: 10px; }
+  .core-layout { padding: 0 10px 0 10px; gap: 10px; } /* 【修改】移除底部 padding */
   .image-grid { gap: 8px; padding: 8px; }
   .indicators-grid { padding: 10px; gap: 8px; }
 }
@@ -595,5 +642,45 @@ export default {
   .image-grid { grid-template-columns: repeat(2, 1fr); } /* 图像 2x2 布局 */
   .indicators-grid { grid-template-columns: 1fr 1fr; } /* 指标 2x2 布局 */
   .level-selection-item { grid-column: 1 / -1; } /* 等级制定占满一行 */
+}
+
+/* * 【新增】测试视频容器样式 
+ */
+.test-video-container {
+  width: calc(100% - 30px); /* 匹配 .core-layout 的 padding */
+  height: 220px; /* 固定高度 */
+  margin: 10px auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-label {
+  /* .module-label 已有样式 */
+}
+
+.video-content-wrapper {
+  border: 2px solid #ccc;
+  background-color: #fff;
+  padding: 20px 10px 10px 10px;
+  flex-grow: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  top: -10px;
+  overflow: hidden;
+}
+
+.test-video-player {
+  width: auto; /* 保持视频比例 */
+  height: 100%;
+  max-width: 100%;
+  background-color: #000;
+}
+
+.video-placeholder-text {
+  color: #999;
+  font-size: 0.9rem;
 }
 </style>
