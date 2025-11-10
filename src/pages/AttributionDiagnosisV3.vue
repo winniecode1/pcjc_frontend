@@ -1,103 +1,167 @@
 <template>
-  <div class="attribution-diagnosis-container">
-    <!-- 顶部导航按钮 -->
-    <div class="top-nav">
-      <button class="nav-btn home-btn" @click="$router.push('/')">首页</button>
-      <button class="nav-btn back-btn" @click="$router.back()">返回</button>
-    </div>
+  <div class="section" :style="{ minHeight: fullHeight + 'px' }">
+    <!-- 背景层 -->
+    <div class="register" :style="{width: fullWidth+'px', height:fullHeight+'px'}"></div>
+    <div class="img_box" :style="{width: fullWidth+'px'}"></div>
 
+    <!-- 标题 -->
+    <b-row class="justify-content-center pt-5">
+      <b-col cols="10" class="text-center">
+        <p class="newTitle text-center">多层级传播不一致性根因诊断模型</p>
+      </b-col>
+    </b-row>
+    
     <!-- 加载/错误提示 -->
-    <div v-if="showAlert" class="alert-container">
-      <b-alert :variant="alertVariant" show dismissible @dismissed="showAlert=false">
-        {{ alertMessage }}
-      </b-alert>
-    </div>
+    <b-row v-if="showAlert" class="justify-content-center mt-3">
+      <b-col cols="10">
+        <b-alert :variant="alertVariant" show dismissible @dismissed="showAlert=false">
+          {{ alertMessage }}
+        </b-alert>
+      </b-col>
+    </b-row>
 
-    <!-- 主要内容网格 -->
-    <div class="main-content">
-      <!-- 模块1：多模态信息认知偏差检测模型 -->
-      <div class="module-container" style="top: 17vh; left: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">多模态信息认知偏差检测模型</div>
-        <div class="module-body">
-          <div class="result-section">
-            <div class="section-title">偏差测试结果</div>
-            <div class="content-box scrollable" v-html="highlightBrackets(module1BiasTestResult)"></div>
-          </div>
-          <div class="metric-group">
-              <div class="metric-item">认知传播偏差测试结果: <span>{{ formatPercent(module1PropagationBias, 0) }}</span></div>
-              <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module1IsBiasModule) }}</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 模块2：先验知识认知偏差检测模型 -->
-      <div class="module-container" style="top: 17vh; right: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">先验知识认知偏差检测模型</div>
-        <div class="module-body">
-           <div class="result-section">
-              <div class="section-title">偏差测试结果</div>
-              <div class="content-box scrollable">
-                  <div class="attributes-grid">
-                    <div v-for="attr in module2DisplayAttributes" :key="attr.key" class="attribute-item">
-                      <span class="attr-key">{{ attr.key }}:</span>
-                      <span class="attr-value" v-html="highlightBrackets(attr.value)"></span>
-                    </div>
-                  </div>
+    <!-- 主要内容区域 -->
+    <b-row class="justify-content-center pt-4 mb-4">
+      <b-col cols="10">
+        
+        <!-- 第一行：模块1和模块2 -->
+        <b-row class="mb-3">
+          <!-- 模块1：多模态信息认知偏差检测模型 -->
+          <b-col cols="6" class="pr-2">
+            <div class="module-card">
+              <div class="module-header">多模态信息认知偏差检测模型</div>
+              
+              <!-- 偏差测试结果 -->
+              <div class="result-section-main">
+                <div class="section-title-inline">偏差测试结果</div>
+                <div class="content-box-large scrollable" v-html="highlightBrackets(module1BiasTestResult)"></div>
+              </div>
+              
+              <!-- 第二行指标 -->
+              <div class="metric-bar">
+                <div class="metric-content">认知传播偏差测试结果：{{ formatPercent(module1PropagationBias) }}</div>
+              </div>
+              
+              <!-- 第三行指标 -->
+              <div class="metric-bar">
+                <div class="metric-content">是否是偏差模块：{{ formatYesNo(module1IsBiasModule) }}</div>
               </div>
             </div>
-          <div class="metric-group">
-              <div class="metric-item">模型内部偏差测试结果: <span>{{ formatPercent(module2InternalBias, 0) }}</span></div>
-              <div class="metric-item">认知传播偏差测试结果: <span>{{ formatPercent(module2PropagationBias, 0) }}</span></div>
-              <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module2IsBiasModule) }}</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 模块3：群体协商认知偏差检测模型 -->
-      <div class="module-container" style="top: 52vh; left: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">群体协商认知偏差检测模型</div>
-         <div class="module-body">
-          <div class="result-section">
-            <div class="section-title">偏差测试结果</div>
-            <div class="content-box scrollable" v-html="highlightBrackets(module3BiasTestResult)"></div>
-          </div>
-          <div class="metric-group">
-              <div class="metric-item">模型内部偏差测试结果: <span>{{ formatPercent(module3InternalBias, 0) }}</span></div>
-              <div class="metric-item">认知传播偏差测试结果: <span>{{ formatPercent(module3PropagationBias, 0) }}</span></div>
-              <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module3IsBiasModule) }}</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 模块4：决策选择认知偏差检测模型 -->
-      <div class="module-container" style="top: 52vh; right: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">决策选择认知偏差检测模型</div>
-        <div class="module-body">
-          <div class="result-section">
-            <div class="section-title">偏差测试结果</div>
-            <div class="content-box scrollable" v-html="highlightBrackets(module4BiasTestResult)"></div>
-          </div>
-          <div class="metric-group">
-            <div class="metric-item">模型内部偏差测试结果: <span>{{ formatPercent(module4InternalBias, 0) }}</span></div>
-            <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module4IsBiasModule) }}</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 底部内容区域 -->
-    <div class="bottom-content">
-        <div class="diagnosis-card">根因诊断结果</div>
-        <div class="metric-card accuracy-card">
-            <div class="metric-title">多主体解析准确率</div>
-            <div class="metric-value">{{ formatPercent(accuracy, 0) }}</div>
-        </div>
-        <div class="metric-card recall-card">
-            <div class="metric-title">不一致根因召回率</div>
-            <div class="metric-value">{{ formatPercent(recall, 0) }}</div>
-        </div>
-        <button class="export-btn">结果导出</button>
-    </div>
+          </b-col>
+          
+          <!-- 模块2：先验知识认知偏差检测模型 -->
+          <b-col cols="6" class="pl-2">
+            <div class="module-card">
+              <div class="module-header">先验知识认知偏差检测模型</div>
+              
+              <!-- 偏差测试结果 -->
+              <div class="result-section-main">
+                <div class="section-title-inline">偏差测试结果</div>
+                <div class="content-box-large scrollable">
+                  <div class="category-header">
+                    <span class="category-label">类别：</span>
+                    <span class="category-value-inline">{{ module2Category }}</span>
+                  </div>
+                  <div class="attributes-two-column">
+                    <div v-for="(value, key) in module2Attributes" :key="key" class="attr-line">
+                      <span class="attr-bullet">•</span>
+                      <span class="attr-key">{{ key }}：</span>
+                      <span class="attr-val" v-html="highlightBrackets(value)"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 第二行指标 -->
+              <div class="metric-bar">
+                <div class="metric-content-split">
+                  <span>模型内部偏差测试结果：{{ formatPercent(module2InternalBias) }}</span>
+                  <span>认知传播偏差测试结果：{{ formatPercent(module2PropagationBias) }}</span>
+                </div>
+              </div>
+              
+              <!-- 第三行指标 -->
+              <div class="metric-bar">
+                <div class="metric-content">是否是偏差模块：{{ formatYesNo(module2IsBiasModule) }}</div>
+              </div>
+            </div>
+          </b-col>
+        </b-row>
+        
+        <!-- 第二行：模块3和模块4 -->
+        <b-row class="mb-3">
+          <!-- 模块3：群体协商认知偏差检测模型 -->
+          <b-col cols="6" class="pr-2">
+            <div class="module-card">
+              <div class="module-header">群体协商认知偏差检测模型</div>
+              
+              <!-- 偏差测试结果 -->
+              <div class="result-section-main">
+                <div class="section-title-inline">偏差测试结果</div>
+                <div class="content-box-large scrollable" v-html="highlightBrackets(module3BiasTestResult)"></div>
+              </div>
+              
+              <!-- 第二行指标 -->
+              <div class="metric-bar">
+                <div class="metric-content-split">
+                  <span>模型内部偏差测试结果：{{ formatPercent(module3InternalBias) }}</span>
+                  <span>认知传播偏差测试结果：{{ formatPercent(module3PropagationBias) }}</span>
+                </div>
+              </div>
+              
+              <!-- 第三行指标 -->
+              <div class="metric-bar">
+                <div class="metric-content">是否是偏差模块：{{ formatYesNo(module3IsBiasModule) }}</div>
+              </div>
+            </div>
+          </b-col>
+          
+          <!-- 模块4：决策选择认知偏差检测模型 -->
+          <b-col cols="6" class="pl-2">
+            <div class="module-card">
+              <div class="module-header">决策选择认知偏差检测模型</div>
+              
+              <!-- 偏差测试结果 -->
+              <div class="result-section-main">
+                <div class="section-title-inline">偏差测试结果</div>
+                <div class="content-box-large scrollable" v-html="highlightBrackets(module4BiasTestResult)"></div>
+              </div>
+              
+              <!-- 第二行指标 -->
+              <div class="metric-bar">
+                <div class="metric-content">模型内部偏差测试结果：{{ formatPercent(module4InternalBias) }}</div>
+              </div>
+              
+              <!-- 第三行指标 -->
+              <div class="metric-bar">
+                <div class="metric-content">是否是偏差模块：{{ formatYesNo(module4IsBiasModule) }}</div>
+              </div>
+            </div>
+          </b-col>
+        </b-row>
+        
+        <!-- 根因诊断结果 -->
+        <b-row>
+          <b-col cols="12">
+            <div class="diagnosis-result-card">
+              <div class="diagnosis-header">根因诊断结果</div>
+              <div class="diagnosis-content">
+                <div class="diagnosis-item-box">
+                  <div class="diagnosis-label-top">多主体解析准确率</div>
+                  <div class="diagnosis-value-large">{{ formatPercent(accuracy) }}</div>
+                </div>
+                <div class="diagnosis-item-box">
+                  <div class="diagnosis-label-top">不一致性根因召回率</div>
+                  <div class="diagnosis-value-large">{{ formatPercent(recall) }}</div>
+                </div>
+              </div>
+            </div>
+          </b-col>
+        </b-row>
+        
+      </b-col>
+    </b-row>
+    
   </div>
 </template>
 
@@ -111,6 +175,9 @@ export default {
     return {
       // 级联数据（从LocalStorage构建）
       cascadeData: null,
+      // 样式控制
+      fullWidth: window.innerWidth,
+      fullHeight: window.innerHeight,
       
       // 请求控制
       taskId: 'test_id_1',
@@ -153,23 +220,6 @@ export default {
       recall: null,
     };
   },
-  computed: {
-    /**
-     * 将模块2的属性整合为用于UI展示的列表
-     */
-    module2DisplayAttributes() {
-      const attributes = [];
-      if (this.module2Category) {
-        attributes.push({ key: '目标类型', value: this.module2Category });
-      }
-      for (const key in this.module2Attributes) {
-        if (Object.hasOwnProperty.call(this.module2Attributes, key)) {
-          attributes.push({ key, value: this.module2Attributes[key] });
-        }
-      }
-      return attributes;
-    }
-  },
   mounted() {
     window.addEventListener('resize', this.handleResize);
     this.handleResize();
@@ -183,7 +233,8 @@ export default {
   },
   methods: {
     handleResize() {
-      // The new layout is responsive with vw/vh, this is no longer needed.
+      this.fullWidth = window.innerWidth;
+      this.fullHeight = window.innerHeight;
     },
     
     /**
@@ -585,9 +636,9 @@ export default {
     /**
      * 格式化百分比
      */
-    formatPercent(value, precision = 2) {
+    formatPercent(value) {
       if (value === null || value === undefined) return '—';
-      return `${(value * 100).toFixed(precision)}%`;
+      return `${(value * 100).toFixed(2)}%`;
     },
     
     /**
@@ -605,7 +656,7 @@ export default {
       if (text === null || text === undefined) return '';
       const str = String(text);
       // 跨行、非贪婪匹配；使用内联样式确保在 scoped/深度选择器受限时也能生效
-      return str.replace(/\{\{([\s\S]*?)\}\}/g, '<span class="highlight-text" style="color:#ff4d4d;font-weight:700;">$1</span>');
+      return str.replace(/\{\{([\s\S]*?)\}\}/g, '<span class="highlight-text" style="color:#dc2626;font-weight:700;">$1</span>');
     },
     
     /**
@@ -620,346 +671,314 @@ export default {
 };
 </script>
 
-<style scoped>
-@font-face {
-  font-family: 'DingTalk-JinBuTi';
-  src: local('DingTalk-JinBuTi'), local('DingTalkJinBuTi');
-  font-weight: normal;
-  font-style: normal;
+<style lang="scss" scoped>
+/* ================= 现代专业商务风格 ================= */
+
+.section {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  color: #2c3e50;
+  font-size: 100%;
+  width: 100%;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  z-index: 2;
+  overflow-y: auto;
 }
 
-.attribution-diagnosis-container {
-  width: 100vw;
-  height: 100vh;
-  background-image: url('~@/assets/images/step5/背景.png');
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-position: center;
-  color: white;
-  overflow: hidden; /* 防止滚动 */
+.newTitle {
+  font-size: calc(1.8vw + 0.8rem);
+  color: #1e3a8a;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 20px;
   position: relative;
+  display: inline-block;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+    border-radius: 2px;
+  }
 }
 
-.attribution-diagnosis-container,
-.attribution-diagnosis-container * {
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif;
+.register {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  opacity: 0.05;
 }
 
-/* ================= 顶部导航 ================= */
-.top-nav {
+.img_box {
   position: absolute;
-  top: 3.5vh;
-  left: 2.5vw;
-  display: flex;
-  z-index: 10;
-}
-
-.nav-btn {
-  border: none;
-  color: white;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: bold;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: transparent;
-  font-family: 'DingTalk-JinBuTi', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
-}
-
-.home-btn {
-  width: 90px;
-  height: 40px;
-  background-image: url('~@/assets/images/step5/首页按钮.png');
-  background-size: 100% 100%;
-  margin-right: 15px;
-}
-
-.back-btn {
-  width: 90px;
-  height: 40px;
-  background-image: url('~@/assets/images/step5/返回按钮.png');
-  background-size: 100% 100%;
-}
-
-/* ================= 提示信息 ================= */
-.alert-container {
-  position: absolute;
-  top: 10vh;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 50%;
-  z-index: 100;
-  opacity: 0.9;
-}
-
-/* ================= 主要内容 ================= */
-.main-content {
-  position: relative;
   width: 100%;
   height: 100%;
+  opacity: 0.03;
+  background-image: url('../assets/images/newBackGound.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
 }
 
-.module-container {
-  position: absolute;
+/* =========== 模块卡片 =========== */
+.module-card {
+  background: #ffffff;
+  border: 2px solid #2c3e50;
+  border-radius: 8px;
+  padding: 0;
+  height: 100%;
+  min-height: 480px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-}
-
-.module-body {
-  background-image: url('~@/assets/images/step5/每个模块背景.png');
-  background-size: 100% 100%;
-  padding: 1.5vh 1.5vw;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
 }
 
 .module-header {
-  background-image: url('~@/assets/images/step5/二级标题.png');
-  background-size: 65% 100%;
-  background-repeat: no-repeat;
-  background-position: left center;
-  font-size: 1rem;
-  font-weight: bold;
-  color: #c6f4ff;
-  padding-left: 80px;
-  height: 40px;
-  line-height: 40px;
-  flex-shrink: 0;
-  font-family: 'DingTalk-JinBuTi', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1f2937;
+  border-bottom: 2px solid #2c3e50;
+  padding: 12px 15px;
+  margin: 0;
+  background-color: #f8f9fa;
 }
 
-.module-content {
+.result-section-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 0.5vh 0.8vw;
-  color: #4ED8FF;
+  padding: 15px;
+  padding-bottom: 10px;
 }
 
-.module-content,
-.module-content * {
-  font-size: 14px !important;
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
-}
-
-.result-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.section-title {
+.section-title-inline {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #8bd3f9;
-  margin-bottom: 0.8vh;
-  padding-left: 20px;
+  color: #374151;
+  margin-bottom: 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.content-box {
+.content-box-large {
   flex: 1;
-  line-height: 1.6;
-  padding: 0 5px;
-  font-size: 14px !important;
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
+  background-color: #ffffff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  padding: 12px;
+  color: #1f2937;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  
+  &.scrollable {
+    overflow-y: auto;
+    max-height: 280px;
+  }
 }
 
-.content-box * {
-  font-size: 14px !important;
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
+/* 底部指标横条 */
+.metric-bar {
+  border-top: 1px solid #d1d5db;
+  padding: 10px 15px;
+  background-color: #ffffff;
+  
+  &:last-child {
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+  }
 }
 
-.scrollable {
-  overflow-y: auto;
-  max-height: 18vh; /* 限制内容高度以适应整体布局 */
+.metric-content {
+  font-size: 0.9rem;
+  color: #1f2937;
+  font-weight: 500;
+  text-align: center;
 }
-.scrollable::-webkit-scrollbar { width: 4px; }
-.scrollable::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 2px;}
-.scrollable::-webkit-scrollbar-thumb { background: #1a65a8; border-radius: 2px;}
 
-.attr-line {
+.metric-content-split {
   display: flex;
-  justify-content: space-between;
-  padding: 0.3vh 0;
-  border-bottom: 1px solid rgba(26, 101, 168, 0.3);
-  font-size: 14px !important;
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
-}
-.attr-line:last-child {
-  border-bottom: none;
-}
-.attr-line > span:first-child {
-  color: #8bd3f9;
-  margin-right: 1vw;
-  font-size: 14px !important;
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
-}
-.attr-line > span {
-  font-size: 14px !important;
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
+  justify-content: space-around;
+  gap: 20px;
+  
+  span {
+    font-size: 0.9rem;
+    color: #1f2937;
+    font-weight: 500;
+  }
 }
 
-/* Styles for Module 2 attributes grid */
-.attributes-grid {
+/* 模块2特殊样式 */
+.category-header {
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  text-align: center;
+  padding: 6px 10px;
+  background-color: #f9fafb;
+  border-radius: 4px;
+  
+  .category-label {
+    font-weight: 600;
+    color: #4b5563;
+  }
+  
+  .category-value-inline {
+    font-weight: 700;
+    color: #1e40af;
+  }
+}
+
+.attributes-two-column {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.2vh 2vw;
-  align-content: flex-start;
-  padding: 0.5vh 0;
+  gap: 6px 15px;
+  
+  .attr-line {
+    font-size: 0.84rem;
+    display: flex;
+    align-items: flex-start;
+    line-height: 1.5;
+    
+    .attr-bullet {
+      color: #6b7280;
+      margin-right: 5px;
+      flex-shrink: 0;
+    }
+    
+    .attr-key {
+      font-weight: 600;
+      color: #374151;
+      flex-shrink: 0;
+    }
+    
+    .attr-val {
+      color: #1f2937;
+      word-break: break-word;
+    }
+  }
 }
-
-.attribute-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 0.8vh 1vw;
-  background: rgba(10, 30, 60, 0.3);
-  border-left: 2px solid #1a65a8;
-  border-radius: 2px;
-  font-size: 14px !important;
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
-  line-height: 1.5;
-}
-.attribute-item * {
-  font-size: 14px !important;
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
-}
-.attr-key {
-  color: #8bd3f9;
-  font-size: 14px !important;
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
-  margin-right: 0.5vw;
-  flex-shrink: 0;
-  font-weight: 500;
-}
-.attr-value {
-  color: #c6f4ff;
-  font-size: 14px !important;
-  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
-  text-align: left;
-  word-break: break-word;
-}
-
-.metric-group {
-  padding-top: 1vh;
-  margin-top: 1vh;
-  border-top: 1px solid #1a65a8;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-}
-
-.metric-item {
-    font-size: 14px;
-    color: #8bd3f9;
-    padding: 2px 5px;
-    font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
-}
-.metric-item span {
-    font-weight: bold;
-    color: #c6f4ff;
-    font-size: 14px;
-    margin-left: 0.5em;
-    font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
-}
-
-/* ================= 底部内容 ================= */
-.bottom-content {
-  position: absolute;
-  bottom: 1vh;
-  width: 100%;
-  height: 15vh;
-}
-
-.diagnosis-card {
-    position: absolute;
-    bottom: 6.3vh;
-    left: 12vw;
-    background-image: url('~@/assets/images/step5/二级标题.png');
-    background-size: 100% 100%;
-    width: 200px;
-    height: 40px;
-    line-height: 40px;
-    padding-left: 45px;
-    font-weight: bold;
-    font-size: 1rem;
-    color: #c6f4ff;
-    font-family: 'DingTalk-JinBuTi', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
-}
-
-.metric-card {
-  position: absolute;
-  bottom: 5vh;
-  background-image: url('~@/assets/images/step5/底部多主体和不一致的背景.png');
-  background-size: 100% 100%;
-  width: 16vw;
-  height: 8vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  font-family: 'DingTalk-JinBuTi', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
-}
-
-.accuracy-card {
-  left: 32vw;
-}
-
-.recall-card {
-  left: 55vw;
-}
-
-.metric-title {
-  font-size: 0.85rem;
-  color: #8bd3f9;
-  margin-bottom: 0.3vh;
-  padding-left: 48px;
-  text-align: left;
-  width: 100%;
-  font-family: 'DingTalk-JinBuTi', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
-}
-
-.metric-value {
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: #ffffff;
-  font-family: 'DingTalk-JinBuTi', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
-}
-
-.export-btn {
-  position: absolute;
-  bottom: 4.8vh;
-  right: 5vw;
-  background-image: url('~@/assets/images/step5/按钮-结果导出.png');
-  background-color: transparent;
-  background-size: 100% 100%;
-  width: 160px;
-  height: 50px;
-  border: none;
-  cursor: pointer;
-  color: white;
-  font-weight: bold;
-  font-size: 1.1rem;
-  padding: 0;
-  padding-right: 25px;
-  text-align: right;
-  font-family: 'DingTalk-JinBuTi', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
-}
-
 
 /* 高亮文本（双括号内容） */
 ::v-deep .highlight-text {
-  color: #FF4242 !important;
+  color: #dc2626;
   font-weight: 700;
+  background-color: #fee;
+  padding: 0 2px;
 }
 
+/* 注：仅保留 ::v-deep，避免 sass 对 /deep/ 与 >>> 的解析报错 */
+
+/* =========== 根因诊断结果卡片 =========== */
+.diagnosis-result-card {
+  background: #ffffff;
+  border: 2px solid #2c3e50;
+  border-radius: 8px;
+  padding: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 10px;
+}
+
+.diagnosis-header {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1f2937;
+  border-bottom: 2px solid #2c3e50;
+  padding: 12px 15px;
+  margin: 0;
+  background-color: #f8f9fa;
+}
+
+.diagnosis-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 20px;
+}
+
+.diagnosis-item-box {
+  background: #ffffff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  padding: 18px;
+  text-align: center;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  }
+  
+  .diagnosis-label-top {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 12px;
+  }
+  
+  .diagnosis-value-large {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #1e40af;
+  }
+}
+
+/* Alert样式优化 */
+::v-deep .alert {
+  border-radius: 8px;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 滚动条样式 */
+.scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollable::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+  
+  &:hover {
+    background: #555;
+  }
+}
+
+/* 响应式优化 */
+@media (max-width: 1200px) {
+  .module-card {
+    min-height: 450px;
+  }
+  
+  .percentage-value {
+    font-size: 1.5rem;
+  }
+  
+  .diagnosis-value {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .diagnosis-content {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .two-column {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
 
