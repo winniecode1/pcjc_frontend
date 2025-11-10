@@ -24,24 +24,15 @@
           <div class="panel-content">
             <div class="server-video-list overflow-auto">
               <!-- 视频列表 -->
-              <div
-                v-for="video in videoList"
-                :key="video.id"
-                class="video-item"
-                @click="selectVideo(video)"
-                :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }"
-              >
+              <div v-for="video in videoList" :key="video.id" class="video-item" @click="selectVideo(video)"
+                :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }">
                 <span>{{ video.name }}</span>
                 <span class="selector-circle"></span>
               </div>
             </div>
 
             <div class="action-buttons">
-              <button
-                @click="startDetection"
-                :disabled="!selectedVideo || isLoading"
-                class="btn-start-detect"
-              >
+              <button @click="startDetection" :disabled="!selectedVideo || isLoading" class="btn-start-detect">
                 <b-spinner small v-if="isLoading"></b-spinner>
                 <span>{{ isLoading ? (progressMessage || '检测中...') : '开始检测' }}</span>
               </button>
@@ -54,13 +45,8 @@
         <div class="video-section">
           <div class="video-label label-original">原视频</div>
           <div class="video-frame">
-            <video
-              v-if="originalVideoURL"
-              :src="originalVideoURL"
-              controls
-              class="video-display"
-              @error="handleVideoError"
-            ></video>
+            <video v-if="originalVideoURL" :src="originalVideoURL" controls class="video-display"
+              @error="handleVideoError"></video>
             <div v-else class="placeholder-text">请选择视频</div>
           </div>
         </div>
@@ -68,14 +54,8 @@
         <div class="video-section">
           <div class="video-label label-processed">多模态检测结果 ({{ taskId || 'N/A' }})</div>
           <div class="video-frame">
-            <video
-              v-if="processedVideoURL"
-              :src="processedVideoURL"
-              controls
-              class="video-display"
-              :key="processedVideoURL"
-              @error="handleVideoError"
-            ></video>
+            <video v-if="processedVideoURL" :src="processedVideoURL" controls class="video-display"
+              :key="processedVideoURL" @error="handleVideoError"></video>
             <div v-else-if="isLoading" class="placeholder-text">等待处理结果...</div>
             <div v-else class="placeholder-text">检测结果将在这里显示</div>
           </div>
@@ -93,7 +73,8 @@
                 {{ fullResult.video_description }}
               </p>
               <p v-if="fullResult.key_frame_detection" class="mb-1 text-left">
-                <span class="text-red">id:{{ fullResult.key_frame_detection.frame_idx }} {{ getMainObject() }} {{ getMainConfidence().toFixed(2) }}</span>
+                <span class="text-red">id:{{ fullResult.key_frame_detection.frame_idx }} {{ getMainObject() }} {{
+                  getMainConfidence().toFixed(2) }}</span>
               </p>
               <p v-else-if="!isLoading" class="text-left small-text">
                 {{ resultMessage || '检测完成后显示结果' }}
@@ -108,22 +89,18 @@
           <div class="panel-content">
             <div class="metric-box">
               <template v-if="fullResult.accuracy_results && fullResult.accuracy_results.detection">
-                 {{ (fullResult.accuracy_results.detection.accuracy * 100).toFixed(2) + '%' }}
+                {{ (fullResult.accuracy_results.detection.accuracy * 100).toFixed(2) + '%' }}
               </template>
               <template v-else>
-                 N/A
+                N/A
               </template>
             </div>
-            </div>
+          </div>
         </div>
 
         <div class="action-buttons-right">
           <!-- 【更改】添加了 @click 和 :disabled 绑定 -->
-          <button
-            class="btn-export-result"
-            @click="exportResults"
-            :disabled="!taskId || isLoading"
-          >
+          <button class="btn-export-result" @click="exportResults" :disabled="!taskId || isLoading">
             <span>结果导出</span>
           </button>
         </div>
@@ -140,7 +117,8 @@ import { BIcon, BIconPlayCircleFill, BIconPlayFill, BSpinner } from 'bootstrap-v
 // API 基础地址
 const API_BASE_URL = 'http://10.109.253.71:5236';
 const FRONTEND_BASE_URL = 'http://10.109.253.71:8889';
-const BASE_DIR = "/home/wuzhixuan/Project/PCJC/1"
+const BASE_DIR = "/home/wuzhixuan/Project/PCJC/1";
+const VIDEO_DIR = "/home/wuzhixuan/Project/PCJC/datasets/Vedio"
 export default {
   name: 'TargetDetection',
   components: {
@@ -258,10 +236,15 @@ export default {
       this.progressMessage = "正在启动分析...";
       console.log("Selected video name:", this.selectedVideo.name);
 
+      const baseUrl = VIDEO_DIR.endsWith('/') ? VIDEO_DIR.slice(0, -1) : VIDEO_DIR;
+      const videoPath = `${baseUrl}/${this.selectedVideo.name}`;
+      console.log("Constructed video path for /batch_predict:", videoPath);
+
       try {
         // 1. 调用后端分析接口
-        const analyzeResponse = await axios.post(`${API_BASE_URL}/analyze_video`, {
-          video_name: this.selectedVideo.name
+        const analyzeResponse = await axios.post(`${API_BASE_URL}/batch_predict`, {
+          // 将 video_name 替换为后端期望的 video_path
+          video_path: videoPath
         });
 
         const analyzeData = analyzeResponse.data;
@@ -271,17 +254,33 @@ export default {
 
         this.taskId = analyzeData.task_id;
         this.progressMessage = `分析任务 [${this.taskId}] 已启动，正在进行深度处理...`;
-        this.resultMessage = `任务ID: ${this.taskId}。处理时间预计 ${analyzeData.processing_time.toFixed(2)}s。`;
+        // 【修改点】：增加安全检查
+        const processingTime = analyzeData.processing_time;
+        const timeDisplay = processingTime ? `${processingTime.toFixed(2)}s` : 'N/A'; // 增加安全检查和默认值
 
+        // 使用新的 timeDisplay 变量
+        this.resultMessage = `任务ID: ${this.taskId}。处理时间预计 ${timeDisplay}。`;
         // 2. 获取检测结果
-        const fullResultResponse = await axios.get(`${API_BASE_URL}/get_detection_results/${this.taskId}`);
+        // 【新增修改点】：去除文件名中的扩展名
+        let videoNameWithoutExtension = this.selectedVideo.name;
+        // 使用正则表达式匹配并移除末尾的 .xxx 扩展名
+        const extensionIndex = videoNameWithoutExtension.lastIndexOf('.');
+        if (extensionIndex > 0) {
+          videoNameWithoutExtension = videoNameWithoutExtension.substring(0, extensionIndex);
+        }
+
+        // 确保编码处理，使用不带扩展名的文件名
+        const videoNameEncoded = encodeURIComponent(videoNameWithoutExtension);
+        const fullResultResponse = await axios.get(
+          `${API_BASE_URL}/get_detection_results/${this.taskId}?video_name=${videoNameEncoded}`
+        );
         const fullData = fullResultResponse.data;
 
         // 3. 更新界面结果 (确保所有字段都已从 fullData 复制过来)
         this.fullResult.task_id = fullData.task_id;
         this.fullResult.video_description = fullData.video_description;
         this.fullResult.video_info = fullData.video_info;
-        this.fullResult.accuracy_results = fullData.accuracy_results;
+        this.fullResult.accuracy_results = fullData.overall_accuracy;
         this.fullResult.overall_accuracy = fullData.overall_accuracy;      // 新增字段
         this.fullResult.low_similarity_aspects = fullData.low_similarity_aspects; // 新增字段
         this.fullResult.video_path = fullData.video_path;                  // 新增字段
@@ -300,7 +299,7 @@ export default {
         try {
           // --- 1. 路径处理（将相对路径转换为完整的 URL） ---
           const baseUrl = BASE_DIR.replace(/\/$/, '');
-          
+
           // 关键帧路径处理
           let fullImagePath = "无图像路径";
           if (key_frame_path_url && key_frame_path_url !== "无图像路径") {
@@ -319,41 +318,41 @@ export default {
           // 直接使用 fullData 的所有字段，并用完整的 URL 覆盖路径字段
           const module1Res = {
             ...fullData, // 复制所有后端返回的字段
-            
+
             // 覆盖字段为完整的 URL 或确保有默认值
             deviceType: fullData.deviceType || "N/A",
-            
+
             // 使用处理后的完整 URL 覆盖原有的相对路径
-            key_frame_path: fullImagePath, 
+            key_frame_path: fullImagePath,
             video_path: fullProcessedVideoPath,
 
             originalVideoPath: originalVideoPath
           };
-          
+
           // 3. 将对象转换为 JSON 字符串并存储
           localStorage.setItem('module1Res', JSON.stringify(module1Res));
 
 
           // 4. 方便调试：【格式化打印】存储的 module1Res 数据
           console.groupCollapsed("%c✅ Module 1 结果已存储 (module1Res)", "color: #17a2b8; font-weight: bold;");
-          
+
           // 打印原始 JSON 字符串
           console.log("%c原始 JSON 字符串:", "font-weight: bold; color: #ffc107;", localStorage.getItem('module1Res'));
 
           // 打印对象所有键值对的表格
           const tableData = Object.entries(module1Res).map(([key, value]) => ({
-              Key: key,
-              Value: (typeof value === 'object' && value !== null) ? JSON.stringify(value).substring(0, 50) + '...' : value
+            Key: key,
+            Value: (typeof value === 'object' && value !== null) ? JSON.stringify(value).substring(0, 50) + '...' : value
           }));
-          
+
           console.log("%c对象内容 (表格展示):", "font-weight: bold; color: #28a745;");
           console.table(tableData);
 
           // 特别打印 video_description (长文本)
           console.log("%c视频描述 (videoDescription):", "font-weight: bold; color: #00e5ff;", module1Res.videoDescription);
-          
+
           console.groupEnd(); // 结束分组
-          
+
         } catch (e) {
           console.error("保存 module1Res 到 localStorage 失败:", e);
         }
@@ -497,12 +496,15 @@ export default {
   background-size: 100% 100%;
   margin: 0 5px;
 }
+
 .btn-home {
   background-image: url('~@/assets/images/step1/-s-按钮-蓝色.png');
 }
+
 .btn-back {
   background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png');
 }
+
 .btn-next {
   background-image: url('~@/assets/images/step1/-s-按钮-绿色.png');
 }
@@ -516,10 +518,13 @@ export default {
 }
 
 /* 三列通用高度 (不变) */
-.left-column, .middle-column, .right-column {
+.left-column,
+.middle-column,
+.right-column {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 80px); /* 减去顶部栏高度和padding */
+  height: calc(100vh - 80px);
+  /* 减去顶部栏高度和padding */
   padding: 0 !important;
 }
 
@@ -538,10 +543,12 @@ export default {
   flex-grow: 1;
   height: 100%;
 }
+
 .panel-right-top {
   height: 55%;
   flex-shrink: 0;
 }
+
 .panel-right-bottom {
   flex-grow: 1;
   height: 100%;
@@ -572,6 +579,7 @@ export default {
   justify-content: center;
   align-items: center;
 }
+
 .header-accuracy {
   margin-top: 15px;
 }
@@ -586,9 +594,18 @@ export default {
   max-height: calc(100% - 80px);
   padding-right: 10px;
 
-  &::-webkit-scrollbar { width: 6px; }
-  &::-webkit-scrollbar-thumb { background: #00e5ff; border-radius: 3px; }
-  &::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #00e5ff;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
 }
 
 .video-item {
@@ -625,6 +642,7 @@ export default {
   flex-shrink: 0;
   margin-left: 10px;
 }
+
 .video-item.selected .selector-circle {
   background-color: #00e5ff;
 }
@@ -689,6 +707,7 @@ export default {
   text-align: center;
   margin-bottom: 10px;
 }
+
 .label-processed {
   font-size: 0.8rem;
 }
@@ -735,11 +754,24 @@ export default {
   line-height: 1.6;
   padding: 10px !important;
 
-  &::-webkit-scrollbar { width: 6px; }
-  &::-webkit-scrollbar-thumb { background: #00e5ff; border-radius: 3px; }
-  &::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #00e5ff;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
 }
-.small-text { font-size: 0.9rem; }
+
+.small-text {
+  font-size: 0.9rem;
+}
+
 .text-red {
   color: #ff4d4d;
   font-weight: bold;
@@ -801,39 +833,60 @@ export default {
   .video-frame {
     height: 250px;
   }
+
   .metric-box {
     font-size: 2.8rem;
   }
+
   [class^="panel-"] {
     padding: 20px;
   }
+
   .panel-header {
     height: 35px;
   }
 }
 
 @media (max-width: 1200px) {
-  .left-column, .middle-column, .right-column {
+
+  .left-column,
+  .middle-column,
+  .right-column {
     height: auto;
     margin-bottom: 20px;
   }
+
   .content-row {
     flex-direction: column;
     align-items: center;
   }
-  .left-column, .right-column {
+
+  .left-column,
+  .right-column {
     width: 80% !important;
     max-width: 80% !important;
   }
+
   .middle-column {
     width: 90% !important;
     max-width: 90% !important;
   }
+
   .right-column {
     min-height: 600px;
   }
-  .panel-left { min-height: 400px; }
-  .panel-right-top { min-height: 250px; height: auto; }
-  .panel-right-bottom { min-height: 150px; }
+
+  .panel-left {
+    min-height: 400px;
+  }
+
+  .panel-right-top {
+    min-height: 250px;
+    height: auto;
+  }
+
+  .panel-right-bottom {
+    min-height: 150px;
+  }
 }
 </style>
