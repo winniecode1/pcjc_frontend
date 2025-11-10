@@ -215,8 +215,22 @@
 <script>
 import axios from 'axios';
 // img_path地址（模块一传参）
-const IMG_PATH_URL = localStorage.getItem('imagePath') || '/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png';
-const DEVICE_TYPE = localStorage.getItem('deviceType') || '飞机';
+// const IMG_PATH_URL = localStorage.getItem('imagePath') || '/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png';
+// const DEVICE_TYPE = localStorage.getItem('deviceType') || '飞机';
+let IMG_PATH_URL = '/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png';
+let DEVICE_TYPE = '飞机';
+const module1ResStr = localStorage.getItem('module1Res');
+    if (module1ResStr) {
+      const module1Res = JSON.parse(module1ResStr);
+      // 获取并清理key_frame_path
+      if (module1Res.key_frame_path) {
+        IMG_PATH_URL = module1Res.key_frame_path.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
+      }
+      // 获取并清理deviceType
+      if (module1Res.deviceType) {
+        DEVICE_TYPE = module1Res.deviceType.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
+      }
+    }
 console.log('IMG_PATH_URL:', IMG_PATH_URL, 'DEVICE_TYPE:', DEVICE_TYPE)
 export default {
   name: 'PriorKnowledge',
@@ -336,8 +350,9 @@ export default {
           this.kind = predictData.kind;
           this.shape = predictData.shape;
           
+          const module2Res = JSON.parse(localStorage.getItem('module2Res'));
           // 这里如果没有ground_truth，可以设置一个默认值或空值
-          this.ground_truth = predictData.model || '';
+          this.ground_truth = module2Res.result[0][0].model || '';
           
           // 拼接属性信息文本
           this.attributeInfo = this.attributeInfo.join('\n');
@@ -376,7 +391,7 @@ export default {
           ];
           this.color = predictData.color;
           this.kind = predictData.kind;
-          this.shape = predictData.shape; 
+          this.shape = predictData.shape;
           this.ground_truth = predictData.model;
         }
         this.attributeInfo = this.attributeInfo.join('\n');
@@ -433,7 +448,9 @@ export default {
     },
     async startInfer() {
       this.isLoading = true;
-       const imgPath = localStorage.getItem('imagePath');
+      const module1ResStr = localStorage.getItem('module1Res');
+      const module1Res = JSON.parse(module1ResStr);
+       const imgPath = module1Res.key_frame_path.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
         console.log("从 LocalStorage 读取 'imagePath':", imgPath);
       const resdata = {
         color: this.color,

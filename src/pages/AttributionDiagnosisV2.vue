@@ -299,6 +299,27 @@ export default {
         try {
           module1Data = JSON.parse(module1Str);
           console.log('✅ module1Res 解析成功:', module1Data);
+          
+          // 提取 key_frame_path 并处理：去掉最后一个/及其后面的内容
+          const keyFramePath = module1Data.key_frame_path;
+          if (!keyFramePath) {
+            console.error('❌ module1Res 中缺少 key_frame_path 字段');
+            return {
+              success: false,
+              message: '模块一数据中缺少 key_frame_path 字段'
+            };
+          }
+          
+          // 去掉最后一个/及其后面的内容，得到文件夹路径
+          const lastSlashIndex = keyFramePath.lastIndexOf('/');
+          const folderPath = lastSlashIndex > 0 ? keyFramePath.substring(0, lastSlashIndex) : keyFramePath;
+          
+          console.log('📁 提取的文件夹路径:', folderPath);
+          
+          // 重新构建 module1Data，只保留 path 字段
+          module1Data = {
+            path: folderPath
+          };
         } catch (e) {
           console.error('❌ module1Res 解析失败:', e);
           return {
@@ -558,7 +579,7 @@ export default {
       
       const singleTask = module3.single_task_stage;
       if (singleTask) {
-        this.module3BiasTestResult = this.safeGet(singleTask, 'prediction.caption', '');
+        this.module3BiasTestResult = this.safeGet(singleTask, 'prediction.final_review', '');
       }
       
       const moduleTestStage = module3.module_test_stage;
@@ -632,10 +653,10 @@ export default {
      * 高亮双括号内容（标红并移除括号）
      */
     highlightBrackets(text) {
-      if (!text) return '';
-      
-      // 将 {{xxx}} 替换为 <span class="highlight">xxx</span>
-      return text.replace(/\{\{([^}]+)\}\}/g, '<span class="highlight-text">$1</span>');
+      if (text === null || text === undefined) return '';
+      const str = String(text);
+      // 跨行、非贪婪匹配；使用内联样式确保在 scoped/深度选择器受限时也能生效
+      return str.replace(/\{\{([\s\S]*?)\}\}/g, '<span class="highlight-text" style="color:#dc2626;font-weight:700;">$1</span>');
     },
     
     /**
@@ -851,6 +872,8 @@ export default {
   background-color: #fee;
   padding: 0 2px;
 }
+
+/* 注：仅保留 ::v-deep，避免 sass 对 /deep/ 与 >>> 的解析报错 */
 
 /* =========== 根因诊断结果卡片 =========== */
 .diagnosis-result-card {
