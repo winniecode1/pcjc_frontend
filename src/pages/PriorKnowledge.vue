@@ -126,14 +126,14 @@ import axios from 'axios';
   // 从localStorage获取module1Res对象并解析所需属性
   let IMG_PATH_URL = '/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png';
   let DEVICE_TYPE = '飞机';
-  
+  let VIDEO_PATH = '';
   try {
     const module1ResStr = localStorage.getItem('module1Res');
     if (module1ResStr) {
       const module1Res = JSON.parse(module1ResStr);
       // 获取并清理key_frame_path
       if (module1Res.key_frame_path) {
-        // IMG_PATH_URL = module1Res.key_frame_path.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
+        IMG_PATH_URL = module1Res.key_frame_path.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
       }
       // 获取并清理deviceType
       if (module1Res.deviceType) {
