@@ -89,7 +89,7 @@
           <div class="panel-content">
             <div class="metric-box">
               <template v-if="fullResult.accuracy_results && fullResult.accuracy_results.detection">
-                {{ (fullResult.accuracy_results.detection.accuracy * 100).toFixed(2) + '%' }}
+                {{ (fullResult.accuracy_results.detection.overall * 100).toFixed(2) + '%' }}
               </template>
               <template v-else>
                 N/A
