@@ -173,34 +173,58 @@ export default {
      * 【新增方法】: 从 LocalStorage 初始化数据
      * 读取 module3Res 中的 final_review 和 final_model_name
      */
+    /**
+         * 【重要修改】: 从 LocalStorage 初始化数据
+         * 读取 module3Res 中的 final_review。
+         * 从 module1Res 中读取 originalVideoPath 并提取视频名称作为 weaponModel。
+         */
+    /**
+         * 【核心修改】: 从 LocalStorage 初始化数据
+         * 1. 读取 module3Res 中的 final_review。
+         * 2. 从 module1Res 中读取 'video_name' 作为 weaponModel。
+         */
     initializeDataFromStorage() {
       try {
+        // --- 1. 处理第三阶段文字信息 (保持读取 module3Res) ---
         const module3ResStr = localStorage.getItem('module3Res');
         if (module3ResStr) {
           const module3Res = JSON.parse(module3ResStr);
           console.log('✅ 成功从 LocalStorage 读取 module3Res:', module3Res);
 
-          // 1. 获取 thirdStageText (第三阶段文字信息)
+          // 获取 thirdStageText (第三阶段文字信息)
           if (module3Res.final_review) {
             this.thirdStageText = module3Res.final_review;
             console.log('--- thirdStageText 更新为:', this.thirdStageText);
           } else {
             console.warn('--- module3Res 中缺少 final_review 字段。');
           }
-
-          // 2. 获取 model（武器型号）
-          if (module3Res.final_model_name) {
-            this.apiConfig.weaponModel = module3Res.final_model_name;
-            console.log('--- apiConfig.weaponModel 更新为:', this.apiConfig.weaponModel);
-          } else {
-            console.warn('--- module3Res 中缺少 final_model_name 字段。');
-          }
         } else {
           console.warn('⚠️ LocalStorage 中未找到 module3Res，使用默认值。');
           this.thirdStageText = '未找到第三阶段信息，正在使用默认武器型号。';
         }
+
+        // --- 2. 【新增逻辑】: 获取 Model (武器型号) 从 module1Res 的 'video_name' 字段 ---
+        const module1ResStr = localStorage.getItem('module1Res');
+        if (module1ResStr) {
+          const module1Res = JSON.parse(module1ResStr);
+          // 【关键修改点】：直接读取 video_name 字段
+          const videoName = module1Res.video_name;
+
+          if (videoName) {
+            this.apiConfig.weaponModel = videoName;
+
+            // 【控制台打印读取结果】
+            console.log('--- ✅ 成功从 module1Res 提取 weaponModel (video_name) ---');
+            console.log('--- 提取的武器型号 (video_name) 更新为:', this.apiConfig.weaponModel);
+          } else {
+            console.warn('--- module1Res 中缺少 "video_name" 字段，weaponModel 使用默认值。');
+          }
+        } else {
+          console.warn('⚠️ LocalStorage 中未找到 module1Res，weaponModel 使用默认值。');
+        }
+
       } catch (e) {
-        console.error('❌ 解析 module3Res 失败:', e);
+        console.error('❌ 解析 LocalStorage 数据失败:', e);
         this.thirdStageText = '加载信息时发生错误，请检查 LocalStorage 数据格式。';
       }
     },
@@ -311,7 +335,9 @@ export default {
             comprehensiveaccuracy: mainData.data.comprehensive_accuracy, // 综合准确度（去除下划线）
             deviation_value: mainData.data.deviation_value, // 偏差值
             coredimensionratingaccuracy: mainData.data.core_dimension_rating_accuracy, // 核心维度评级准确率（去除下划线）
-            summary: mainData.data.summary // 武器性能总结
+            summary: mainData.data.summary, // 武器性能总结
+            // 【新增行】: 存储来自准确率接口的字段
+            average_comprehensive_accuracy: accuracyData['average_comprehensive_accuracy']
           };
           localStorage.setItem('module4Res', JSON.stringify(module4Res));
           console.log('模块四后端返回值已按目标格式存入localStorage的module4Res');
@@ -407,11 +433,11 @@ export default {
       try {
         // 【关键修改 1】：从 LocalStorage 读取 module1Res 整个对象
         const module1ResStr = localStorage.getItem('module1Res');
-        
+
         if (module1ResStr) {
           const module1Res = JSON.parse(module1ResStr);
           // 【关键修改 2】：从解析后的对象中获取 originalVideoPath 属性
-          const videoPath = module1Res.originalVideoPath; 
+          const videoPath = module1Res.originalVideoPath;
 
           console.log("【测试】从 module1Res 对象中读取 'originalVideoPath':", videoPath);
 
