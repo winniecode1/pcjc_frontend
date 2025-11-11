@@ -338,7 +338,7 @@ export default {
     // 导航到下一页
     navigateNext() {
       // 这里可以设置下一个页面的路由
-      this.$router.push('/decision-making');
+      this.$router.push('/decisionmaking');
     },
     // 从localStorage加载预测信息
     loadPredictInfoFromStorage() {
