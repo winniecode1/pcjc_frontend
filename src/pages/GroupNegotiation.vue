@@ -9,7 +9,7 @@
         <button class="header-btn btn-back" @click="navigateBack">返回</button>
       </b-col>
       <b-col cols="6" class="text-center">
-        <h1 class="header-title">群体协商认知偏差检测模型</h1>
+        <!-- <h1 class="header-title">群体协商认知偏差检测模型</h1> -->
       </b-col>
       <b-col cols="3" class="text-right">
         <button class="header-btn btn-next" @click="navigateNext">下个页面</button>
@@ -561,7 +561,7 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: url('~@/assets/images/step1/-s-图层 0.png');
+  background-image: url('~@/assets/images/step3/bg.png');
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center center;

@@ -1,16 +1,18 @@
 <template>
-  <div class="container-fluid bg-dark text-white min-vh-100">
+  <div class="section">
+    <div class="img_box"></div>
+
     <!-- 顶部导航栏 -->
     <b-row class="header-bar align-item-s-center no-gutters">
-      <b-col cols="4" class="d-flex align-items-center">
+      <b-col cols="3" class="text-left">
         <button class="header-btn btn-home" @click="navigateHome">首页</button>
         <button class="header-btn btn-back" @click="navigateBack">返回</button>
       </b-col>
-      <b-col cols="4" class="d-flex justify-content-center align-items-center">
-        <h1 class="header-title">先验知识和偏差检测模型</h1>
+      <b-col cols="6" class="text-center">
+        <!-- <h1 class="header-title">先验知识认知偏差检测模型</h1> -->
       </b-col>
-      <b-col cols="4" class="d-flex justify-content-end align-items-center">
-        <button class="header-btn btn-next" @click="navigateNext">下一步</button>
+      <b-col cols="3" class="text-right">
+        <button class="header-btn btn-next" @click="navigateNext">下个页面</button>
       </b-col>
     </b-row>
 
@@ -50,9 +52,6 @@
                 <img src="~@/assets/images/step1/-s-按钮-开始测试.png" alt="开始" width="24" height="24">
                 <span>开始检测</span>
               </button>
-              <button @click="downloadJsonData" class="btn-export-result mt-3" :disabled="isLoading">
-                导出结果
-              </button>
             </div>
           </div>
         </div>
@@ -62,7 +61,7 @@
       <div class="col-md-6 middle-column">
         <div class="panel-left h-100">
           <div class="panel-header">
-            <span>知识图谱</span>
+            <span>先验知识</span>
           </div>
           <div class="panel-content">
             <div class="graph-container" ref="graphContainer" style="height: calc(100% - 40px);">
@@ -112,6 +111,11 @@
               <template v-else>
                 N/A
               </template>
+            </div>
+            <div class="action-buttons">
+              <button @click="downloadJsonData" class="btn-export-result" :disabled="isLoading">
+                结果导出
+              </button>
             </div>
           </div>
         </div>
@@ -187,7 +191,7 @@ export default {
     },
     // 返回上一页
     navigateBack() {
-      this.$router.back();
+      this.$router.push('/target-detection');
     },
     // 导航到下一页
     navigateNext() {
@@ -541,12 +545,40 @@ export default {
 
 <style>
 /* 1. 全局样式 */
+/* 1. 全局和背景 */
+.section {
+  width: 100%;
+  min-height: 100vh;
+  color: #fff;
+  font-family: "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  z-index: 2;
+  padding: 10px;
+  margin: 0;
+  background-color: transparent;
+  display: flex;
+  flex-direction: column;
+}
+
 body {
   background-color: #0a1120;
   color: #e8f4ff;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   margin: 0;
   padding: 0;
+}
+
+.img_box {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('~@/assets/images/step2/bg.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+  opacity: 1;
+  z-index: -1;
 }
 
 .bg-dark {
@@ -558,14 +590,12 @@ body {
 }
 
 /* 2. 顶部标题栏 */
+/* 2. 顶部标题栏 */
 .header-bar {
   width: 100%;
   flex-shrink: 0;
   padding: 0 20px;
   height: 60px;
-  background-color: rgba(10, 17, 32, 0.95);
-  border-bottom: 2px solid #00e5ff;
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
 }
 
 .header-title {
@@ -586,52 +616,9 @@ body {
   color: #fff;
   font-size: 0.9rem;
   font-weight: bold;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
   margin: 0 5px;
-  background: linear-gradient(135deg, #0f1a2e, #1a2942);
-  border: 1px solid #00e5ff;
-  border-radius: 4px;
-  box-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: linear-gradient(135deg, #1a2942, #0f1a2e);
-    box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    box-shadow: none;
-  }
-}
-
-.btn {
-  background: linear-gradient(135deg, #0f1a2e, #1a2942);
-  border: 1px solid #00e5ff;
-  border-radius: 4px;
-  cursor: pointer;
-  width: 100px;
-  height: 36px;
-  margin-left: 10px;
-  color: #fff;
-  font-size: 1rem;
-  box-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: linear-gradient(135deg, #1a2942, #0f1a2e);
-    box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    box-shadow: none;
-  }
-  font-weight: bold;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
 }
 
 .btn-home {
@@ -645,6 +632,7 @@ body {
 .btn-next {
   background-image: url('~@/assets/images/step1/-s-按钮-绿色.png');
 }
+
 
 /* 3. 核心内容区 */
 .content-row {
