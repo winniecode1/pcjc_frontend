@@ -52,7 +52,7 @@
         </div>
 
         <div class="video-section">
-          <div class="video-label label-processed">多模态检测结果 ({{ taskId || 'N/A' }})</div>
+          <div class="video-label label-processed">多模态检测结果 </div>
           <div class="video-frame">
             <video v-if="processedVideoURL" :src="processedVideoURL" controls class="video-display"
               :key="processedVideoURL" @error="handleVideoError"></video>
@@ -69,8 +69,9 @@
         <div class="panel-right-top">
           <div class="panel-content">
             <div class="description-box p-2 overflow-auto">
-              <p v-if="fullResult.video_description" class="mb-1 text-left small-text">
-                {{ fullResult.video_description }}
+              <!-- 使用 formatDescription 方法进行标红处理 -->
+              <p v-if="fullResult.video_description" class="mb-1 text-left small-text"
+                v-html="formatDescription(fullResult.video_description)">
               </p>
               <p v-if="fullResult.key_frame_detection" class="mb-1 text-left">
                 <span class="text-red">id:{{ fullResult.key_frame_detection.frame_idx }} {{ getMainObject() }} {{
@@ -88,8 +89,8 @@
         <div class="panel-right-bottom">
           <div class="panel-content">
             <div class="metric-box">
-              <template v-if="fullResult.accuracy_results && fullResult.accuracy_results.detection">
-                {{ (fullResult.accuracy_results.detection.overall * 100).toFixed(2) + '%' }}
+              <template v-if="fullResult.overall_accuracy !== undefined">
+                {{ (fullResult.overall_accuracy * 100).toFixed(2) + '%' }}
               </template>
               <template v-else>
                 N/A
@@ -99,7 +100,6 @@
         </div>
 
         <div class="action-buttons-right">
-          <!-- 【更改】添加了 @click 和 :disabled 绑定 -->
           <button class="btn-export-result" @click="exportResults" :disabled="!taskId || isLoading">
             <span>结果导出</span>
           </button>
@@ -119,6 +119,22 @@ const API_BASE_URL = 'http://10.109.253.71:5236';
 const FRONTEND_BASE_URL = 'http://10.109.253.71:8889';
 const BASE_DIR = "/home/wuzhixuan/Project/PCJC/1";
 const VIDEO_DIR = "/home/wuzhixuan/Project/PCJC/datasets/Vedio"
+
+/**
+ * 【关键修正工具函数】从完整的文件路径中提取文件名
+ * 作用：从 /home/.../detected_video.mp4 中提取 detected_video.mp4
+ * @param {string} fullPath - 完整路径，例如 /home/.../detected_video.mp4 或 C:\path\to\file.mp4
+ * @returns {string|null} 文件名，例如 detected_video.mp4
+ */
+function getFilenameFromPath(fullPath) {
+  if (!fullPath || typeof fullPath !== 'string') return null;
+  // 使用 split 方法按路径分隔符（/ 或 \）分割，并取最后一个元素
+  const parts = fullPath.split(/[/\\]/);
+  // pop() 方法移除并返回数组的最后一个元素，即文件名
+  return parts.pop() || null; 
+}
+
+
 export default {
   name: 'TargetDetection',
   components: {
@@ -170,6 +186,31 @@ export default {
     handleVideoError(e) {
       console.error("视频加载错误:", e);
       this.resultMessage = "处理后视频加载失败，请检查服务器日志和网络。";
+    },
+    /**
+     * 【标红修正】实现“动作：”行的标红处理。
+     * 作用：确保只有以“动作：”开头的行被标红，并正确处理换行。
+     */
+    formatDescription(description) {
+      if (!description) return '';
+      // 1. 仅按换行符分割文本，保留每行的完整内容
+      // 使用 /\r?\n/ 确保兼容 Windows (\r\n) 和 Unix/Linux/Mac (\n) 换行
+      const lines = description.split(/\r?\n/).filter(line => line.trim() !== '');
+      let html = '';
+      const actionKeyword = "动作：";
+
+      // 2. 遍历每一行，如果以 "动作："开头则标红，并添加 <br> 换行
+      lines.forEach(line => {
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith(actionKeyword)) {
+          // 标红处理
+          html += `<span class="text-highlight">${trimmedLine}</span><br>`;
+        } else {
+          // 否则只添加行和换行
+          html += `${trimmedLine}<br>`;
+        }
+      });
+      return html;
     },
     getMainObject() {
       if (!this.fullResult.key_frame_detection || !this.fullResult.key_frame_detection.detections || !this.fullResult.key_frame_detection.detections.length) {
@@ -240,6 +281,15 @@ export default {
       const videoPath = `${baseUrl}/${this.selectedVideo.name}`;
       console.log("Constructed video path for /batch_predict:", videoPath);
 
+      // 【关键修正点 A】：获取不带扩展名的视频名 (对应后端路由中的 <video_name>)
+      let videoNameWithoutExtension = this.selectedVideo.name;
+      // 使用正则表达式匹配并移除末尾的 .xxx 扩展名
+      const extensionIndex = videoNameWithoutExtension.lastIndexOf('.');
+      if (extensionIndex > 0) {
+        videoNameWithoutExtension = videoNameWithoutExtension.substring(0, extensionIndex);
+      }
+      const videoNameEncoded = encodeURIComponent(videoNameWithoutExtension); // 对应后端路由中的 <video_name>
+
       try {
         // 1. 调用后端分析接口
         const analyzeResponse = await axios.post(`${API_BASE_URL}/batch_predict`, {
@@ -254,23 +304,12 @@ export default {
 
         this.taskId = analyzeData.task_id;
         this.progressMessage = `分析任务 [${this.taskId}] 已启动，正在进行深度处理...`;
-        // 【修改点】：增加安全检查
         const processingTime = analyzeData.processing_time;
-        const timeDisplay = processingTime ? `${processingTime.toFixed(2)}s` : 'N/A'; // 增加安全检查和默认值
+        const timeDisplay = processingTime ? `${processingTime.toFixed(2)}s` : 'N/A';
 
-        // 使用新的 timeDisplay 变量
         this.resultMessage = `任务ID: ${this.taskId}。处理时间预计 ${timeDisplay}。`;
-        // 2. 获取检测结果
-        // 【新增修改点】：去除文件名中的扩展名
-        let videoNameWithoutExtension = this.selectedVideo.name;
-        // 使用正则表达式匹配并移除末尾的 .xxx 扩展名
-        const extensionIndex = videoNameWithoutExtension.lastIndexOf('.');
-        if (extensionIndex > 0) {
-          videoNameWithoutExtension = videoNameWithoutExtension.substring(0, extensionIndex);
-        }
 
-        // 确保编码处理，使用不带扩展名的文件名
-        const videoNameEncoded = encodeURIComponent(videoNameWithoutExtension);
+        // 2. 获取检测结果
         const fullResultResponse = await axios.get(
           `${API_BASE_URL}/get_detection_results/${this.taskId}?video_name=${videoNameEncoded}`
         );
@@ -281,50 +320,64 @@ export default {
         this.fullResult.video_description = fullData.video_description;
         this.fullResult.video_info = fullData.video_info;
         this.fullResult.accuracy_results = fullData.overall_accuracy;
-        this.fullResult.overall_accuracy = fullData.overall_accuracy;      // 新增字段
-        this.fullResult.low_similarity_aspects = fullData.low_similarity_aspects; // 新增字段
-        this.fullResult.video_path = fullData.video_path;                  // 新增字段
+        this.fullResult.overall_accuracy = fullData.overall_accuracy;
+        this.fullResult.low_similarity_aspects = fullData.low_similarity_aspects;
+        this.fullResult.video_path = fullData.video_path;
         this.fullResult.deviceType = fullData.deviceType;
-        this.fullResult.key_frame_path = fullData.key_frame_path;          // 新增字段
+        this.fullResult.key_frame_path = fullData.key_frame_path;
         this.fullResult.key_frame_detection = fullData.key_frame_detection;
 
-        const key_frame_path_url = fullData.key_frame_path;
-        const video_path_url = fullData.video_path; // 获取后端返回的 video_path
 
-        // 构造处理后视频的 URL (这个保留，用于播放器)
-        this.processedVideoURL = `${API_BASE_URL}${video_path_url}`;
+        // ---- 提取文件名和路径修正 (用于构造新接口 URL) ----
+        // 原始路径字符串 (可能包含完整路径)
+        const raw_key_frame_path = fullData.key_frame_path;
+        const raw_video_path = fullData.video_path;
+
+        // 【关键修正点 B】：从完整路径中提取纯文件名，用于构造新接口 URL (对应 <filename>)
+        const key_frame_filename = getFilenameFromPath(raw_key_frame_path);
+        const video_filename = getFilenameFromPath(raw_video_path);
+        
+        console.log("Extracted video filename:", video_filename);
+        console.log("Extracted keyframe filename:", key_frame_filename);
+        // ----------------------------------------------------
 
 
-        // 4. 【关键修改】：整合所有后端结果并以 module1Res 的格式存储到 localStorage
+        // 4. 【关键修正点 C】: 构造处理后视频的 URL (用于播放器) - 对接新接口
+        if (video_filename && this.taskId) {
+          // 格式: /output/<task_id>/<video_name_without_ext>/<filename>
+          this.processedVideoURL = `${API_BASE_URL}/output/${this.taskId}/${videoNameEncoded}/${encodeURIComponent(video_filename)}`;
+          console.log("Processed video URL (Fixed):", this.processedVideoURL);
+        } else {
+          this.processedVideoURL = null;
+        }
+
+
+        // 5. 【关键修改】：整合所有后端结果并以 module1Res 的格式存储到 localStorage
         try {
-          // --- 1. 路径处理（将相对路径转换为完整的 URL） ---
-          const baseUrl = BASE_DIR.replace(/\/$/, '');
-
-          // 关键帧路径处理
-          let fullImagePath = "无图像路径";
-          if (key_frame_path_url && key_frame_path_url !== "无图像路径") {
-            const relativePath = key_frame_path_url.startsWith('/') ? key_frame_path_url : '/' + key_frame_path_url;
-            fullImagePath = baseUrl + relativePath;
+          // 构造 module1Res 中使用的完整路径 (使用新接口 URL)
+          let fullImagePathURL = "无图像路径";
+          if (key_frame_filename && key_frame_filename !== "无图像路径" && this.taskId) {
+            // 格式: /output/<task_id>/<video_name_without_ext>/<filename>
+            fullImagePathURL = `${API_BASE_URL}/output/${this.taskId}/${videoNameEncoded}/${encodeURIComponent(key_frame_filename)}`;
           }
 
-          // 处理后视频路径处理
-          let fullProcessedVideoPath = "无视频路径";
-          if (video_path_url && video_path_url !== "无视频路径") {
-            const relativePath = video_path_url.startsWith('/') ? video_path_url : '/' + video_path_url;
-            fullProcessedVideoPath = baseUrl + relativePath;
+          let fullProcessedVideoPathURL = "无视频路径";
+          if (video_filename && video_filename !== "无视频路径" && this.taskId) {
+            // 格式: /output/<task_id>/<video_name_without_ext>/<filename>
+            fullProcessedVideoPathURL = `${API_BASE_URL}/output/${this.taskId}/${videoNameEncoded}/${encodeURIComponent(video_filename)}`;
           }
+
           const originalVideoPath = this.originalVideoURL || "无原视频路径";
+
           // --- 2. 构建 module1Res 最终对象 ---
-          // 直接使用 fullData 的所有字段，并用完整的 URL 覆盖路径字段
           const module1Res = {
             ...fullData, // 复制所有后端返回的字段
 
-            // 覆盖字段为完整的 URL 或确保有默认值
             deviceType: fullData.deviceType || "N/A",
 
-            // 使用处理后的完整 URL 覆盖原有的相对路径
-            key_frame_path: fullImagePath,
-            video_path: fullProcessedVideoPath,
+            // 使用处理后的完整 URL 覆盖原有的路径字段
+            key_frame_path: fullImagePathURL,
+            video_path: fullProcessedVideoPathURL,
 
             originalVideoPath: originalVideoPath
           };
@@ -348,18 +401,11 @@ export default {
           console.log("%c对象内容 (表格展示):", "font-weight: bold; color: #28a745;");
           console.table(tableData);
 
-          // 特别打印 video_description (长文本)
-          console.log("%c视频描述 (videoDescription):", "font-weight: bold; color: #00e5ff;", module1Res.videoDescription);
-
           console.groupEnd(); // 结束分组
 
         } catch (e) {
           console.error("保存 module1Res 到 localStorage 失败:", e);
         }
-
-        // 【删除】旧的 localStorage 存储方式，替换为新的
-        // localStorage.setItem(`video_analysis_${this.taskId}`, JSON.stringify(fullData));
-        // console.log("保存模块一结果到 localStorage");
 
         this.resultMessage = "视频分析成功！结果已更新。";
         this.progressMessage = "分析完成";
@@ -373,7 +419,7 @@ export default {
     },
 
     /**
-     * 【新增】: 导出结果
+     * 导出结果
      */
     async exportResults() {
       if (!this.taskId) {
@@ -567,7 +613,6 @@ export default {
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  flex-shrink: 0;
 
   color: #fff;
   font-size: 1rem;
@@ -778,6 +823,12 @@ export default {
   font-size: 0.95rem;
 }
 
+/* 【已添加的样式】新增偏差检测结果文本中“动作：”的标红样式 */
+.text-highlight {
+  color: #ff4d4d;
+  font-weight: bold;
+}
+
 /* 右下方面板 (不变) */
 .panel-right-bottom {
   background-image: url('~@/assets/images/step1/-s-弹窗-偏差检测准确率.png');
@@ -821,7 +872,7 @@ export default {
   justify-content: center;
   align-items: center;
 
-  /* 【新增】导出按钮的 disabled 样式 */
+  /* 导出按钮的 disabled 样式 */
   &:disabled {
     filter: grayscale(80%);
     cursor: not-allowed;
