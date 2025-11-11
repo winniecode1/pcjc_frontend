@@ -3,97 +3,133 @@
     <div class="register" :style="{ width: `${windowWidth}px`, height: `${windowHeight}px` }"></div>
     <div class="img_box" :style="{ width: `${windowWidth}px`, height: `${windowHeight}px` }"></div>
 
-    <div class="title-container">
-      <h1 class="newTitle">决策选择认知偏差检测</h1>
+    <div class="top-nav-left">
+      <router-link to="/" class="nav-btn">首页</router-link>
+      <router-link to="/group-negotiation" class="nav-btn">返回</router-link>
+    </div>
+    <div class="top-nav-right">
+      <router-link to="/attributiondiagnosis" class="nav-btn">下一页</router-link>
     </div>
 
-    <div class="core-layout">
-      <div class="left-column">
-        <div class="left-module top-module">
-          <div class="module-label">第三阶段给出的文字信息</div>
-          <div class="module-content">
-            <p class="text-content">{{ thirdStageText }}</p>
+    <div class="title-container">
+      <h1 class="newTitle">决策选择认知偏差检测模型</h1>
+    </div>
+
+    <div class="core-layout-design">
+
+      <div class="design-left-column">
+        <div class="design-module video-module">
+          <div class="design-module-label">视频演示</div>
+          <div class="design-module-content video-content-wrapper">
+            <video v-if="testVideoUrl" :src="testVideoUrl" controls class="test-video-player"
+              @error="handleVideoError"></video>
+            <div v-else class="video-placeholder-text">
+              {{ testVideoMessage }}
+            </div>
+          </div>
+        </div>
+
+        <div class="design-module text-module-left">
+          <div class="design-module-content">
+            <p class="text-content" v-html="thirdStageText"></p>
           </div>
         </div>
 
         <div class="button-container">
           <b-button @click="fetchBackendData" variant="primary" :disabled="isLoading" class="inference-btn">
             <b-spinner small v-if="isLoading"></b-spinner>
-            {{ isLoading ? '获取数据中...' : '信息推理' }}
+            {{ isLoading ? '获取数据中...' : '结果推理' }}
           </b-button>
         </div>
-
-        <div class="left-module bottom-module">
-          <div class="module-label">本阶段产生的文本信息</div>
-          <div class="module-content">
-            <p class="text-content" v-html="performanceData"></p>
-          </div>
-        </div>
       </div>
 
-      <div class="right-column">
-        <div class="right-module image-module">
-          <div class="module-label">多时序图像数据</div>
-          <div class="image-grid">
-            <div class="image-item" v-for="(img, idx) in imageList" :key="idx">
-              <img :src="img" alt="多时序图像" class="image-display" v-if="img">
-              <div class="image-placeholder" v-else>图像 {{ idx + 1 }}</div>
+      <div class="design-center-column">
+        <div class="design-module assessment-module">
+          <div class="design-module-label">我方评估</div>
+          <div class="assessment-content">
+            <div class="assessment-icon-box">
+              <div class="icon-placeholder-red"></div>
+              <span class="assessment-level">{{ modelDangerLevel.replace('!', '') }} 级战备</span>
+            </div>
+            <div class="design-module-content text-content-scrollable">
+              <p class="text-content" v-html="performanceData"></p>
             </div>
           </div>
         </div>
 
-        <div class="right-module bottom-right-module">
-          <div class="device-desc">
-            <div class="module-label">设备描述</div>
-            <p class="desc-content">{{ currentStageText }}</p>
-          </div>
+        <div class="design-module behavior-module">
+          <div class="design-module-label">匹配性行为</div>
+          <div class="behavior-content">
 
-          <div class="indicators-grid">
-            <div class="indicator-item">
-              <div class="indicator-label">偏差检测准确率</div>
-              <div class="indicator-value">{{ deviationDetectionAccuracy }}%</div>
-            </div>
-
-            <div class="indicator-item">
-              <div class="indicator-label">模型评估危险等级</div>
-              <div class="indicator-value">{{ modelDangerLevel }}</div>
-            </div>
-
-            <div class="indicator-item">
-              <div class="indicator-label">专家评估危险等级</div>
-              <div class="indicator-value">{{ expertDangerLevel }}</div>
-            </div>
-
-            <div class="indicator-item level-selection-item">
-              <div class="indicator-label">等级制定</div>
-              <div class="level-list">
-                <div class="level-item" :class="{ 'active-level': currentLevel === 4 }">四级战备 <span
-                    class="level-num">4</span></div>
-                <div class="level-item" :class="{ 'active-level': currentLevel === 3 }">三级战备 <span
-                    class="level-num">3</span></div>
-                <div class="level-item" :class="{ 'active-level': currentLevel === 2 }">二级战备 <span
-                    class="level-num">2</span></div>
-                <div class="level-item" :class="{ 'active-level': currentLevel === 1 }">一级战备 <span
-                    class="level-num">1</span></div>
+            <div class="flanking-image-column">
+              <div class="image-item">
+                <img :src="imageList[0]" v-if="imageList[0]" alt="图像 1" class="image-display">
+                <div class="image-placeholder" v-else>图像 1</div>
+              </div>
+              <div class="image-item">
+                <img :src="imageList[2]" v-if="imageList[2]" alt="图像 3" class="image-display">
+                <div class="image-placeholder" v-else>图像 3</div>
               </div>
             </div>
+
+            <div class="pyramid-legend-group">
+              <div class="pyramid-placeholder"></div>
+              <div class="level-legend">
+                <div class="legend-item" :class="{ 'active-level': currentLevel === 1 }">一级战备</div>
+                <div class="legend-item" :class="{ 'active-level': currentLevel === 2 }">二级战备</div>
+                <div class="legend-item" :class="{ 'active-level': currentLevel === 3 }">三级战备</div>
+                <div class="legend-item" :class="{ 'active-level': currentLevel === 4 }">四级战备</div>
+              </div>
+            </div>
+
+            <div class="flanking-image-column">
+              <div class="image-item">
+                <img :src="imageList[1]" v-if="imageList[1]" alt="图像 2" class="image-display">
+                <div class="image-placeholder" v-else>图像 2</div>
+              </div>
+              <div class="image-item">
+                <img :src="imageList[3]" v-if="imageList[3]" alt="图像 4" class="image-display">
+                <div class="image-placeholder" v-else>图像 4</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="design-module assessment-module">
+          <div class="design-module-label">系统评估</div>
+          <div class="assessment-content">
+            <div class="assessment-icon-box">
+              <div class="icon-placeholder-red"></div>
+              <span class="assessment-level">{{ expertDangerLevel.replace('!', '') }} 级战备</span>
+            </div>
+            <div class="design-module-content text-content-scrollable">
+              <p class="text-content" v-html="performanceDataLocal"></p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 【新增】测试视频显示框 -->
-    <div class="test-video-container">
-      <div class="module-label video-label">原视频 (来自 LocalStorage)</div>
-      <div class="video-content-wrapper">
-        <video v-if="testVideoUrl" :src="testVideoUrl" controls class="test-video-player"
-          @error="handleVideoError"></video>
-        <div v-else class="video-placeholder-text">
-          {{ testVideoMessage }}
+      <div class="design-right-column">
+        <div class="design-module result-log-module">
+          <div class="design-module-label">决策选择认知偏差检测结果</div>
+          <div class="design-module-content">
+            <p class="text-content">
+              {{ summaryText }}
+            </p>
+          </div>
+        </div>
+
+        <div class="right-bottom-controls">
+          <div class="accuracy-box">
+            <div class="accuracy-label">偏差检测准确率</div>
+            <div class="accuracy-value">{{ deviationDetectionAccuracy }}%</div>
+          </div>
+          <button class="export-btn">结果导出</button>
         </div>
       </div>
-    </div>
 
+    </div>
   </div>
 </template>
 
@@ -132,9 +168,16 @@ export default {
       // 页面所有数据
       // thirdStageText 将在 mounted 中被 module3Res.final_review 覆盖
       thirdStageText: '正在加载第三阶段文字信息...',
-      currentStageText: '', // 本阶段总结（后端summary）
-      performanceData: '', // 用于存储性能数据
-      imageList: [], // 多时序图像（拼接后的图片URL列表）
+      currentStageText: '', // (原)本阶段总结（后端summary），保留此变量以防函数依赖
+      performanceData: '', // 【映射】中间顶部文本
+
+      // 【新增】: 对应新的数据映射
+      performanceDataLocal: '正在加载本地性能数据...', // 【映射】中间底部文本
+      summaryText: '正在加载总结文本...', // 【映射】右侧文本
+
+      // 【修改】：初始化为4个占位符
+      imageList: [null, null, null, null], // 【映射】中间4张图像
+
       deviationDetectionAccuracy: 100,
       modelDangerLevel: 'N/A',
       expertDangerLevel: 'N/A',
@@ -322,10 +365,13 @@ export default {
           console.log('准确率接口响应状态：', accuracyResponse.status, accuracyResponse.statusText);
           const accuracyData = accuracyResponse.data; // 准确率接口完整返回值
 
-          // 【新增：组合后端返回值并存储到localStorage】
+          // 【修改：按新需求添加字段到 localStorage】
           const module4Res = {
             weapon_model: mainData.data.weapon_model, // 武器型号
-            performancedata: mainData.data.performance_data, // 性能描述文本（原performance_data）
+            performancedata: mainData.data.performancedata, // 【映射】中间顶部
+            performance_data_local: mainData.data.performance_data_local, // 【新增】中间底部
+            summary: mainData.data.summary, // 【新增】右侧文本
+            image_paths: mainData.data.image_paths, // 【新增】中间图像
             behavior_status: mainData.data.behavior_status, // 行为状态（如静止、移动）
             comprehensive_score: mainData.data.comprehensive_score, // 综合得分
             modelanalysisdangerlevel: mainData.data.model_analysis_danger_level, // 模型分析危险等级（去除下划线）
@@ -335,19 +381,18 @@ export default {
             comprehensiveaccuracy: mainData.data.comprehensive_accuracy, // 综合准确度（去除下划线）
             deviation_value: mainData.data.deviation_value, // 偏差值
             coredimensionratingaccuracy: mainData.data.core_dimension_rating_accuracy, // 核心维度评级准确率（去除下划线）
-            summary: mainData.data.summary, // 武器性能总结
             // 【新增行】: 存储来自准确率接口的字段
             average_comprehensive_accuracy: accuracyData['average_comprehensive_accuracy']
           };
           localStorage.setItem('module4Res', JSON.stringify(module4Res));
           console.log('模块四后端返回值已按目标格式存入localStorage的module4Res');
 
+          // (此日志打印逻辑保持不变)
           const module4ResStr = localStorage.getItem('module4Res');
           if (module4ResStr) {
             try {
               const module4Res = JSON.parse(module4ResStr);
-              // 树状结构打印（支持点击展开子节点）
-              console.dir(module4Res, { depth: null }); // depth: null 表示展示所有层级
+              console.dir(module4Res, { depth: null });
             } catch (e) {
               console.error('解析module4Res失败：', e);
             }
@@ -379,27 +424,58 @@ export default {
       }
     },
 
-    // 解析后端数据并更新页面
+    // 【修改】: 解析后端数据并按新需求更新页面
     parseBackendData(backendData) {
       console.log('开始解析主接口返回数据：', backendData);
 
-      // 1. 第三阶段文本 (保留原逻辑，但现在会被 initializeDataFromStorage 覆盖)
-      // 为了保持与原代码的兼容性，这里可以补充一个逻辑：如果 initializeDataFromStorage 没有成功设置，就用后端数据补充。
-      if (!this.thirdStageText || this.thirdStageText.includes('正在加载') || this.thirdStageText.includes('未找到')) {
+      // 1. 第三阶段文本 (左侧) - 逻辑不变
+      const currentThirdStageText = String(this.thirdStageText);
+      if (!currentThirdStageText || currentThirdStageText.includes('正在加载') || currentThirdStageText.includes('未找到')) {
         this.thirdStageText = `发现目标武器型号：${backendData.weapon_model}，位于指定区域，行为模式初步匹配已知威胁，待进一步分析验证`;
         console.log('第三阶段文本被后端数据补充设置为：', this.thirdStageText);
       }
 
-      // 2. 本阶段文本（后端summary）
-      // 增加示例文本以保证有内容可高亮
-      this.currentStageText = backendData.summary || '设备性能分析完成，危险等级已评估。根据多时序图像数据和模型评估结果，综合判定目标具备高威胁等级。决策制定需充分考虑当前信息，避免认知偏差。';
-      console.log('本阶段文本设置为：', this.currentStageText);
-
+      // 2. 性能数据 (中间顶部)
       const rawPerformanceData = backendData.performance_data || '暂无性能数据。';
       this.performanceData = this.highlightRandomWords(rawPerformanceData, 1, 3);
-      console.log('性能数据设置为（已高亮）：', this.performanceData);
+      console.log('性能数据 (中-顶) 设置为（已高亮）：', this.performanceData);
 
-      // 4. 模型/专家危险等级
+      // 3. 【新增】本地性能数据 (中间底部)
+      const rawPerformanceDataLocal = backendData.performance_data_local || '暂无本地性能数据。';
+      this.performanceDataLocal = this.highlightRandomWords(rawPerformanceDataLocal, 1, 3);
+      console.log('本地性能数据 (中-底) 设置为（已高亮）：', this.performanceDataLocal);
+
+      // 4. 【新增】总结文本 (右侧)
+      // 注意：summary 文本一般不进行随机高亮
+      this.summaryText = backendData.summary || '暂无总结文本。';
+      console.log('总结文本 (右) 设置为：', this.summaryText);
+      // (保留 currentStageText 的赋值，以防旧逻辑依赖)
+      this.currentStageText = backendData.summary;
+
+      // 5. 【新增】图像 API 对接 (中间)
+      if (backendData.image_paths && Array.isArray(backendData.image_paths)) {
+        this.imageList = backendData.image_paths.map(path => {
+          if (!path || path.startsWith('http')) return path;
+          // 确保 path 前有 /
+          const cleanPath = path.startsWith('/') ? path : `/${path}`;
+          return `${IMAGE_API_BASE_URL}${cleanPath}`;
+        });
+
+        // 确保数组长度为4，不足补 null
+        if (this.imageList.length > 4) {
+          this.imageList = this.imageList.slice(0, 4);
+        } else {
+          while (this.imageList.length < 4) {
+            this.imageList.push(null);
+          }
+        }
+      } else {
+        this.imageList = [null, null, null, null];
+        console.warn('后端数据中未找到 image_paths 字段。');
+      }
+      console.log('更新图像列表 (4):', this.imageList);
+
+      // 6. 模型/专家危险等级 (逻辑不变)
       const modelLevelNum = this.getLevelNum(backendData.model_analysis_danger_level);
       const expertLevelNum = this.getLevelNum(backendData.local_txt_danger_level);
       console.log('模型危险等级：', backendData.model_analysis_danger_level, '转换后：', modelLevelNum);
@@ -408,7 +484,7 @@ export default {
       this.modelDangerLevel = `${modelLevelNum} !`;
       this.expertDangerLevel = `${expertLevelNum} !`;
 
-      // 5. 激活当前战备等级
+      // 7. 激活当前战备等级 (逻辑不变)
       this.currentLevel = modelLevelNum;
       console.log('当前战备等级设置为：', this.currentLevel);
     },
@@ -470,431 +546,458 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-/* 样式（Style）部分与原文件完全相同 */
-/* 基础样式：满屏无滚动 */
+/* 基础重置 */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* 根容器：深色科幻主题，占满屏幕 */
 .section {
-  background-color: #EAF4FE;
-  color: #333;
+  background-color: #030a1c;
+  /* 深蓝黑背景 */
+  color: #e0e0e0;
+  /* 默认浅色文字 */
   font-family: "Helvetica Neue", sans-serif;
   overflow: hidden;
-  /* 确保满屏无滚动 */
   position: relative;
   width: 100%;
 }
 
+/* 隐藏原有的浅色背景 */
 .register,
 .img_box {
-  position: fixed;
+  display: none;
+}
+
+/* * CSS 模拟组件图片样式 (Mixin)
+ * 由于没有 zip 包中的图片，我们用 CSS 模拟科幻边框和背景
+ */
+@mixin sci-fi-border {
+  border: 2px solid;
+  border-image-slice: 1;
+  // 模拟蓝色辉光边框
+  border-image-source: linear-gradient(to bottom, #00e0ff, #005f7f, #00e0ff);
+  // 半透明深蓝背景
+  background: rgba(10, 25, 50, 0.6);
+  backdrop-filter: blur(5px); // 毛玻璃效果
+}
+
+@mixin sci-fi-label {
+  // 模拟设计图中的标签样式
+  background: linear-gradient(to right, #00e0ff, #005f7f);
+  color: #030a1c;
+  padding: 4px 15px;
+  font-weight: bold;
+  text-align: center;
+  position: absolute;
   top: 0;
-  left: 0;
-  z-index: -1;
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-position: center;
+  left: 50%;
+  transform: translate(-50%, -50%); // 标签骑跨在边框上
+  border-radius: 4px;
+  font-size: 0.9rem;
+  white-space: nowrap; // 确保标签不换行
 }
 
-.img_box {
-  /* 确保背景图路径正确，相对于 public 目录或者使用 require */
-  background-image: url('../assets/images/newBackGound.png');
-  opacity: 0.8;
+/* 顶部导航按钮 (设计图新增) */
+.top-nav-left,
+.top-nav-right {
+  position: absolute;
+  top: 25px;
+  z-index: 10;
 }
 
-/* 标题样式（严格匹配图片） */
+.top-nav-left {
+  left: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.top-nav-right {
+  right: 20px;
+}
+
+.nav-btn {
+  @include sci-fi-border;
+  background: rgba(10, 25, 50, 0.9);
+  color: #00e0ff;
+  padding: 5px 15px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: bold;
+  border: 1px solid #005f7f;
+
+  &:hover {
+    background: rgba(20, 40, 70, 0.9);
+    color: #fff;
+  }
+}
+
+/* 标题 (样式重写) */
 .title-container {
   text-align: center;
   padding: 15px 0;
-  border-bottom: 2px solid #ccc;
-  margin-bottom: 10px;
-  /* 确保标题不会导致高度溢出 */
+  margin-bottom: 0;
   height: 80px;
+  /* 保持原有高度 */
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 5;
 }
 
 .newTitle {
-  font-size: calc(1vw + 0.9rem);
-  /* 响应式字体 */
-  color: #2168BE;
+  font-size: calc(1.2vw + 1rem);
+  /* 字体放大 */
+  color: #00e0ff;
+  /* 科幻蓝 */
   font-weight: bolder;
-  letter-spacing: 0.03em;
-  margin: 0;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 10px #00e0ff, 0 0 15px #00e0ff;
+  /* 辉光效果 */
 }
 
-/* 核心布局：左3右9，满屏分布 */
-.core-layout {
+/* 核心布局 (三列结构) */
+.core-layout-design {
   display: flex;
-  /* 【修改】为视频框腾出空间 */
-  height: calc(100% - 80px - 220px);
-  /* 减去标题和视频框的高度 */
-  padding: 0 15px 0 15px;
-  /* 增加底部内边距, 移除底部 padding */
+  height: calc(100% - 80px);
+  /* 占满剩余高度 */
+  padding: 10px 20px 20px 20px;
+  gap: 20px;
+}
+
+/* 三列定义 */
+.design-left-column {
+  width: 25%;
+  display: flex;
+  flex-direction: column;
   gap: 15px;
 }
 
-.left-column {
-  width: 25%;
-  /* 3/12 */
+.design-center-column {
+  width: 45%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  height: 100%;
-  /* 占满父-元素高度 */
+  gap: 15px;
 }
 
-.right-column {
-  width: 75%;
-  /* 9/12 */
+.design-right-column {
+  width: 30%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  height: 100%;
-  /* 占满父-元素高度 */
+  gap: 15px;
 }
 
-/* 模块通用样式 */
-.module-label {
-  font-size: 0.9rem;
-  color: black;
-  font-weight: bold;
-  margin-bottom: 8px;
-  text-align: center;
-  background-color: #EAF4FE;
-  /* 与 section 背景色一致 */
-  padding: 0 8px;
-  display: inline-block;
-
-  /* 关键：浮动在边框上 */
+/* 通用模块样式 */
+.design-module {
+  @include sci-fi-border;
   position: relative;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1;
-}
-
-.module-content {
-  border: 2px solid #ccc;
-  background-color: #fff;
-  padding: 20px 10px 10px 10px;
-  /* 增加顶部内边距给 label 留出空间 */
-  flex-grow: 1;
-  /* 占据剩余空间 */
-  height: 100%;
+  padding-top: 15px;
   display: flex;
-  align-items: flex-start;
-  position: relative;
-  top: -10px;
-  /* 向上移动以覆盖 label 的下半部分 */
-  overflow-y: auto;
+  flex-direction: column;
+  border-radius: 5px;
+
+  .design-module-label {
+    @include sci-fi-label;
+  }
+
+  .design-module-content {
+    padding: 15px;
+    flex-grow: 1;
+    overflow-y: auto;
+
+    /* 自定义滚动条 */
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #00e0ff;
+      border-radius: 3px;
+    }
+  }
 }
 
 .text-content {
-  font-size: 0.85rem;
-  line-height: 1.4;
-  text-align: left;
-  width: 100%;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #e0e0e0;
   margin: 0;
+
+  /* 确保 v-html 渲染的高亮样式生效 */
+  :deep(span) {
+    color: #ff4500 !important; // 覆盖高亮颜色
+    font-weight: bold;
+  }
 }
 
-/* 左列模块：上下等高，填充左列 */
-.left-module {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  /* 平分剩余空间 */
-  min-height: 150px;
-  /* 最小高度 */
+/* --- 左列 --- */
+.video-module {
+  flex-basis: 40%; // 视频占40%
+
+  .video-content-wrapper {
+    padding: 10px;
+    /* 调整内边距 */
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .test-video-player {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* 保持比例 */
+    border-radius: 4px;
+  }
+
+  .video-placeholder-text {
+    color: #999;
+    font-size: 0.9rem;
+  }
 }
 
-.top-module,
-.bottom-module {
-  height: 45%;
-  /* 上下模块各占左列45%，中间按钮占10% */
-  flex: none;
-  /* 固定高度 */
+.text-module-left {
+  flex-basis: 45%; // 文本占45%
 }
 
-/* 按钮容器：居中，占左列10%高度 */
 .button-container {
+  flex-basis: 10%; // 按钮占10%
+  min-height: 40px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 10%;
-  /* 固定高度 */
-  flex-shrink: 0;
-}
 
-.inference-btn {
-  width: 80%;
-  font-size: 0.95rem;
-  padding: 6px 0;
-  font-weight: bold;
-}
+  .inference-btn {
+    width: 100%;
+    height: 100%;
+    font-size: 1.1rem;
+    font-weight: bold;
+    @include sci-fi-border;
+    background: #00e0ff;
+    color: #030a1c;
+    border: none;
+    border-radius: 4px;
 
-/* 右列图像模块：占右列45%高度 */
-.image-module {
-  height: 45%;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-}
+    &:hover,
+    &:active,
+    &:focus {
+      background: #fff;
+      color: #030a1c;
+      box-shadow: 0 0 15px #00e0ff;
+    }
 
-.image-grid {
-  border: 2px solid #ccc;
-  background-color: #fff;
-  flex: 1;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  padding: 10px;
-  position: relative;
-  top: -10px;
-}
-
-.image-item {
-  border: 1px dashed #ddd;
-  background-color: #f9f9f9;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  overflow: hidden;
-  /* 确保图片不溢出 */
-}
-
-.image-display {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
-
-.image-placeholder {
-  color: #999;
-  font-size: 0.9rem;
-}
-
-/* 右列底部模块：占右列55%高度 */
-.bottom-right-module {
-  height: 55%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.device-desc {
-  border: 2px solid #ccc;
-  background-color: #fff;
-  padding: 10px;
-  text-align: center;
-  position: relative;
-  top: -10px;
-  flex-shrink: 0;
-}
-
-.desc-content {
-  font-size: 0.85rem;
-  color: #333;
-  margin: 0;
-  padding-top: 5px;
-  /* 为 label 留出空间 */
-}
-
-/* 四大指标网格：严格横向排列 */
-.indicators-grid {
-  border: 2px solid #ccc;
-  background-color: #fff;
-  flex-grow: 1;
-  /* 占据剩余所有空间 */
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 2fr;
-  /* 最后一列占2份，匹配图片布局 */
-  gap: 10px;
-  padding: 15px;
-  position: relative;
-  top: -10px;
-}
-
-.indicator-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-
-.indicator-label {
-  font-size: 0.85rem;
-  color: #2168BE;
-  font-weight: bold;
-  margin-bottom: 8px;
-}
-
-.indicator-value {
-  font-size: 1.5rem;
-  /* 放大 "100%" 和 "1 !" */
-  font-weight: bold;
-  color: #FF4500;
-  /* 统一为红色 */
-}
-
-/* 等级制定样式（严格匹配图片） */
-.level-selection-item {
-  padding: 0 10px;
-  justify-content: flex-start;
-  /* 从顶部开始对齐 */
-}
-
-.level-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-  margin-top: 10px;
-  /* 与 label 保持距离 */
-}
-
-.level-item {
-  font-size: 0.9rem;
-  padding: 5px 0;
-  border: 2px solid #ccc;
-  border-radius: 3px;
-  background-color: #f9f9f9;
-  color: #333;
-  font-weight: 500;
-  display: flex;
-  /* 用于对齐内部数字 */
-  justify-content: center;
-  align-items: center;
-  position: relative;
-  /* 用于数字定位 */
-}
-
-.level-num {
-  color: #FF0000;
-  font-weight: bold;
-  margin-left: 15px;
-  /* 匹配图片中的右侧对齐 */
-  position: absolute;
-  right: 15px;
-}
-
-.active-level {
-  background-color: #FF4500;
-  color: white;
-  border-color: #FF0000;
-  font-weight: bold;
-}
-
-/* 响应式优化：确保所有屏幕满屏无滚动 */
-@media (max-width: 1440px) {
-  .newTitle {
-    font-size: calc(0.9vw + 0.8rem);
-  }
-
-  .text-content,
-  .desc-content,
-  .indicator-label,
-  .level-item {
-    font-size: 0.8rem;
-  }
-
-  .indicator-value {
-    font-size: 1.3rem;
+    &[disabled] {
+      background: #555;
+      color: #999;
+      border-color: #777;
+    }
   }
 }
 
-@media (max-width: 1200px) {
-  .core-layout {
-    padding: 0 10px 0 10px;
+/* --- 中列 --- */
+.assessment-module {
+  flex: 1; // 均分
+  min-height: 150px;
+
+  .assessment-content {
+    display: flex;
+    padding: 15px;
+    gap: 15px;
+    flex-grow: 1;
+  }
+
+  .assessment-icon-box {
+    flex-shrink: 0;
+    text-align: center;
+    padding-top: 10px;
+
+    .icon-placeholder-red {
+      width: 70px;
+      height: 60px;
+      // CSS 模拟红色文件夹图标
+      background-color: #ff4500;
+      border: 1px solid #ff7777;
+      border-radius: 4px;
+      margin: 0 auto 10px auto;
+      opacity: 0.7;
+    }
+
+    .assessment-level {
+      color: #ff4500;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+  }
+
+  .text-content-scrollable {
+    flex-grow: 1;
+    height: 100px;
+    /* 固定高度，使其可滚动 */
+    overflow-y: auto;
+    border-left: 1px solid #005f7f;
+    padding-left: 15px;
+  }
+}
+
+.behavior-module {
+  flex: 1; // 均分
+  min-height: 150px;
+
+  .design-module-label {
+    width: 120px;
+    /* 标签加宽 */
+  }
+
+  /* 【修改】: 行为模块内容区 */
+  .behavior-content {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* 三列 */
+    padding: 15px;
+    gap: 15px;
+  }
+
+  /* 【新增】: 左右图像列 */
+  .flanking-image-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-basis: 30%;
+    /* 左右列各占 30% */
+    height: 100%;
+    /* 占满父-元素高度 */
+  }
+
+  /* 【新增】: 图像项 */
+  .image-item {
+    height: calc(50% - 5px);
+    /* 均分高度 */
+    width: 100%;
+    @include sci-fi-border;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 4px;
+  }
+
+  .image-display {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* 填充模式 */
+  }
+
+  .image-placeholder {
+    color: #999;
+    font-size: 0.9rem;
+  }
+
+  /* 【修改】: 中间金字塔组 */
+  .pyramid-legend-group {
+    flex-basis: 35%;
+    /* 中心占 35% */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     gap: 10px;
   }
 
-  /* 【修改】移除底部 padding */
-  .image-grid {
-    gap: 8px;
-    padding: 8px;
+  .pyramid-placeholder {
+    width: 100px;
+    height: 100px;
+    // CSS 模拟金字塔
+    background: linear-gradient(to top left, #005f7f 50%, transparent 50.5%) top left,
+      linear-gradient(to top right, #005f7f 50%, transparent 50.5%) top right,
+      linear-gradient(to bottom left, #00e0ff 50%, transparent 50.5%) bottom left,
+      linear-gradient(to bottom right, #00e0ff 50%, transparent 50.5%) bottom right;
+    background-size: 50% 50%;
+    background-repeat: no-repeat;
+    opacity: 0.8;
   }
 
-  .indicators-grid {
-    padding: 10px;
-    gap: 8px;
+  .level-legend {
+    display: flex;
+    gap: 15px;
+
+    .legend-item {
+      font-size: 0.8rem;
+      color: #aaa;
+      font-weight: bold;
+
+      &.active-level {
+        color: #00e0ff;
+        text-shadow: 0 0 5px #00e0ff;
+      }
+    }
   }
 }
 
-@media (max-width: 992px) {
-
-  /* 在较小屏幕上，可能需要调整列宽或布局 */
-  .left-column {
-    width: 30%;
-  }
-
-  .right-column {
-    width: 70%;
-  }
-
-  .image-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  /* 图像 2x2 布局 */
-  .indicators-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  /* 指标 2x2 布局 */
-  .level-selection-item {
-    grid-column: 1 / -1;
-  }
-
-  /* 等级制定占满一行 */
+/* --- 右列 --- */
+.result-log-module {
+  flex-grow: 1; // 占满所有剩余空间
 }
 
-/* * 【新增】测试视频容器样式
- */
-.test-video-container {
-  width: calc(100% - 30px);
-  /* 匹配 .core-layout 的 padding */
-  height: 220px;
-  /* 固定高度 */
-  margin: 10px auto;
+.right-bottom-controls {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  /* 让子元素等高 */
+  gap: 15px;
+}
+
+.accuracy-box {
+  flex-grow: 1;
+  @include sci-fi-border;
+  padding: 10px;
+  text-align: center;
   display: flex;
   flex-direction: column;
-}
-
-.video-label {
-  /* .module-label 已有样式 */
-}
-
-.video-content-wrapper {
-  border: 2px solid #ccc;
-  background-color: #fff;
-  padding: 20px 10px 10px 10px;
-  flex-grow: 1;
-  height: 100%;
-  display: flex;
-  align-items: center;
   justify-content: center;
-  position: relative;
-  top: -10px;
-  overflow: hidden;
+  border-radius: 4px;
+
+  .accuracy-label {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-bottom: 5px;
+  }
+
+  .accuracy-value {
+    font-size: 1.8rem;
+    color: #00e0ff;
+    font-weight: bold;
+  }
 }
 
-.test-video-player {
-  width: auto;
-  /* 保持视频比例 */
-  height: 100%;
-  max-width: 100%;
-  background-color: #000;
-}
+.export-btn {
+  flex-shrink: 0;
+  width: 120px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  @include sci-fi-border;
+  background: #00e0ff;
+  color: #030a1c;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 
-.video-placeholder-text {
-  color: #999;
-  font-size: 0.9rem;
+  &:hover,
+  &:active,
+  &:focus {
+    background: #fff;
+    color: #030a1c;
+    box-shadow: 0 0 15px #00e0ff;
+  }
 }
 </style>

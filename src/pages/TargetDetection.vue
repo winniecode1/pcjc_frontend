@@ -358,7 +358,7 @@ export default {
           let fullImagePathURL = "无图像路径";
           if (key_frame_filename && key_frame_filename !== "无图像路径" && this.taskId) {
             // 格式: /output/<task_id>/<video_name_without_ext>/<filename>
-            fullImagePathURL = `${API_BASE_URL}/output/${this.taskId}/${videoNameEncoded}/${encodeURIComponent(key_frame_filename)}`;
+            fullImagePathURL = `${BASE_DIR}/output/${this.taskId}/${videoNameEncoded}/${encodeURIComponent(key_frame_filename)}`;
           }
 
           let fullProcessedVideoPathURL = "无视频路径";
@@ -376,7 +376,7 @@ export default {
             deviceType: fullData.deviceType || "N/A",
 
             // 使用处理后的完整 URL 覆盖原有的路径字段
-            key_frame_path: fullImagePathURL,
+            // key_frame_path: fullImagePathURL,
             video_path: fullProcessedVideoPathURL,
 
             originalVideoPath: originalVideoPath
