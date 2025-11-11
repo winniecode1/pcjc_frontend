@@ -249,13 +249,13 @@ export default {
           module1Data = JSON.parse(module1Str);
           console.log('✅ module1Res 解析成功:', module1Data);
           
-          // 提取 key_frame_path 并处理：去掉最后一个/及其后面的内容
-          const keyFramePath = module1Data.key_frame_path;
+          // 提取 full_output_path 并处理：去掉最后一个/及其后面的内容
+          const keyFramePath = module1Data.full_output_path;
           if (!keyFramePath) {
-            console.error('❌ module1Res 中缺少 key_frame_path 字段');
+            console.error('❌ module1Res 中缺少 full_output_path 字段');
             return {
               success: false,
-              message: '模块一数据中缺少 key_frame_path 字段'
+              message: '模块一数据中缺少 full_output_path 字段'
             };
           }
           
