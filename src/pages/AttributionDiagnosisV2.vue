@@ -40,7 +40,8 @@
               <div class="section-title">偏差测试结果</div>
               <div class="content-box scrollable">
                   <div class="attributes-grid">
-                    <div v-for="attr in module2DisplayAttributes" :key="attr.key" class="attribute-item">
+                    <div v-for="attr in module2DisplayAttributes" :key="attr.key" 
+                         :class="['attribute-item', { 'category-highlight': attr.isCategory }]">
                       <span class="attr-key">{{ attr.key }}:</span>
                       <span class="attr-value" v-html="highlightBrackets(attr.value)"></span>
                     </div>
@@ -160,13 +161,34 @@ export default {
      * 将模块2的属性整合为用于UI展示的列表
      */
     module2DisplayAttributes() {
+      // 英文键到中文的映射
+      const keyMapping = {
+        'color': '颜色信息',
+        'firepower': '火力信息',
+        'model': '型号信息',
+        'power': '动力信息',
+        'scene': '场景信息',
+        'shape': '形状信息',
+        'size': '尺寸信息'
+      };
+      
       const attributes = [];
       if (this.module2Category) {
-        attributes.push({ key: '目标类型', value: this.module2Category });
+        attributes.push({ 
+          key: '目标类型', 
+          value: this.module2Category,
+          isCategory: true  // 标记为目标类型，用于特殊样式
+        });
       }
       for (const key in this.module2Attributes) {
         if (Object.hasOwnProperty.call(this.module2Attributes, key)) {
-          attributes.push({ key, value: this.module2Attributes[key] });
+          // 使用映射后的中文名称，如果没有映射则使用原英文名
+          const displayKey = keyMapping[key] || key;
+          attributes.push({ 
+            key: displayKey, 
+            value: this.module2Attributes[key],
+            isCategory: false
+          });
         }
       }
       return attributes;
@@ -822,6 +844,11 @@ export default {
   font-size: 14px !important;
   font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
   line-height: 1.5;
+}
+
+.category-highlight {
+  background: rgba(255, 223, 100, 0.25) !important;
+  border-left: 2px solid #ffd700 !important;
 }
 .attribute-item * {
   font-size: 14px !important;
