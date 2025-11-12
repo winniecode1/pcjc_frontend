@@ -544,7 +544,7 @@ export default {
 }
 
 .btn-home {
-  background-image: url('~@/assets/images/step1/-s-按钮-蓝色.png');
+  background-image: url('~@/assets/images/step4/首页按键.png');
 }
 
 .btn-back {

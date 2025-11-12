@@ -22,37 +22,36 @@
     </div>
 
     <!-- 主要内容区域 -->
-    <b-row class="justify-content-center content-row no-gutters">
-      <!-- 左侧：图片和属性信息 -->
-      <b-col cols="3" class="left-column px-2">
-        <div class="panel-header header-select-data">视频信息</div>
-
-        <div class="panel-left">
-          <div class="panel-content">
-            <div class="video-frame mb-4">
-              <video v-if="videoUrl" :src="videoUrl" controls class="video-display" @error="handleVideoError"></video>
-              <div v-else class="placeholder-text">
-                {{ videoMessage }}
-              </div>
-            </div>
-
-            <div class="panel-header mt-4">属性信息</div>
-            <div class="description-box p-2 mt-2">
-              <p class="text-left small-text">{{ attributeInfo }}</p>
-            </div>
-
-            <div class="action-buttons mt-4">
-              <button @click="startNegotiation" :disabled="!isApiLoaded || isLoading" class="btn-start-detect">
-                <b-spinner small v-if="isLoading"></b-spinner>
-                <span>{{ isLoading ? '协商中...' : '群体协商' }}</span>
-              </button>
+    <div class="row content-row">
+      <!-- 左侧视频和按钮区域 -->
+      <div class="design-left-column">
+        <div class="design-module video-module">
+          <div class="panel-header">视频信息</div>
+          <div class="design-module-content video-content-wrapper">
+            <video v-if="videoUrl" :src="videoUrl" controls class="video-display" @error="handleVideoError"></video>
+            <div v-else class="placeholder-text">
+              {{ videoMessage }}
             </div>
           </div>
         </div>
-      </b-col>
+
+        <div class="design-module text-module-left fixed-left-text">
+          <div class="panel-header">属性信息</div>
+          <div class="design-module-content text-scrollable">
+            <p class="text-content" v-if="attributeInfo">{{ attributeInfo }}</p>
+            <p class="text-content text-muted" v-else>暂无属性信息</p>
+          </div>
+        </div>
+
+        <div class="button-container">
+          <button @click="startNegotiation" class="btn-start-detect" :disabled="!isApiLoaded || isLoading">
+            <span>{{ isLoading ? '协商中...' : '群体协商' }}</span>
+          </button>
+        </div>
+      </div>
 
       <!-- 中间：智能体推理 -->
-      <b-col cols="5" class="middle-column mx-2 px-1">
+      <div class="col-md-5 middle-column">
         <div class="panel-left h-100">
           <div class="panel-content">
             <!-- 一轮推理 -->
@@ -168,10 +167,10 @@
             </div>
           </div>
         </div>
-      </b-col>
+      </div>
 
       <!-- 右侧：协商结果 -->
-      <b-col cols="3" class="right-column px-2">
+      <div class="col-md-3 right-column">
         <div class="panel-header header-results">群体协商认知偏差检测结果</div>
 
         <div class="panel-right-top">
@@ -195,35 +194,41 @@
         <div class="panel-right-bottom">
           <div class="panel-content">
             <div class="final-result-section">
-              <div class="final-result-title">经过智能体群体协商之后，该装备的详细型号为：</div>
+              <div class="final-result-title">协商后详细型号</div>
               <div class="final-model-display">
                 <p class="final-model-text">{{ finalResult || 'MiG-25Foxbat' }}</p>
               </div>
               
-              <div class="metric-box">
-                <template v-if="accuracyRate !== '—'">
-                  {{ accuracyRate }}
-                </template>
-                <template v-else>
-                  N/A
-                </template>
-              </div>
-
-              <div class="action-buttons-right">
-                <button class="btn-export-result" @click="exportResults">
-                  <span>结果导出</span>
-                </button>
-              </div>
+              
             </div>
           </div>
+          <!-- <div class="metric-box">
+            <template v-if="accuracyRate !== '—'">
+              {{ accuracyRate }}
+            </template>
+            <template v-else>
+              N/A
+            </template>
+          </div>
+
+          <div class="action-buttons-right">
+            <button class="btn-export-result" @click="exportResults">
+              <span>结果导出</span>
+            </button>
+          </div> -->
+          <div class="right-bottom-controls">
+            <div class="accuracy-box">
+              <div class="accuracy-label">偏差检测准确率</div>
+              <div class="accuracy-value">{{ formattedAccuracyRate === 'N/A' ? formattedAccuracyRate : formattedAccuracyRate + '%' }}</div>
+            </div>
+            <button class="btn-export-result" @click="exportResults">结果导出</button>
+          </div>
         </div>
-      </b-col>
-    </b-row>
+      </div>
+    </div>
 
   </div>
-</template>
-
-<script>
+</template><script>
 import axios from 'axios';
 // img_path地址（模块一传参）
 // const IMG_PATH_URL = localStorage.getItem('imagePath') || '/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png';
@@ -264,10 +269,10 @@ export default {
       finalResult: "群体协商之后的结果",
       isLoading: false,
       accuracyRate: '—',
-      color:'',
-      kind:'',
-      shape:'',
-      ground_truth:'',
+      color: '',
+      kind: '',
+      shape: '',
+      ground_truth: '',
       isApiLoaded: false, // 新增：接口加载状态，控制按钮禁用
       consensusSummary: "",
       disagreementPoints: "",
@@ -316,6 +321,24 @@ export default {
       }
       
       return points;
+    },
+    // 格式化准确率显示
+    formattedAccuracyRate() {
+      if (this.accuracyRate === '—' || this.accuracyRate === null || this.accuracyRate === undefined || this.accuracyRate === '') {
+        return 'N/A';
+      }
+      // 如果是数字，转换为百分比
+      const numValue = typeof this.accuracyRate === 'number' ? this.accuracyRate : parseFloat(this.accuracyRate);
+      if (!isNaN(numValue)) {
+        // 如果值在 0-1 之间，转换为百分比
+        if (numValue <= 1 && numValue >= 0) {
+          return (numValue * 100).toFixed(2);
+        }
+        // 如果已经是百分比形式，直接返回（保留两位小数）
+        return numValue.toFixed(2);
+      }
+      // 如果不是数字，直接返回原值
+      return String(this.accuracyRate);
     }
   },
   mounted() {
@@ -548,12 +571,13 @@ export default {
   min-height: 100vh;
   color: #fff;
   font-family: "Helvetica Neue", "Microsoft YaHei", sans-serif;
-  z-index: 2;
+  z-index: 1;
   padding: 10px;
   margin: 0;
   background-color: transparent;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .img_box {
@@ -565,9 +589,10 @@ export default {
   background-image: url('~@/assets/images/step3/bg.png');
   background-size: cover;
   background-repeat: no-repeat;
-  background-position: center center;
+  background-position: center top;
   opacity: 1;
-  z-index: -1;
+  z-index: 0;
+  pointer-events: none;
 }
 
 /* 2. 顶部标题栏 */
@@ -576,6 +601,8 @@ export default {
   flex-shrink: 0;
   padding: 0 20px;
   height: 60px;
+  position: relative;
+  z-index: 10;
 }
 
 .header-title {
@@ -602,7 +629,7 @@ export default {
 }
 
 .btn-home {
-  background-image: url('~@/assets/images/step1/-s-按钮-蓝色.png');
+  background-image: url('~@/assets/images/step4/首页按键.png');
 }
 
 .btn-back {
@@ -610,7 +637,7 @@ export default {
 }
 
 .btn-next {
-  background-image: url('~@/assets/images/step1/-s-按钮-绿色.png');
+  background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png');
 }
 
 /* 3. 核心内容区 */
@@ -619,27 +646,48 @@ export default {
   width: 100%;
   max-width: 100%;
   margin: 0;
+  position: relative;
+  z-index: 2;
 }
 
 /* 三列通用高度 */
+.design-left-column,
 .left-column,
 .middle-column,
 .right-column {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 80px);
-  /* 减去顶部栏高度和padding */
+  /* 减去顶部栏高度 */
   padding: 0 !important;
 }
 
+.design-left-column {
+  width: 25%;
+  gap: 15px;
+}
+
+.middle-column {
+  width: 45%;
+  gap: 20px;
+}
+
+.right-column {
+  width: 30%;
+  gap: 5px;
+  position: relative;
+  z-index: 2;
+}
+
 /* 面板通用样式 */
-[class^="panel-"] {
+[class^="panel-"]:not(.panel-right-top):not(.panel-right-bottom):not(.panel-header), .design-module {
   width: 100%;
   background-repeat: no-repeat;
   background-size: 100% 100%;
   padding: 20px 30px 30px 30px;
   display: flex;
   flex-direction: column;
+  background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
 }
 
 /* 特定面板的高度和边距 */
@@ -652,13 +700,30 @@ export default {
 .panel-right-top {
   height: 55%;
   flex-shrink: 0;
-  background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
+  width: 100%;
+  // background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  // padding: 20px 30px 30px 30px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
 }
 
 .panel-right-bottom {
   flex-grow: 1;
   height: 100%;
-  background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
+  width: 100%;
+  // background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  padding: 20px 30px 30px 30px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+  gap: 15px;
 }
 
 .panel-content {
@@ -666,10 +731,11 @@ export default {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: transparent;
 }
 
 /* 面板标题 */
-.panel-header {
+.panel-header, .design-module-label {
   height: 35px;
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
   background-repeat: no-repeat;
@@ -680,35 +746,157 @@ export default {
   font-size: 1rem;
   font-weight: bold;
   padding-left: 0;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
 
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+/* 右侧标题特殊样式 */
+.header-results {
+  margin-bottom: 5px !important;
+}
+
+/* 设计模块特定样式 */
+.design-module {
+  position: relative;
+  padding-top: 15px;
+  border-radius: 5px;
+}
+
+.design-module-label {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 35px;
+  background-image: url('~@/assets/images/step1/-s-二级标题.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  margin-bottom: 0;
+}
+
+.design-module-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 视频模块样式 */
+.video-module {
+  flex-basis: 40%;
+}
+
+.video-content-wrapper {
+  padding: 0;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.video-display {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* 文本模块样式 */
+.text-module-left {
+  flex-basis: 45%;
+  display: flex;
+  flex-direction: column;
+}
+
+.fixed-left-text {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  align-self: flex-start;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fixed-left-text .design-module-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.text-scrollable {
+  padding: 15px;
+  flex-grow: 1;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.text-scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.text-scrollable::-webkit-scrollbar-track {
+  background: rgba(10, 25, 50, 0.3);
+  border-radius: 4px;
+}
+
+.text-scrollable::-webkit-scrollbar-thumb {
+  background: #00e5ff;
+  border-radius: 4px;
+}
+
+.text-scrollable::-webkit-scrollbar-thumb:hover {
+  background: #00b8d4;
+}
+
+/* 按钮样式 */
+.button-container {
+  flex-basis: 10%;
+  min-height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.btn-start-detect {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: auto;
+  min-width: 150px;
+  max-width: 250px;
+  height: 100%;
+  background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: bold;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-start-detect:disabled {
+  filter: grayscale(80%);
+  cursor: not-allowed;
+}
+
+.btn-start-detect span {
+  margin-left: 8px;
 }
 
 .header-accuracy {
   margin-top: 15px;
 }
 
-/* 4. 左侧列 - 视频框样式对齐 PriorKnowledge.vue */
-.video-frame {
-  width: 95%;
-  height: 250px;
-  background-image: url('~@/assets/images/step1/-s-框-小视频.png');
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  padding: 15px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.video-display {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
+/* 文本框框架 - 已移至视频模块 */
 
 .placeholder-text {
   color: #88a;
@@ -717,53 +905,18 @@ export default {
   padding: 20px;
 }
 
-.description-box {
-  background-color: rgba(0, 0, 0, 0.3);
-  border: 1px solid #00e5ff;
-  border-radius: 5px;
-  padding: 15px;
-  margin: 10px 0;
-  min-height: 120px;
-  overflow-y: auto;
+.text-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  font-size: 0.9rem;
 }
 
-.small-text {
-  font-size: 0.85rem;
-  line-height: 1.5;
-  white-space: pre-line;
-}
-
-.action-buttons {
-  margin-top: 15px;
-  display: flex;
-  justify-content: center;
-}
-
-.btn-start-detect {
-  background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  background-color: transparent;
-  border: none;
-  color: #fff;
-  font-weight: bold;
-  font-size: 1rem;
-  padding: 10px 40px;
-  cursor: pointer;
-  transition: transform 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
-  &:hover {
-    transform: scale(1.05);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
+.text-muted {
+  color: #888888;
+  font-style: italic;
 }
 
 /* 5. 中间列 - 智能体推理区域 */
@@ -867,7 +1020,8 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  height: 100%;
+  flex-grow: 1;
+  min-height: 0;
 }
 
 .final-result-title {
@@ -910,21 +1064,67 @@ export default {
   justify-content: center;
 }
 
+.right-bottom-controls {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 15px;
+  margin-top: auto;
+}
+
+.accuracy-box {
+  flex-grow: 1;
+  // @include sci-fi-border;
+  padding: 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: 4px;
+  // border: 1px solid #00e5ff;
+  /* 蓝色胶囊条背景 - 与决策选择页面一致 */
+  background: url('~@/assets/images/step4/准确率框.png') no-repeat center/cover;
+
+  .accuracy-label {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-bottom: 5px;
+  }
+
+  .accuracy-value {
+    font-size: 1.8rem;
+    color: #00e0ff;
+    font-weight: bold;
+  }
+}
+
 .btn-export-result {
-  background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
+  flex-shrink: 0;
+  width: 120px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  background: url('~@/assets/images/step4/结果导出按键.png') no-repeat center/contain;
   background-color: transparent;
   border: none;
-  color: #fff;
-  font-weight: bold;
-  font-size: 0.9rem;
-  padding: 8px 30px;
+  color: #ffffff;
+  border-radius: 4px;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     transform: scale(1.05);
+    box-shadow: 0 0 15px #00e0ff;
+  }
+
+  &:active,
+  &:focus {
+    outline: none;
+    background: url('~@/assets/images/step4/结果导出按键.png') no-repeat center/contain;
   }
 }
 
