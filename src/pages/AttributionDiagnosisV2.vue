@@ -1,10 +1,12 @@
 <template>
   <div class="attribution-diagnosis-container">
     <!-- 顶部导航按钮 -->
-    <div class="top-nav">
-      <button class="nav-btn home-btn" @click="$router.push('/')">首页</button>
-      <button class="nav-btn back-btn" @click="$router.back()">返回</button>
-    </div>
+    <b-row class="header-bar align-items-center no-gutters">
+      <b-col cols="3" class="text-left">
+        <button class="header-btn btn-home" @click="$router.push('/')">首页</button>
+        <button class="header-btn btn-back" @click="$router.back()">返回</button>
+      </b-col>
+    </b-row>
 
     <!-- 加载/错误提示 -->
     <div v-if="showAlert" class="alert-container">
@@ -646,41 +648,37 @@ export default {
 }
 
 /* ================= 顶部导航 ================= */
-.top-nav {
+.header-bar {
   position: absolute;
-  top: 3.5vh;
-  left: 2.5vw;
-  display: flex;
+  top: 0;
+  left: 0;
+  width: 100%;
+  flex-shrink: 0;
+  padding: 0 20px;
+  height: 60px;
   z-index: 10;
 }
 
-.nav-btn {
+.header-btn {
+  background: none;
   border: none;
-  color: white;
   cursor: pointer;
-  font-size: 1rem;
+  width: 120px;
+  height: 40px;
+  color: #fff;
+  font-size: 0.9rem;
   font-weight: bold;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: transparent;
-  font-family: 'DingTalk-JinBuTi', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
 }
 
-.home-btn {
-  width: 90px;
-  height: 40px;
-  background-image: url('~@/assets/images/step5/首页按钮.png');
-  background-size: 100% 100%;
-  margin-right: 15px;
+.btn-home {
+  background-image: url('~@/assets/images/step1/-s-按钮-蓝色.png');
+  margin-right: 10px;
 }
 
-.back-btn {
-  width: 90px;
-  height: 40px;
-  background-image: url('~@/assets/images/step5/返回按钮.png');
-  background-size: 100% 100%;
+.btn-back {
+  background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png');
 }
 
 /* ================= 提示信息 ================= */
