@@ -198,46 +198,46 @@ export default {
       this.$router.push('/group-negotiation');
     },
     // 从本地存储加载视频信息
-    loadVideoFromStorage() {
-      try {
-        // 获取完整的module1Res对象
-        const module1ResStr = localStorage.getItem('module1Res');
-        if (module1ResStr) {
-          const module1Res = JSON.parse(module1ResStr);
+    // loadVideoFromStorage() {
+    //   try {
+    //     // 获取完整的module1Res对象
+    //     const module1ResStr = localStorage.getItem('module1Res');
+    //     if (module1ResStr) {
+    //       const module1Res = JSON.parse(module1ResStr);
           
-          // 提取视频路径并清理
-          if (module1Res.originalVideoPath) {
-            this.videoUrl = module1Res.originalVideoPath.replace(/^\"|\"$/g, '').trim();
-            this.videoMessage = "视频已加载";
-            console.log('成功加载视频:', this.videoUrl);
-          }
+    //       // 提取视频路径并清理
+    //       if (module1Res.originalVideoPath) {
+    //         this.videoUrl = module1Res.originalVideoPath.replace(/^\"|\"$/g, '').trim();
+    //         this.videoMessage = "视频已加载";
+    //         console.log('成功加载视频:', this.videoUrl);
+    //       }
           
-          // 提取关键帧路径并清理
-          if (module1Res.key_frame_path) {
-            this.keyFramePath = module1Res.key_frame_path.replace(/^\"|\"$/g, '').trim();
-            console.log('成功加载关键帧路径:', this.keyFramePath);
-          }
+    //       // 提取关键帧路径并清理
+    //       if (module1Res.key_frame_path) {
+    //         this.keyFramePath = module1Res.key_frame_path.replace(/^\"|\"$/g, '').trim();
+    //         console.log('成功加载关键帧路径:', this.keyFramePath);
+    //       }
           
-          // 提取设备类型并清理
-          if (module1Res.deviceType) {
-            this.deviceType = module1Res.deviceType.replace(/^\"|\"$/g, '').trim();
-            console.log('成功加载设备类型:', this.deviceType);
-          }
+    //       // 提取设备类型并清理
+    //       if (module1Res.deviceType) {
+    //         this.deviceType = module1Res.deviceType.replace(/^\"|\"$/g, '').trim();
+    //         console.log('成功加载设备类型:', this.deviceType);
+    //       }
           
-          // 提取视频描述并清理
-          if (module1Res.video_description) {
-            this.videoDescription = module1Res.video_description.replace(/^\"|\"$/g, '').trim();
-            console.log('成功加载视频描述:', this.videoDescription);
-          }
-        } else {
-          console.warn('未找到视频信息');
-          this.videoMessage = "未找到视频信息";
-        }
-      } catch (error) {
-        console.error('加载视频信息时出错:', error);
-        this.videoMessage = "视频加载失败";
-      }
-    },
+    //       // 提取视频描述并清理
+    //       if (module1Res.video_description) {
+    //         this.videoDescription = module1Res.video_description.replace(/^\"|\"$/g, '').trim();
+    //         console.log('成功加载视频描述:', this.videoDescription);
+    //       }
+    //     } else {
+    //       console.warn('未找到视频信息');
+    //       this.videoMessage = "未找到视频信息";
+    //     }
+    //   } catch (error) {
+    //     console.error('加载视频信息时出错:', error);
+    //     this.videoMessage = "视频加载失败";
+    //   }
+    // },
     // 处理窗口大小变化
     handleResize() {
       this.fullWidth = window.innerWidth;
