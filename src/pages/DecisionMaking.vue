@@ -16,7 +16,6 @@
     </div>
 
     <div class="core-layout-design">
-      <!-- 左列文本框 - 带滑动条 -->
       <div class="design-left-column">
         <div class="design-module video-module" :style="videoPanelBgStyle">
           <div class="design-module-label" :style="labelImageStyle(assetNames.videoLabel, 140, 30)">视频演示</div>
@@ -31,7 +30,7 @@
 
         <div class="design-module text-module-left fixed-left-text" :style="leftTextPanelBgStyle">
           <div class="design-module-content text-scrollable">
-            <p class="text-content" v-html="thirdStageText"></p>
+            <p class="text-content" v-html="formattedThirdStageText"></p>
           </div>
         </div>
 
@@ -43,7 +42,6 @@
         </div>
       </div>
 
-      <!-- 中列文本框 - 带滑动条 -->
       <div class="design-center-column">
         <div class="design-module assessment-module commander-assessment" :style="commanderPanelBgStyle">
           <div class="assessment-content">
@@ -122,7 +120,6 @@
         </div>
       </div>
 
-      <!-- 右列文本框 - 带滑动条 -->
       <div class="design-right-column">
         <div class="design-module result-log-module" :style="rightPanelBgStyle">
           <div class="design-module-label" :style="labelImageStyle(assetNames.resultLabel, 260, 28)">决策选择认知偏差检测结果</div>
@@ -217,6 +214,38 @@ export default {
     highlightedCurrentStageText() {
       return this.highlightRandomWords(this.currentStageText, 1, 3);
     },
+    /* 左下文本框：当内容为 JSON 字符串时，仅提取三个字段并换行展示 */
+    formattedThirdStageText() {
+      const source = this.thirdStageText;
+      if (!source) return '';
+      try {
+        let data = source;
+        if (typeof source === 'string') {
+          const trimmed = source.trim();
+          if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+            data = JSON.parse(trimmed);
+          }
+        }
+        if (typeof data === 'object' && data !== null) {
+          const takeKeys = [
+            'consensus_summary',
+            'deviation_analysis',
+            'deviation_analysis_report'
+          ];
+          const parts = takeKeys
+            .map(k => data[k])
+            .filter(v => typeof v === 'string' && v.trim().length > 0);
+          if (parts.length > 0) {
+            return parts.map(s => this.escapeToHtml(s)).join('<br/><br/>');
+          }
+        }
+        // 非 JSON 或未包含目标字段时，原样返回
+        return typeof source === 'string' ? this.escapeToHtml(source) : String(source);
+      } catch (e) {
+        // 解析失败，返回原文本
+        return typeof source === 'string' ? this.escapeToHtml(source) : String(source);
+      }
+    },
     panelBgStyle() {
       return this.bgImageStyle(this.assetNames.panel);
     },
@@ -277,6 +306,14 @@ export default {
     window.removeEventListener('resize', this.handleResize);
   },
   methods: {
+    /* 简单转义，避免意外的 HTML 注入；保留换行 */
+    escapeToHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br/>');
+    },
     handleResize() {
       this.windowWidth = window.innerWidth;
       this.windowHeight = window.innerHeight;
@@ -781,7 +818,7 @@ export default {
   width: 45%;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
 }
 
 .design-right-column {
@@ -1048,6 +1085,7 @@ export default {
   flex: 1 1 auto; /* 占据中间空间 */
   min-height: 200px;
   order: 2; /* 确保在中间位置 */
+  padding-top: 18px; /* 为绝对定位的标题留出空间，避免与金字塔重叠 */
 
   .design-module-label {
     width: 120px;
@@ -1056,10 +1094,10 @@ export default {
   .behavior-content {
     flex-grow: 1;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 15px;
-    gap: 20px; /* 增加间距避免重叠 */
+    align-items: flex-start; /* 顶部对齐，让图片上缘更贴近机器评估底部 */
+    justify-content: space-between; /* 左右分布，靠齐两侧 */
+    padding: 0 15px 15px 15px; /* 顶部 0，保持与标签紧邻 */
+    gap: 20px; /* 间距避免重叠 */
     min-height: 0;
   }
 
@@ -1067,15 +1105,17 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 15px; /* 增加图片之间的间距 */
-    flex-basis: auto; /* 改为自动 */
+    flex-basis: 35%;
     height: 100%;
     width: auto; /* 宽度自动 */
+    min-width: 220px;
   }
 
   .image-item {
-    height: calc(50% - 7.5px); /* 根据gap调整，高度保持不变 */
-    max-height: 150px; /* 限制图片最大高度 */
-    width: auto; /* 宽度自动，根据高度和比例计算 */
+    height: auto;
+    width: 100%; /* 列内尽可能宽 */
+    aspect-ratio: 16 / 9; /* 按样例比例拉伸容器 */
+    max-height: 170px; /* 适度向上向下延申，同时避免与下方重叠 */
     @include sci-fi-border;
     background: rgba(0, 0, 0, 0.3);
     display: flex;
@@ -1086,9 +1126,9 @@ export default {
   }
 
   .image-display {
-    height: 100%; /* 高度填满容器 */
-    width: auto; /* 宽度自动，保持原比例 */
-    object-fit: contain; /* 保持原比例 */
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 填满16:9容器，保持比例 */
   }
 
   .image-placeholder {
@@ -1103,7 +1143,7 @@ export default {
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    min-width: 150px; /* 确保有足够空间 */
+    min-width: 120px; /* 减小最小宽度 */
   }
 
   .pyramid-placeholder {
@@ -1120,12 +1160,16 @@ export default {
 
   .level-legend {
     display: flex;
-    gap: 15px;
+    flex-wrap: wrap; /* 允许换行 */
+    gap: 8px; /* 减小间距 */
+    justify-content: center;
+    max-width: 120px; /* 限制最大宽度，强制换行 */
 
     .legend-item {
-      font-size: 0.8rem;
+      font-size: 0.65rem; /* 减小字体 */
       color: #aaa;
       font-weight: bold;
+      white-space: nowrap; /* 防止文字换行 */
 
       &.active-level {
         color: #00e0ff;
