@@ -1,25 +1,25 @@
 <template>
-  <div class="section" :style="{ height: `${windowHeight}px` }">
+  <div class="section" :style="{ height: `${windowHeight}px` }" :class="{ 'use-assets': designAssetsEnabled }">
     <div class="register" :style="{ width: `${windowWidth}px`, height: `${windowHeight}px` }"></div>
     <div class="img_box" :style="{ width: `${windowWidth}px`, height: `${windowHeight}px` }"></div>
 
     <div class="top-nav-left">
-      <router-link to="/" class="nav-btn">首页</router-link>
-      <router-link to="/group-negotiation" class="nav-btn">返回</router-link>
+      <router-link to="/" class="nav-btn nav-home">首页</router-link>
+      <router-link to="/group-negotiation" class="nav-btn nav-back">返回</router-link>
     </div>
     <div class="top-nav-right">
-      <router-link to="/attributiondiagnosis" class="nav-btn">下一页</router-link>
+      <router-link to="/attributiondiagnosis" class="nav-btn nav-next">下一页</router-link>
     </div>
 
-    <div class="title-container">
+    <div class="title-container" :style="bgImageStyle(assetNames.titleBg)">
       <h1 class="newTitle">决策选择认知偏差检测模型</h1>
     </div>
 
     <div class="core-layout-design">
       <!-- 左列文本框 - 带滑动条 -->
       <div class="design-left-column">
-        <div class="design-module video-module">
-          <div class="design-module-label">视频演示</div>
+        <div class="design-module video-module" :style="videoPanelBgStyle">
+          <div class="design-module-label" :style="labelImageStyle(assetNames.videoLabel, 140, 30)">视频演示</div>
           <div class="design-module-content video-content-wrapper">
             <video v-if="testVideoUrl" :src="testVideoUrl" controls class="test-video-player"
               @error="handleVideoError"></video>
@@ -29,37 +29,43 @@
           </div>
         </div>
 
-        <div class="design-module text-module-left">
+        <div class="design-module text-module-left fixed-left-text" :style="leftTextPanelBgStyle">
           <div class="design-module-content text-scrollable">
             <p class="text-content" v-html="thirdStageText"></p>
           </div>
         </div>
 
         <div class="button-container">
-          <b-button @click="fetchBackendData" variant="primary" :disabled="isLoading" class="inference-btn">
+          <b-button @click="fetchBackendData" variant="primary" :disabled="isLoading" class="inference-btn" :style="buttonBgStyle">
             <b-spinner small v-if="isLoading"></b-spinner>
-            {{ isLoading ? '获取数据中...' : '结果推理' }}
+            {{ isLoading ? '获取数据中...' : '信息推理' }}
           </b-button>
         </div>
       </div>
 
       <!-- 中列文本框 - 带滑动条 -->
       <div class="design-center-column">
-        <div class="design-module assessment-module">
-          <div class="design-module-label">我方评估</div>
+        <div class="design-module assessment-module commander-assessment" :style="commanderPanelBgStyle">
           <div class="assessment-content">
-            <div class="assessment-icon-box">
-              <div class="icon-placeholder-red"></div>
-              <span class="assessment-level">{{ modelDangerLevel.replace('!', '') }} 级战备</span>
+            <div class="assessment-left-section">
+              <img v-if="designAssetsEnabled" :src="fileUrl(assetNames.commanderIcon)" alt="指挥员评估" class="assessment-module-icon" />
+              <div v-else class="icon-placeholder-commander"></div>
+              <div class="assessment-title">指挥员评估</div>
             </div>
-            <div class="design-module-content text-scrollable">
-              <p class="text-content" v-html="performanceData"></p>
+            <div class="assessment-middle-section">
+              <div class="assessment-right-section">
+                <div class="icon-placeholder-red" :style="iconRedStyle"></div>
+                <span class="assessment-level">{{ modelDangerLevel.replace('!', '') }} 级战备</span>
+              </div>
+              <div class="design-module-content text-scrollable">
+                <p class="text-content" v-html="performanceData"></p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="design-module behavior-module">
-          <div class="design-module-label">匹配性行为</div>
+        <div class="design-module behavior-module" :style="behaviorPanelBgStyle">
+          <div class="design-module-label" :style="labelImageStyle(assetNames.behaviorLabel, 120, 28)">可视化行为</div>
           <div class="behavior-content">
             <div class="flanking-image-column">
               <div class="image-item">
@@ -73,7 +79,8 @@
             </div>
 
             <div class="pyramid-legend-group">
-              <div class="pyramid-placeholder"></div>
+              <div class="pyramid-placeholder" v-if="!designAssetsEnabled"></div>
+              <img v-else :src="fileUrl(assetNames.pyramid)" alt="金字塔" style="width:120px;height:120px;opacity:.95;" />
               <div class="level-legend">
                 <div class="legend-item" :class="{ 'active-level': currentLevel === 1 }">一级战备</div>
                 <div class="legend-item" :class="{ 'active-level': currentLevel === 2 }">二级战备</div>
@@ -95,15 +102,21 @@
           </div>
         </div>
 
-        <div class="design-module assessment-module">
-          <div class="design-module-label">系统评估</div>
+        <div class="design-module assessment-module machine-assessment" :style="systemPanelBgStyle">
           <div class="assessment-content">
-            <div class="assessment-icon-box">
-              <div class="icon-placeholder-red"></div>
-              <span class="assessment-level">{{ expertDangerLevel.replace('!', '') }} 级战备</span>
+            <div class="assessment-left-section">
+              <img v-if="designAssetsEnabled" :src="fileUrl(assetNames.machineIcon)" alt="机器评估" class="assessment-module-icon" />
+              <div v-else class="icon-placeholder-machine"></div>
+              <div class="assessment-title">机器评估</div>
             </div>
-            <div class="design-module-content text-scrollable">
-              <p class="text-content" v-html="performanceDataLocal"></p>
+            <div class="assessment-middle-section">
+              <div class="assessment-right-section">
+                <div class="icon-placeholder-red" :style="iconRedStyle"></div>
+                <span class="assessment-level">{{ expertDangerLevel.replace('!', '') }} 级战备</span>
+              </div>
+              <div class="design-module-content text-scrollable">
+                <p class="text-content" v-html="performanceDataLocal"></p>
+              </div>
             </div>
           </div>
         </div>
@@ -111,8 +124,8 @@
 
       <!-- 右列文本框 - 带滑动条 -->
       <div class="design-right-column">
-        <div class="design-module result-log-module">
-          <div class="design-module-label">决策选择认知偏差检测结果</div>
+        <div class="design-module result-log-module" :style="rightPanelBgStyle">
+          <div class="design-module-label" :style="labelImageStyle(assetNames.resultLabel, 260, 28)">决策选择认知偏差检测结果</div>
           <div class="design-module-content text-scrollable">
             <p class="text-content">
               {{ summaryText }}
@@ -121,11 +134,11 @@
         </div>
 
         <div class="right-bottom-controls">
-          <div class="accuracy-box">
+          <div class="accuracy-box" :style="accuracyBgStyle">
             <div class="accuracy-label">偏差检测准确率</div>
             <div class="accuracy-value">{{ deviationDetectionAccuracy }}%</div>
           </div>
-          <button class="export-btn">结果导出</button>
+          <button class="export-btn" :style="exportBtnBgStyle">结果导出</button>
         </div>
       </div>
     </div>
@@ -150,6 +163,36 @@ export default {
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
       isLoading: false,
+      /* 设计稿资源配置（使用项目内 step4 素材） */
+      designAssetsEnabled: true,
+      assetNames: {
+        /* 若某项为 null 将退回到默认描边样式 */
+        panel: null,
+        rightPanel: '决策选择认知偏差检测结果文本框.png',
+        label: null,
+        button: '开始测验.png',
+        exportBtn: '结果导出按键.png',
+        accuracy: '准确率框.png',
+        titleBg: '标题栏.png',
+        pyramid: '金字塔图.png',
+        iconRed: null,
+        /* 模块面板与标题框 */
+        videoPanel: '原视频框.png',
+        leftTextPanel: '左下文本框.png',
+        commanderPanel: '指挥员评估文本框.png',
+        systemPanel: '机器评估文本框.png',
+        videoLabel: '视频演示标题框.png',
+        behaviorLabel: '可视化行为标题框.png',
+        resultLabel: '决策选择认知偏差检测结果标题框.png',
+        /* 战备等级图标 */
+        level1: '一级战备图片.png',
+        level2: '二级战备图片.png',
+        level3: '三级战备图片.png',
+        level4: '四级战备图片.png',
+        /* 评估模块图标 */
+        machineIcon: '机器评估图标.png',
+        commanderIcon: '指挥员评估图标.png'
+      },
       apiConfig: {
         weaponModel: process.env.VUE_APP_WEAPON_MODEL || 'B-2',
         imgDir: process.env.VUE_APP_IMG_DIR || '/home/img/B-2',
@@ -173,7 +216,56 @@ export default {
   computed: {
     highlightedCurrentStageText() {
       return this.highlightRandomWords(this.currentStageText, 1, 3);
+    },
+    panelBgStyle() {
+      return this.bgImageStyle(this.assetNames.panel);
+    },
+    rightPanelBgStyle() {
+      return this.bgImageStyle(this.assetNames.rightPanel || this.assetNames.panel);
+    },
+    videoPanelBgStyle() {
+      return this.bgImageStyle(this.assetNames.videoPanel);
+    },
+    leftTextPanelBgStyle() {
+      return this.bgImageStyle(this.assetNames.leftTextPanel);
+    },
+    commanderPanelBgStyle() {
+      return this.bgImageStyle(this.assetNames.commanderPanel);
+    },
+    systemPanelBgStyle() {
+      return this.bgImageStyle(this.assetNames.systemPanel);
+    },
+    behaviorPanelBgStyle() {
+      return this.bgImageStyle(this.assetNames.panel);
+    },
+    labelBgStyle() {
+      const base = this.bgImageStyle(this.assetNames.label);
+      if (!this.designAssetsEnabled) return {};
+      return Object.assign({}, base, { color: '#e6faff' });
+    },
+    buttonBgStyle() {
+      return this.bgImageStyle(this.assetNames.button);
+    },
+    exportBtnBgStyle() {
+      return this.bgImageStyle(this.assetNames.exportBtn || this.assetNames.button);
+    },
+    accuracyBgStyle() {
+      return this.bgImageStyle(this.assetNames.accuracy);
+    },
+    iconRedStyle() {
+      if (!this.designAssetsEnabled) return {};
+      const levelImg = this.projectAssetUrl(this.getLevelImageName(this.currentLevel));
+      if (!levelImg) return {};
+      return {
+        width: '70px',
+        height: '60px',
+        backgroundImage: `url('${levelImg}')`,
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: '100% 100%',
+        border: 'none'
+      };
     }
+
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);
@@ -250,6 +342,41 @@ export default {
       });
 
       return highlightedWords.join('');
+    },
+    /* 获取项目内 step4 素材的打包 URL */
+    projectAssetUrl(name) {
+      if (!this.designAssetsEnabled || !name) return '';
+      try {
+        return require(`@/assets/images/step4/${name}`);
+      } catch (e) {
+        console.warn('未找到素材：', name);
+        return '';
+      }
+    },
+    /* 向后兼容模板中对 fileUrl 的调用 */
+    fileUrl(name) {
+      return this.projectAssetUrl(name);
+    },
+    /* 指定标题框图片并设置尺寸 */
+    labelImageStyle(name, width = 160, height = 28) {
+      if (!this.designAssetsEnabled || !name) return {};
+      const url = this.projectAssetUrl(name);
+      return {
+        width: `${width}px`,
+        height: `${height}px`,
+        backgroundImage: `url('${url}')`,
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: '100% 100%',
+        color: '#e6faff'
+      };
+    },
+    bgImageStyle(name) {
+      if (!this.designAssetsEnabled || !name) return {};
+      return {
+        backgroundImage: `url('${this.projectAssetUrl(name)}')`,
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: '100% 100%'
+      };
     },
     formatAndLogModule4Res(module4Res) {
       console.groupCollapsed("%c✅ Module 4 结果已存储 (module4Res)", "color: #ffc107; font-weight: bold;");
@@ -403,6 +530,14 @@ export default {
       console.log('等级转换：', backendLevel, '→', result);
       return result;
     },
+    getLevelImageName(level) {
+      switch (level) {
+        case 1: return this.assetNames.level1;
+        case 2: return this.assetNames.level2;
+        case 3: return this.assetNames.level3;
+        default: return this.assetNames.level4;
+      }
+    },
     loadVideoFromStorage() {
       try {
         const module1ResStr = localStorage.getItem('module1Res');
@@ -446,11 +581,38 @@ export default {
 /* 根容器：深色科幻主题，占满屏幕 */
 .section {
   background-color: #030a1c;
+  /* 使用项目内背景图 */
+  background-image: url('~@/assets/images/step4/背景.png');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
   color: #e0e0e0;
   font-family: "Helvetica Neue", sans-serif;
   overflow: hidden;
   position: relative;
   width: 100%;
+}
+
+/* 两侧装饰条 */
+.section::before,
+.section::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  z-index: 2;
+  pointer-events: none;
+}
+.section::before {
+  left: 0;
+  background-image: url('~@/assets/images/step4/装饰-左.png');
+}
+.section::after {
+  right: 0;
+  background-image: url('~@/assets/images/step4/装饰-右.png');
 }
 
 /* 隐藏原有的浅色背景 */
@@ -528,6 +690,21 @@ export default {
   justify-content: center;
   position: relative;
   z-index: 5;
+
+  /* 标题栏底图（与 computed 的内联样式兼容，双保险） */
+  &.use-assets,
+  .use-assets & {
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      margin: 0 auto;
+      width: min(980px, 92%);
+      background: url('~@/assets/images/step4/标题栏.png') no-repeat center/contain;
+      z-index: -1;
+      pointer-events: none;
+    }
+  }
 }
 
 .newTitle {
@@ -536,6 +713,52 @@ export default {
   font-weight: bolder;
   letter-spacing: 0.1em;
   text-shadow: 0 0 10px #00e0ff, 0 0 15px #00e0ff;
+}
+
+/* 资源皮肤启用时的覆盖样式 */
+.use-assets {
+  .design-module {
+    border: none;
+    background: transparent;
+    backdrop-filter: none;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+  }
+
+  .design-module .design-module-label {
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .nav-btn {
+    border: none;
+    background: transparent;
+    color: #ffffff; /* 白色文字置顶 */
+    text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 90px;
+    height: 34px;
+    padding: 0;
+    font-weight: bold;
+  }
+  .nav-btn.nav-home {
+    background: url('~@/assets/images/step4/首页按键.png') no-repeat center/contain;
+  }
+  .nav-btn.nav-back {
+    background: url('~@/assets/images/step4/返回按键.png') no-repeat center/contain;
+  }
+  .top-nav-right .nav-btn.nav-next {
+    width: 100px;
+    background: url('~@/assets/images/step4/下一页按键.png') no-repeat center/contain;
+  }
+
+  .accuracy-box,
+  .export-btn {
+    border: none;
+    background: transparent;
+  }
 }
 
 /* 核心布局 */
@@ -588,17 +811,17 @@ export default {
   flex-grow: 1;
   overflow-y: auto;
   max-height: 100%;
-  
+
   /* 自定义滚动条样式 */
   &::-webkit-scrollbar {
     width: 8px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: rgba(10, 25, 50, 0.3);
     border-radius: 4px;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: #00e0ff;
     border-radius: 4px;
@@ -606,6 +829,13 @@ export default {
       background: #00b8d4;
     }
   }
+}
+
+.assessment-module .design-module-content,
+.result-log-module .design-module-content,
+.text-module-left .design-module-content {
+  overflow-y: auto;
+  max-height: 100%;
 }
 
 .text-content {
@@ -654,19 +884,42 @@ export default {
   flex-direction: column;
 }
 
+/* 左下文本框尺寸与相对定位（保持在按钮上方的文档流位置） */
+.fixed-left-text {
+  position: relative;
+  width: 100%; /* 和视频框右边齐平 */
+  height: 480px;
+  align-self: flex-start; /* 防止被拉伸，保持固定宽度 */
+  overflow: hidden; /* 确保内容不超出 */
+  display: flex;
+  flex-direction: column;
+}
+
+.fixed-left-text .design-module-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .button-container {
   flex-basis: 10%;
   min-height: 40px;
   display: flex;
+  justify-content: center; /* 居中对齐 */
+  align-items: center;
 
   .inference-btn {
-    width: 100%;
+    width: auto; /* 改为自动宽度 */
+    min-width: 150px; /* 设置最小宽度 */
+    max-width: 250px; /* 设置最大宽度 */
     height: 100%;
     font-size: 1.1rem;
     font-weight: bold;
     @include sci-fi-border;
-    background: #00e0ff;
-    color: #030a1c;
+    /* 使用"开始测验.png"作为按钮底图 */
+    background: url('~@/assets/images/step4/开始测验.png') no-repeat center/contain, #00e0ff;
+    color: #ffffff; /* 改为白色 */
     border: none;
     border-radius: 4px;
 
@@ -688,28 +941,90 @@ export default {
 
 /* 中列 */
 .assessment-module {
-  flex: 1;
+  flex: 0 1 auto; /* 不自动增长，根据内容调整 */
   min-height: 150px;
+  max-height: 200px; /* 限制最大高度，让框更紧凑 */
+  overflow: hidden; /* 确保内容不超出 */
+  display: flex;
+  flex-direction: column;
+
+  &.machine-assessment {
+    order: 1; /* 机器评估在上 */
+    margin-bottom: 10px; /* 上边往下缩一点 */
+  }
+
+  &.commander-assessment {
+    order: 3; /* 指挥员评估在下 */
+    margin-top: 10px; /* 下边往上缩一点 */
+  }
 
   .assessment-content {
     display: flex;
     padding: 15px;
     gap: 15px;
     flex-grow: 1;
+    min-height: 0;
+    overflow: hidden; /* 防止内容超出 */
   }
 
-  .assessment-icon-box {
+  .assessment-left-section {
     flex-shrink: 0;
     text-align: center;
-    padding-top: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 100px;
+
+    .assessment-module-icon {
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+    }
+
+    .icon-placeholder-commander,
+    .icon-placeholder-machine {
+      width: 50px;
+      height: 50px;
+      background-color: rgba(0, 224, 255, 0.3);
+      border: 1px solid #00e0ff;
+      border-radius: 4px;
+    }
+
+    .assessment-title {
+      color: #e6faff;
+      font-weight: bold;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      text-shadow: 0 0 5px rgba(0, 224, 255, 0.5);
+    }
+  }
+
+  .assessment-middle-section {
+    flex: 1;
+    display: flex;
+    gap: 15px;
+    min-width: 0;
+    overflow: hidden; /* 防止内容超出 */
+  }
+
+  .assessment-right-section {
+    flex-shrink: 0;
+    text-align: center;
+    padding: 10px 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 80px;
 
     .icon-placeholder-red {
-      width: 70px;
+      width: 60px;
       height: 60px;
       background-color: #ff4500;
       border: 1px solid #ff7777;
       border-radius: 4px;
-      margin: 0 auto 10px auto;
       opacity: 0.7;
     }
 
@@ -719,11 +1034,20 @@ export default {
       font-size: 1rem;
     }
   }
+
+  .assessment-module .design-module-content {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
 }
 
 .behavior-module {
-  flex: 1;
-  min-height: 150px;
+  flex: 1 1 auto; /* 占据中间空间 */
+  min-height: 200px;
+  order: 2; /* 确保在中间位置 */
 
   .design-module-label {
     width: 120px;
@@ -733,22 +1057,25 @@ export default {
     flex-grow: 1;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     padding: 15px;
-    gap: 15px;
+    gap: 20px; /* 增加间距避免重叠 */
+    min-height: 0;
   }
 
   .flanking-image-column {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    flex-basis: 30%;
+    gap: 15px; /* 增加图片之间的间距 */
+    flex-basis: auto; /* 改为自动 */
     height: 100%;
+    width: auto; /* 宽度自动 */
   }
 
   .image-item {
-    height: calc(50% - 5px);
-    width: 100%;
+    height: calc(50% - 7.5px); /* 根据gap调整，高度保持不变 */
+    max-height: 150px; /* 限制图片最大高度 */
+    width: auto; /* 宽度自动，根据高度和比例计算 */
     @include sci-fi-border;
     background: rgba(0, 0, 0, 0.3);
     display: flex;
@@ -759,9 +1086,9 @@ export default {
   }
 
   .image-display {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: 100%; /* 高度填满容器 */
+    width: auto; /* 宽度自动，保持原比例 */
+    object-fit: contain; /* 保持原比例 */
   }
 
   .image-placeholder {
@@ -770,11 +1097,13 @@ export default {
   }
 
   .pyramid-legend-group {
-    flex-basis: 35%;
+    flex-basis: auto; /* 自动调整 */
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    min-width: 150px; /* 确保有足够空间 */
   }
 
   .pyramid-placeholder {
@@ -811,6 +1140,15 @@ export default {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* 确保内容不超出 */
+  min-height: 0;
+}
+
+.result-log-module .design-module-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .right-bottom-controls {
@@ -830,6 +1168,8 @@ export default {
   flex-direction: column;
   justify-content: center;
   border-radius: 4px;
+  /* 蓝色胶囊条背景 */
+  background: url('~@/assets/images/step4/准确率框.png') no-repeat center/cover;
 
   .accuracy-label {
     font-size: 0.9rem;
@@ -850,8 +1190,9 @@ export default {
   font-size: 1.1rem;
   font-weight: bold;
   @include sci-fi-border;
-  background: #00e0ff;
-  color: #030a1c;
+  /* 黄色导出按钮底图 */
+  background: url('~@/assets/images/step4/结果导出按键.png') no-repeat center/contain, #00e0ff;
+  color: #ffffff; /* 改为白色 */
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -863,5 +1204,19 @@ export default {
     color: #030a1c;
     box-shadow: 0 0 15px #00e0ff;
   }
+}
+
+/* 底部装饰条 */
+.core-layout-design::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(1120px, 96%);
+  height: 40px;
+  background: url('~@/assets/images/step4/底部.png') no-repeat center/contain;
+  pointer-events: none;
+  opacity: .95;
 }
 </style>
