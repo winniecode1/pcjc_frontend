@@ -135,7 +135,7 @@
             <div class="accuracy-label">偏差检测准确率</div>
             <div class="accuracy-value">{{ deviationDetectionAccuracy }}%</div>
           </div>
-          <button class="export-btn" :style="exportBtnBgStyle">结果导出</button>
+          <button class="export-btn" :style="exportBtnBgStyle" @click="exportData">结果导出</button>
         </div>
       </div>
     </div>
@@ -602,6 +602,41 @@ export default {
       console.error("测试视频加载失败:", e);
       this.testVideoMessage = "视频加载失败，请检查 LocalStorage 中的 URL 是否正确。";
       this.testVideoUrl = null;
+    },
+    // 导出数据为JSON文件
+    exportData() {
+      try {
+        // 准备要导出的数据
+        const exportData = {
+          "performance_data": this.performanceData,
+          "performance_data_local": this.performanceDataLocal,
+          "summary": this.summaryText
+        };
+        
+        // 转换为JSON字符串
+        const jsonStr = JSON.stringify(exportData, null, 2);
+        
+        // 创建Blob对象
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        
+        // 创建下载链接
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `decision_making_data_${new Date().toISOString().slice(0, 10)}.json`;
+        
+        // 触发下载
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // 释放URL对象
+        URL.revokeObjectURL(link.href);
+        
+        console.log('数据导出成功');
+      } catch (error) {
+        console.error('导出数据失败:', error);
+        alert('导出失败，请重试');
+      }
     }
   }
 };

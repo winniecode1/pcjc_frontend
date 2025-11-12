@@ -8,8 +8,7 @@
         <button class="header-btn btn-back" @click="navigateHome">返回</button>
       </b-col>
       <b-col cols="6" class="text-center">
-        <!-- <h1 class="header-title">多模态信息认知偏差检测模型</h1> -->
-      </b-col>
+        </b-col>
       <b-col cols="3" class="text-right">
         <button class="header-btn btn-next" @click="navigateNextPage">下个页面</button>
       </b-col>
@@ -23,7 +22,6 @@
         <div class="panel-left">
           <div class="panel-content">
             <div class="server-video-list overflow-auto">
-              <!-- 视频列表 -->
               <div v-for="video in videoList" :key="video.id" class="video-item" @click="selectVideo(video)"
                 :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }">
                 <span>{{ video.name }}</span>
@@ -69,10 +67,9 @@
         <div class="panel-right-top">
           <div class="panel-content">
             <div class="description-box p-2 overflow-auto">
-              <!-- 使用 formatDescription 方法进行标红处理 -->
-              <p v-if="fullResult.video_description" class="mb-1 text-left small-text"
+              <div v-if="fullResult.video_description" class="mb-1 text-left small-text"
                 v-html="formatDescription(fullResult.video_description)">
-              </p>
+              </div>
               <p v-if="fullResult.key_frame_detection" class="mb-1 text-left">
                 <span class="text-red">id:{{ fullResult.key_frame_detection.frame_idx }} {{ getMainObject() }} {{
                   getMainConfidence().toFixed(2) }}</span>
@@ -131,9 +128,8 @@ function getFilenameFromPath(fullPath) {
   // 使用 split 方法按路径分隔符（/ 或 \）分割，并取最后一个元素
   const parts = fullPath.split(/[/\\]/);
   // pop() 方法移除并返回数组的最后一个元素，即文件名
-  return parts.pop() || null; 
+  return parts.pop() || null;
 }
-
 
 export default {
   name: 'TargetDetection',
@@ -172,12 +168,12 @@ export default {
   },
   methods: {
     navigateHome() {
-      // "首页" 和 "返回" 都跳转到根路径
-      window.location.href = `${FRONTEND_BASE_URL}/`;
+      // "首页" 和 "返回" 都跳转到根路径（使用相对路径确保在当前端口下正确导航）
+      window.location.href = '/';
     },
     navigateNextPage() {
-      // "下个页面" 跳转到指定页面
-      window.location.href = `${FRONTEND_BASE_URL}/prior-knowledge`;
+      // "下个页面" 跳转到指定页面（使用相对路径确保在当前端口下正确导航）
+      window.location.href = '/prior-knowledge';
     },
     handleResize() {
       this.fullWidth = window.innerWidth;
@@ -188,29 +184,147 @@ export default {
       this.resultMessage = "处理后视频加载失败，请检查服务器日志和网络。";
     },
     /**
-     * 【标红修正】实现“动作：”行的标红处理。
-     * 作用：确保只有以“动作：”开头的行被标红，并正确处理换行。
+     * 【标红修正】根据 low_similarity_aspects 列表高亮对应标签的行。
+     * 目前有四行：场景、主要目标、动作、总结。仅高亮列表中出现的那些行。
      */
     formatDescription(description) {
-      if (!description) return '';
-      // 1. 仅按换行符分割文本，保留每行的完整内容
-      // 使用 /\r?\n/ 确保兼容 Windows (\r\n) 和 Unix/Linux/Mac (\n) 换行
-      const lines = description.split(/\r?\n/).filter(line => line.trim() !== '');
-      let html = '';
-      const actionKeyword = "动作：";
+      // DEBUG 0: 函数开始
+      console.log("--- [DEBUG] formatDescription START (Fixed) ---");
 
-      // 2. 遍历每一行，如果以 "动作："开头则标红，并添加 <br> 换行
-      lines.forEach(line => {
-        const trimmedLine = line.trim();
-        if (trimmedLine.startsWith(actionKeyword)) {
-          // 标红处理
-          html += `<span class="text-highlight">${trimmedLine}</span><br>`;
-        } else {
-          // 否则只添加行和换行
-          html += `${trimmedLine}<br>`;
+      if (!description) {
+        console.log("[DEBUG] 1. 传入的 description 为空，已停止。");
+        console.log("--- [DEBUG] formatDescription END ---");
+        return '';
+      }
+
+      // DEBUG 1: 检查原始数据
+      const rawAspects = this.fullResult && this.fullResult.low_similarity_aspects;
+      console.log("[DEBUG] 1. 传入的 description (原始文本):", JSON.stringify(description));
+      console.log("[DEBUG] 2. 传入的 low_similarity_aspects (原始数据):", rawAspects);
+
+      // 1) 解析需要高亮的标签集合
+      const aspects = this.parseLowSimilarityAspects(rawAspects);
+
+      // DEBUG 2: 检查解析后的标签
+      console.log("[DEBUG] 3. 经过 parseLowSimilarityAspects 解析后的数组:", aspects);
+
+      // 标准化到四个候选标签
+      const validLabels = new Set(['场景', '主要目标', '动作', '总结']);
+      const labelsToHighlight = new Set();
+      (aspects || []).forEach(item => {
+        if (typeof item !== 'string') return;
+        // 清理和标准化标签名称
+        const name = item.trim().replace(/^["'《【\s]+|["'》】\s]+$/g, '');
+        if (name === '目标') {
+          console.log("[DEBUG] 4. '目标' 映射为 '主要目标'");
+          labelsToHighlight.add('主要目标');
+        }
+        if (validLabels.has(name)) {
+          labelsToHighlight.add(name);
         }
       });
+      const labelsArray = Array.from(labelsToHighlight);
+
+      // DEBUG 3: 检查最终要高亮的标签
+      console.log("[DEBUG] 5. 最终待高亮的标签数组 (labelsArray):", labelsArray);
+
+      // 2) 仅按换行符分割文本
+      // 使用 filter(line => line.trim() !== '') 排除空行
+      const lines = description.split(/\r?\n/).filter(line => line.trim() !== '');
+
+      // DEBUG 4: 检查分割后的行
+      console.log(`[DEBUG] 6. 文本被分割为 ${lines.length} 行:`, lines);
+
+      let html = '';
+
+      // 3) 遍历每一行
+      console.log("[DEBUG] 7. 开始逐行匹配...");
+      lines.forEach((line, index) => {
+        const trimmedLine = line.trim();
+
+        // 确保 shouldHighlight 在这里被正确计算
+        const shouldHighlight = labelsArray.some(label => {
+          // 调用 shouldHighlightLine 进行精确匹配
+          const isMatch = this.shouldHighlightLine(trimmedLine, label);
+
+          if (isMatch) {
+            // 报告匹配成功
+            console.log(`[DEBUG]   -> 匹配成功! [行 ${index}] (标签: '${label}') (行内容: '${trimmedLine.substring(0, 20)}...')`);
+          }
+          return isMatch;
+        });
+
+        let lineContent = trimmedLine; // 默认内容
+
+        if (shouldHighlight) {
+          // 标红处理：用 <span> 标红文本，使用内联样式作为备选
+          lineContent = `<span class="text-highlight" style="color: #ff4d4d; font-weight: bold;">${trimmedLine}</span>`;
+          console.log(`[DEBUG]   -> 应用高亮样式! [行 ${index}]`);
+        } else if (labelsArray.length > 0) {
+          // 报告未匹配 (如果有标签要高亮的话)
+          console.log(`[DEBUG]   -> 未匹配. [行 ${index}] (行内容: '${trimmedLine.substring(0, 20)}...')`);
+        }
+
+        // 使用div包裹每一行，确保样式正确应用
+        html += `<div>${lineContent}</div>`;
+      });
+
+      // DEBUG 7: 检查最终输出的 HTML
+      console.log("[DEBUG] 8. 最终生成的 HTML:", html);
+      console.log("--- [DEBUG] formatDescription END ---");
       return html;
+    },
+    shouldHighlightLine(text, label) {
+      if (!text || !label) return false;
+      const escapeRegExp = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // 匹配：开头 + 0或多空格 + 标签 + 0或多空格 + (全角或半角冒号)
+      const pattern = new RegExp(`^\\s*${escapeRegExp(label)}\\s*[：:]`);
+      return pattern.test(text);
+    },
+
+    /**
+     * 解析后端返回的 low_similarity_aspects，兼容多种格式：
+     * - 数组：["动作","总结"]
+     * - 字符串（JSON 或包含数组片段的字符串）：'{"data": ["动作","总结"]}' 或 '["动作","总结"]' 或 "{'["动作","总结"]...'}"
+     */
+    parseLowSimilarityAspects(raw) {
+      try {
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === 'object') {
+          for (const key of ['low_similarity_aspects', 'data', 'items', 'list']) {
+            if (Array.isArray(raw[key])) return raw[key];
+          }
+          for (const k in raw) {
+            if (Array.isArray(raw[k])) return raw[k];
+          }
+          return [];
+        }
+        if (typeof raw === 'string') {
+          const s = raw.trim();
+          if (!s) return [];
+          if (s.startsWith('[') && s.endsWith(']')) {
+            try { return JSON.parse(s); } catch (_) { }
+          }
+          if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) {
+            const normalized = s.replace(/'/g, '"');
+            try {
+              const obj = JSON.parse(normalized);
+              return this.parseLowSimilarityAspects(obj);
+            } catch (_) { /* ignore */ }
+          }
+          const match = s.match(/\[([^\]]+)\]/);
+          if (match && match[0]) {
+            const arrText = match[0].replace(/'/g, '"');
+            try { return JSON.parse(arrText); } catch (_) {
+              return match[1].split(',').map(t => t.replace(/["'\s]/g, '')).filter(Boolean);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('解析 low_similarity_aspects 失败：', e);
+      }
+      return [];
     },
     getMainObject() {
       if (!this.fullResult.key_frame_detection || !this.fullResult.key_frame_detection.detections || !this.fullResult.key_frame_detection.detections.length) {
@@ -327,7 +441,6 @@ export default {
         this.fullResult.key_frame_path = fullData.key_frame_path;
         this.fullResult.key_frame_detection = fullData.key_frame_detection;
 
-
         // ---- 提取文件名和路径修正 (用于构造新接口 URL) ----
         // 原始路径字符串 (可能包含完整路径)
         const raw_key_frame_path = fullData.key_frame_path;
@@ -336,11 +449,10 @@ export default {
         // 【关键修正点 B】：从完整路径中提取纯文件名，用于构造新接口 URL (对应 <filename>)
         const key_frame_filename = getFilenameFromPath(raw_key_frame_path);
         const video_filename = getFilenameFromPath(raw_video_path);
-        
+
         console.log("Extracted video filename:", video_filename);
         console.log("Extracted keyframe filename:", key_frame_filename);
         // ----------------------------------------------------
-
 
         // 4. 【关键修正点 C】: 构造处理后视频的 URL (用于播放器) - 对接新接口
         if (video_filename && this.taskId) {
@@ -350,7 +462,6 @@ export default {
         } else {
           this.processedVideoURL = null;
         }
-
 
         // 5. 【关键修改】：整合所有后端结果并以 module1Res 的格式存储到 localStorage
         try {
@@ -385,7 +496,6 @@ export default {
           // 3. 将对象转换为 JSON 字符串并存储
           localStorage.setItem('module1Res', JSON.stringify(module1Res));
 
-
           // 4. 方便调试：【格式化打印】存储的 module1Res 数据
           console.groupCollapsed("%c✅ Module 1 结果已存储 (module1Res)", "color: #17a2b8; font-weight: bold;");
 
@@ -402,7 +512,6 @@ export default {
           console.table(tableData);
 
           console.groupEnd(); // 结束分组
-
         } catch (e) {
           console.error("保存 module1Res 到 localStorage 失败:", e);
         }
@@ -780,12 +889,9 @@ export default {
   font-size: 1rem;
 }
 
-/* 6. 右侧列 (不变) */
-.right-column {
-  /* 结构在 template 中已修改 */
-}
+/* 6. 右侧列 (重点修正 CSS 在这里) */
 
-/* 右上方面板 (不变) */
+/* 右上方面板 (容器样式不变) */
 .panel-right-top {
   background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
 }
@@ -798,6 +904,9 @@ export default {
   font-size: 0.9rem;
   line-height: 1.6;
   padding: 10px !important;
+  overflow: auto;
+  display: flex; /* 确保内部元素（v-html渲染的div）可以正常布局 */
+  flex-direction: column; /* 垂直排列 v-html 渲染的行 */
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -811,22 +920,35 @@ export default {
   &::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.3);
   }
+
+  }
+</style>
+
+/* 全局样式，确保能应用到v-html生成的内容 */
+<style lang="scss">
+.text-highlight {
+  color: #ff4d4d !important; /* 确保颜色覆盖 */
+  font-weight: bold;
+  background-color: rgba(255, 77, 77, 0.1);
+  padding: 1px 3px;
+  border-radius: 3px;
+  display: inline-block;
 }
+</style>
+
+<style lang="scss" scoped>
+
+// 移除原代码中所有冗余或冲突的 .description-box>>>.text-highlight 规则
 
 .small-text {
   font-size: 0.9rem;
+  line-height: 1.6; // 确保行高生效
 }
 
 .text-red {
   color: #ff4d4d;
   font-weight: bold;
   font-size: 0.95rem;
-}
-
-/* 【已添加的样式】新增偏差检测结果文本中“动作：”的标红样式 */
-.text-highlight {
-  color: #ff4d4d;
-  font-weight: bold;
 }
 
 /* 右下方面板 (不变) */
