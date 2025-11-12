@@ -271,14 +271,21 @@ export default {
       svg.selectAll('*').remove();
 
       // 使用从后端获取的nodes和links，如果没有则使用默认数据
-      let renderNodes = this.nodes.length ? this.nodes : [
-        { id: '飞机', x: width * 0.3, y: height * 0.5, color: '#87CEEB' },
-        { id: '战斗机', x: width * 0.6, y: height * 0.3, color: '#FF6B6B' },
-        { id: '无人机', x: width * 0.6, y: height * 0.7, color: '#95E1D3' },
-        { id: '运输机', x: width * 0.8, y: height * 0.5, color: '#FFD93D' }
+      let renderNodes = this.nodes.length ? JSON.parse(JSON.stringify(this.nodes)) : [
+        { id: '飞机', color: '#87CEEB' },
+        { id: '战斗机', color: '#FF6B6B' },
+        { id: '无人机', color: '#95E1D3' },
+        { id: '运输机', color: '#FFD93D' }
       ];
-      
-      // 确保中心节点在中间位置
+
+      // 清理后端节点的x/y/fx/fy，避免拖拽报错
+      renderNodes.forEach(node => {
+        delete node.x;
+        delete node.y;
+        delete node.fx;
+        delete node.fy;
+      });
+
       // 默认将id为'飞机'的节点放在中央，如果不存在则将第一个节点放在中央
       const centerNode = renderNodes.find(node => node.is_center === true) || renderNodes[0];
       if (centerNode) {

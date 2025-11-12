@@ -29,10 +29,10 @@
 
         <div class="panel-left">
           <div class="panel-content">
-            <div class="video-section">
-              <div class="video-frame">
-                <video v-if="videoUrl" :src="videoUrl" controls class="video-display" @error="handleVideoError"></video>
-                <div v-else class="placeholder-text">{{ videoMessage }}</div>
+            <div class="video-frame mb-4">
+              <video v-if="videoUrl" :src="videoUrl" controls class="video-display" @error="handleVideoError"></video>
+              <div v-else class="placeholder-text">
+                {{ videoMessage }}
               </div>
             </div>
 
@@ -358,22 +358,23 @@ export default {
             if (item.label.includes('尺寸')) predictData.size = item.value;
             if (item.label.includes('动力')) predictData.power = item.value;
           });
-          
-          // 设置属性信息
+
+          // 设置属性信息，去除括号及其内容
           this.attributeInfo = [
-            `小类信息：${predictData.kind || '未知'}`,
-            `火力信息：${predictData.firepower || '未知'}`,
-            `颜色信息：${predictData.color || '未知'}`,
-            `形状信息：${predictData.shape || '未知'}`,
-            `尺寸信息：${predictData.size || '未知'}`,
-            `动力信息：${predictData.power || '未知'}`,
+            `小类信息：${predictData.kind ? predictData.kind.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+            `火力信息：${predictData.firepower ? predictData.firepower.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+            `颜色信息：${predictData.color ? predictData.color.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+            `形状信息：${predictData.shape ? predictData.shape.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+            `尺寸信息：${predictData.size ? predictData.size.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+            `动力信息：${predictData.power ? predictData.power.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
           ];
           
           // 设置其他需要的变量
+          // 去除括号及其内容
           this.color = predictData.color;
           this.kind = predictData.kind;
           this.shape = predictData.shape;
-          
+
           const module2Res = JSON.parse(localStorage.getItem('module2Res'));
           // 这里如果没有ground_truth，可以设置一个默认值或空值
           this.ground_truth = module2Res.result[0][0].model || '';
@@ -690,32 +691,30 @@ export default {
   margin-top: 15px;
 }
 
-/* 4. 左侧列 */
-.video-section {
-  margin-bottom: 15px;
-}
-
+/* 4. 左侧列 - 视频框样式对齐 PriorKnowledge.vue */
 .video-frame {
-  width: 100%;
-  height: 200px;
-  border: 1px solid #00e5ff;
-  background-color: rgba(0, 0, 0, 0.3);
+  width: 95%;
+  height: 250px;
+  background-image: url('~@/assets/images/step1/-s-框-小视频.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  padding: 15px;
   display: flex;
   justify-content: center;
   align-items: center;
-  overflow: hidden;
 }
 
 .video-display {
-  width: 100%;
-  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
 }
 
 .placeholder-text {
-  color: #00e5ff;
-  font-size: 0.9rem;
+  color: #88a;
+  font-size: 1rem;
   text-align: center;
+  padding: 20px;
 }
 
 .description-box {
