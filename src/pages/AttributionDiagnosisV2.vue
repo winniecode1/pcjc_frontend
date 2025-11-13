@@ -650,9 +650,48 @@ export default {
     /**
      * 导出结果
      */
-    exportResult() {
-      // 直接打开下载链接，浏览器会自动下载
-      window.open('/module5/module5/download', '_blank');
+    async exportResult() {
+      try {
+        const response = await axios.get('/module5/module5/download', {
+          responseType: 'blob' // 重要：告诉axios这是二进制数据
+        });
+        
+        // 创建一个 Blob URL
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        
+        // 创建一个隐藏的 <a> 标签来触发下载
+        const link = document.createElement('a');
+        link.href = url;
+        
+        // 从响应头中获取文件名，如果没有则使用默认名称
+        const contentDisposition = response.headers['content-disposition'];
+        let filename = 'result.zip'; // 默认文件名
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1].replace(/['"]/g, '');
+            // 对文件名进行URL解码，处理中文等特殊字符
+            try {
+              filename = decodeURIComponent(filename);
+              // 去掉文件名开头的 UTF-8 或 utf-8 前缀
+              filename = filename.replace(/^UTF-8/i, '');
+            } catch (e) {
+              console.warn('文件名解码失败，使用原始文件名', e);
+            }
+          }
+        }
+        link.setAttribute('download', filename);
+        
+        document.body.appendChild(link);
+        link.click();
+        
+        // 清理
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+      } catch (error) {
+        console.error('导出失败:', error);
+      }
     }
   }
 };
