@@ -623,13 +623,19 @@ export default {
     },
     
     /**
-     * 高亮双括号内容（标红并移除括号）
+     * 高亮双括号内容（标红并移除括号）并处理换行符
      */
     highlightBrackets(text) {
       if (text === null || text === undefined) return '';
       const str = String(text);
-      // 跨行、非贪婪匹配；使用内联样式确保在 scoped/深度选择器受限时也能生效
-      return str.replace(/\{\{([\s\S]*?)\}\}/g, '<span class="highlight-text" style="color:#ff4d4d;font-weight:700;">$1</span>');
+      
+      // 先处理双括号高亮
+      let result = str.replace(/\{\{([\s\S]*?)\}\}/g, '<span class="highlight-text" style="color:#ff4d4d;font-weight:700;">$1</span>');
+      
+      // 将 \n 换行符转换为 <br> 标签
+      result = result.replace(/\n/g, '<br>');
+      
+      return result;
     },
     
     /**
@@ -787,6 +793,8 @@ export default {
   padding: 0 5px;
   font-size: 14px !important;
   font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
+  white-space: pre-wrap; /* 保留空白符和换行符 */
+  word-wrap: break-word; /* 长单词换行 */
 }
 
 .content-box * {
