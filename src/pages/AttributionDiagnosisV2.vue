@@ -99,7 +99,7 @@
             <div class="metric-title">不一致根因召回率</div>
             <div class="metric-value">{{ formatPercent(recall, 0) }}</div>
         </div>
-        <button class="export-btn">结果导出</button>
+        <button class="export-btn" @click="exportResult">结果导出</button>
     </div>
   </div>
 </template>
@@ -645,6 +645,14 @@ export default {
       this.alertVariant = variant;
       this.alertMessage = message;
       this.showAlert = true;
+    },
+    
+    /**
+     * 导出结果
+     */
+    exportResult() {
+      // 直接打开下载链接，浏览器会自动下载
+      window.open('/module5/module5/download', '_blank');
     }
   }
 };
