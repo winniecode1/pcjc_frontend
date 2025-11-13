@@ -53,8 +53,8 @@
             </div>
             <div class="assessment-middle-section">
               <div class="assessment-right-section">
-                <div class="icon-placeholder-red" :style="iconRedStyle"></div>
-                <span class="assessment-level">{{ modelDangerLevel.replace('!', '') }} 级战备</span>
+                <div class="icon-placeholder-red" :style="expertIconStyle"></div>
+                <span class="assessment-level">{{ expertDangerLevel.replace('!', '') }} 级战备</span>
               </div>
               <div class="design-module-content text-scrollable">
                 <p class="text-content" v-html="performanceData"></p>
@@ -110,8 +110,8 @@
             </div>
             <div class="assessment-middle-section">
               <div class="assessment-right-section">
-                <div class="icon-placeholder-red" :style="iconRedStyle"></div>
-                <span class="assessment-level">{{ expertDangerLevel.replace('!', '') }} 级战备</span>
+                <div class="icon-placeholder-red" :style="modelIconStyle"></div>
+                <span class="assessment-level">{{ modelDangerLevel.replace('!', '') }} 级战备</span>
               </div>
               <div class="design-module-content text-scrollable">
                 <p class="text-content" v-html="performanceDataLocal"></p>
@@ -285,9 +285,26 @@ export default {
     accuracyBgStyle() {
       return this.bgImageStyle(this.assetNames.accuracy);
     },
-    iconRedStyle() {
+    // 指挥员评估战备等级图标样式
+    expertIconStyle() {
       if (!this.designAssetsEnabled) return {};
-      const levelImg = this.projectAssetUrl(this.getLevelImageName(this.currentLevel));
+      const expertLevel = this.extractLevelFromString(this.expertDangerLevel);
+      const levelImg = this.projectAssetUrl(this.getLevelImageName(expertLevel));
+      if (!levelImg) return {};
+      return {
+        width: '70px',
+        height: '60px',
+        backgroundImage: `url('${levelImg}')`,
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: '100% 100%',
+        border: 'none'
+      };
+    },
+    // 机器评估战备等级图标样式
+    modelIconStyle() {
+      if (!this.designAssetsEnabled) return {};
+      const modelLevel = this.extractLevelFromString(this.modelDangerLevel);
+      const levelImg = this.projectAssetUrl(this.getLevelImageName(modelLevel));
       if (!levelImg) return {};
       return {
         width: '70px',
@@ -590,6 +607,12 @@ export default {
         case 3: return this.assetNames.level3;
         default: return this.assetNames.level4;
       }
+    },
+    // 从等级字符串中提取数字等级（如 "1 !" -> 1）
+    extractLevelFromString(levelString) {
+      if (!levelString) return 4;
+      const match = levelString.toString().match(/(\d+)/);
+      return match ? parseInt(match[1], 10) : 4;
     },
     loadVideoFromStorage() {
       try {
@@ -1182,7 +1205,7 @@ export default {
   .behavior-content {
     flex-grow: 1;
     display: flex;
-    align-items: flex-start; /* 顶部对齐，让图片上缘更贴近机器评估底部 */
+    align-items: stretch; /* 改为拉伸对齐，让图片自适应高度 */
     justify-content: space-between; /* 左右分布，靠齐两侧 */
     padding: 0 15px 15px 15px; /* 顶部 0，保持与标签紧邻 */
     gap: 20px; /* 间距避免重叠 */
@@ -1194,16 +1217,17 @@ export default {
     flex-direction: column;
     gap: 15px; /* 增加图片之间的间距 */
     flex-basis: 35%;
+    flex-grow: 1; /* 允许列自适应拉伸 */
     height: 100%;
     width: auto; /* 宽度自动 */
     min-width: 220px;
   }
 
   .image-item {
-    height: auto;
+    flex: 1 1 0; /* 允许图片项等比例拉伸，优先填充可用空间 */
     width: 100%; /* 列内尽可能宽 */
-    aspect-ratio: 16 / 9; /* 按样例比例拉伸容器 */
-    max-height: 170px; /* 适度向上向下延申，同时避免与下方重叠 */
+    min-height: 120px; /* 设置最小高度，确保在小屏幕上也有合理显示 */
+    /* 移除固定的 aspect-ratio，允许根据容器高度自适应拉伸 */
     @include sci-fi-border;
     background: rgba(0, 0, 0, 0.3);
     display: flex;
