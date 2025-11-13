@@ -17,8 +17,9 @@
 
     <div class="core-layout-design">
       <div class="design-left-column">
+        <!-- 独立标题：视频演示（与下方视频框同宽） -->
+        <div class="standalone-label" :style="fullWidthLabelStyle(assetNames.videoLabel, 30)">视频演示</div>
         <div class="design-module video-module" :style="videoPanelBgStyle">
-          <div class="design-module-label" :style="labelImageStyle(assetNames.videoLabel, 140, 30)">视频演示</div>
           <div class="design-module-content video-content-wrapper">
             <video v-if="testVideoUrl" :src="testVideoUrl" controls class="test-video-player"
               @error="handleVideoError"></video>
@@ -121,12 +122,11 @@
       </div>
 
       <div class="design-right-column">
+        <!-- 独立标题：决策选择认知偏差检测结果（与下方文本框同宽） -->
+        <div class="standalone-label" :style="fullWidthLabelStyle(assetNames.resultLabel, 28)">决策选择认知偏差检测结果</div>
         <div class="design-module result-log-module" :style="rightPanelBgStyle">
-          <div class="design-module-label" :style="labelImageStyle(assetNames.resultLabel, 260, 28)">决策选择认知偏差检测结果</div>
           <div class="design-module-content text-scrollable">
-            <p class="text-content">
-              {{ summaryText }}
-            </p>
+            <p class="text-content" v-html="highlightedSummaryText"></p>
           </div>
         </div>
 
@@ -214,6 +214,10 @@ export default {
     highlightedCurrentStageText() {
       return this.highlightRandomWords(this.currentStageText, 1, 3);
     },
+    /* 仅对右侧“决策选择认知偏差检测结果”做随机标红 */
+    highlightedSummaryText() {
+      return this.highlightRandomWords(this.summaryText || '', 1, 3);
+    },
     /* 左下文本框：当内容为 JSON 字符串时，仅提取三个字段并换行展示 */
     formattedThirdStageText() {
       const source = this.thirdStageText;
@@ -300,7 +304,6 @@ export default {
     window.addEventListener('resize', this.handleResize);
     this.initializeDataFromStorage();
     this.loadVideoFromStorage();
-    this.fetchBackendData();
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
@@ -400,6 +403,19 @@ export default {
       const url = this.projectAssetUrl(name);
       return {
         width: `${width}px`,
+        height: `${height}px`,
+        backgroundImage: `url('${url}')`,
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: '100% 100%',
+        color: '#e6faff'
+      };
+    },
+    /* 宽度自适应的独立标题条（与模块同宽） */
+    fullWidthLabelStyle(name, height = 28) {
+      if (!this.designAssetsEnabled || !name) return {};
+      const url = this.projectAssetUrl(name);
+      return {
+        width: '100%',
         height: `${height}px`,
         backgroundImage: `url('${url}')`,
         backgroundRepeat: 'no-repeat',
@@ -534,12 +550,12 @@ export default {
       }
 
       const rawPerformanceData = backendData.performance_data || '暂无性能数据。';
-      this.performanceData = this.highlightRandomWords(rawPerformanceData, 1, 3);
-      console.log('性能数据 (中-顶) 设置为（已高亮）：', this.performanceData);
+      this.performanceData = rawPerformanceData;
+      console.log('性能数据 (中-顶) 设置为：', this.performanceData);
 
       const rawPerformanceDataLocal = backendData.performance_data_local || '暂无本地性能数据。';
-      this.performanceDataLocal = this.highlightRandomWords(rawPerformanceDataLocal, 1, 3);
-      console.log('本地性能数据 (中-底) 设置为（已高亮）：', this.performanceDataLocal);
+      this.performanceDataLocal = rawPerformanceDataLocal;
+      console.log('本地性能数据 (中-底) 设置为：', this.performanceDataLocal);
 
       this.summaryText = backendData.summary || '暂无总结文本。';
       console.log('总结文本 (右) 设置为：', this.summaryText);
@@ -612,26 +628,26 @@ export default {
           "performance_data_local": this.performanceDataLocal,
           "summary": this.summaryText
         };
-        
+
         // 转换为JSON字符串
         const jsonStr = JSON.stringify(exportData, null, 2);
-        
+
         // 创建Blob对象
         const blob = new Blob([jsonStr], { type: 'application/json' });
-        
+
         // 创建下载链接
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `decision_making_data_${new Date().toISOString().slice(0, 10)}.json`;
-        
+
         // 触发下载
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+
         // 释放URL对象
         URL.revokeObjectURL(link.href);
-        
+
         console.log('数据导出成功');
       } catch (error) {
         console.error('导出数据失败:', error);
@@ -836,7 +852,7 @@ export default {
 /* 核心布局 */
 .core-layout-design {
   display: flex;
-  height: calc(100% - 80px);
+  height: calc(100vh - 80px);
   padding: 10px 20px 20px 20px;
   gap: 20px;
 }
@@ -847,6 +863,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  height: 100%;
 }
 
 .design-center-column {
@@ -854,6 +871,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  height: 100%;
 }
 
 .design-right-column {
@@ -861,6 +879,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  height: 100%;
 }
 
 /* 通用模块样式 */
@@ -926,10 +945,15 @@ export default {
 
 /* 左列 */
 .video-module {
-  flex-basis: 40%;
+  flex: 0 0 auto;
+  width: 95%; // 添加宽度设置
+  height: 250px;
+  background-image: url('~@/assets/images/step1/-s-框-小视频.png'); // 添加背景图片
+  background-repeat: no-repeat; // 确保背景不重复
+  background-size: 100% 100%; // 确保背景填满整个容器
 
   .video-content-wrapper {
-    padding: 10px;
+    padding: 15px;
     height: 100%;
     display: flex;
     align-items: center;
@@ -938,8 +962,8 @@ export default {
   }
 
   .test-video-player {
-    width: 100%;
-    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
     border-radius: 4px;
   }
@@ -951,32 +975,61 @@ export default {
 }
 
 .text-module-left {
-  flex-basis: 45%;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+}
+
+/* 独立标题条（与模块等宽，置于模块上方） */
+.standalone-label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  text-align: left;
+  color: #e6faff;
+  font-weight: bold;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding-left: 40px;
+  padding-right: 10px;
+  margin-bottom: 6px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #00e0ff, #005f7f);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.use-assets {
+  .standalone-label {
+    background: transparent;
+    line-height: 1;
+  }
 }
 
 /* 左下文本框尺寸与相对定位（保持在按钮上方的文档流位置） */
 .fixed-left-text {
   position: relative;
-  width: 100%; /* 和视频框右边齐平 */
-  height: 480px;
-  align-self: flex-start; /* 防止被拉伸，保持固定宽度 */
-  overflow: hidden; /* 确保内容不超出 */
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-self: stretch;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .fixed-left-text .design-module-content {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
 .button-container {
-  flex-basis: 10%;
-  min-height: 40px;
+  flex: 0 0 auto;
+  height: 60px;
   display: flex;
   justify-content: center; /* 居中对齐 */
   align-items: center;

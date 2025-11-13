@@ -41,7 +41,7 @@
     <div class="tool-card d-flex flex-column align-items-center">
       <router-link to="/decisionmaking" class="tool-text">
         <h3>项目四</h3>
-        <p>强化学习</p>
+        <p>决策选择</p>
       </router-link>
       <!-- <img :src="imageSrc" alt="Tool Image" class="tool-image" /> -->
        <img :src="require('@/assets/images/bianpai.png')" alt="Tool Image" class="tool-image"/>
@@ -53,7 +53,7 @@
     <div class="tool-card d-flex flex-column align-items-center">
       <router-link to="/attributiondiagnosis" class="tool-text">
         <h3>项目五</h3>
-        <p>归因诊断</p>
+        <p>根因诊断</p>
       </router-link>
       <!-- <img :src="imageSrc" alt="Tool Image" class="tool-image" /> -->
        <img :src="require('@/assets/images/fangzhen.png')" alt="Tool Image" class="tool-image"/>
