@@ -38,8 +38,18 @@
         <div class="design-module text-module-left fixed-left-text">
           <div class="panel-header">属性信息</div>
           <div class="design-module-content text-scrollable">
-            <p class="text-content" v-if="attributeInfo">{{ attributeInfo }}</p>
-            <p class="text-content text-muted" v-else>暂无属性信息</p>
+            <div class="description-box attribute-content">
+              <ul class="info-list" v-if="attributeInfoList && attributeInfoList.length > 0">
+                <li 
+                  v-for="(item, idx) in attributeInfoList" 
+                  :key="'attr-' + idx"
+                  :class="{ 'first-item': item.includes('小类信息') }"
+                >
+                  {{ item }}
+                </li>
+              </ul>
+              <p class="text-content text-muted" v-else>暂无属性信息</p>
+            </div>
           </div>
         </div>
 
@@ -66,9 +76,8 @@
                 </div>
                 <div class="agent-content">
                   <p v-if="typeof agentARound1Result === 'object' && agentARound1Result !== null" class="agent-result">
-                    推理型号：{{ agentARound1Result.model_name || '***' }}
-                    <br/>
-                    推理依据：{{ agentARound1Result.reason || '***' }}
+                    <span class="result-line">推理型号：{{ agentARound1Result.model_name || '***' }}</span>
+                    <span class="result-line">推理依据：{{ agentARound1Result.reason || '***' }}</span>
                   </p>
                   <p v-else class="agent-result">{{ agentARound1Result || '推理型号：***\n推理依据：***' }}</p>
                 </div>
@@ -82,9 +91,8 @@
                 </div>
                 <div class="agent-content">
                   <p v-if="typeof agentBRound1Result === 'object' && agentBRound1Result !== null" class="agent-result">
-                    推理型号：{{ agentBRound1Result.model_name || '***' }}
-                    <br/>
-                    推理依据：{{ agentBRound1Result.reason || '***' }}
+                    <span class="result-line">推理型号：{{ agentBRound1Result.model_name || '***' }}</span>
+                    <span class="result-line">推理依据：{{ agentBRound1Result.reason || '***' }}</span>
                   </p>
                   <p v-else class="agent-result">{{ agentBRound1Result || '推理型号：***\n推理依据：***' }}</p>
                 </div>
@@ -98,9 +106,8 @@
                 </div>
                 <div class="agent-content">
                   <p v-if="typeof agentCRound1Result === 'object' && agentCRound1Result !== null" class="agent-result">
-                    推理型号：{{ agentCRound1Result.model_name || '***' }}
-                    <br/>
-                    推理依据：{{ agentCRound1Result.reason || '***' }}
+                    <span class="result-line">推理型号：{{ agentCRound1Result.model_name || '***' }}</span>
+                    <span class="result-line">推理依据：{{ agentCRound1Result.reason || '***' }}</span>
                   </p>
                   <p v-else class="agent-result">{{ agentCRound1Result || '推理型号：***\n推理依据：***' }}</p>
                 </div>
@@ -121,9 +128,8 @@
                 </div>
                 <div class="agent-content">
                   <p v-if="typeof agentABNegotiation === 'object' && agentABNegotiation !== null" class="agent-result">
-                    推理型号：{{ agentABNegotiation.model_name || '***' }}
-                    <br/>
-                    推理依据：{{ agentABNegotiation.reason || '***' }}
+                    <span class="result-line">推理型号：{{ agentABNegotiation.model_name || '***' }}</span>
+                    <span class="result-line">推理依据：{{ agentABNegotiation.reason || '***' }}</span>
                   </p>
                   <p v-else class="agent-result">{{ agentABNegotiation || '推理型号：***\n协商过程：***' }}</p>
                 </div>
@@ -139,9 +145,8 @@
                 </div>
                 <div class="agent-content">
                   <p v-if="typeof agentBCNegotiation === 'object' && agentBCNegotiation !== null" class="agent-result">
-                    推理型号：{{ agentBCNegotiation.model_name || '***' }}
-                    <br/>
-                    推理依据：{{ agentBCNegotiation.reason || '***' }}
+                    <span class="result-line">推理型号：{{ agentBCNegotiation.model_name || '***' }}</span>
+                    <span class="result-line">推理依据：{{ agentBCNegotiation.reason || '***' }}</span>
                   </p>
                   <p v-else class="agent-result">{{ agentBCNegotiation || '推理型号：***\n协商过程：***' }}</p>
                 </div>
@@ -157,9 +162,8 @@
                 </div>
                 <div class="agent-content">
                   <p v-if="typeof agentCANegotiation === 'object' && agentCANegotiation !== null" class="agent-result">
-                    推理型号：{{ agentCANegotiation.model_name || '***' }}
-                    <br/>
-                    推理依据：{{ agentCANegotiation.reason || '***' }}
+                    <span class="result-line">推理型号：{{ agentCANegotiation.model_name || '***' }}</span>
+                    <span class="result-line">推理依据：{{ agentCANegotiation.reason || '***' }}</span>
                   </p>
                   <p v-else class="agent-result">{{ agentCANegotiation || '推理型号：***\n协商过程：***' }}</p>
                 </div>
@@ -198,31 +202,30 @@
               <div class="final-model-display">
                 <p class="final-model-text">{{ finalResult || 'MiG-25Foxbat' }}</p>
               </div>
-              
-              
             </div>
           </div>
-          <!-- <div class="metric-box">
-            <template v-if="accuracyRate !== '—'">
-              {{ accuracyRate }}
-            </template>
-            <template v-else>
-              N/A
-            </template>
-          </div>
+        </div>
 
-          <div class="action-buttons-right">
-            <button class="btn-export-result" @click="exportResults">
-              <span>结果导出</span>
-            </button>
-          </div> -->
-          <div class="right-bottom-controls">
-            <div class="accuracy-box">
-              <div class="accuracy-label">偏差检测准确率</div>
-              <div class="accuracy-value">{{ formattedAccuracyRate === 'N/A' ? formattedAccuracyRate : formattedAccuracyRate + '%' }}</div>
-            </div>
-            <button class="btn-export-result" @click="exportResults">结果导出</button>
+        <!-- 偏差检测准确率面板 -->
+        <div class="panel-right-accuracy">
+          <div class="accuracy-content">
+            <span class="accuracy-label">偏差检测准确率</span>
+            <span class="accuracy-value">
+              <template v-if="accuracyRate !== '—' && accuracyRate !== null && accuracyRate !== undefined && accuracyRate !== ''">
+                {{ formattedAccuracyRate }}%
+              </template>
+              <template v-else>
+                N/A
+              </template>
+            </span>
           </div>
+        </div>
+
+        <!-- 结果导出按钮 -->
+        <div class="panel-right-button">
+          <button @click="exportResults" class="btn-export-result" :disabled="isLoading">
+            结果导出
+          </button>
         </div>
       </div>
     </div>
@@ -257,6 +260,7 @@ export default {
       originalImageURL: null,
       attributeInfo: "各种属性信息的文本显示",
       attributeInfoArray: ['Value 1', 'Value 2', 'Value 3', 'Value 4'],
+      attributeInfoList: [],
       // 一轮推理结果
       agentARound1Result: "",
       agentBRound1Result: "",
@@ -383,7 +387,7 @@ export default {
           });
 
           // 设置属性信息，去除括号及其内容
-          this.attributeInfo = [
+          this.attributeInfoList = [
             `小类信息：${predictData.kind ? predictData.kind.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
             `火力信息：${predictData.firepower ? predictData.firepower.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
             `颜色信息：${predictData.color ? predictData.color.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
@@ -402,8 +406,8 @@ export default {
           // 这里如果没有ground_truth，可以设置一个默认值或空值
           this.ground_truth = module2Res.result[0][0].model || '';
           
-          // 拼接属性信息文本
-          this.attributeInfo = this.attributeInfo.join('\n');
+          // 保留原来的 attributeInfo 用于兼容
+          this.attributeInfo = this.attributeInfoList.join('\n');
           this.isApiLoaded = true; // 数据加载完成，解锁按钮
         } else {
           console.warn('localStorage中没有找到预测信息');
@@ -429,7 +433,7 @@ export default {
         // 处理预测信息
         if (data.result && data.result.length > 0 && data.result[0].length > 0) {
           const predictData = data.result[0][0];
-          this.attributeInfo = [
+          this.attributeInfoList = [
             `小类信息：${predictData.kind || '未知'}`,
             `火力信息：${predictData.firepower || '未知'}`,
             `颜色信息：${predictData.color || '未知'}`,
@@ -442,7 +446,8 @@ export default {
           this.shape = predictData.shape;
           this.ground_truth = predictData.model;
         }
-        this.attributeInfo = this.attributeInfo.join('\n');
+        // 保留原来的 attributeInfo 用于兼容
+        this.attributeInfo = this.attributeInfoList.join('\n');
         this.isApiLoaded = true; // 接口成功返回，解锁按钮
       }).catch(err => {
         console.error(err.response && err.response.data || err);
@@ -699,7 +704,7 @@ export default {
 }
 
 /* 面板通用样式 */
-[class^="panel-"]:not(.panel-right-top):not(.panel-right-bottom):not(.panel-header), .design-module {
+[class^="panel-"]:not(.panel-right-top):not(.panel-right-bottom):not(.panel-header):not(.panel-right-button):not(.panel-right-accuracy), .design-module {
   width: 100%;
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -708,6 +713,7 @@ export default {
   flex-direction: column;
   background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
 }
+
 
 /* 特定面板的高度和边距 */
 .panel-left {
@@ -754,6 +760,10 @@ export default {
 }
 
 /* 面板标题 */
+.panel-header {
+  padding-left: 50px !important;
+  justify-content: flex-start !important;
+}
 .panel-header, .design-module-label {
   height: 35px;
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
@@ -768,8 +778,14 @@ export default {
   margin-bottom: 5px;
 
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
+}
+
+/* 中间列的标题居中显示 */
+.middle-column .panel-left .panel-header {
+  justify-content: center !important;
+  padding-left: 0 !important;
 }
 
 /* 右侧标题特殊样式 */
@@ -849,10 +865,12 @@ export default {
 }
 
 .text-scrollable {
-  padding: 15px;
+  padding: 0;
   flex-grow: 1;
-  overflow-y: auto;
+  overflow: hidden;
   max-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .text-scrollable::-webkit-scrollbar {
@@ -938,6 +956,79 @@ export default {
   font-style: italic;
 }
 
+/* 属性信息内容框样式 - 与先验知识界面预测信息一致 */
+.attribute-content {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 15px 20px !important;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.attribute-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.attribute-content::-webkit-scrollbar-thumb {
+  background: #00e5ff;
+  border-radius: 3px;
+}
+
+.attribute-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* 信息列表样式 */
+.info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.info-list li {
+  position: relative;
+  padding: 10px 0;
+  margin: 0;
+  line-height: 1.6;
+  color: #ffffff;
+  font-size: 0.95rem;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* 移除左侧黄色条 */
+.info-list li:before {
+  display: none;
+}
+
+/* 所有列表项底部添加分隔线 */
+.info-list li::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-image: url('~@/assets/images/step2/blueline.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center;
+}
+
+/* 第一项（小类信息）使用黄色线 */
+.info-list li.first-item::after {
+  background-image: url('~@/assets/images/step2/yellowline.png');
+}
+
 /* 5. 中间列 - 智能体推理区域 */
 .reasoning-section {
   flex-grow: 1;
@@ -965,8 +1056,8 @@ export default {
 }
 
 .agent-avatar {
-  width: 35px;
-  height: 35px;
+  width: 25px;
+  height: 25px;
   border-radius: 50%;
   background-color: #00e5ff;
   color: #000;
@@ -999,10 +1090,48 @@ export default {
   font-size: 0.85rem;
   line-height: 1.5;
   margin: 0;
+}
+
+/* 有 result-line 的情况：使用 flex 布局控制间距 */
+.agent-result:has(.result-line) {
+  white-space: normal;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 控制推理型号和推理依据之间的间距为10px */
+.agent-result .result-line {
+  display: block;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.agent-result .result-line:last-child {
+  margin-bottom: 0;
+}
+
+/* 兼容旧格式（没有 result-line，使用 br 或 pre-line） */
+.agent-result:not(:has(.result-line)) {
   white-space: pre-line;
+  display: block;
 }
 
 /* 6. 右侧列 - 结果区域 */
+/* 偏差检测准确率面板 */
+.panel-right-accuracy {
+  flex-shrink: 0;
+  width: 100%;
+  background-image: url('~@/assets/images/step1/-s-弹窗-偏差检测准确率.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  margin-bottom: 15px;
+  padding: 20px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+}
+
 .result-section {
   margin-bottom: 20px;
 }
@@ -1019,8 +1148,8 @@ export default {
   border: 1px solid #00e5ff;
   border-radius: 5px;
   padding: 15px;
-  min-height: 100px;
-  max-height: 120px;
+  min-height: 120px;
+  max-height: 125px;
   overflow-y: auto;
 }
 
@@ -1083,68 +1212,73 @@ export default {
   justify-content: center;
 }
 
-.right-bottom-controls {
+/* 结果导出按钮区域 */
+.panel-right-button {
   flex-shrink: 0;
+  width: 100%;
   display: flex;
-  justify-content: space-between;
-  align-items: stretch;
-  gap: 15px;
-  margin-top: auto;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+  min-height: 70px;
+  background: none !important;
+  background-image: none !important;
 }
 
-.accuracy-box {
-  flex-grow: 1;
-  // @include sci-fi-border;
-  padding: 10px;
-  text-align: center;
+/* 准确率显示 */
+.accuracy-content {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  border-radius: 4px;
-  // border: 1px solid #00e5ff;
-  /* 蓝色胶囊条背景 - 与决策选择页面一致 */
-  background: url('~@/assets/images/step4/准确率框.png') no-repeat center/cover;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0 15px;
+}
 
-  .accuracy-label {
-    font-size: 0.9rem;
-    color: #aaa;
-    margin-bottom: 5px;
-  }
+.accuracy-label {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
 
-  .accuracy-value {
-    font-size: 1.8rem;
-    color: #00e0ff;
-    font-weight: bold;
-  }
+.accuracy-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #00e5ff;
+  text-shadow: 0 0 10px #00e5ff, 0 0 20px rgba(0, 229, 255, 0.5);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .btn-export-result {
-  flex-shrink: 0;
-  width: 120px;
+  background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  max-width: 280px;
+  height: 60px;
+  color: #333;
   font-size: 1.1rem;
   font-weight: bold;
-  background: url('~@/assets/images/step4/结果导出按键.png') no-repeat center/contain;
-  background-color: transparent;
-  border: none;
-  color: #ffffff;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  padding: 0;
   display: inline-flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+  position: relative;
+  padding: 0;
+}
 
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 15px #00e0ff;
-  }
+.btn-export-result:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
 
-  &:active,
-  &:focus {
-    outline: none;
-    background: url('~@/assets/images/step4/结果导出按键.png') no-repeat center/contain;
-  }
+.btn-export-result:disabled {
+  filter: grayscale(80%);
+  cursor: not-allowed;
 }
 
 /* 7. 加载遮罩 */

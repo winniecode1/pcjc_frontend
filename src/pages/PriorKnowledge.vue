@@ -53,8 +53,8 @@
       <!-- 中间知识图谱区域 -->
       <div class="col-md-6 middle-column">
         <div class="panel-left h-100">
-          <div class="panel-header">
-            <span>先验知识</span>
+          <div class="panel-header" style="align-items: center;">
+            <span >先验知识</span>
           </div>
           <div class="panel-content">
             <div class="graph-container" ref="graphContainer" style="height: calc(100% - 40px);">
@@ -67,27 +67,39 @@
 
       <!-- 右侧标签和预测信息区域 -->
       <div class="col-md-3 right-column">
-        <div class="panel-right-top">
+        <!-- 标签信息面板 -->
+        <div class="panel-right-tag">
           <div class="panel-header">
             <span>标签信息</span>
           </div>
-          <div class="panel-content">
-            <div class="description-box">
+          <div class="panel-content panel-content-right">
+            <div class="description-box tag-content">
               <ul class="info-list">
-                <li v-for="(item, idx) in tagInfoList" :key="'tag-' + idx">{{ item }}</li>
+                <li 
+                  v-for="(item, idx) in tagInfoList" 
+                  :key="'tag-' + idx"
+                  :class="{ 'first-item': item.toString().includes('小类信息') }"
+                >
+                  {{ item }}
+                </li>
               </ul>
             </div>
           </div>
         </div>
 
-        <div class="panel-right-bottom">
+        <!-- 预测信息面板 -->
+        <div class="panel-right-predict">
           <div class="panel-header">
             <span>预测信息</span>
           </div>
-          <div class="panel-content">
-            <div class="description-box mb-4">
+          <div class="panel-content panel-content-right">
+            <div class="description-box predict-content">
               <ul class="info-list">
-                <li v-for="(item, idx) in predictInfoList" :key="'pre-' + idx">
+                <li 
+                  v-for="(item, idx) in predictInfoList" 
+                  :key="'pre-' + idx"
+                  :class="{ 'first-item': (typeof item === 'object' ? item.label : item.toString()).includes('小类信息') }"
+                >
                   <span v-if="typeof item === 'object'">
                     {{ item.label }}
                     <span :style="{ color: item.color || '#00e5ff' }">{{ item.value }}</span>
@@ -96,21 +108,29 @@
                 </li>
               </ul>
             </div>
-            <div class="panel-header header-accuracy">偏差检测准确率</div>
-            <div class="metric-box">
+          </div>
+        </div>
+
+        <!-- 偏差检测准确率面板 -->
+        <div class="panel-right-accuracy">
+          <div class="accuracy-content">
+            <span class="accuracy-label">偏差检测准确率</span>
+            <span class="accuracy-value">
               <template v-if="accuracyRate !== '—'">
                 {{ accuracyRate }}
               </template>
               <template v-else>
                 N/A
               </template>
-            </div>
-            <div class="action-buttons">
-              <button @click="downloadJsonData" class="btn-export-result" :disabled="isLoading">
-                结果导出
-              </button>
-            </div>
+            </span>
           </div>
+        </div>
+
+        <!-- 结果导出按钮 -->
+        <div class="panel-right-button">
+          <button @click="downloadJsonData" class="btn-export-result" :disabled="isLoading">
+            结果导出
+          </button>
         </div>
       </div>
     </div>
@@ -576,7 +596,7 @@ body {
   background-image: url('~@/assets/images/step2/bg.png');
   background-size: cover;
   background-repeat: no-repeat;
-  background-position: center center;
+  background-position: center top;
   opacity: 1;
   z-index: -1;
 }
@@ -665,7 +685,7 @@ body {
 }
 
 /* 面板通用样式 */
-[class^="panel-"], .design-module {
+[class^="panel-"]:not(.panel-right-button):not(.panel-right-accuracy), .design-module {
   width: 100%;
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -681,6 +701,62 @@ body {
   background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
 }
 
+/* 右侧标签信息面板 */
+.panel-right-tag {
+  flex-shrink: 0;
+  background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  margin-bottom: 15px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  width: 100%;
+}
+
+/* 右侧预测信息面板 */
+.panel-right-predict {
+  flex-shrink: 0;
+  background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  margin-bottom: 15px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  width: 100%;
+}
+
+/* 偏差检测准确率面板 */
+.panel-right-accuracy {
+  flex-shrink: 0;
+  width: 100%;
+  background-image: url('~@/assets/images/step1/-s-弹窗-偏差检测准确率.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  margin-bottom: 15px;
+  padding: 20px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+}
+
+/* 结果导出按钮区域 */
+.panel-right-button {
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+  min-height: 70px;
+  background: none;
+}
+
+/* 兼容旧样式 */
 .panel-right-top {
   height: 55%;
   flex-shrink: 0;
@@ -701,7 +777,21 @@ body {
   overflow: hidden;
 }
 
+/* 标签信息和预测信息专用的 panel-content 样式 - 铺满父元素 */
+.panel-right-tag .panel-content-right,
+.panel-right-predict .panel-content-right {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  padding: 0 !important;
+  margin: 0;
+  min-height: 0;
+}
+
 /* 面板标题 */
+.panel-header {
+  padding-left: 50px !important;
+}
 .panel-header, .design-module-label {
   height: 35px;
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
@@ -711,11 +801,12 @@ body {
   color: #fff;
   font-size: 1rem;
   font-weight: bold;
-  padding-left: 0;
-  margin-bottom: 10px;
+  padding: 0 20px;
+  margin: 0;
+  margin-bottom: 0;
   display: flex;
   justify-content: center;
-  align-items: center;
+  /* align-items: center; */
 }
 
 /* 设计模块特定样式 */
@@ -854,12 +945,34 @@ body {
 /* 信息列表样式 */
 .description-box {
   flex-grow: 1;
-  background-color: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(0, 229, 255, 0.3);
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
   color: #eee;
   font-size: 0.9rem;
   line-height: 1.6;
   padding: 15px !important;
+  overflow-y: auto;
+  border-radius: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 标签信息和预测信息的内容框样式 - 无边框，占满父元素 */
+.tag-content,
+.predict-content {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 15px 20px !important;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
 }
 
@@ -884,23 +997,40 @@ body {
 
 .info-list li {
   position: relative;
-  padding-left: 20px;
-  margin-bottom: 10px;
-  line-height: 1.5;
+  padding: 10px 0;
+  margin: 0;
+  line-height: 1.6;
   color: #e8f4ff;
+  font-size: 0.95rem;
+  padding-left: 0;
+  padding-right: 0;
 }
 
+/* 移除左侧黄色条 */
 .info-list li:before {
-  content: "";
-  width: 10px;
-  height: 10px;
-  background: #00e5ff;
-  border-radius: 50%;
-  position: absolute;
-  left: 0;
-  top: 8px;
-  box-shadow: 0 0 8px #00e5ff;
+  display: none;
 }
+
+/* 所有列表项底部添加分隔线 */
+.info-list li::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-image: url('~@/assets/images/step2/blueline.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center;
+}
+
+/* 第一项（小类信息）使用黄色线 */
+.info-list li.first-item::after {
+  background-image: url('~@/assets/images/step2/yellowline.png');
+}
+
+/* 所有项都需要底部分隔线，包括最后一项 */
 
 .text-red {
   color: #ff4d4d;
@@ -909,6 +1039,40 @@ body {
 }
 
 /* 准确率显示 */
+.accuracy-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0 15px;
+}
+
+.accuracy-label {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.accuracy-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #00e5ff;
+  text-shadow: 0 0 10px #00e5ff, 0 0 20px rgba(0, 229, 255, 0.5);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* 兼容旧样式 */
+.accuracy-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  margin: 15px 0;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+}
+
 .metric-box {
   flex-grow: 1;
   display: flex;
@@ -959,20 +1123,38 @@ body {
 }
 
 .btn-export-result {
-  background: none;
-  border: none;
-  cursor: pointer;
-  width: 200px;
-  height: 48px;
   background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
+  background-position: center;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  max-width: 280px;
+  height: 60px;
   color: #333;
   font-size: 1.1rem;
   font-weight: bold;
   display: inline-flex;
   justify-content: center;
   align-items: center;
+  transition: all 0.3s ease;
+  position: relative;
+  padding: 0;
+}
+
+.btn-export-result:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+/* 兼容旧样式 */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 15px 0 10px 0;
+  margin-top: auto;
 }
 
 .btn-export-result:disabled {
