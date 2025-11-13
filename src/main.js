@@ -3,6 +3,7 @@
 import Vue from 'vue'
 import App from './App'
 import router from './router'
+import Antd from 'ant-design-vue'
 import BootstrapVue from 'bootstrap-vue'
 import BootstrapVueIcons from 'bootstrap-vue/dist/bootstrap-vue-icons.esm'
 import 'bootstrap/dist/css/bootstrap.css'
@@ -27,6 +28,8 @@ Vue.use(AxiosPlugin)
 // 引入BootstapVue
 Vue.use(BootstrapVue)
 Vue.use(BootstrapVueIcons)
+
+Vue.use(Antd)
 
 Vue.config.productionTip = false
 // 注意，Vue.use方法必须在new Vue之前被调用

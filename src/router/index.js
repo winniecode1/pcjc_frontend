@@ -11,6 +11,8 @@ import PriorKnowledge from '../pages/PriorKnowledge.vue'
 import DecisionMaking from '../pages/DecisionMaking.vue'
 import AttributionDiagnosis from '../pages/AttributionDiagnosis.vue'
 import AttributionDiagnosisV2 from '../pages/AttributionDiagnosisV2.vue'
+import HomePage from '../pages/home_page/index.vue'
+
 Vue.use(Router)
 
 export default new Router({
@@ -22,7 +24,7 @@ export default new Router({
     },
     {
       path: '/',
-      component: index,
+      component: HomePage,
       pathMatch: 'full'
     },
     {

@@ -39,7 +39,7 @@
         </b-row>
         <b-row class="justify-content-start pt-1 custom-gutter">
           <!-- <b-col lg="2"></b-col> -->
-  
+
           <!-- <b-col lg="2" class="custom-col">
             <login-modal class="modal-login"></login-modal>
           </b-col>
@@ -56,13 +56,13 @@
       </div>
     </div>
   </template>
-  
+
   <script>
   import registerModal from './components/registerModal'
   import loginModal from './components/loginModal'
   import navigateBar from './components/navigateBar'
   import indexTool from './components/indexTool'
-  
+
 
   export default {
     name: 'index',
@@ -83,7 +83,7 @@
 
   }
   </script>
-  
+
   <style lang="scss" scoped>
 
 .navbar {
@@ -113,7 +113,7 @@
     .first-half {
       color: #2168BE; /* 前半段文字的颜色 */
     }
-  
+
     .second-half {
       color: #4675AB; /* 后半段文字的颜色 */
     }
@@ -125,7 +125,7 @@
         padding-left: 0px; /* 调整列的左内边距 */
         padding-right: 0px; /* 调整列的右内边距 */
       }
-  
+
     .section {
       background-color: #EAF4FE;
       color: black;
@@ -137,7 +137,7 @@
       z-index: 2;
       /*padding-bottom: 200px;*/
     }
-  
+
     .product-name {
       font-size: 36px;
       text-transform: uppercase;
@@ -150,7 +150,7 @@
       margin-bottom: 10px;
       line-height: 1.1;
     }
-  
+
     .lead {
       margin: 30px auto 40px;
       font-size: 24px;
@@ -158,7 +158,7 @@
       font-weight: 300;
       line-height: 1.4;
     }
-  
+
     .background-image {
       ////padding-top: 80px;
       position: absolute;
@@ -172,7 +172,7 @@
       background-size: auto;
       opacity: .8;
     }
-  
+
     .modal-login {
     }
   //   body {
@@ -293,7 +293,7 @@
         }
 
     .tool-shift {
-      margin-right: 100px; 
+      margin-right: 100px;
     }
     .img_box {
         position: absolute;
@@ -319,4 +319,3 @@
   </style>
   // WEBPACK FOOTER //
   // src/pages/index.vue
-  

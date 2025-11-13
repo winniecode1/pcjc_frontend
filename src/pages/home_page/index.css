@@ -1,0 +1,294 @@
+/* .ant-btn-link.ant-btn {
+  all: unset;
+  height: 390px;
+} */
+
+@font-face {
+  font-family: 'DOUYUFont';
+  src: url('../../assets/douyuFont-2.otf') format('truetype');
+}
+
+.home-page {
+  display: flex;
+  width: 100%;
+  min-width: 1920px;
+  height: 100%;
+  min-height: 922px;
+  flex-direction: column;
+  /* border: 1px solid red; 或指定边框宽度，如 2px、3px */
+  background-image: url('../../assets/home_page/background.png');
+  background-size: cover; /* 等比例缩放图片以确保完全显示 */
+  background-position: center center; /* 图片居中 */
+  background-repeat: no-repeat; /* 防止图片重复 */
+}
+
+.home-page-head {
+  min-width: 100%;
+  height: 121px;
+  /* border: 1px solid red; */
+  display: grid;
+  justify-content: center; /* 水平居中 */
+  /* opacity: 0; */
+}
+
+.home-page-head-box {
+  /* 顶部栏 */
+  width: 855px;
+  height: 121px;
+  top: 0px;
+  display: grid;
+  justify-content: center; /* 水平居中 */
+  background-image: url('../../assets/home_page/top_box.png');
+  background-size: cover; /* 等比例缩放图片以确保完全显示 */
+  background-position: center center; /* 图片居中 */
+  background-repeat: no-repeat; /* 防止图片重复 */
+}
+
+.home-page-head-text {
+  /* 人机混合信息认知传播系统 */
+  width: 547px;
+  height: 46px;
+  margin-top: 10px;
+  top: 16px;
+  left: 687px;
+  font-family: 'DOUYUFont';
+  color: #ffffff;
+  font-weight: 400;
+  font-size: 35px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: center;
+  /* background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(191, 245, 255, 1) 100%); */
+}
+
+.home-page-context {
+  /* transform: translateY(-11px); */
+  min-width: 1771px;
+  min-height: 834px;
+  /* background-color: aqua; */
+  /* flex: 1; 关键！自动占据剩余所有空间 */
+  /* border: 1px solid red; */
+  padding-bottom: 10px;
+  display: flex;
+  justify-content: center;
+  background-image: url('../../assets/home_page/context.png');
+  background-size: contain; /* 等比例缩放图片以确保完全显示 */
+  background-position: center; /* 图片居中 */
+  background-repeat: no-repeat; /* 防止图片重复 */
+}
+
+.home-page-context-multimodal {
+  height: 390px;
+  width: 280px;
+  margin-top: 130px;
+  margin-right: 30px;
+  padding: 0px;
+  border: 0px;
+  background-image: url('../../assets/home_page/multimodal_box.png');
+  background-size: contain; /* 等比例缩放图片以确保完全显示 */
+  background-position: center; /* 图片居中 */
+  background-repeat: no-repeat; /* 防止图片重复 */
+}
+
+.home-page-context-multimodal-box {
+  height: 316px;
+  width: 280px;
+  margin: 0px;
+}
+
+.home-page-context-multimodal-icon {
+  height: 176px;
+  width: 176px;
+  margin: 62px 56px 0px 58px;
+  /* background-image: url('../../assets/home_page/multimodal_icon.png'); */
+  /* background-image: url('../../assets/home_page/multimodal_icon.png');
+  background-size: auto;
+  background-position: center;
+  background-repeat: no-repeat; */
+}
+
+.home-page-context-multimodal-text {
+  transform: translateY(-36px) rotate(4deg);
+  margin-left: 10px;
+  height: 74px;
+  width: 232px;
+  /* background-color: blueviolet; */
+  font-family: 'DOUYUFont';
+  color: #ffffff;
+  font-weight: 400;
+  font-size: 22px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: center;
+}
+
+.home-page-context-priori-knowledge {
+  height: 360px;
+  width: 280px;
+  margin-top: 177px;
+  margin-right: 30px;
+  padding: 0px;
+  border: 0px;
+  background-image: url('../../assets/home_page/priori_knowledge_box.png');
+  background-size: contain; /* 等比例缩放图片以确保完全显示 */
+  background-position: center; /* 图片居中 */
+  background-repeat: no-repeat; /* 防止图片重复 */
+}
+
+.home-page-context-priori-knowledge-box {
+  height: 286px;
+  width: 280px;
+}
+
+.home-page-context-priori-knowledge-icon {
+  height: 171px;
+  width: 171px;
+  margin: 66px 54px 0px 56px;
+  /* background-image: url('../../assets/home_page/knowledge_icon.png');
+  background-size: auto;
+  background-position: center;
+  background-repeat: no-repeat; */
+}
+
+.home-page-context-priori-knowledge-text {
+  transform: translateY(-48px) rotate(4deg);
+  margin-left: 7px;
+  height: 74px;
+  width: 232px;
+  /* background-color: blueviolet; */
+  font-family: 'DOUYUFont';
+  color: #ffffff;
+  font-weight: 400;
+  font-size: 22px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: center;
+}
+
+.home-page-context-negotiation {
+  height: 380px;
+  width: 280px;
+  margin-top: 200px;
+  margin-right: 30px;
+  padding: 0px;
+  border: 0px;
+  background-image: url('../../assets/home_page/negotiation_box.png');
+  background-size: contain; /* 等比例缩放图片以确保完全显示 */
+  background-position: center; /* 图片居中 */
+  background-repeat: no-repeat; /* 防止图片重复 */
+}
+
+.home-page-context-negotiation-box {
+  height: 322px;
+  width: 280px;
+}
+
+.home-page-context-negotiation-icon {
+  height: 160px;
+  width: 161px;
+  margin: 62px 65px 0px 65px;
+  /* background-image: url('../../assets/home_page/negotiation_icon.png');
+  background-size: auto;
+  background-position: center;
+  background-repeat: no-repeat; */
+}
+
+.home-page-context-negotiation-text {
+  transform: translateY(-66px);
+  margin-left: 31px;
+  height: 58px;
+  width: 229px;
+  /* background-color: blueviolet; */
+  font-family: 'DOUYUFont';
+  color: #ffffff;
+  font-weight: 400;
+  font-size: 22px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: center;
+}
+
+.home-page-context-selection {
+  height: 360px;
+  width: 280px;
+  margin-top: 177px;
+  margin-right: 30px;
+  padding: 0px;
+  border: 0px;
+  background-image: url('../../assets/home_page/selection_box.png');
+  background-size: contain; /* 等比例缩放图片以确保完全显示 */
+  background-position: center; /* 图片居中 */
+  background-repeat: no-repeat; /* 防止图片重复 */
+}
+
+.home-page-context-selection-box {
+  height: 286px;
+  width: 280px;
+}
+
+.home-page-context-selection-icon {
+  height: 161px;
+  width: 169px;
+  margin: 69px 62px 0px 49px;
+  /* background-image: url('../../assets/home_page/selection_icon.png');
+  background-size: auto;
+  background-position: center;
+  background-repeat: no-repeat; */
+}
+
+.home-page-context-selection-text {
+  transform: translateY(-51px) rotate(-4deg);
+  margin-left: 33px;
+  height: 74px;
+  width: 232px;
+  /* background-color: blueviolet; */
+  font-family: 'DOUYUFont';
+  color: #ffffff;
+  font-weight: 400;
+  font-size: 22px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: center;
+}
+
+.home-page-context-diagnosis {
+  height: 390px;
+  width: 280px;
+  padding: 0px;
+  margin-top: 130px;
+  border: 0px;
+  background-image: url('../../assets/home_page/diagnosis_box.png');
+  background-size: contain; /* 等比例缩放图片以确保完全显示 */
+  background-position: center; /* 图片居中 */
+  background-repeat: no-repeat; /* 防止图片重复 */
+}
+
+.home-page-context-diagnosis-box {
+  height: 314px;
+  width: 280px;
+}
+
+.home-page-context-diagnosis-icon {
+  height: 166px;
+  width: 175px;
+  margin: 76px 62px 0px 62px;
+  /* background-image: url('../../assets/home_page/diagnosis_icon.png');
+  background-size: auto;
+  background-position: center;
+  background-repeat: no-repeat; */
+}
+
+.home-page-context-diagnosis-text {
+  transform: translateY(-45px) rotate(-4deg);
+  margin-left: 27px;
+  height: 76px;
+  width: 261px;
+  /* background-color: blueviolet; */
+  font-family: 'DOUYUFont';
+  color: #ffffff;
+  font-weight: 400;
+  font-size: 22px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: center;
+}
