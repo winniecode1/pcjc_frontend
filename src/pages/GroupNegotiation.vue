@@ -641,11 +641,18 @@ export default {
 }
 
 /* 3. 核心内容区 */
+.middle-column .panel-left .panel-content {
+  background-image: none !important;
+  margin: 0;
+  padding: 0 !important;
+}
+
 .content-row {
   flex-grow: 1;
   width: 100%;
   max-width: 100%;
   margin: 0;
+  margin-left: 50px;
   position: relative;
   z-index: 2;
 }
@@ -677,6 +684,18 @@ export default {
   gap: 5px;
   position: relative;
   z-index: 2;
+}
+
+.panel-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+  background: none;
+  padding: 0;
+  margin: 0;
 }
 
 /* 面板通用样式 */
