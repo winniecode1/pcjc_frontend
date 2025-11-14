@@ -26,9 +26,9 @@
       <!-- 左侧视频和按钮区域 -->
       <div class="design-left-column">
         <div class="design-module video-module">
-          <div class="panel-header">视频演示</div>
+          <div class="panel-header">多模态信息认知传播结果</div>
           <div class="design-module-content video-content-wrapper">
-            <video v-if="videoUrl" :src="videoUrl" controls class="video-display" @error="handleVideoError"></video>
+            <video v-if="videoUrl" :src="videoUrl" controls autoplay loop muted class="video-display" @error="handleVideoError"></video>
             <div v-else class="placeholder-text">
               {{ videoMessage }}
             </div>
@@ -45,7 +45,7 @@
 
         <div class="button-container">
           <button @click="startNegotiation" class="btn-start-detect" :disabled="isLoading">
-            <span>开始检测</span>
+            <span>加载先验知识</span>
           </button>
         </div>
       </div>
@@ -58,7 +58,7 @@
           </div>
           <div class="panel-content">
             <div class="graph-container" ref="graphContainer" style="height: calc(100% - 40px);">
-              <div class="graph-title">知识图谱先验信息</div>
+              <div class="graph-title">领域先验知识</div>
               <svg ref="graphSvg" style="width: 100%; height: calc(100% - 30px);"></svg>
             </div>
           </div>
@@ -70,13 +70,13 @@
         <!-- 标签信息面板 -->
         <div class="panel-right-tag">
           <div class="panel-header">
-            <span>标签信息</span>
+            <span>真值信息</span>
           </div>
           <div class="panel-content panel-content-right">
             <div class="description-box tag-content">
               <ul class="info-list">
-                <li 
-                  v-for="(item, idx) in tagInfoList" 
+                <li
+                  v-for="(item, idx) in tagInfoList"
                   :key="'tag-' + idx"
                   :class="{ 'first-item': item.toString().includes('小类信息') }"
                 >
@@ -90,13 +90,13 @@
         <!-- 预测信息面板 -->
         <div class="panel-right-predict">
           <div class="panel-header">
-            <span>预测信息</span>
+            <span>先验知识认知偏差检测结果</span>
           </div>
           <div class="panel-content panel-content-right">
             <div class="description-box predict-content">
               <ul class="info-list">
-                <li 
-                  v-for="(item, idx) in predictInfoList" 
+                <li
+                  v-for="(item, idx) in predictInfoList"
                   :key="'pre-' + idx"
                   :class="{ 'first-item': (typeof item === 'object' ? item.label : item.toString()).includes('小类信息') }"
                 >
@@ -217,26 +217,26 @@ export default {
     //     const module1ResStr = localStorage.getItem('module1Res');
     //     if (module1ResStr) {
     //       const module1Res = JSON.parse(module1ResStr);
-          
+
     //       // 提取视频路径并清理
     //       if (module1Res.originalVideoPath) {
     //         this.videoUrl = module1Res.originalVideoPath.replace(/^\"|\"$/g, '').trim();
     //         this.videoMessage = "视频已加载";
     //         console.log('成功加载视频:', this.videoUrl);
     //       }
-          
+
     //       // 提取关键帧路径并清理
     //       if (module1Res.key_frame_path) {
     //         this.keyFramePath = module1Res.key_frame_path.replace(/^\"|\"$/g, '').trim();
     //         console.log('成功加载关键帧路径:', this.keyFramePath);
     //       }
-          
+
     //       // 提取设备类型并清理
     //       if (module1Res.deviceType) {
     //         this.deviceType = module1Res.deviceType.replace(/^\"|\"$/g, '').trim();
     //         console.log('成功加载设备类型:', this.deviceType);
     //       }
-          
+
     //       // 提取视频描述并清理
     //       if (module1Res.video_description) {
     //         this.videoDescription = module1Res.video_description.replace(/^\"|\"$/g, '').trim();
@@ -256,167 +256,187 @@ export default {
       this.fullWidth = window.innerWidth;
       this.fullHeight = window.innerHeight;
       // 重新渲染以适应新尺寸
-      this.$nextTick(() => {
-        this.renderGraph();
-      });
+      // this.$nextTick(() => {
+      //   this.renderGraph();
+      // });
     },
     startNegotiation() {
       console.log("开始先验知识");
       this.startInfer();
     },
-    renderGraph() {
+    async renderGraph() {
       const d3 = require('d3');
       const container = this.$refs.graphContainer;
       const svgEl = this.$refs.graphSvg;
       if (!container || !svgEl) return;
-      
+
       // 1. 新增：验证数据中的color字段
       console.log("渲染节点数据（含color）：", this.nodes);
       console.log("渲染链接数据（含color）：", this.links);
 
       const width = container.clientWidth - 40;
       const height = container.clientHeight - 60;
-      
+
       const svg = d3.select(svgEl)
         .attr('width', width)
         .attr('height', height);
-      
+
       svg.selectAll('*').remove();
 
-      // 使用从后端获取的nodes和links，如果没有则使用默认数据
-      let renderNodes = this.nodes.length ? JSON.parse(JSON.stringify(this.nodes)) : [
-        { id: '飞机', color: '#87CEEB' },
-        { id: '战斗机', color: '#FF6B6B' },
-        { id: '无人机', color: '#95E1D3' },
-        { id: '运输机', color: '#FFD93D' }
-      ];
+      try {
+        if (this.nodes.length == 0) {
+          const response = await axios.get('http://10.109.253.71:8001/module2/knowledge/all')
+          console.log('Backend response:', response.data);
+          const data = response.data;
 
-      // 清理后端节点的x/y/fx/fy，避免拖拽报错
-      renderNodes.forEach(node => {
-        delete node.x;
-        delete node.y;
-        delete node.fx;
-        delete node.fy;
-      });
+          if (data.knowledge_list && data.knowledge_list.nodes && data.knowledge_list.links) {
+            this.nodes = data.knowledge_list.nodes || [];
+            this.links = data.knowledge_list.links || [];
+          }
+        }
 
-      // 默认将id为'飞机'的节点放在中央，如果不存在则将第一个节点放在中央
-      const centerNode = renderNodes.find(node => node.is_center === true) || renderNodes[0];
-      if (centerNode) {
-        centerNode.x = width / 2;
-        centerNode.y = height / 2;
-        // 为中心节点设置更强的固定力
-        centerNode.fx = width / 2;
-        centerNode.fy = height / 2;
+        // 使用从后端获取的nodes和links，如果没有则使用默认数据
+        // let renderNodes = this.nodes.length ? JSON.parse(JSON.stringify(this.nodes)) : [
+        //   { id: '飞机', color: '#87CEEB' },
+        //   { id: '战斗机', color: '#FF6B6B' },
+        //   { id: '无人机', color: '#95E1D3' },
+        //   { id: '运输机', color: '#FFD93D' }
+        // ];
+        let renderNodes = this.nodes.length ? JSON.parse(JSON.stringify(this.nodes)) : []
+
+        // 清理后端节点的x/y/fx/fy，避免拖拽报错
+        renderNodes.forEach(node => {
+          delete node.x;
+          delete node.y;
+          delete node.fx;
+          delete node.fy;
+        });
+
+        // 默认将id为'飞机'的节点放在中央，如果不存在则将第一个节点放在中央
+        const centerNode = renderNodes.find(node => node.is_center === true) || renderNodes[0];
+        if (centerNode) {
+          centerNode.x = width / 2;
+          centerNode.y = height / 2;
+          // 为中心节点设置更强的固定力
+          centerNode.fx = width / 2;
+          centerNode.fy = height / 2;
+        }
+
+        // const renderLinks = this.links.length ? this.links : [
+        //   { source: '飞机', target: '战斗机' },
+        //   { source: '飞机', target: '无人机' },
+        //   { source: '飞机', target: '运输机' }
+        // ];
+
+        const renderLinks = this.links.length ? this.links : []
+
+        const simulation = d3.forceSimulation(renderNodes)
+          .force('link', d3.forceLink(renderLinks).id(d => d.id).distance(150))
+          .force('charge', d3.forceManyBody().strength(-500))
+          .force('x', d3.forceX(width / 2))
+          .force('y', d3.forceY(height / 2))
+          .force('collide', d3.forceCollide().radius(40));
+
+        // 添加箭头标记
+        const defs = svg.append('defs');
+        defs.append('marker')
+          .attr('id', 'arrow')
+          .attr('orient', 'auto')
+          .attr('markerUnits', 'strokeWidth')
+          .attr('viewBox', '0 -5 10 10')
+          .attr('refX', 36)
+          .attr('refY', 0)
+          .attr('markerWidth', 8)
+          .attr('markerHeight', 8)
+          .append('path')
+          .attr('d', 'M3 5 L8 0 L3 -5')
+          .attr('fill', '#999');
+
+        const link = svg.append('g')
+          .attr('class', 'links')
+          .selectAll('line')
+          .data(renderLinks)
+          .enter().append('line')
+          .attr('stroke', d => {
+            // 新增：打印链接color，确认是否读取到
+            console.log("链接颜色：", d.color);
+            return d.color || '#999';
+          }) // 使用链接自身的颜色，如果没有则使用默认颜色
+          .attr('stroke-width', 2)
+          .attr('marker-end', 'url(#arrow)');
+
+        const nodeGroup = svg.append('g')
+          .attr('class', 'nodes')
+          .selectAll('g')
+          .data(renderNodes)
+          .enter().append('g')
+          .style('cursor', 'move');
+
+        nodeGroup.append('circle')
+          .attr('r', 30)
+          .attr('fill', d => {
+            // 新增：打印节点color，确认是否读取到
+            console.log("节点颜色：", d.color);
+            return d.color || '#69b3a2';
+          }) // 使用节点自身的颜色，如果没有则使用默认颜色
+          .attr('stroke', '#333')
+          .attr('stroke-width', 2);
+
+        nodeGroup.append('text')
+          .attr('text-anchor', 'middle')
+          .attr('dy', 5)
+          .attr("fill", "#000")
+          .style('font-size', '14px')
+          .style('pointer-events', 'none')
+          .text(d => d.id);
+
+        // 拖拽功能
+        const dragBehavior = d3.drag()
+          .on('start', function(d) {
+            if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+          })
+          .on('drag', function(d) {
+            const radius = 30;
+            d.fx = Math.max(radius, Math.min(width - radius, d3.event.x));
+            d.fy = Math.max(radius, Math.min(height - radius, d3.event.y));
+          })
+          .on('end', function(d) {
+            if (!d3.event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+          });
+
+        nodeGroup.call(dragBehavior);
+
+        // 节点点击事件
+        nodeGroup.on('click', (d) => {
+          console.log('节点被点击:', d.id);
+          this.$emit('node-click', d);
+        });
+
+        simulation.on('tick', () => {
+          // 限制节点在边界内
+          renderNodes.forEach(d => {
+            const radius = 30;
+            d.x = Math.max(radius, Math.min(width - radius, d.x));
+            d.y = Math.max(radius, Math.min(height - radius, d.y));
+          });
+
+          link
+            .attr('x1', d => d.source.x)
+            .attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x)
+            .attr('y2', d => d.target.y);
+
+          nodeGroup.attr('transform', d => `translate(${d.x},${d.y})`);
+        });
+      } catch (error) {
+        console.log(error);
       }
-
-      const renderLinks = this.links.length ? this.links : [
-        { source: '飞机', target: '战斗机' },
-        { source: '飞机', target: '无人机' },
-        { source: '飞机', target: '运输机' }
-      ];
-      
-      const simulation = d3.forceSimulation(renderNodes)
-        .force('link', d3.forceLink(renderLinks).id(d => d.id).distance(150))
-        .force('charge', d3.forceManyBody().strength(-500))
-        .force('x', d3.forceX(width / 2))
-        .force('y', d3.forceY(height / 2))
-        .force('collide', d3.forceCollide().radius(40));
-
-      // 添加箭头标记
-      const defs = svg.append('defs');
-      defs.append('marker')
-        .attr('id', 'arrow')
-        .attr('orient', 'auto')
-        .attr('markerUnits', 'strokeWidth')
-        .attr('viewBox', '0 -5 10 10')
-        .attr('refX', 36)
-        .attr('refY', 0)
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 8)
-        .append('path')
-        .attr('d', 'M3 5 L8 0 L3 -5')
-        .attr('fill', '#999');
-
-      const link = svg.append('g')
-        .attr('class', 'links')
-        .selectAll('line')
-        .data(renderLinks)
-        .enter().append('line')
-        .attr('stroke', d => {
-          // 新增：打印链接color，确认是否读取到
-          console.log("链接颜色：", d.color);
-          return d.color || '#999';
-        }) // 使用链接自身的颜色，如果没有则使用默认颜色
-        .attr('stroke-width', 2)
-        .attr('marker-end', 'url(#arrow)');
-
-      const nodeGroup = svg.append('g')
-        .attr('class', 'nodes')
-        .selectAll('g')
-        .data(renderNodes)
-        .enter().append('g')
-        .style('cursor', 'move');
-
-      nodeGroup.append('circle')
-        .attr('r', 30)
-        .attr('fill', d => {
-          // 新增：打印节点color，确认是否读取到
-          console.log("节点颜色：", d.color);
-          return d.color || '#69b3a2';
-        }) // 使用节点自身的颜色，如果没有则使用默认颜色
-        .attr('stroke', '#333')
-        .attr('stroke-width', 2);
-
-      nodeGroup.append('text')
-        .attr('text-anchor', 'middle')
-        .attr('dy', 5)
-        .style('font-size', '14px')
-        .style('pointer-events', 'none')
-        .text(d => d.id);
-
-      // 拖拽功能
-      const dragBehavior = d3.drag()
-        .on('start', function(d) {
-          if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-          d.fx = d.x;
-          d.fy = d.y;
-        })
-        .on('drag', function(d) {
-          const radius = 30;
-          d.fx = Math.max(radius, Math.min(width - radius, d3.event.x));
-          d.fy = Math.max(radius, Math.min(height - radius, d3.event.y));
-        })
-        .on('end', function(d) {
-          if (!d3.event.active) simulation.alphaTarget(0);
-          d.fx = null;
-          d.fy = null;
-        });
-
-      nodeGroup.call(dragBehavior);
-
-      // 节点点击事件
-      nodeGroup.on('click', (d) => {
-        console.log('节点被点击:', d.id);
-        this.$emit('node-click', d);
-      });
-
-      simulation.on('tick', () => {
-        // 限制节点在边界内
-        renderNodes.forEach(d => {
-          const radius = 30;
-          d.x = Math.max(radius, Math.min(width - radius, d.x));
-          d.y = Math.max(radius, Math.min(height - radius, d.y));
-        });
-
-        link
-          .attr('x1', d => d.source.x)
-          .attr('y1', d => d.source.y)
-          .attr('x2', d => d.target.x)
-          .attr('y2', d => d.target.y);
-
-        nodeGroup.attr('transform', d => `translate(${d.x},${d.y})`);
-      });
     },
+
     startInfer() {
       this.isLoading = true;
 
@@ -428,13 +448,13 @@ export default {
       }).then(res => {
         console.log('Backend response:', res.data);
         const data = res.data;
-        
+
         // 处理图谱数据
         if (data.knowledge_info && data.knowledge_info.length > 0) {
           this.nodes = data.knowledge_info[0].nodes || [];
           this.links = data.knowledge_info[0].links || [];
         }
-        
+
         // 处理标签信息
         if (data.label_info && data.label_info.length > 0 && data.label_info[0].length > 0) {
           const labelData = data.label_info[0][0];
@@ -447,12 +467,12 @@ export default {
             `动力信息：${labelData.power || '未知'}`
           ];
         }
-        
+
         // 处理属性颜色
         if (data.property_color && data.property_color.length > 0 && data.property_color[0].length > 0) {
           this.propertyColors = data.property_color[0][0];
         }
-        
+
         // 处理预测信息
         if (data.result && data.result.length > 0 && data.result[0].length > 0) {
           const predictData = data.result[0][0];
@@ -475,10 +495,10 @@ export default {
           console.log("module2Res:", localStorage.getItem('module2Res'));
           console.log("---------------------------------");
         }
-        
+
         // 处理准确率
         this.accuracyRate = data.accuracy !== undefined ? (data.accuracy * 100) + '%' : '—';
-        
+
         // 重新渲染图谱
         this.$nextTick(() => {
           this.renderGraph();
@@ -496,23 +516,23 @@ export default {
         // 先获取整个module1Res对象
         const module1ResStr = localStorage.getItem('module1Res');
         console.log("从 LocalStorage 读取 'module1Res':", module1ResStr ? '存在' : '不存在');
-        
+
         if (module1ResStr) {
           const module1Res = JSON.parse(module1ResStr);
           // 从对象中获取originalVideoPath
           const videoPath = module1Res.originalVideoPath;
           console.log("从 module1Res 中获取 originalVideoPath:", videoPath);
-          
+
           // 清理可能存在的空格和反引号
           const cleanedVideoPath = videoPath ? videoPath.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '') : null;
-          
+
           if (cleanedVideoPath && cleanedVideoPath !== '无原视频路径') {
             this.videoUrl = cleanedVideoPath;
           } else {
             this.videoMessage = '未在 module1Res 中找到有效 "originalVideoPath"。';
             console.warn(this.videoMessage);
           }
-          
+
           // 提取视频描述并清理
           if (module1Res.video_description) {
             this.VIDEO_DESCRIPTION = module1Res.video_description.replace(/^"|"$/g, '').trim();
@@ -1205,15 +1225,15 @@ body {
   .video-frame {
     height: 200px;
   }
-  
+
   .metric-box {
     font-size: 2.8rem;
   }
-  
+
   [class^="panel-"] {
     padding: 20px;
   }
-  
+
   .panel-header {
     height: 35px;
   }
@@ -1224,26 +1244,26 @@ body {
     height: auto;
     margin-bottom: 20px;
   }
-  
+
   .content-row {
     flex-direction: column;
     align-items: center;
   }
-  
+
   .design-left-column, .right-column {
     width: 80% !important;
     max-width: 80% !important;
   }
-  
+
   .middle-column {
     width: 90% !important;
     max-width: 90% !important;
   }
-  
+
   .right-column {
     min-height: 600px;
   }
-  
+
   .panel-left { min-height: 400px; }
   .panel-right-top { min-height: 250px; height: auto; }
   .panel-right-bottom { min-height: 150px; }
