@@ -652,7 +652,7 @@ export default {
      */
     async exportResult() {
       try {
-        const response = await axios.get('/module5/module5/download', {
+        const response = await axios.get('/module5/api/download', {
           responseType: 'blob' // 重要：告诉axios这是二进制数据
         });
         
