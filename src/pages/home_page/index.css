@@ -292,3 +292,8 @@
   text-decoration: none;
   text-align: center;
 }
+
+.home-page-other{
+  min-width: 1771px;
+  flex: 1;
+}

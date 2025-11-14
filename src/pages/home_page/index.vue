@@ -11,13 +11,13 @@
         <div class="home-page-context-multimodal-box">
           <div class="home-page-context-multimodal-icon"></div>
         </div>
-        <div class="home-page-context-multimodal-text">多模态信息<br />认知偏差检测模式</div>
+        <div class="home-page-context-multimodal-text">多模态信息<br />认知偏差检测模型</div>
       </a-button>
       <a-button @click="priori_knowledge" type="link" class="home-page-context-priori-knowledge">
         <div class="home-page-context-priori-knowledge-box">
           <div class="home-page-context-priori-knowledge-icon"></div>
         </div>
-        <div class="home-page-context-priori-knowledge-text">先验知识<br />认知偏差检测模式</div>
+        <div class="home-page-context-priori-knowledge-text">先验知识<br />认知偏差检测模型</div>
       </a-button>
       <a-button @click="negotiation" type="link" class="home-page-context-negotiation">
         <div class="home-page-context-negotiation-box">
@@ -38,6 +38,7 @@
         <div class="home-page-context-diagnosis-text">多层级传播不一致性<br />根因诊断模型</div>
       </a-button>
     </div>
+    <div class="home-page-other"></div>
   </div>
 </template>
 
