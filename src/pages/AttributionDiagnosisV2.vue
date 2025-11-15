@@ -10,34 +10,47 @@
 
     <!-- 加载/错误提示 -->
     <div v-if="showAlert" class="alert-container">
-      <b-alert :variant="alertVariant" show dismissible @dismissed="showAlert=false">
-        {{ alertMessage }}
-      </b-alert>
+      <div :class="['custom-alert', `alert-${alertVariant}`]">
+        <div class="alert-icon">
+          <span v-if="alertVariant === 'success'">✓</span>
+          <span v-else-if="alertVariant === 'danger'">✕</span>
+          <span v-else-if="alertVariant === 'warning'">⚠</span>
+          <span v-else>ℹ</span>
+        </div>
+        <div class="alert-content">{{ alertMessage }}</div>
+        <button class="alert-close" @click="showAlert = false">✕</button>
+      </div>
     </div>
 
     <!-- 主要内容网格 -->
     <div class="main-content">
       <!-- 模块1：多模态信息认知偏差检测模型 -->
       <div class="module-container" style="top: 17vh; left: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">多模态信息认知偏差检测模型</div>
+        <div class="module-header">多模态信息认知偏差根因诊断</div>
         <div class="module-body">
           <div class="result-section">
-            <div class="section-title">偏差测试结果</div>
+            <div class="section-title">根因诊断与定位结果</div>
             <div class="content-box scrollable" v-html="highlightBrackets(module1BiasTestResult)"></div>
           </div>
           <div class="metric-group">
-              <div class="metric-item">认知传播偏差测试结果: <span>{{ formatPercent(module1PropagationBias, 0) }}</span></div>
-              <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module1IsBiasModule) }}</span></div>
+              <div class="metric-item">认知传播偏差测试结果: 
+                <span v-if="module1PropagationBias !== null && module1PropagationBias !== undefined">{{ formatPercent(module1PropagationBias, 0) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
+              <div class="metric-item">是否是偏差模块: 
+                <span v-if="module1IsBiasModule !== null && module1IsBiasModule !== undefined">{{ formatYesNo(module1IsBiasModule) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
           </div>
         </div>
       </div>
 
       <!-- 模块2：先验知识认知偏差检测模型 -->
       <div class="module-container" style="top: 17vh; right: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">先验知识认知偏差检测模型</div>
+        <div class="module-header">先验知识认知偏差根因诊断</div>
         <div class="module-body">
            <div class="result-section">
-              <div class="section-title">偏差测试结果</div>
+              <div class="section-title">根因诊断与定位结果</div>
               <div class="content-box scrollable">
                   <div class="attributes-grid">
                     <div v-for="attr in module2DisplayAttributes" :key="attr.key" 
@@ -49,40 +62,64 @@
               </div>
             </div>
           <div class="metric-group">
-              <div class="metric-item">模型内部偏差测试结果: <span>{{ formatPercent(module2InternalBias, 0) }}</span></div>
-              <div class="metric-item">认知传播偏差测试结果: <span>{{ formatPercent(module2PropagationBias, 0) }}</span></div>
-              <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module2IsBiasModule) }}</span></div>
+              <div class="metric-item">模型内部偏差测试结果: 
+                <span v-if="module2InternalBias !== null && module2InternalBias !== undefined">{{ formatPercent(module2InternalBias, 0) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
+              <div class="metric-item">认知传播偏差测试结果: 
+                <span v-if="module2PropagationBias !== null && module2PropagationBias !== undefined">{{ formatPercent(module2PropagationBias, 0) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
+              <div class="metric-item">是否是偏差模块: 
+                <span v-if="module2IsBiasModule !== null && module2IsBiasModule !== undefined">{{ formatYesNo(module2IsBiasModule) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
           </div>
         </div>
       </div>
 
       <!-- 模块3：群体协商认知偏差检测模型 -->
       <div class="module-container" style="top: 52vh; left: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">群体协商认知偏差检测模型</div>
+        <div class="module-header">群体协商认知偏差根因诊断</div>
          <div class="module-body">
           <div class="result-section">
-            <div class="section-title">偏差测试结果</div>
+            <div class="section-title">根因诊断与定位结果</div>
             <div class="content-box scrollable" v-html="highlightBrackets(module3BiasTestResult)"></div>
           </div>
           <div class="metric-group">
-              <div class="metric-item">模型内部偏差测试结果: <span>{{ formatPercent(module3InternalBias, 0) }}</span></div>
-              <div class="metric-item">认知传播偏差测试结果: <span>{{ formatPercent(module3PropagationBias, 0) }}</span></div>
-              <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module3IsBiasModule) }}</span></div>
+              <div class="metric-item">模型内部偏差测试结果: 
+                <span v-if="module3InternalBias !== null && module3InternalBias !== undefined">{{ formatPercent(module3InternalBias, 0) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
+              <div class="metric-item">认知传播偏差测试结果: 
+                <span v-if="module3PropagationBias !== null && module3PropagationBias !== undefined">{{ formatPercent(module3PropagationBias, 0) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
+              <div class="metric-item">是否是偏差模块: 
+                <span v-if="module3IsBiasModule !== null && module3IsBiasModule !== undefined">{{ formatYesNo(module3IsBiasModule) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
           </div>
         </div>
       </div>
 
       <!-- 模块4：决策选择认知偏差检测模型 -->
       <div class="module-container" style="top: 52vh; right: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">决策选择认知偏差检测模型</div>
+        <div class="module-header">决策选择认知偏差检测根因诊断</div>
         <div class="module-body">
           <div class="result-section">
-            <div class="section-title">偏差测试结果</div>
+            <div class="section-title">根因诊断与定位结果</div>
             <div class="content-box scrollable" v-html="highlightBrackets(module4BiasTestResult)"></div>
           </div>
           <div class="metric-group">
-            <div class="metric-item">模型内部偏差测试结果: <span>{{ formatPercent(module4InternalBias, 0) }}</span></div>
-            <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module4IsBiasModule) }}</span></div>
+            <div class="metric-item">模型内部偏差测试结果: 
+              <span v-if="module4InternalBias !== null && module4InternalBias !== undefined">{{ formatPercent(module4InternalBias, 0) }}</span>
+              <span v-else class="loading-spinner"></span>
+            </div>
+            <div class="metric-item">是否是偏差模块: 
+              <span v-if="module4IsBiasModule !== null && module4IsBiasModule !== undefined">{{ formatYesNo(module4IsBiasModule) }}</span>
+              <span v-else class="loading-spinner"></span>
+            </div>
           </div>
         </div>
       </div>
@@ -93,11 +130,17 @@
         <div class="diagnosis-card">根因诊断结果</div>
         <div class="metric-card accuracy-card">
             <div class="metric-title">多主体解析准确率</div>
-            <div class="metric-value">{{ formatPercent(accuracy, 0) }}</div>
+            <div class="metric-value">
+              <span v-if="accuracy !== null && accuracy !== undefined">{{ formatPercent(accuracy, 0) }}</span>
+              <span v-else class="loading-spinner loading-spinner-large"></span>
+            </div>
         </div>
         <div class="metric-card recall-card">
             <div class="metric-title">不一致根因召回率</div>
-            <div class="metric-value">{{ formatPercent(recall, 0) }}</div>
+            <div class="metric-value">
+              <span v-if="recall !== null && recall !== undefined">{{ formatPercent(recall, 0) }}</span>
+              <span v-else class="loading-spinner loading-spinner-large"></span>
+            </div>
         </div>
         <button class="export-btn" @click="exportResult">结果导出</button>
     </div>
@@ -608,17 +651,17 @@ export default {
     
     /**
      * 格式化百分比
+     * 注意：null/undefined 的判断已在模板层面处理，此方法仅负责格式化有效值
      */
     formatPercent(value, precision = 2) {
-      if (value === null || value === undefined) return '—';
       return `${(value * 100).toFixed(precision)}%`;
     },
     
     /**
      * 格式化是/否
+     * 注意：null/undefined 的判断已在模板层面处理，此方法仅负责格式化有效值
      */
     formatYesNo(value) {
-      if (value === null || value === undefined) return '—';
       return value ? '是' : '否';
     },
     
@@ -764,7 +807,144 @@ export default {
   transform: translateX(-50%);
   width: 50%;
   z-index: 100;
-  opacity: 0.9;
+}
+
+.custom-alert {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(10, 30, 60, 0.95) 0%, rgba(20, 50, 90, 0.95) 100%);
+  border: 2px solid #1a65a8;
+  box-shadow: 0 0 20px rgba(26, 101, 168, 0.5), 
+              0 0 40px rgba(26, 101, 168, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  animation: slideInDown 0.4s ease-out;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.alert-content {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif;
+}
+
+.alert-close {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #8bd3f9;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  margin-left: 12px;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.alert-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #c6f4ff;
+  transform: scale(1.1);
+}
+
+/* Success - 成功（蓝绿色） */
+.alert-success {
+  border-color: #00d4aa;
+  box-shadow: 0 0 20px rgba(0, 212, 170, 0.5), 
+              0 0 40px rgba(0, 212, 170, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.alert-success .alert-icon {
+  background: linear-gradient(135deg, #00d4aa 0%, #00a88a 100%);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(0, 212, 170, 0.6);
+}
+
+.alert-success .alert-content {
+  color: #00ffcc;
+}
+
+/* Info - 信息（科技蓝） */
+.alert-info {
+  border-color: #4ED8FF;
+  box-shadow: 0 0 20px rgba(78, 216, 255, 0.5), 
+              0 0 40px rgba(78, 216, 255, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.alert-info .alert-icon {
+  background: linear-gradient(135deg, #4ED8FF 0%, #1a8fc9 100%);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(78, 216, 255, 0.6);
+}
+
+.alert-info .alert-content {
+  color: #8bd3f9;
+}
+
+/* Warning - 警告（黄色） */
+.alert-warning {
+  border-color: #ffb74d;
+  box-shadow: 0 0 20px rgba(255, 183, 77, 0.5), 
+              0 0 40px rgba(255, 183, 77, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.alert-warning .alert-icon {
+  background: linear-gradient(135deg, #ffb74d 0%, #ff9800 100%);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(255, 183, 77, 0.6);
+}
+
+.alert-warning .alert-content {
+  color: #ffcc80;
+}
+
+/* Danger - 错误（红色） */
+.alert-danger {
+  border-color: #ff4d4d;
+  box-shadow: 0 0 20px rgba(255, 77, 77, 0.5), 
+              0 0 40px rgba(255, 77, 77, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.alert-danger .alert-icon {
+  background: linear-gradient(135deg, #ff4d4d 0%, #d32f2f 100%);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(255, 77, 77, 0.6);
+}
+
+.alert-danger .alert-content {
+  color: #ff8a80;
 }
 
 /* ================= 主要内容 ================= */
@@ -798,7 +978,7 @@ export default {
   font-size: 1rem;
   font-weight: bold;
   color: #c6f4ff;
-  padding-left: 80px;
+  padding-left: 70px;
   height: 40px;
   line-height: 40px;
   flex-shrink: 0;
@@ -831,7 +1011,7 @@ export default {
   font-weight: 600;
   color: #8bd3f9;
   margin-bottom: 0.8vh;
-  padding-left: 20px;
+  padding-left: 5px;
 }
 
 .content-box {
@@ -1039,6 +1219,38 @@ export default {
 ::v-deep .highlight-text {
   color: #FF4242 !important;
   font-weight: 700;
+}
+
+/* ================= 加载转圈动画 ================= */
+.loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(78, 216, 255, 0.2);
+  border-top-color: #4ED8FF;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-left: 0.3em;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 针对底部大字体的加载动画 */
+.loading-spinner-large {
+  width: 28px;
+  height: 28px;
+  border-width: 3px;
+  border-color: rgba(78, 216, 255, 0.2);
+  border-top-color: #4ED8FF;
+  margin-left: 0;
 }
 
 </style>
