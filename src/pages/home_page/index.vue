@@ -3,7 +3,7 @@
   <div class="home-page">
     <div class="home-page-head">
       <div class="home-page-head-box">
-        <div class="home-page-head-text">人机混合信息认知传播系统</div>
+        <div class="home-page-head-text">人机混合多主体认知传播模型仿真验证系统</div>
       </div>
     </div>
     <div class="home-page-context">
