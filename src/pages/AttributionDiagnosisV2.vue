@@ -163,6 +163,10 @@ export default {
       isRunning: false,
       pollTimer: null,
       
+      // accuracy/recall 独立轮询控制
+      accuracyRecallTimer: null,
+      accuracyRecallFetched: false,
+      
       // 提示信息
       showAlert: false,
       alertVariant: 'info',
@@ -241,11 +245,15 @@ export default {
     window.addEventListener('resize', this.handleResize);
     this.handleResize();
     this.initBiasAnalysis();
+    this.initAccuracyRecallPolling();
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
     if (this.pollTimer) {
       clearInterval(this.pollTimer);
+    }
+    if (this.accuracyRecallTimer) {
+      clearInterval(this.accuracyRecallTimer);
     }
   },
   methods: {
@@ -527,9 +535,7 @@ export default {
       // 解析模块4
       this.parseModule4(modules.module4);
       
-      // 解析根因诊断结果
-      this.accuracy = this.safeGet(data, 'accuracy', null);
-      this.recall = this.safeGet(data, 'recall', null);
+      // 注意：accuracy 和 recall 不再从这个接口获取，改为独立的延迟轮询
     },
     
     /**
@@ -688,6 +694,155 @@ export default {
       this.alertVariant = variant;
       this.alertMessage = message;
       this.showAlert = true;
+    },
+    
+    /**
+     * 初始化 accuracy/recall 延迟轮询
+     */
+    initAccuracyRecallPolling() {
+      console.log('🕐 初始化 accuracy/recall 延迟轮询');
+      
+      // 检查或创建 timestamp
+      const timestampData = this.checkOrCreateTimestamp();
+      console.log('📅 Timestamp 数据:', timestampData);
+      
+      // 立即检查一次
+      this.checkAndFetchAccuracyRecall(timestampData);
+      
+      // 启动定时器，每2秒检查一次
+      this.accuracyRecallTimer = setInterval(() => {
+        if (!this.accuracyRecallFetched) {
+          const currentTimestampData = this.getTimestampFromStorage();
+          if (currentTimestampData) {
+            this.checkAndFetchAccuracyRecall(currentTimestampData);
+          }
+        } else {
+          // 已经获取到数据，停止轮询
+          this.stopAccuracyRecallPolling();
+        }
+      }, 2000);
+    },
+    
+    /**
+     * 检查或创建 timestamp
+     */
+    checkOrCreateTimestamp() {
+      const TIMESTAMP_KEY = 'timestamp';
+      const existingData = localStorage.getItem(TIMESTAMP_KEY);
+      
+      if (existingData) {
+        try {
+          const parsedData = JSON.parse(existingData);
+          const currentTime = Date.now();
+          
+          // 检查是否过期（20分钟）
+          if (currentTime > parsedData.expireTime) {
+            console.log('⏰ Timestamp 已过期，重新创建');
+            return this.createNewTimestamp();
+          } else {
+            console.log('✅ Timestamp 有效，继续使用');
+            return parsedData;
+          }
+        } catch (e) {
+          console.error('❌ 解析 timestamp 失败，重新创建', e);
+          return this.createNewTimestamp();
+        }
+      } else {
+        console.log('🆕 Timestamp 不存在，创建新的');
+        return this.createNewTimestamp();
+      }
+    },
+    
+    /**
+     * 创建新的 timestamp
+     */
+    createNewTimestamp() {
+      const TIMESTAMP_KEY = 'timestamp';
+      const currentTime = Date.now();
+      const timestampData = {
+        startTime: currentTime,
+        expireTime: currentTime + 20 * 60 * 1000  // 20分钟后过期
+      };
+      
+      localStorage.setItem(TIMESTAMP_KEY, JSON.stringify(timestampData));
+      console.log('💾 新 timestamp 已保存:', timestampData);
+      
+      return timestampData;
+    },
+    
+    /**
+     * 从 storage 获取 timestamp
+     */
+    getTimestampFromStorage() {
+      const TIMESTAMP_KEY = 'timestamp';
+      const data = localStorage.getItem(TIMESTAMP_KEY);
+      if (data) {
+        try {
+          return JSON.parse(data);
+        } catch (e) {
+          console.error('❌ 解析 timestamp 失败', e);
+          return null;
+        }
+      }
+      return null;
+    },
+    
+    /**
+     * 检查并在满足条件时获取 accuracy/recall
+     */
+    async checkAndFetchAccuracyRecall(timestampData) {
+      const currentTime = Date.now();
+      const targetTime = timestampData.startTime + 5 * 60 * 1000;  // startTime + 5分钟
+      
+      if (currentTime >= targetTime) {
+        console.log('✅ 已达到5分钟，开始请求 accuracy/recall');
+        await this.fetchAccuracyRecall();
+      } else {
+        const remainingSeconds = Math.ceil((targetTime - currentTime) / 1000);
+        console.log(`⏳ 还需等待 ${remainingSeconds} 秒`);
+      }
+    },
+    
+    /**
+     * 请求 accuracy/recall 接口
+     */
+    async fetchAccuracyRecall() {
+      if (this.accuracyRecallFetched) {
+        return;
+      }
+      
+      try {
+        console.log('🌐 请求 /module5/api/accuracy_recall 接口');
+        const response = await axios.get('/module5/api/accuracy_recall');
+        
+        if (response.status === 200 && response.data.success) {
+          this.accuracy = response.data.accuracy;
+          this.recall = response.data.recall;
+          this.accuracyRecallFetched = true;
+          
+          console.log('✅ 成功获取 accuracy/recall:', {
+            accuracy: this.accuracy,
+            recall: this.recall
+          });
+          
+          // 停止轮询
+          this.stopAccuracyRecallPolling();
+        }
+      } catch (error) {
+        console.error('❌ 获取 accuracy/recall 失败:', error);
+        // 注意：失败后继续轮询，不停止
+      }
+    },
+    
+    /**
+     * 停止 accuracy/recall 轮询
+     */
+    stopAccuracyRecallPolling() {
+      if (this.accuracyRecallTimer) {
+        clearInterval(this.accuracyRecallTimer);
+        this.accuracyRecallTimer = null;
+        console.log('🛑 停止 accuracy/recall 轮询');
+      }
     },
     
     /**
