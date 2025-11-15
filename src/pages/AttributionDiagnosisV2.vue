@@ -265,6 +265,19 @@ export default {
      * 初始化偏差分析流程
      */
     async initBiasAnalysis() {
+      // 首先检查 localStorage 是否存在 module5Res
+      const module5Result = this.loadModule5FromStorage();
+      
+      if (module5Result.success) {
+        // 存在缓存数据，直接使用
+        console.log('✅ 从 localStorage 加载 module5Res 成功，直接显示');
+        this.parseStatusData(module5Result.data);
+        this.showAlertMessage('success', '诊断结果已加载');
+        return; // 不再执行后续的请求和轮询
+      }
+      
+      console.log('📭 localStorage 中不存在 module5Res，开始正常请求流程');
+      
       // 从LocalStorage构建级联数据
       const buildResult = this.buildCascadeDataFromLocalStorage();
       
@@ -283,6 +296,58 @@ export default {
       console.log('✅ 最终使用的级联数据：', JSON.parse(JSON.stringify(this.cascadeData)));
       
       await this.startBiasAnalysis();
+    },
+    
+    /**
+     * 从 localStorage 加载 module5Res
+     */
+    loadModule5FromStorage() {
+      const MODULE5_KEY = 'module5Res';
+      
+      try {
+        const module5Str = localStorage.getItem(MODULE5_KEY);
+        
+        if (!module5Str) {
+          console.log('📭 localStorage 中不存在 module5Res');
+          return { success: false };
+        }
+        
+        console.log('📦 发现 module5Res，开始解析');
+        const module5Data = JSON.parse(module5Str);
+        
+        // 验证数据结构是否完整
+        if (!module5Data.modules) {
+          console.warn('⚠️ module5Res 数据结构不完整，缺少 modules 字段');
+          return { success: false };
+        }
+        
+        console.log('✅ module5Res 解析成功');
+        return {
+          success: true,
+          data: module5Data
+        };
+        
+      } catch (error) {
+        console.error('❌ 解析 module5Res 失败:', error);
+        return { success: false };
+      }
+    },
+    
+    /**
+     * 将 module5 结果保存到 localStorage
+     */
+    saveModule5ToStorage(data) {
+      const MODULE5_KEY = 'module5Res';
+      
+      try {
+        // 保存完整的响应数据（不包括 accuracy 和 recall，这两个由独立轮询处理）
+        const dataToSave = JSON.stringify(data);
+        localStorage.setItem(MODULE5_KEY, dataToSave);
+        
+        console.log('💾 module5Res 已保存到 localStorage');
+      } catch (error) {
+        console.error('❌ 保存 module5Res 失败:', error);
+      }
     },
     
     /**
@@ -490,6 +555,9 @@ export default {
           if (!data.running) {
             this.stopPolling();
             this.showAlertMessage('success', '诊断完成');
+            
+            // 诊断完成时，将结果保存到 localStorage
+            this.saveModule5ToStorage(data);
           }
         }
         
