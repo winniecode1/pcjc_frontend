@@ -33,7 +33,7 @@
 
 .home-page-head-box {
   /* 顶部栏 */
-  width: 855px;
+  width: 1155px;
   height: 121px;
   top: 0px;
   display: grid;
@@ -46,7 +46,7 @@
 
 .home-page-head-text {
   /* 人机混合信息认知传播系统 */
-  width: 547px;
+  width: 900px;
   height: 46px;
   margin-top: 10px;
   top: 16px;
@@ -291,4 +291,9 @@
   font-style: normal;
   text-decoration: none;
   text-align: center;
+}
+
+.home-page-other{
+  min-width: 1771px;
+  flex: 1;
 }
