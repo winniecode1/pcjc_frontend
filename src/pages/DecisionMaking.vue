@@ -9,6 +9,9 @@
     </div>
     <div class="top-nav-right">
       <router-link to="/attributiondiagnosis" class="nav-btn nav-next">下一页</router-link>
+      <b-button @click="performDeviationDetection" variant="info" class="nav-btn nav-detect">
+        偏差检测
+      </b-button>
     </div>
 
     <div class="title-container" :style="bgImageStyle(assetNames.titleBg)">
@@ -17,7 +20,6 @@
 
     <div class="core-layout-design">
       <div class="design-left-column">
-        <!-- 独立标题：视频演示（与下方视频框同宽） -->
         <div class="standalone-label" :style="fullWidthLabelStyle(assetNames.videoLabel, 30)">视频演示</div>
         <div class="design-module video-module" :style="videoPanelBgStyle">
           <div class="design-module-content video-content-wrapper">
@@ -122,7 +124,6 @@
       </div>
 
       <div class="design-right-column">
-        <!-- 独立标题：决策选择认知偏差检测结果（与下方文本框同宽） -->
         <div class="standalone-label" :style="fullWidthLabelStyle(assetNames.resultLabel, 28)">决策选择认知偏差检测结果</div>
         <div class="design-module result-log-module" :style="rightPanelBgStyle">
           <div class="design-module-content text-scrollable">
@@ -197,7 +198,7 @@ export default {
         apiKey: process.env.VUE_APP_DASHSCOPE_API_KEY
       },
       thirdStageText: '正在加载第三阶段文字信息...',
-      currentStageText: '',
+      currentStageText: '', // 保留此字段，以防将来使用
       performanceData: '',
       performanceDataLocal: '正在加载本地性能数据...',
       summaryText: '正在加载总结文本...',
@@ -212,6 +213,7 @@ export default {
   },
   computed: {
     highlightedCurrentStageText() {
+      // 注意：此计算属性当前未在模板中使用
       return this.highlightRandomWords(this.currentStageText, 1, 3);
     },
     /* 仅对右侧“决策选择认知偏差检测结果”做随机标红 */
@@ -319,8 +321,9 @@ export default {
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);
-    this.initializeDataFromStorage();
-    this.loadVideoFromStorage();
+    this.initializeDataFromStorage(); // 加载 module3Res (左侧文本)
+    this.loadVideoFromStorage(); // 加载 module1Res (视频)
+    this.loadDataFromModule4Res(); // 加载 module4Res (所有结果) 或设置为空白
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
@@ -338,6 +341,9 @@ export default {
       this.windowWidth = window.innerWidth;
       this.windowHeight = window.innerHeight;
     },
+    /**
+     * 逻辑1A：从 localStorage 加载先决条件数据 (module3Res)
+     */
     initializeDataFromStorage() {
       try {
         const module3ResStr = localStorage.getItem('module3Res');
@@ -372,6 +378,68 @@ export default {
       } catch (e) {
         console.error('❌ 解析 LocalStorage 数据失败:', e);
         this.thirdStageText = '加载信息时发生错误，请检查 LocalStorage 数据格式。';
+      }
+    },
+    /**
+     * 逻辑1B：从 localStorage 加载 module4Res (如果存在)
+     * 如果 module4Res 存在，则加载所有数据 ("恢复" 状态)
+     * 如果不存在，则将结果设置为空白/待处理状态
+     */
+    loadDataFromModule4Res() {
+      try {
+        const module4ResStr = localStorage.getItem('module4Res');
+        if (module4ResStr) {
+          console.log('✅ 发现 module4Res，正在加载所有页面数据...');
+          const module4Data = JSON.parse(module4ResStr);
+
+          // 1. 填充指挥员评估
+          this.performanceData = module4Data.performancedata || '暂无性能数据。';
+          console.log('性能数据 (中-顶) 设置为：', this.performanceData);
+
+          // 2. 填充机器评估
+          this.performanceDataLocal = module4Data.performance_data_local || '暂无本地性能数据。';
+          console.log('本地性能数据 (中-底) 设置为：', this.performanceDataLocal);
+
+          // 3. 填充等级
+          const modelLevelNum = this.getLevelNum(module4Data.modelanalysisdangerlevel);
+          const expertLevelNum = this.getLevelNum(module4Data.local_txt_danger_level);
+          this.modelDangerLevel = `${modelLevelNum} !`;
+          this.expertDangerLevel = `${expertLevelNum} !`;
+          this.currentLevel = modelLevelNum;
+          console.log('当前战备等级设置为：', this.currentLevel);
+
+          // 4. 填充图片列表
+          this.imageList = module4Data.imageList || [null, null, null, null];
+          console.log('图像列表设置为：', this.imageList);
+
+          // 5. 填充偏差检测结果
+          this.summaryText = module4Data.summary || '暂无总结文本。';
+          console.log('总结文本 (右) 设置为：', this.summaryText);
+
+          // 6. 填充准确率
+          const accuracyValue = parseFloat(module4Data.average_comprehensive_accuracy);
+          this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
+          console.log('偏差检测准确率设置为：', this.deviationDetectionAccuracy);
+
+        } else {
+          console.log('ℹ️ LocalStorage 中未找到 module4Res，将以空白状态启动。');
+          // 设置为空白/待处理状态
+          this.performanceData = '请点击 "信息推理"';
+          this.performanceDataLocal = '请点击 "信息推理"';
+          this.summaryText = '请点击 "信息推理"，然后点击 "偏差检测"';
+          this.imageList = [null, null, null, null];
+          this.deviationDetectionAccuracy = 'N/A';
+          this.modelDangerLevel = 'N/A';
+          this.expertDangerLevel = 'N/A';
+          this.currentLevel = 4;
+        }
+      } catch (e) {
+        console.error('❌ 解析 module4Res 失败:', e);
+        // 设置为错误状态
+        this.performanceData = '加载数据出错';
+        this.performanceDataLocal = '加载数据出错';
+        this.summaryText = '加载数据出错';
+        this.deviationDetectionAccuracy = 'N/A';
       }
     },
     highlightRandomWords(text, minCount, maxCount) {
@@ -462,6 +530,13 @@ export default {
       console.table(tableData);
       console.groupEnd();
     },
+    /**
+     * 逻辑2：点击 "信息推理"
+     * 1. 调用所有 API
+     * 2. 将 *所有* 结果存入 localStorage (module4Res)
+     * 3. 填充 "指挥员评估"、"机器评估" 和 "可视化行为" (图片)
+     * 4. *不* 填充 "偏差检测结果" 或 "准确率"
+     */
     async fetchBackendData() {
       this.isLoading = true;
       const model = this.apiConfig.weaponModel;
@@ -477,8 +552,6 @@ export default {
         const mainData = mainResponse.data;
 
         if (mainData.status === 'success') {
-          this.parseBackendData(mainData.data);
-
           console.log('开始调用准确率接口：', `${IMAGE_API_BASE_URL}/statistics/accuracy`);
           const accuracyResponse = await axios.get(`${IMAGE_API_BASE_URL}/statistics/accuracy`);
           console.log('准确率接口响应状态：', accuracyResponse.status, accuracyResponse.statusText);
@@ -491,6 +564,7 @@ export default {
           const imageData = imageResponse.data;
           console.log('图片列表接口返回数据：', imageData);
 
+          // 步骤 3.1：填充图片列表 (this.imageList)
           if (imageData.images && Array.isArray(imageData.images)) {
             this.imageList = imageData.images
               .map(img => img.url)
@@ -504,12 +578,14 @@ export default {
           }
           console.log('更新图像列表 (从图片接口)：', this.imageList);
 
+          // 步骤 2：构建 module4Res 对象 (包含所有数据)
           const module4Res = {
             weapon_model: mainData.data.weapon_model,
             performancedata: mainData.data.performancedata,
             performance_data_local: mainData.data.performance_data_local,
             summary: mainData.data.summary,
-            image_paths: mainData.data.image_paths,
+            image_paths: mainData.data.image_paths, // 保留原始字段
+            imageList: this.imageList, // 新增：保存用于UI的图片列表
             behavior_status: mainData.data.behavior_status,
             comprehensive_score: mainData.data.comprehensive_score,
             modelanalysisdangerlevel: mainData.data.model_analysis_danger_level,
@@ -521,29 +597,17 @@ export default {
             coredimensionratingaccuracy: mainData.data.core_dimension_rating_accuracy,
             average_comprehensive_accuracy: accuracyData['average_comprehensive_accuracy']
           };
+          // 步骤 2.1：将所有结果存入 localStorage
           localStorage.setItem('module4Res', JSON.stringify(module4Res));
           console.log('模块四后端返回值已按目标格式存入localStorage的module4Res');
+          this.formatAndLogModule4Res(module4Res); // 打印存储内容
 
-          const module4ResStr = localStorage.getItem('module4Res');
-          if (module4ResStr) {
-            try {
-              const module4Res = JSON.parse(module4ResStr);
-              console.dir(module4Res, { depth: null });
-            } catch (e) {
-              console.error('解析module4Res失败：', e);
-            }
-          } else {
-            console.warn('localStorage中未找到module4Res');
-          }
+          // 步骤 3：填充评估和等级 (不含 summaryText)
+          this.parseBackendData(mainData.data);
+          
+          // 步骤 4：*不* 填充准确率或总结文本
+          // (相关代码已被移除)
 
-          if (accuracyData && typeof accuracyData['average_comprehensive_accuracy'] !== 'undefined') {
-            const accuracyValue = parseFloat(accuracyData['average_comprehensive_accuracy']);
-            this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
-            console.log('偏差检测准确率设置为：', this.deviationDetectionAccuracy);
-          } else {
-            console.error('准确率数据格式不正确或缺少字段');
-            this.deviationDetectionAccuracy = 'N/A';
-          }
         } else {
           console.error('后端返回错误：', (mainData.error && mainData.error.message) || '未知错误');
           this.currentStageText = `分析接口数据获取失败：${(mainData.error && mainData.error.message) || '未知错误'}`;
@@ -551,12 +615,16 @@ export default {
       } catch (error) {
         console.error('接口调用失败：', error);
         this.currentStageText = '接口调用失败，请检查网络、CORS配置或后端服务';
-        this.deviationDetectionAccuracy = 'N/A';
+        this.deviationDetectionAccuracy = 'N/A'; // 出错时重置
       } finally {
         this.isLoading = false;
         console.log('数据获取流程结束');
       }
     },
+    /**
+     * 解析 "信息推理" 数据，仅填充评估和等级
+     * (已移除 summaryText 和 currentStageText 的设置)
+     */
     parseBackendData(backendData) {
       console.log('开始解析主接口返回数据：', backendData);
 
@@ -574,9 +642,8 @@ export default {
       this.performanceDataLocal = rawPerformanceDataLocal;
       console.log('本地性能数据 (中-底) 设置为：', this.performanceDataLocal);
 
-      this.summaryText = backendData.summary || '暂无总结文本。';
-      console.log('总结文本 (右) 设置为：', this.summaryText);
-      this.currentStageText = backendData.summary;
+      // (已移除) this.summaryText = ...
+      // (已移除) this.currentStageText = ...
 
       const modelLevelNum = this.getLevelNum(backendData.model_analysis_danger_level);
       const expertLevelNum = this.getLevelNum(backendData.local_txt_danger_level);
@@ -589,6 +656,42 @@ export default {
       this.currentLevel = modelLevelNum;
       console.log('当前战备等级设置为：', this.currentLevel);
     },
+    /**
+     * 逻辑3：点击 "偏差检测"
+     * 1. 从 localStorage 读取 module4Res
+     * 2. 填充 "偏差检测结果" (summaryText)
+     * 3. 填充 "准确率" (deviationDetectionAccuracy)
+     */
+    performDeviationDetection() {
+      console.log('偏差检测按钮点击');
+      try {
+        const module4ResStr = localStorage.getItem('module4Res');
+        if (module4ResStr) {
+          const module4Res = JSON.parse(module4ResStr);
+          console.log('从localStorage读取module4Res成功', module4Res);
+
+          // 步骤 2：填充 决策选择认知偏差检测结果文本
+          this.summaryText = module4Res.summary || '暂无总结文本。';
+          console.log('总结文本 (右) 设置为：', this.summaryText);
+
+          // 步骤 3：填充 准确率数字
+          const accuracyValue = parseFloat(module4Res.average_comprehensive_accuracy);
+          this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
+          console.log('偏差检测准确率设置为：', this.deviationDetectionAccuracy);
+
+        } else {
+          console.warn('LocalStorage 中未找到 module4Res，无法执行偏差检测。');
+          this.summaryText = '请先点击 "信息推理" 获取数据，然后再点击 "偏差检测"。';
+          this.deviationDetectionAccuracy = 'N/A';
+          // 可选：弹窗提示
+          // alert('请先点击 "信息推理" 获取数据。');
+        }
+      } catch (e) {
+        console.error('执行偏差检测失败:', e);
+        this.summaryText = '加载偏差检测结果时出错，请检查LocalStorage数据。';
+        this.deviationDetectionAccuracy = 'N/A';
+      }
+    },
     getLevelNum(backendLevel) {
       const numMap = {
         '危险等级1': 1,
@@ -597,7 +700,7 @@ export default {
         '危险等级4': 4
       };
       const result = numMap[backendLevel] || 4;
-      console.log('等级转换：', backendLevel, '→', result);
+      // console.log('等级转换：', backendLevel, '→', result); // 此日志过于频繁，可注释掉
       return result;
     },
     getLevelImageName(level) {
@@ -614,6 +717,9 @@ export default {
       const match = levelString.toString().match(/(\d+)/);
       return match ? parseInt(match[1], 10) : 4;
     },
+    /**
+     * 逻辑1C：从 localStorage 加载视频 (module1Res)
+     */
     loadVideoFromStorage() {
       try {
         const module1ResStr = localStorage.getItem('module1Res');
@@ -772,6 +878,10 @@ export default {
 
 .top-nav-right {
   right: 20px;
+  display: flex; /* 改为 flex 布局 */
+  flex-direction: column; /* 垂直排列 */
+  gap: 10px; /* 按钮间距 */
+  align-items: flex-end; /* 右对齐 */
 }
 
 .nav-btn {
@@ -783,12 +893,30 @@ export default {
   border-radius: 4px;
   font-weight: bold;
   border: 1px solid #005f7f;
+  text-decoration: none; /* 确保 router-link 表现一致 */
+  display: inline-flex; /* 用于对齐 */
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     background: rgba(20, 40, 70, 0.9);
     color: #fff;
   }
 }
+
+/* 新增：偏差检测按键的特定样式 */
+.nav-btn.nav-detect {
+  background: rgba(10, 50, 25, 0.9);
+  color: #00ffaa;
+  border-color: #007f5f;
+  width: 100px; /* 与下一页按钮对齐 */
+
+  &:hover {
+    background: rgba(20, 70, 40, 0.9);
+    color: #fff;
+  }
+}
+
 
 /* 标题 */
 .title-container {
@@ -864,6 +992,17 @@ export default {
     width: 100px;
     background: url('~@/assets/images/step4/下一页按键.png') no-repeat center/contain;
   }
+  
+  /* 新增：偏差检测按键的资源样式 */
+  .top-nav-right .nav-btn.nav-detect {
+    width: 100px;
+    height: 34px;
+    padding: 0;
+    /* (复用 "返回按键" 资源作为示例，建议替换为专用资源) */
+    background: url('~@/assets/images/step4/返回按键.png') no-repeat center/contain; 
+    color: #ffffff;
+    border: none;
+  }
 
   .accuracy-box,
   .export-btn {
@@ -901,7 +1040,8 @@ export default {
   width: 30%;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  /* 调整 gap 以适应可能的内容压缩 */
+  gap: 10px; 
   height: 100%;
 }
 
@@ -1022,6 +1162,8 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* 确保在右列中正常显示 */
+  flex-shrink: 0;
 }
 
 .use-assets {

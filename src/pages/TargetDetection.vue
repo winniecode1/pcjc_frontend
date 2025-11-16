@@ -8,7 +8,8 @@
         <button class="header-btn btn-back" @click="navigateHome">返回</button>
       </b-col>
       <b-col cols="6" class="text-center">
-        </b-col>
+        <!-- 标题已移除，与 step4 风格统一 -->
+      </b-col>
       <b-col cols="3" class="text-right">
         <button class="header-btn btn-next" @click="navigateNextPage">下个页面</button>
       </b-col>
@@ -16,6 +17,7 @@
 
     <b-row class="justify-content-center content-row no-gutters">
 
+      <!-- 左侧列 -->
       <b-col cols="3" class="left-column px-2">
         <div class="panel-header header-select-data">选择数据</div>
 
@@ -30,52 +32,84 @@
             </div>
 
             <div class="action-buttons">
-              <button @click="startDetection" :disabled="!selectedVideo || isLoading" class="btn-start-detect">
+              <button @click="startDetection" :disabled="isLoading"
+                class="btn-start-detect">
                 <b-spinner small v-if="isLoading"></b-spinner>
-                <span>{{ isLoading ? (progressMessage || '检测中...') : '开始检测' }}</span>
+                <!-- 移除了 !selectedVideo 的禁用条件，因为加载时可能没有 selectedVideo -->
+                <span>{{ isLoading ? (progressMessage || '检测中...') : '开始目标检测' }}</span>
               </button>
             </div>
           </div>
         </div>
       </b-col>
 
+      <!-- 中间列 -->
       <b-col cols="5" class="middle-column mx-2 px-1">
+        <!-- 原视频 -->
         <div class="video-section">
           <div class="video-label label-original">原视频</div>
           <div class="video-frame">
-            <video v-if="originalVideoURL" :src="originalVideoURL" controls class="video-display"
-              @error="handleVideoError"></video>
+            <video v-if="originalVideoURL" ref="originalVideo" :src="originalVideoURL" controls class="video-display"
+              playsinline @error="handleVideoError"></video>
             <div v-else class="placeholder-text">请选择视频</div>
           </div>
         </div>
 
+        <!-- 检测结果视频 -->
         <div class="video-section">
           <div class="video-label label-processed">多模态检测结果 </div>
           <div class="video-frame">
-            <video v-if="processedVideoURL" :src="processedVideoURL" controls class="video-display"
-              :key="processedVideoURL" @error="handleVideoError"></video>
+            <video v-if="processedVideoURL" ref="processedVideo" :src="processedVideoURL" controls class="video-display"
+              :key="processedVideoURL" playsinline @error="handleVideoError"></video>
             <div v-else-if="isLoading" class="placeholder-text">等待处理结果...</div>
             <div v-else class="placeholder-text">检测结果将在这里显示</div>
           </div>
         </div>
+
+        <!-- 新增：总结文本框 -->
+        <div class="summary-box-middle">
+          <div class="summary-content overflow-auto" :class="{ 'text-highlight': summaryHighlight }">
+            {{ summaryTextOnly || '总结将在此显示...' }}
+          </div>
+        </div>
       </b-col>
 
+      <!-- 右侧列 -->
       <b-col cols="3" class="right-column px-2">
 
         <div class="panel-header header-results">偏差检测结果</div>
 
         <div class="panel-right-top">
           <div class="panel-content">
+            <div class="description-actions">
+              <button class="btn-start-bias" @click="handleStartBiasDetection"
+                :disabled="!canStartBiasDetection || isBiasTyping || isLoading">
+                开始偏差检测
+              </button>
+            </div>
             <div class="description-box p-2 overflow-auto">
-              <div v-if="fullResult.video_description" class="mb-1 text-left small-text"
-                v-html="formatDescription(fullResult.video_description)">
+              <!-- 移除了原有的 "总结" v-if="showSummary" 部分 -->
+              <div v-if="isLoading && !showBiasDetails" class="text-left small-text">
+                {{ progressMessage || '正在加载...' }}
               </div>
+              <div v-else-if="!showBiasDetails && !isLoading" class="text-left small-text">
+                {{ resultMessage || '检测完成后显示结果' }}
+              </div>
+
+              <!-- 偏差详情（除总结外） -->
+              <div v-if="showBiasDetails">
+                <div v-for="(entry, index) in biasDetailEntries" :key="entry.label"
+                  class="typing-text text-left small-text" :class="{ 'text-highlight': entry.highlight }">
+                  {{ biasDisplayTexts[index] }}
+                </div>
+              </div>
+              <div v-else-if="canStartBiasDetection" class="text-left small-text hint-text">
+                点击“开始偏差检测”查看其余信息
+              </div>
+
               <p v-if="fullResult.key_frame_detection" class="mb-1 text-left">
                 <span class="text-red">id:{{ fullResult.key_frame_detection.frame_idx }} {{ getMainObject() }} {{
                   getMainConfidence().toFixed(2) }}</span>
-              </p>
-              <p v-else-if="!isLoading" class="text-left small-text">
-                {{ resultMessage || '检测完成后显示结果' }}
               </p>
             </div>
           </div>
@@ -86,11 +120,11 @@
         <div class="panel-right-bottom">
           <div class="panel-content">
             <div class="metric-box">
-              <template v-if="fullResult.overall_accuracy !== undefined">
+              <template v-if="showAccuracy && fullResult.overall_accuracy !== undefined">
                 {{ (fullResult.overall_accuracy * 100).toFixed(2) + '%' }}
               </template>
               <template v-else>
-                N/A
+                --
               </template>
             </div>
           </div>
@@ -156,17 +190,106 @@ export default {
         accuracy_results: null,
         video_info: null,
         key_frame_detection: null
-      }
+      },
+      descriptionEntries: [],
+      biasDetailEntries: [],
+      biasDisplayTexts: [],
+      // 移除了 summaryFullText 和 summaryTypingText
+      summaryTextOnly: '', // 新增：用于中间总结框
+      summaryHighlight: false, // 新增：用于中间总结框高亮
+      // 移除了 summaryTypingInterval
+      biasTypingInterval: null,
+      biasTypingTimeout: null,
+      accuracyTimeout: null,
+      // 移除了 showSummary
+      showBiasDetails: false,
+      showAccuracy: false,
+      isBiasTyping: false,
+      labelsToHighlight: [],
+      typingSpeed: 60
     };
+  },
+  computed: {
+    canStartBiasDetection() {
+      return this.biasDetailEntries.length > 0 && !this.isLoading;
+    }
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);
-    this.fetchVideoList(); // 获取视频列表
+    // 逻辑点 5：执行新的加载逻辑
+    this.loadInitialData();
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
+    this.clearTypingIntervals();
   },
   methods: {
+    /**
+     * 逻辑点 5：页面加载逻辑
+     */
+    async loadInitialData() {
+      const module1ResStr = localStorage.getItem('module1Res');
+      if (module1ResStr) {
+        console.log("检测到 module1Res，正在从缓存加载数据...");
+        try {
+          const module1Res = JSON.parse(module1ResStr);
+          // 恢复 UI 状态
+          this.populateUIFromStorage(module1Res);
+          // 仍然加载视频列表，以便用户可以切换
+          await this.fetchVideoList();
+        } catch (e) {
+          console.error("解析 module1Res 失败:", e);
+          // 解析失败，清空缓存并按正常流程启动
+          localStorage.clear();
+          await this.fetchVideoList();
+        }
+      } else {
+        console.log("未检测到 module1Res，正常启动...");
+        // 正常启动流程
+        await this.fetchVideoList();
+      }
+    },
+    /**
+     * 逻辑点 5：根据缓存的 module1Res 填充 UI
+     */
+    populateUIFromStorage(data) {
+      console.log("正在填充UI:", data);
+      
+      // 1. 恢复视频
+      this.originalVideoURL = data.originalVideoPath;
+      this.processedVideoURL = data.video_path;
+
+      // 2. 恢复任务 ID 和结果
+      this.taskId = data.task_id;
+      this.fullResult = data; // 假设 data 包含所有需要的结果字段
+
+      // 3. 模拟选中视频（用于左侧列表高亮）
+      if (data.video_info && data.video_info.name) {
+         this.selectedVideo = { name: data.video_info.name, id: data.video_info.id || -1 };
+      } else if (data.originalVideoPath) {
+         // 备用方案：从路径中提取文件名
+         const videoName = getFilenameFromPath(data.originalVideoPath);
+         if(videoName) {
+           this.selectedVideo = { name: videoName, id: -1 };
+         }
+      }
+
+      // 4. 处理文本显示
+      // 这将填充 summaryTextOnly 和 biasDetailEntries
+      this.prepareDescriptionDisplay(data);
+
+      // 5. 立即显示所有结果（跳过打字效果）
+      this.showBiasDetails = true;
+      this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+      this.showAccuracy = true;
+      
+      this.resultMessage = "已从缓存加载数据。";
+      this.progressMessage = "加载完成";
+      this.isLoading = false;
+
+      // 尝试同步播放
+      this.syncAndPlayVideos();
+    },
     navigateHome() {
       // "首页" 和 "返回" 都跳转到根路径（使用相对路径确保在当前端口下正确导航）
       window.location.href = '/';
@@ -344,11 +467,208 @@ export default {
       }, this.fullResult.key_frame_detection.detections[0]);
       return maxConfDet.confidence;
     },
+    resetResultState(options = {}) {
+      const { preserveMessages = false } = options;
+      this.processedVideoURL = null;
+      this.taskId = null;
+      this.fullResult = {
+        video_description: null,
+        accuracy_results: null,
+        video_info: null,
+        key_frame_detection: null
+      };
+      if (!preserveMessages) {
+        this.resultMessage = null;
+        this.progressMessage = null;
+      }
+      this.descriptionEntries = [];
+      this.biasDetailEntries = [];
+      this.biasDisplayTexts = [];
+      this.summaryTextOnly = ''; // 重置中间总结框
+      this.summaryHighlight = false;
+      this.showBiasDetails = false;
+      this.showAccuracy = false;
+      this.labelsToHighlight = [];
+      this.isBiasTyping = false;
+      this.clearTypingIntervals();
+    },
+    clearTypingIntervals() {
+      // 移除了 summaryTypingInterval
+      if (this.biasTypingInterval) {
+        clearInterval(this.biasTypingInterval);
+        this.biasTypingInterval = null;
+      }
+      this.clearBiasTimeouts();
+    },
+    autoPlayOriginalVideo() {
+      this.$nextTick(() => {
+        const videoEl = this.$refs.originalVideo;
+        if (!videoEl) return;
+        try {
+          videoEl.currentTime = 0;
+          const playPromise = videoEl.play();
+          if (playPromise && typeof playPromise.then === 'function') {
+            playPromise.catch(err => console.warn("自动播放原视频失败:", err));
+          }
+        } catch (err) {
+          console.warn("自动播放原视频异常:", err);
+        }
+      });
+    },
+    syncAndPlayVideos() {
+      this.$nextTick(() => {
+        const original = this.$refs.originalVideo;
+        const processed = this.$refs.processedVideo;
+        if (!original || !processed) return;
+        try {
+          original.currentTime = 0;
+          processed.currentTime = 0;
+          [original.play(), processed.play()].forEach(p => {
+            if (p && typeof p.then === 'function') {
+              p.catch(err => console.warn("同步播放失败:", err));
+            }
+          });
+        } catch (err) {
+          console.warn("同步播放异常:", err);
+        }
+      });
+    },
+    /**
+     * 逻辑点 3：拆分总结和详情
+     */
+    prepareDescriptionDisplay(fullData) {
+      this.clearTypingIntervals();
+      this.updateLabelsToHighlight(fullData.low_similarity_aspects);
+      this.descriptionEntries = this.buildDescriptionEntries(fullData.video_description);
+      
+      // 1. 提取总结（用于中间框）
+      const summaryEntry = this.descriptionEntries.find(entry => entry.label === '总结');
+      this.summaryTextOnly = summaryEntry ? summaryEntry.text : '未找到总结信息。';
+      this.summaryHighlight = summaryEntry ? summaryEntry.highlight : false;
+      
+      // 2. 提取详情（用于右侧框）
+      this.biasDetailEntries = this.descriptionEntries.filter(entry => entry.label !== '总结');
+      this.biasDisplayTexts = this.biasDetailEntries.map(() => ''); // 重置打字内容
+      
+      // 3. 重置显示状态
+      this.showBiasDetails = false;
+      this.showAccuracy = false;
+    },
+    updateLabelsToHighlight(rawAspects) {
+      const aspects = this.parseLowSimilarityAspects(rawAspects);
+      const validLabels = new Set(['场景', '主要目标', '动作', '总结']);
+      const labels = new Set();
+      (aspects || []).forEach(item => {
+        if (typeof item !== 'string') return;
+        const name = item.trim().replace(/^["'《【\s]+|["'》】\s]+$/g, '');
+        if (name === '目标') {
+          labels.add('主要目标');
+        }
+        if (validLabels.has(name)) {
+          labels.add(name);
+        }
+      });
+      this.labelsToHighlight = Array.from(labels);
+    },
+    buildDescriptionEntries(description) {
+      if (!description) return [];
+      const lines = description.split(/\r?\n/).filter(line => line.trim() !== '');
+      return lines.map(line => {
+        const trimmedLine = line.trim();
+        const match = trimmedLine.match(/^([^：:]+)[：:]\s*(.*)$/);
+        if (match) {
+          let label = match[1].trim();
+          if (label === '目标') {
+            label = '主要目标';
+          }
+          const value = match[2].trim();
+          return {
+            label,
+            text: `${label}：${value}`,
+            highlight: this.labelsToHighlight.includes(label)
+          };
+        }
+        return {
+          label: '其他',
+          text: trimmedLine,
+          highlight: false
+        };
+      });
+    },
+    // 移除了 startSummaryTyping 和 resetSummaryTyping
+    handleStartBiasDetection() {
+      if (!this.canStartBiasDetection) return;
+      // 清理之前的定时器
+      this.clearBiasTimeouts();
+      // 立即显示偏差检测结果区域（详情），但不显示准确率
+      this.showBiasDetails = true;
+      this.showAccuracy = false;
+      this.resetBiasTyping(); // 重置打字状态
+
+      // 等待2秒后开始逐字显示偏差检测结果的详情行
+      this.biasTypingTimeout = setTimeout(() => {
+        this.isBiasTyping = true;
+        this.startBiasTypingSequence(0);
+        this.biasTypingTimeout = null;
+      }, 2000);
+
+      // 再等待5秒后（总共7秒）显示准确率
+      this.accuracyTimeout = setTimeout(() => {
+        this.showAccuracy = true;
+        this.accuracyTimeout = null;
+      }, 7000);
+    },
+    clearBiasTimeouts() {
+      if (this.biasTypingTimeout) {
+        clearTimeout(this.biasTypingTimeout);
+        this.biasTypingTimeout = null;
+      }
+      if (this.accuracyTimeout) {
+        clearTimeout(this.accuracyTimeout);
+        this.accuracyTimeout = null;
+      }
+    },
+    resetBiasTyping() {
+      if (this.biasTypingInterval) {
+        clearInterval(this.biasTypingInterval);
+        this.biasTypingInterval = null;
+      }
+      this.clearBiasTimeouts();
+      this.biasDisplayTexts = this.biasDetailEntries.map(() => '');
+      this.isBiasTyping = false;
+    },
+    startBiasTypingSequence(index) {
+      if (index >= this.biasDetailEntries.length) {
+        this.isBiasTyping = false;
+        this.biasTypingInterval = null;
+        return;
+      }
+      const entry = this.biasDetailEntries[index];
+      let charIndex = 0;
+      this.biasTypingInterval = setInterval(() => {
+        this.$set(this.biasDisplayTexts, index, entry.text.slice(0, charIndex + 1));
+        charIndex += 1;
+        if (charIndex >= entry.text.length) {
+          clearInterval(this.biasTypingInterval);
+          this.biasTypingInterval = null;
+          this.startBiasTypingSequence(index + 1);
+        }
+      }, this.typingSpeed);
+    },
     async fetchVideoList() {
       try {
         const response = await axios.get(`${API_BASE_URL}/videos`);
         this.videoList = response.data.videos;
         console.log("视频列表获取成功", this.videoList);
+        
+        // 如果是从缓存加载的，尝试匹配并高亮选中的视频
+        if (this.selectedVideo && this.selectedVideo.name) {
+          const matchedVideo = this.videoList.find(v => v.name === this.selectedVideo.name);
+          if(matchedVideo) {
+            this.selectedVideo = matchedVideo; // 更新为从列表获取的完整对象
+          }
+        }
+        
       } catch (error) {
         console.error("获取视频列表失败", error);
         this.videoList = [];
@@ -357,6 +677,9 @@ export default {
     selectVideo(video) {
       this.selectedVideo = video;
 
+      // 切换视频时清空处理中视频和结果面板
+      this.resetResultState();
+
       // 正确构造原视频URL
       try {
         // 确保API_BASE_URL末尾没有斜杠
@@ -364,6 +687,7 @@ export default {
         // 构造正确的视频URL
         this.originalVideoURL = `${baseUrl}/video/${encodeURIComponent(video.name)}`;
         console.log("原视频URL:", this.originalVideoURL); // 用于调试
+        this.autoPlayOriginalVideo();
       } catch (error) {
         console.error("构造视频URL失败:", error);
         this.originalVideoURL = null;
@@ -373,20 +697,17 @@ export default {
       console.log("已选择视频:", video.name);
     },
     async startDetection() {
+      // 逻辑点 4：首先清空 localStorage
+      localStorage.clear();
+      console.log("LocalStorage 已清空。");
+
       if (!this.selectedVideo) {
         alert("请先选择视频文件！");
         return;
       }
 
       this.isLoading = true;
-      this.processedVideoURL = null;
-      this.taskId = null;
-      this.fullResult = {
-        video_description: null,
-        accuracy_results: null,
-        video_info: null,
-        key_frame_detection: null
-      };
+      this.resetResultState({ preserveMessages: true });
       this.resultMessage = "正在启动分析...";
       this.progressMessage = "正在启动分析...";
       console.log("Selected video name:", this.selectedVideo.name);
@@ -432,7 +753,7 @@ export default {
         // 3. 更新界面结果 (确保所有字段都已从 fullData 复制过来)
         this.fullResult.task_id = fullData.task_id;
         this.fullResult.video_description = fullData.video_description;
-        this.fullResult.video_info = fullData.video_info;
+        this.fullResult.video_info = fullData.video_info; // 保存视频信息
         this.fullResult.accuracy_results = fullData.overall_accuracy;
         this.fullResult.overall_accuracy = fullData.overall_accuracy;
         this.fullResult.low_similarity_aspects = fullData.low_similarity_aspects;
@@ -440,6 +761,9 @@ export default {
         this.fullResult.deviceType = fullData.deviceType;
         this.fullResult.key_frame_path = fullData.key_frame_path;
         this.fullResult.key_frame_detection = fullData.key_frame_detection;
+        
+        // 逻辑点 3：拆分总结和详情
+        this.prepareDescriptionDisplay(fullData);
 
         // ---- 提取文件名和路径修正 (用于构造新接口 URL) ----
         // 原始路径字符串 (可能包含完整路径)
@@ -459,6 +783,7 @@ export default {
           // 格式: /output/<task_id>/<video_name_without_ext>/<filename>
           this.processedVideoURL = `${API_BASE_URL}/output/${this.taskId}/${videoNameEncoded}/${encodeURIComponent(video_filename)}`;
           console.log("Processed video URL (Fixed):", this.processedVideoURL);
+          this.syncAndPlayVideos();
         } else {
           this.processedVideoURL = null;
         }
@@ -487,8 +812,8 @@ export default {
             deviceType: fullData.deviceType || "N/A",
 
             // 使用处理后的完整 URL 覆盖原有的路径字段
-            // key_frame_path: fullImagePathURL,
-            video_path: fullProcessedVideoPathURL,
+            key_frame_path: fullImagePathURL, // 保持与后端字段一致
+            video_path: fullProcessedVideoPathURL, // 保持与后端字段一致
 
             originalVideoPath: originalVideoPath
           };
@@ -835,9 +1160,14 @@ export default {
   }
 }
 
-/* 5. 中间列 (不变) */
+/* 5. 中间列 (修改) */
 .middle-column {
-  justify-content: space-around;
+  /* 移除了 justify-content: space-around; */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* 从顶部开始排列 */
+  align-items: center; /* 居中对齐 */
+  gap: 5px; /* 模块间的小间距 */
 }
 
 .video-section {
@@ -845,6 +1175,8 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-bottom: 0; /* 移除底部外边距，使其更紧凑 */
+  flex-shrink: 0; /* 防止视频框被压缩 */
 }
 
 .video-label {
@@ -859,7 +1191,7 @@ export default {
   font-weight: bold;
   line-height: 35px;
   text-align: center;
-  margin-bottom: 10px;
+  margin-bottom: 5px; /* 减小标题和框的间距 */
 }
 
 .label-processed {
@@ -868,7 +1200,7 @@ export default {
 
 .video-frame {
   width: 95%;
-  height: 320px;
+  height: 280px; /* 稍微减小高度以为总结框腾出空间 */
   background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -888,6 +1220,49 @@ export default {
   color: #88a;
   font-size: 1rem;
 }
+
+/* 新增：中间总结框样式 */
+.summary-box-middle {
+  width: 95%;
+  /* 自动高度，最小高度约3行 */
+  min-height: 90px;
+  max-height: 120px; /* 限制最大高度 */
+  height: auto;
+  
+  background-image: url('~@/assets/images/step1/-s-框-小视频.png'); /* 复用视频框背景 */
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  padding: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 5px; /* 与上方视频框的间距 */
+  flex-shrink: 0; /* 防止被压缩 */
+}
+
+.summary-content {
+  width: 100%;
+  height: 100%;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #eee;
+  white-space: pre-wrap;
+  overflow-y: auto;
+  text-align: left; /* 确保文本左对齐 */
+  padding: 5px; /* 内部增加一点padding */
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #00e5ff;
+    border-radius: 3px;
+  }
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
 
 /* 6. 右侧列 (重点修正 CSS 在这里) */
 
@@ -922,9 +1297,47 @@ export default {
   }
 
   }
+
+.description-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.btn-start-bias {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 160px;
+  height: 36px;
+  background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: bold;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+
+  &:disabled {
+    filter: grayscale(80%);
+    cursor: not-allowed;
+  }
+}
+
+.typing-text {
+  white-space: pre-wrap;
+  margin-bottom: 6px;
+}
+
+.hint-text {
+  color: #9fc5ff;
+  margin-bottom: 6px;
+}
 </style>
 
-/* 全局样式，确保能应用到v-html生成的内容 */
+/* 全局样式，确保能应用到v-html生成的内容 和 新的总结框 */
 <style lang="scss">
 .text-highlight {
   color: #ff4d4d !important; /* 确保颜色覆盖 */
@@ -932,7 +1345,7 @@ export default {
   background-color: rgba(255, 77, 77, 0.1);
   padding: 1px 3px;
   border-radius: 3px;
-  display: inline-block;
+  /* display: inline-block; */ /* 移除，以防破坏 pre-wrap 布局 */
 }
 </style>
 
@@ -1001,10 +1414,14 @@ export default {
   }
 }
 
-/* 7. 响应式调整 (不变) */
+/* 7. 响应式调整 (修改) */
 @media (max-width: 1400px) {
   .video-frame {
-    height: 250px;
+    height: 250px; /* 调整高度 */
+  }
+  .summary-box-middle {
+    min-height: 80px; /* 调整高度 */
+    max-height: 100px;
   }
 
   .metric-box {
@@ -1062,4 +1479,5 @@ export default {
     min-height: 150px;
   }
 }
+
 </style>
