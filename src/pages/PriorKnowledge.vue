@@ -16,11 +16,6 @@
       </b-col>
     </b-row>
 
-    <!-- 加载遮罩 -->
-    <div v-if="isLoading" class="loading-mask">
-      <div class="loading-spinner">加载中...</div>
-    </div>
-
     <!-- 主要内容区域 -->
     <div class="row content-row">
       <!-- 左侧视频和按钮区域 -->
@@ -60,6 +55,7 @@
             <div class="graph-container" ref="graphContainer" style="height: calc(100% - 40px);">
               <div class="graph-title">领域先验知识</div>
               <svg ref="graphSvg" style="width: 100%; height: calc(100% - 30px);"></svg>
+              <div v-if="isLoading" class="panel-loading">加载中...</div>
             </div>
           </div>
         </div>
@@ -67,8 +63,13 @@
 
       <!-- 右侧标签和预测信息区域 -->
       <div class="col-md-3 right-column">
+        <div class="panel-right-bias">
+          <button class="btn-bias-detect" @click="onBiasDetectClick" :disabled="isLoading">
+            偏差检测
+          </button>
+        </div>
         <!-- 标签信息面板 -->
-        <div class="panel-right-tag">
+        <!-- <div class="panel-right-tag">
           <div class="panel-header">
             <span>真值信息</span>
           </div>
@@ -85,7 +86,7 @@
               </ul>
             </div>
           </div>
-        </div>
+        </div> -->
 
         <!-- 预测信息面板 -->
         <div class="panel-right-predict">
@@ -93,7 +94,8 @@
             <span>先验知识认知偏差检测结果</span>
           </div>
           <div class="panel-content panel-content-right">
-            <div class="description-box predict-content">
+            <div v-if="isLoading" class="description-box predict-content">加载中...</div>
+            <div v-else class="description-box predict-content">
               <ul class="info-list">
                 <li
                   v-for="(item, idx) in predictInfoList"
@@ -102,7 +104,7 @@
                 >
                   <span v-if="typeof item === 'object'">
                     {{ item.label }}
-                    <span :style="{ color: item.color || '#00e5ff' }">{{ item.value }}</span>
+                    <span :style="{ color: isColorized ? (item.color || '#00e5ff') : '#ffffff' }">{{ item.value }}</span>
                   </span>
                   <span v-else>{{ item }}</span>
                 </li>
@@ -113,17 +115,25 @@
 
         <!-- 偏差检测准确率面板 -->
         <div class="panel-right-accuracy">
-          <div class="accuracy-content">
-            <span class="accuracy-label">偏差检测准确率</span>
-            <span class="accuracy-value">
-              <template v-if="accuracyRate !== '—'">
-                {{ accuracyRate }}
-              </template>
-              <template v-else>
-                N/A
-              </template>
-            </span>
-          </div>
+          <template v-if="isLoading">
+            <div class="accuracy-content">
+              <span class="accuracy-label">偏差检测准确率</span>
+              <span class="accuracy-value">计算中...</span>
+            </div>
+          </template>
+          <template v-else>
+            <div class="accuracy-content">
+              <span class="accuracy-label">偏差检测准确率</span>
+              <span class="accuracy-value">
+                <template v-if="accuracyRate !== '—'">
+                  {{ accuracyRate }}
+                </template>
+                <template v-else>
+                  N/A
+                </template>
+              </span>
+            </div>
+          </template>
         </div>
 
         <!-- 结果导出按钮 -->
@@ -177,6 +187,9 @@ export default {
           propertyColors: {}, // 用于存储属性颜色
           isLoading: false,
           accuracyRate: '—',
+          cachedAccuracy: '—',
+          accuracyTimer: null,
+          isColorized: false,
           finalResult: null,
           nodes: [], // 用于存储后端返回的节点数据
           links: [], // 用于存储后端返回的链接数据
@@ -192,10 +205,16 @@ export default {
     this.renderGraph();
     // 页面加载时加载视频
     this.loadVideoFromStorage();
+    // 页面加载时尝试读取模块二缓存
+    this.loadModule2FromStorage();
     // this.downloadJsonData();
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
+    if (this.accuracyTimer) {
+      clearTimeout(this.accuracyTimer);
+      this.accuracyTimer = null;
+    }
   },
   methods: {
     // 导航到首页
@@ -262,6 +281,7 @@ export default {
     },
     startNegotiation() {
       console.log("开始先验知识");
+      this.isColorized = false;
       this.startInfer();
     },
     async renderGraph() {
@@ -496,8 +516,16 @@ export default {
           console.log("---------------------------------");
         }
 
-        // 处理准确率
-        this.accuracyRate = data.accuracy !== undefined ? (data.accuracy * 100) + '%' : '—';
+        // 处理准确率：延迟3分钟显示
+        this.cachedAccuracy = data.accuracy !== undefined ? (data.accuracy * 100) + '%' : '—';
+        this.accuracyRate = '—';
+        if (this.accuracyTimer) {
+          clearTimeout(this.accuracyTimer);
+        }
+        this.accuracyTimer = setTimeout(() => {
+          this.accuracyRate = this.cachedAccuracy;
+          this.accuracyTimer = null;
+        }, 180000);
 
         // 重新渲染图谱
         this.$nextTick(() => {
@@ -509,6 +537,70 @@ export default {
       }).finally(() => {
         this.isLoading = false;
       });
+    },
+    // 从本地缓存加载模块二结果
+    loadModule2FromStorage() {
+      try {
+        const cacheStr = localStorage.getItem('module2Res');
+        if (!cacheStr) {
+          console.log('未找到 module2Res 缓存');
+          return;
+        }
+        const data = JSON.parse(cacheStr);
+        // 图谱
+        if (data.knowledge_info && data.knowledge_info.length > 0) {
+          this.nodes = data.knowledge_info[0].nodes || [];
+          this.links = data.knowledge_info[0].links || [];
+        }
+        // 标签
+        if (data.label_info && data.label_info.length > 0 && data.label_info[0].length > 0) {
+          const labelData = data.label_info[0][0];
+          this.tagInfoList = [
+            `小类信息：${labelData.kind || '未知'}`,
+            `火力信息：${labelData.firepower || '未知'}`,
+            `颜色信息：${labelData.color || '未知'}`,
+            `形状信息：${labelData.shape || '未知'}`,
+            `尺寸信息：${labelData.size || '未知'}`,
+            `动力信息：${labelData.power || '未知'}`
+          ];
+        }
+        // 属性颜色
+        if (data.property_color && data.property_color.length > 0 && data.property_color[0].length > 0) {
+          this.propertyColors = data.property_color[0][0];
+        }
+        // 预测（默认白色显示）
+        if (data.result && data.result.length > 0 && data.result[0].length > 0) {
+          const predictData = data.result[0][0];
+          this.predictInfoList = [
+            { label: '小类信息：', value: predictData.kind || '未知', color: this.propertyColors.kind || '#000' },
+            { label: '火力信息：', value: predictData.firepower || '未知', color: this.propertyColors.firepower || '#000' },
+            { label: '颜色信息：', value: predictData.color || '未知', color: this.propertyColors.color || '#000' },
+            { label: '形状信息：', value: predictData.shape || '未知', color: this.propertyColors.shape || '#000' },
+            { label: '尺寸信息：', value: predictData.size || '未知', color: this.propertyColors.size || '#000' },
+            { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
+          ];
+        }
+        // 准确率延迟
+        this.cachedAccuracy = data.accuracy !== undefined ? (data.accuracy * 100) + '%' : '—';
+        this.accuracyRate = '—';
+        if (this.accuracyTimer) {
+          clearTimeout(this.accuracyTimer);
+        }
+        this.accuracyTimer = setTimeout(() => {
+          this.accuracyRate = this.cachedAccuracy;
+          this.accuracyTimer = null;
+        }, 180000);
+        // 渲染图谱
+        this.$nextTick(() => {
+          this.renderGraph();
+        });
+      } catch (e) {
+        console.error('读取 module2Res 缓存失败:', e);
+      }
+    },
+    // 偏差检测按钮：启用颜色显示
+    onBiasDetectClick() {
+      this.isColorized = true;
     },
     // 从 LocalStorage 加载视频
     loadVideoFromStorage() {
@@ -756,12 +848,13 @@ body {
   background-image: url('~@/assets/images/step1/-s-弹窗-偏差检测准确率.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  margin-bottom: 15px;
+  margin-bottom: -5px;
   padding: 20px 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100px;
+  margin-top: -20px;
 }
 
 /* 结果导出按钮区域 */
@@ -1183,29 +1276,7 @@ body {
 }
 
 /* 加载遮罩样式 */
-.loading-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(10, 17, 32, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  font-size: 20px;
-  font-weight: bold;
-}
-
-.loading-spinner {
-  padding: 20px 40px;
-  background-color: rgba(0, 0, 0, 0.7);
-  border: 3px solid #00e5ff;
-  border-radius: 8px;
-  color: #00e5ff;
-  box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
-}
+/*（全局遮罩已移除，不再使用）*/
 
 .text-muted {
   color: #888888;
@@ -1267,5 +1338,61 @@ body {
   .panel-left { min-height: 400px; }
   .panel-right-top { min-height: 250px; height: auto; }
   .panel-right-bottom { min-height: 150px; }
+}
+
+/* 新增：偏差检测按钮容器与样式，以及局部加载样式 */
+.panel-right-bias {
+  flex-shrink: 0;
+  /* flex-basis: 10%; */
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 0 10px 0;
+  background: none;
+  min-height: 40px;
+}
+
+.btn-bias-detect {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: auto;
+  min-width: 150px;
+  max-width: 250px;
+  min-height: 50px;
+  height: 100%;
+  background-image: url('~@/assets/images/step3/greenbutton.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: bold;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: -50px;
+  margin-top: -30px;
+}
+
+.btn-bias-detect:disabled {
+  filter: grayscale(80%);
+  cursor: not-allowed;
+}
+
+/* 按钮样式与“加载先验知识”一致，不额外定义 hover 效果 */
+
+.panel-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(10, 17, 32, 0.4);
+  color: #00e5ff;
+  font-weight: bold;
 }
 </style>

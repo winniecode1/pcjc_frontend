@@ -16,19 +16,25 @@
       </b-col>
     </b-row>
 
-    <!-- 加载遮罩 -->
-    <div v-if="isLoading" class="loading-mask">
-      <div class="loading-spinner">加载中...</div>
-    </div>
-
     <!-- 主要内容区域 -->
     <div class="row content-row">
       <!-- 左侧视频和按钮区域 -->
       <div class="design-left-column">
         <div class="design-module video-module">
-          <div class="panel-header">视频信息</div>
+          <div class="panel-header">先验知识传播结果</div>
           <div class="design-module-content video-content-wrapper">
-            <video v-if="videoUrl" :src="videoUrl" controls class="video-display" @error="handleVideoError"></video>
+            <video
+              v-if="videoUrl"
+              ref="resultVideo"
+              :src="videoUrl"
+              controls
+              autoplay
+              loop
+              muted
+              playsinline
+              class="video-display"
+              @error="handleVideoError"
+            ></video>
             <div v-else class="placeholder-text">
               {{ videoMessage }}
             </div>
@@ -71,10 +77,11 @@
               <!-- 智能体A推理结果 -->
               <div class="agent-box">
                 <div class="agent-header">
-                  <div class="agent-avatar">A</div>
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/agent.png')" alt="Agent" />
                   <div class="agent-label">智能体A</div>
                 </div>
                 <div class="agent-content">
+                  <div v-if="isLoadingRound1" class="panel-overlay">加载中...</div>
                   <p v-if="typeof agentARound1Result === 'object' && agentARound1Result !== null" class="agent-result">
                     <span class="result-line">推理型号：{{ agentARound1Result.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentARound1Result.reason || '***' }}</span>
@@ -86,10 +93,11 @@
               <!-- 智能体B推理结果 -->
               <div class="agent-box">
                 <div class="agent-header">
-                  <div class="agent-avatar">B</div>
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/agent.png')" alt="Agent" />
                   <div class="agent-label">智能体B</div>
                 </div>
                 <div class="agent-content">
+                  <div v-if="isLoadingRound1" class="panel-overlay">加载中...</div>
                   <p v-if="typeof agentBRound1Result === 'object' && agentBRound1Result !== null" class="agent-result">
                     <span class="result-line">推理型号：{{ agentBRound1Result.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentBRound1Result.reason || '***' }}</span>
@@ -101,10 +109,11 @@
               <!-- 智能体C推理结果 -->
               <div class="agent-box">
                 <div class="agent-header">
-                  <div class="agent-avatar">C</div>
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/agent.png')" alt="Agent" />
                   <div class="agent-label">智能体C</div>
                 </div>
                 <div class="agent-content">
+                  <div v-if="isLoadingRound1" class="panel-overlay">加载中...</div>
                   <p v-if="typeof agentCRound1Result === 'object' && agentCRound1Result !== null" class="agent-result">
                     <span class="result-line">推理型号：{{ agentCRound1Result.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentCRound1Result.reason || '***' }}</span>
@@ -121,12 +130,13 @@
               <!-- 智能体A-B协商 -->
               <div class="agent-box negotiation">
                 <div class="agent-header">
-                  <div class="agent-avatar">A</div>
-                  <div class="negotiation-sign">⇄</div>
-                  <div class="agent-avatar">B</div>
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" />
+                  <!-- <div class="negotiation-sign">⇄</div>
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" /> -->
                   <div class="agent-label">A&B</div>
                 </div>
                 <div class="agent-content">
+                  <div v-if="isLoadingRound2" class="panel-overlay">加载中...</div>
                   <p v-if="typeof agentABNegotiation === 'object' && agentABNegotiation !== null" class="agent-result">
                     <span class="result-line">推理型号：{{ agentABNegotiation.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentABNegotiation.reason || '***' }}</span>
@@ -138,12 +148,13 @@
               <!-- 智能体B-C协商 -->
               <div class="agent-box negotiation">
                 <div class="agent-header">
-                  <div class="agent-avatar">B</div>
-                  <div class="negotiation-sign">⇄</div>
-                  <div class="agent-avatar">C</div>
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" />
+                  <!-- <div class="negotiation-sign">⇄</div>
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" /> -->
                   <div class="agent-label">B&C</div>
                 </div>
                 <div class="agent-content">
+                  <div v-if="isLoadingRound2" class="panel-overlay">加载中...</div>
                   <p v-if="typeof agentBCNegotiation === 'object' && agentBCNegotiation !== null" class="agent-result">
                     <span class="result-line">推理型号：{{ agentBCNegotiation.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentBCNegotiation.reason || '***' }}</span>
@@ -155,12 +166,13 @@
               <!-- 智能体C-A协商 -->
               <div class="agent-box negotiation">
                 <div class="agent-header">
-                  <div class="agent-avatar">C</div>
-                  <div class="negotiation-sign">⇄</div>
-                  <div class="agent-avatar">A</div>
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" />
+                  <!-- <div class="negotiation-sign">⇄</div>
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" /> -->
                   <div class="agent-label">C&A</div>
                 </div>
                 <div class="agent-content">
+                  <div v-if="isLoadingRound2" class="panel-overlay">加载中...</div>
                   <p v-if="typeof agentCANegotiation === 'object' && agentCANegotiation !== null" class="agent-result">
                     <span class="result-line">推理型号：{{ agentCANegotiation.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentCANegotiation.reason || '***' }}</span>
@@ -175,50 +187,70 @@
 
       <!-- 右侧：协商结果 -->
       <div class="col-md-3 right-column">
+        <div class="panel-right-bias-button">
+          <button
+            class="btn-bias-detect"
+            @click="handleBiasDetect"
+            :disabled="isRightLoadingResults || isRightLoadingAccuracy || isLoadingRound1 || isLoadingRound2"
+          >
+            偏差检测
+          </button>
+        </div>
         <div class="panel-header header-results">群体协商认知偏差检测结果</div>
 
         <div class="panel-right-top">
           <div class="panel-content">
-            <div class="result-section">
-              <div class="section-header">共识摘要：</div>
-              <div class="section-content">
-                <p class="result-text" v-html="formattedConsensusSummary || '***'"></p>
+            <div v-if="isRightLoadingResults" class="panel-overlay">加载中...</div>
+            <template v-else>
+              <div class="result-section">
+                <div class="section-header">共识摘要：</div>
+                <div class="section-content">
+                  <p class="result-text" v-html="formattedConsensusSummary || '***'"></p>
+                </div>
               </div>
-            </div>
-            
-            <div class="result-section">
-              <div class="section-header">分歧点：</div>
-              <div class="section-content">
-                <p class="result-text" v-html="formattedDisagreementPoints || '***'"></p>
+              
+              <div class="result-section">
+                <div class="section-header">分歧点：</div>
+                <div class="section-content">
+                  <p class="result-text" v-html="formattedDisagreementPoints || '***'"></p>
+                </div>
               </div>
-            </div>
+            </template>
           </div>
         </div>
 
-        <div class="panel-right-bottom">
+        <div class="panel-right-bottom" style="margin-top: -10px;">
           <div class="panel-content">
-            <div class="final-result-section">
-              <div class="final-result-title">协商后详细型号</div>
-              <div class="final-model-display">
-                <p class="final-model-text">{{ finalResult || 'MiG-25Foxbat' }}</p>
+            <div v-if="isRightLoadingResults" class="panel-overlay">加载中...</div>
+            <template v-else>
+              <div class="final-result-section">
+                <div class="final-result-title">协商后详细型号</div>
+                <div class="final-model-display">
+                  <p class="final-model-text">{{ finalResult || 'MiG-25Foxbat' }}</p>
+                </div>
               </div>
-            </div>
+            </template>
           </div>
         </div>
 
         <!-- 偏差检测准确率面板 -->
         <div class="panel-right-accuracy">
-          <div class="accuracy-content">
-            <span class="accuracy-label">偏差检测准确率</span>
-            <span class="accuracy-value">
-              <template v-if="accuracyRate !== '—' && accuracyRate !== null && accuracyRate !== undefined && accuracyRate !== ''">
-                {{ formattedAccuracyRate }}%
-              </template>
-              <template v-else>
-                N/A
-              </template>
-            </span>
-          </div>
+          <template v-if="isRightLoadingAccuracy">
+            <div class="loading-spinner">加载中...</div>
+          </template>
+          <template v-else>
+            <div class="accuracy-content">
+              <span class="accuracy-label">偏差检测准确率</span>
+              <span class="accuracy-value">
+                <template v-if="accuracyRate !== '—' && accuracyRate !== null && accuracyRate !== undefined && accuracyRate !== ''">
+                  {{ formattedAccuracyRate }}%
+                </template>
+                <template v-else>
+                  N/A
+                </template>
+              </span>
+            </div>
+          </template>
         </div>
 
         <!-- 结果导出按钮 -->
@@ -283,7 +315,15 @@ export default {
       differentModelAndReason: "",
       // 视频相关数据
       videoUrl: null,
-      videoMessage: '正在从 LocalStorage 加载视频...'
+      videoMessage: '正在从 LocalStorage 加载视频...',
+      // 中间区域加载与显示控制
+      isLoadingRound1: false,
+      isLoadingRound2: false,
+      isRound1Displayed: false,
+      isRound2Displayed: false,
+      // 右侧分步显示控制
+      isRightLoadingResults: false,
+      isRightLoadingAccuracy: false
     };
   },
   beforeDestroy() {
@@ -349,9 +389,17 @@ export default {
     window.addEventListener('resize', this.handleResize);
     // 页面加载时加载视频
     this.loadVideoFromStorage();
+    // 若视频可播放，尝试自动播放
+    this.$nextTick(() => {
+      if (this.$refs.resultVideo && typeof this.$refs.resultVideo.play === 'function') {
+        try { this.$refs.resultVideo.play(); } catch (e) {}
+      }
+    });
     
     // 从localStorage读取预测信息
     this.loadPredictInfoFromStorage();
+    // 从localStorage读取模块三结果
+    this.loadModule3ResultsFromStorage();
   },
   methods: {
     // 导航到首页
@@ -505,8 +553,44 @@ export default {
       alert('结果导出功能已触发');
     },
     
+    // 读取本地已存在的模块三结果并直接回显
+    loadModule3ResultsFromStorage() {
+      try {
+        const stored = localStorage.getItem('module3Res');
+        if (!stored) return;
+        const data = JSON.parse(stored);
+        if (!data) return;
+        // 回显所有结果（直接显示两轮与右侧结果）
+        this.finalResult = data.final_model_name;
+        this.consensusSummary = (data.final_review && data.final_review.consensus_summary) || '';
+        this.disagreementPoints = (data.final_review && data.final_review.deviation_analysis) || '';
+        this.disagreementPointsHighlight = (data.final_review && data.final_review.deviation_analysis_report) || '';
+        this.agentARound1Result = (data.negotiation_details && data.negotiation_details.initial_analyses && data.negotiation_details.initial_analyses.Agent_A) || '';
+        this.agentBRound1Result = (data.negotiation_details && data.negotiation_details.initial_analyses && data.negotiation_details.initial_analyses.Agent_B) || '';
+        this.agentCRound1Result = (data.negotiation_details && data.negotiation_details.initial_analyses && data.negotiation_details.initial_analyses.Agent_C) || '';
+        this.agentABNegotiation = (data.negotiation_details && data.negotiation_details.negotiation_results && data.negotiation_details.negotiation_results.Agent_A) || '';
+        this.agentBCNegotiation = (data.negotiation_details && data.negotiation_details.negotiation_results && data.negotiation_details.negotiation_results.Agent_B) || '';
+        this.agentCANegotiation = (data.negotiation_details && data.negotiation_details.negotiation_results && data.negotiation_details.negotiation_results.Agent_C) || '';
+        this.accuracyRate = (data.accuracy !== undefined && data.accuracy !== null) ? data.accuracy : '—';
+        this.isRound1Displayed = true;
+        this.isRound2Displayed = true;
+        this.isLoadingRound1 = false;
+        this.isLoadingRound2 = false;
+        this.isRightLoadingResults = false;
+        this.isRightLoadingAccuracy = false;
+        console.log('已从 localStorage 回显 module3Res');
+      } catch (e) {
+        console.warn('读取 module3Res 失败：', e);
+      }
+    },
+
     async startInfer() {
-      this.isLoading = true;
+      // 改为仅中间区域显示加载
+      this.isLoading = false;
+      this.isLoadingRound1 = true;
+      this.isLoadingRound2 = true;
+      this.isRound1Displayed = false;
+      this.isRound2Displayed = false;
       const module1ResStr = localStorage.getItem('module1Res');
       const module1Res = JSON.parse(module1ResStr);
        const imgPath = module1Res.key_frame_path.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
@@ -530,21 +614,28 @@ export default {
         
         // 模拟数据 - 实际使用时从API响应获取
         console.log("推理请求成功，结果:", data);
+        // 右侧最终/准确率准备（由偏差检测按钮控制显示节奏）
         this.finalResult = data.final_model_name;
-        this.consensusSummary = data.final_review.consensus_summary;
-        this.disagreementPoints = data.final_review.deviation_analysis;
-        this.disagreementPointsHighlight = data.final_review.deviation_analysis_report;
-        // 设置一轮推理数据
-        this.agentARound1Result = data.negotiation_details.initial_analyses.Agent_A;
-        this.agentBRound1Result = data.negotiation_details.initial_analyses.Agent_B;
-        this.agentCRound1Result = data.negotiation_details.initial_analyses.Agent_C;
-        
-        // 设置二轮协商数据
-        this.agentABNegotiation = data.negotiation_details.negotiation_results.Agent_A;
-        this.agentBCNegotiation = data.negotiation_details.negotiation_results.Agent_B;
-        this.agentCANegotiation = data.negotiation_details.negotiation_results.Agent_C;
-        
-        this.accuracyRate = data.accuracy;
+        this.consensusSummary = (data.final_review && data.final_review.consensus_summary) || '';
+        this.disagreementPoints = (data.final_review && data.final_review.deviation_analysis) || '';
+        this.disagreementPointsHighlight = (data.final_review && data.final_review.deviation_analysis_report) || '';
+        this.accuracyRate = (data.accuracy !== undefined && data.accuracy !== null) ? data.accuracy : '—';
+
+        // 立刻显示一轮推理
+        this.agentARound1Result = (data.negotiation_details && data.negotiation_details.initial_analyses && data.negotiation_details.initial_analyses.Agent_A) || '';
+        this.agentBRound1Result = (data.negotiation_details && data.negotiation_details.initial_analyses && data.negotiation_details.initial_analyses.Agent_B) || '';
+        this.agentCRound1Result = (data.negotiation_details && data.negotiation_details.initial_analyses && data.negotiation_details.initial_analyses.Agent_C) || '';
+        this.isLoadingRound1 = false;
+        this.isRound1Displayed = true;
+
+        // 3秒后显示二轮协商结果
+        setTimeout(() => {
+          this.agentABNegotiation = (data.negotiation_details && data.negotiation_details.negotiation_results && data.negotiation_details.negotiation_results.Agent_A) || '';
+          this.agentBCNegotiation = (data.negotiation_details && data.negotiation_details.negotiation_results && data.negotiation_details.negotiation_results.Agent_B) || '';
+          this.agentCANegotiation = (data.negotiation_details && data.negotiation_details.negotiation_results && data.negotiation_details.negotiation_results.Agent_C) || '';
+          this.isLoadingRound2 = false;
+          this.isRound2Displayed = true;
+        }, 3000);
 
         localStorage.setItem('module3Res', JSON.stringify(response.data));
         console.log('模块3返回值已存入localStorage');
@@ -556,10 +647,30 @@ export default {
         console.error("推理请求失败:", error);
         this.finalResult = "推理失败: " + (error.response && error.response.data && error.response.data.error) || error.message;
       } finally {
-        this.isLoading = false;
+        // 全局不显示遮罩，这里不再处理 isLoading
       }
     },
 
+    // 右侧偏差检测按钮：不再请求后端，分步显示
+    handleBiasDetect() {
+      // 若没有已有数据，直接返回
+      const stored = localStorage.getItem('module3Res');
+      if (!stored) {
+        alert('请先进行群体协商，以获取完整结果。');
+        return;
+      }
+      // 触发右侧加载流程
+      this.isRightLoadingResults = true;
+      this.isRightLoadingAccuracy = true;
+      // 2秒后显示结果与型号
+      setTimeout(() => {
+        this.isRightLoadingResults = false;
+      }, 2000);
+      // 3分钟后显示准确率
+      setTimeout(() => {
+        this.isRightLoadingAccuracy = false;
+      }, 3 * 60 * 1000);
+    }
   }
 };
 </script>
@@ -701,6 +812,7 @@ export default {
   background: none;
   padding: 0;
   margin: 0;
+  position: relative;
 }
 
 /* 面板通用样式 */
@@ -736,6 +848,37 @@ export default {
   z-index: 1;
 }
 
+.panel-right-top .panel-content {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 右侧顶部面板内：共识摘要与分歧点按3:2比例分配可用高度 */
+.panel-right-top .result-section {
+  display: flex;
+  flex-direction: column;
+  /* 作为基线占位，具体比例在下面两个选择器中定义 */
+  flex: 1 1 0;
+  margin-bottom: 10px;
+}
+
+.panel-right-top .result-section:first-child {
+  flex: 3 1 0;
+}
+
+.panel-right-top .result-section:last-child {
+  flex: 2 1 0;
+  margin-bottom: 0;
+}
+
+.panel-right-top .section-content {
+  /* 让内容区域自适应填充并可滚动 */
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+
 .panel-right-bottom {
   flex-grow: 1;
   height: 100%;
@@ -757,6 +900,7 @@ export default {
   flex-direction: column;
   overflow: hidden;
   background: transparent;
+  position: relative;
 }
 
 /* 面板标题 */
@@ -791,6 +935,7 @@ export default {
 /* 右侧标题特殊样式 */
 .header-results {
   margin-bottom: 5px !important;
+  margin-top: -20px;
 }
 
 /* 设计模块特定样式 */
@@ -1084,6 +1229,7 @@ export default {
   padding: 10px;
   border-radius: 5px;
   min-height: 80px;
+  position: relative;
 }
 
 .agent-result {
@@ -1130,6 +1276,7 @@ export default {
   align-items: center;
   justify-content: center;
   min-height: 100px;
+  margin-top: -20px;
 }
 
 .result-section {
@@ -1225,6 +1372,45 @@ export default {
   background-image: none !important;
 }
 
+/* 新增：右侧偏差检测按钮区域与样式（与左下角按钮尺寸风格一致） */
+.panel-right-bias-button {
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 0 12px 0;
+  min-height: 70px;
+  background: none !important;
+}
+
+.btn-bias-detect {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: auto;
+  min-width: 150px;
+  max-width: 250px;
+  height: 100%;
+  background-image: url('~@/assets/images/step3/greenbutton.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: bold;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50px;
+  margin-bottom: -50px;
+  margin-top: -60px;
+}
+
+.btn-bias-detect:disabled {
+  filter: grayscale(80%);
+  cursor: not-allowed;
+}
+
 /* 准确率显示 */
 .accuracy-content {
   display: flex;
@@ -1269,6 +1455,7 @@ export default {
   transition: all 0.3s ease;
   position: relative;
   padding: 0;
+  margin-top: -20px;
 }
 
 .btn-export-result:hover:not(:disabled) {
@@ -1301,6 +1488,19 @@ export default {
   text-shadow: 0 0 5px #00e5ff;
 }
 
+/* 面板与框内局部遮罩 */
+.panel-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
 /* 8. 滚动条样式 */
 ::-webkit-scrollbar {
   width: 6px;
