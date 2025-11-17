@@ -10,34 +10,47 @@
 
     <!-- 加载/错误提示 -->
     <div v-if="showAlert" class="alert-container">
-      <b-alert :variant="alertVariant" show dismissible @dismissed="showAlert=false">
-        {{ alertMessage }}
-      </b-alert>
+      <div :class="['custom-alert', `alert-${alertVariant}`]">
+        <div class="alert-icon">
+          <span v-if="alertVariant === 'success'">✓</span>
+          <span v-else-if="alertVariant === 'danger'">✕</span>
+          <span v-else-if="alertVariant === 'warning'">⚠</span>
+          <span v-else>ℹ</span>
+        </div>
+        <div class="alert-content">{{ alertMessage }}</div>
+        <button class="alert-close" @click="showAlert = false">✕</button>
+      </div>
     </div>
 
     <!-- 主要内容网格 -->
     <div class="main-content">
       <!-- 模块1：多模态信息认知偏差检测模型 -->
       <div class="module-container" style="top: 17vh; left: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">多模态信息认知偏差检测模型</div>
+        <div class="module-header">多模态信息认知偏差根因诊断</div>
         <div class="module-body">
           <div class="result-section">
-            <div class="section-title">偏差测试结果</div>
+            <div class="section-title">根因诊断与定位结果</div>
             <div class="content-box scrollable" v-html="highlightBrackets(module1BiasTestResult)"></div>
           </div>
           <div class="metric-group">
-              <div class="metric-item">认知传播偏差测试结果: <span>{{ formatPercent(module1PropagationBias, 0) }}</span></div>
-              <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module1IsBiasModule) }}</span></div>
+              <div class="metric-item">认知传播偏差测试结果: 
+                <span v-if="module1PropagationBias !== null && module1PropagationBias !== undefined">{{ formatPercent(module1PropagationBias, 0) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
+              <div class="metric-item">是否是偏差模块: 
+                <span v-if="module1IsBiasModule !== null && module1IsBiasModule !== undefined">{{ formatYesNo(module1IsBiasModule) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
           </div>
         </div>
       </div>
 
       <!-- 模块2：先验知识认知偏差检测模型 -->
       <div class="module-container" style="top: 17vh; right: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">先验知识认知偏差检测模型</div>
+        <div class="module-header">先验知识认知偏差根因诊断</div>
         <div class="module-body">
            <div class="result-section">
-              <div class="section-title">偏差测试结果</div>
+              <div class="section-title">根因诊断与定位结果</div>
               <div class="content-box scrollable">
                   <div class="attributes-grid">
                     <div v-for="attr in module2DisplayAttributes" :key="attr.key" 
@@ -49,40 +62,64 @@
               </div>
             </div>
           <div class="metric-group">
-              <div class="metric-item">模型内部偏差测试结果: <span>{{ formatPercent(module2InternalBias, 0) }}</span></div>
-              <div class="metric-item">认知传播偏差测试结果: <span>{{ formatPercent(module2PropagationBias, 0) }}</span></div>
-              <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module2IsBiasModule) }}</span></div>
+              <div class="metric-item">模型内部偏差测试结果: 
+                <span v-if="module2InternalBias !== null && module2InternalBias !== undefined">{{ formatPercent(module2InternalBias, 0) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
+              <div class="metric-item">认知传播偏差测试结果: 
+                <span v-if="module2PropagationBias !== null && module2PropagationBias !== undefined">{{ formatPercent(module2PropagationBias, 0) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
+              <div class="metric-item">是否是偏差模块: 
+                <span v-if="module2IsBiasModule !== null && module2IsBiasModule !== undefined">{{ formatYesNo(module2IsBiasModule) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
           </div>
         </div>
       </div>
 
       <!-- 模块3：群体协商认知偏差检测模型 -->
       <div class="module-container" style="top: 52vh; left: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">群体协商认知偏差检测模型</div>
+        <div class="module-header">群体协商认知偏差根因诊断</div>
          <div class="module-body">
           <div class="result-section">
-            <div class="section-title">偏差测试结果</div>
+            <div class="section-title">根因诊断与定位结果</div>
             <div class="content-box scrollable" v-html="highlightBrackets(module3BiasTestResult)"></div>
           </div>
           <div class="metric-group">
-              <div class="metric-item">模型内部偏差测试结果: <span>{{ formatPercent(module3InternalBias, 0) }}</span></div>
-              <div class="metric-item">认知传播偏差测试结果: <span>{{ formatPercent(module3PropagationBias, 0) }}</span></div>
-              <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module3IsBiasModule) }}</span></div>
+              <div class="metric-item">模型内部偏差测试结果: 
+                <span v-if="module3InternalBias !== null && module3InternalBias !== undefined">{{ formatPercent(module3InternalBias, 0) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
+              <div class="metric-item">认知传播偏差测试结果: 
+                <span v-if="module3PropagationBias !== null && module3PropagationBias !== undefined">{{ formatPercent(module3PropagationBias, 0) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
+              <div class="metric-item">是否是偏差模块: 
+                <span v-if="module3IsBiasModule !== null && module3IsBiasModule !== undefined">{{ formatYesNo(module3IsBiasModule) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
           </div>
         </div>
       </div>
 
       <!-- 模块4：决策选择认知偏差检测模型 -->
       <div class="module-container" style="top: 52vh; right: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">决策选择认知偏差检测模型</div>
+        <div class="module-header">决策选择认知偏差检测根因诊断</div>
         <div class="module-body">
           <div class="result-section">
-            <div class="section-title">偏差测试结果</div>
+            <div class="section-title">根因诊断与定位结果</div>
             <div class="content-box scrollable" v-html="highlightBrackets(module4BiasTestResult)"></div>
           </div>
           <div class="metric-group">
-            <div class="metric-item">模型内部偏差测试结果: <span>{{ formatPercent(module4InternalBias, 0) }}</span></div>
-            <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module4IsBiasModule) }}</span></div>
+            <div class="metric-item">模型内部偏差测试结果: 
+              <span v-if="module4InternalBias !== null && module4InternalBias !== undefined">{{ formatPercent(module4InternalBias, 0) }}</span>
+              <span v-else class="loading-spinner"></span>
+            </div>
+            <div class="metric-item">是否是偏差模块: 
+              <span v-if="module4IsBiasModule !== null && module4IsBiasModule !== undefined">{{ formatYesNo(module4IsBiasModule) }}</span>
+              <span v-else class="loading-spinner"></span>
+            </div>
           </div>
         </div>
       </div>
@@ -93,11 +130,17 @@
         <div class="diagnosis-card">根因诊断结果</div>
         <div class="metric-card accuracy-card">
             <div class="metric-title">多主体解析准确率</div>
-            <div class="metric-value">{{ formatPercent(accuracy, 0) }}</div>
+            <div class="metric-value">
+              <span v-if="accuracy !== null && accuracy !== undefined">{{ formatPercent(accuracy, 0) }}</span>
+              <span v-else class="loading-spinner loading-spinner-large"></span>
+            </div>
         </div>
         <div class="metric-card recall-card">
             <div class="metric-title">不一致根因召回率</div>
-            <div class="metric-value">{{ formatPercent(recall, 0) }}</div>
+            <div class="metric-value">
+              <span v-if="recall !== null && recall !== undefined">{{ formatPercent(recall, 0) }}</span>
+              <span v-else class="loading-spinner loading-spinner-large"></span>
+            </div>
         </div>
         <button class="export-btn" @click="exportResult">结果导出</button>
     </div>
@@ -119,6 +162,10 @@ export default {
       taskId: 'test_id_1',
       isRunning: false,
       pollTimer: null,
+      
+      // accuracy/recall 独立轮询控制
+      accuracyRecallTimer: null,
+      accuracyRecallFetched: false,
       
       // 提示信息
       showAlert: false,
@@ -198,11 +245,15 @@ export default {
     window.addEventListener('resize', this.handleResize);
     this.handleResize();
     this.initBiasAnalysis();
+    this.initAccuracyRecallPolling();
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
     if (this.pollTimer) {
       clearInterval(this.pollTimer);
+    }
+    if (this.accuracyRecallTimer) {
+      clearInterval(this.accuracyRecallTimer);
     }
   },
   methods: {
@@ -214,6 +265,19 @@ export default {
      * 初始化偏差分析流程
      */
     async initBiasAnalysis() {
+      // 首先检查 localStorage 是否存在 module5Res
+      const module5Result = this.loadModule5FromStorage();
+      
+      if (module5Result.success) {
+        // 存在缓存数据，直接使用
+        console.log('✅ 从 localStorage 加载 module5Res 成功，直接显示');
+        this.parseStatusData(module5Result.data);
+        this.showAlertMessage('success', '诊断结果已加载');
+        return; // 不再执行后续的请求和轮询
+      }
+      
+      console.log('📭 localStorage 中不存在 module5Res，开始正常请求流程');
+      
       // 从LocalStorage构建级联数据
       const buildResult = this.buildCascadeDataFromLocalStorage();
       
@@ -232,6 +296,58 @@ export default {
       console.log('✅ 最终使用的级联数据：', JSON.parse(JSON.stringify(this.cascadeData)));
       
       await this.startBiasAnalysis();
+    },
+    
+    /**
+     * 从 localStorage 加载 module5Res
+     */
+    loadModule5FromStorage() {
+      const MODULE5_KEY = 'module5Res';
+      
+      try {
+        const module5Str = localStorage.getItem(MODULE5_KEY);
+        
+        if (!module5Str) {
+          console.log('📭 localStorage 中不存在 module5Res');
+          return { success: false };
+        }
+        
+        console.log('📦 发现 module5Res，开始解析');
+        const module5Data = JSON.parse(module5Str);
+        
+        // 验证数据结构是否完整
+        if (!module5Data.modules) {
+          console.warn('⚠️ module5Res 数据结构不完整，缺少 modules 字段');
+          return { success: false };
+        }
+        
+        console.log('✅ module5Res 解析成功');
+        return {
+          success: true,
+          data: module5Data
+        };
+        
+      } catch (error) {
+        console.error('❌ 解析 module5Res 失败:', error);
+        return { success: false };
+      }
+    },
+    
+    /**
+     * 将 module5 结果保存到 localStorage
+     */
+    saveModule5ToStorage(data) {
+      const MODULE5_KEY = 'module5Res';
+      
+      try {
+        // 保存完整的响应数据（不包括 accuracy 和 recall，这两个由独立轮询处理）
+        const dataToSave = JSON.stringify(data);
+        localStorage.setItem(MODULE5_KEY, dataToSave);
+        
+        console.log('💾 module5Res 已保存到 localStorage');
+      } catch (error) {
+        console.error('❌ 保存 module5Res 失败:', error);
+      }
     },
     
     /**
@@ -439,6 +555,9 @@ export default {
           if (!data.running) {
             this.stopPolling();
             this.showAlertMessage('success', '诊断完成');
+            
+            // 诊断完成时，将结果保存到 localStorage
+            this.saveModule5ToStorage(data);
           }
         }
         
@@ -484,9 +603,7 @@ export default {
       // 解析模块4
       this.parseModule4(modules.module4);
       
-      // 解析根因诊断结果
-      this.accuracy = this.safeGet(data, 'accuracy', null);
-      this.recall = this.safeGet(data, 'recall', null);
+      // 注意：accuracy 和 recall 不再从这个接口获取，改为独立的延迟轮询
     },
     
     /**
@@ -608,17 +725,17 @@ export default {
     
     /**
      * 格式化百分比
+     * 注意：null/undefined 的判断已在模板层面处理，此方法仅负责格式化有效值
      */
     formatPercent(value, precision = 2) {
-      if (value === null || value === undefined) return '—';
       return `${(value * 100).toFixed(precision)}%`;
     },
     
     /**
      * 格式化是/否
+     * 注意：null/undefined 的判断已在模板层面处理，此方法仅负责格式化有效值
      */
     formatYesNo(value) {
-      if (value === null || value === undefined) return '—';
       return value ? '是' : '否';
     },
     
@@ -645,6 +762,155 @@ export default {
       this.alertVariant = variant;
       this.alertMessage = message;
       this.showAlert = true;
+    },
+    
+    /**
+     * 初始化 accuracy/recall 延迟轮询
+     */
+    initAccuracyRecallPolling() {
+      console.log('🕐 初始化 accuracy/recall 延迟轮询');
+      
+      // 检查或创建 timestamp
+      const timestampData = this.checkOrCreateTimestamp();
+      console.log('📅 Timestamp 数据:', timestampData);
+      
+      // 立即检查一次
+      this.checkAndFetchAccuracyRecall(timestampData);
+      
+      // 启动定时器，每2秒检查一次
+      this.accuracyRecallTimer = setInterval(() => {
+        if (!this.accuracyRecallFetched) {
+          const currentTimestampData = this.getTimestampFromStorage();
+          if (currentTimestampData) {
+            this.checkAndFetchAccuracyRecall(currentTimestampData);
+          }
+        } else {
+          // 已经获取到数据，停止轮询
+          this.stopAccuracyRecallPolling();
+        }
+      }, 2000);
+    },
+    
+    /**
+     * 检查或创建 timestamp
+     */
+    checkOrCreateTimestamp() {
+      const TIMESTAMP_KEY = 'timestamp';
+      const existingData = localStorage.getItem(TIMESTAMP_KEY);
+      
+      if (existingData) {
+        try {
+          const parsedData = JSON.parse(existingData);
+          const currentTime = Date.now();
+          
+          // 检查是否过期（20分钟）
+          if (currentTime > parsedData.expireTime) {
+            console.log('⏰ Timestamp 已过期，重新创建');
+            return this.createNewTimestamp();
+          } else {
+            console.log('✅ Timestamp 有效，继续使用');
+            return parsedData;
+          }
+        } catch (e) {
+          console.error('❌ 解析 timestamp 失败，重新创建', e);
+          return this.createNewTimestamp();
+        }
+      } else {
+        console.log('🆕 Timestamp 不存在，创建新的');
+        return this.createNewTimestamp();
+      }
+    },
+    
+    /**
+     * 创建新的 timestamp
+     */
+    createNewTimestamp() {
+      const TIMESTAMP_KEY = 'timestamp';
+      const currentTime = Date.now();
+      const timestampData = {
+        startTime: currentTime,
+        expireTime: currentTime + 20 * 60 * 1000  // 20分钟后过期
+      };
+      
+      localStorage.setItem(TIMESTAMP_KEY, JSON.stringify(timestampData));
+      console.log('💾 新 timestamp 已保存:', timestampData);
+      
+      return timestampData;
+    },
+    
+    /**
+     * 从 storage 获取 timestamp
+     */
+    getTimestampFromStorage() {
+      const TIMESTAMP_KEY = 'timestamp';
+      const data = localStorage.getItem(TIMESTAMP_KEY);
+      if (data) {
+        try {
+          return JSON.parse(data);
+        } catch (e) {
+          console.error('❌ 解析 timestamp 失败', e);
+          return null;
+        }
+      }
+      return null;
+    },
+    
+    /**
+     * 检查并在满足条件时获取 accuracy/recall
+     */
+    async checkAndFetchAccuracyRecall(timestampData) {
+      const currentTime = Date.now();
+      const targetTime = timestampData.startTime + 5 * 60 * 1000;  // startTime + 5分钟
+      
+      if (currentTime >= targetTime) {
+        console.log('✅ 已达到5分钟，开始请求 accuracy/recall');
+        await this.fetchAccuracyRecall();
+      } else {
+        const remainingSeconds = Math.ceil((targetTime - currentTime) / 1000);
+        console.log(`⏳ 还需等待 ${remainingSeconds} 秒`);
+      }
+    },
+    
+    /**
+     * 请求 accuracy/recall 接口
+     */
+    async fetchAccuracyRecall() {
+      if (this.accuracyRecallFetched) {
+        return;
+      }
+      
+      try {
+        console.log('🌐 请求 /module5/api/accuracy_recall 接口');
+        const response = await axios.get('/module5/api/accuracy_recall');
+        
+        if (response.status === 200 && response.data.success) {
+          this.accuracy = response.data.accuracy;
+          this.recall = response.data.recall;
+          this.accuracyRecallFetched = true;
+          
+          console.log('✅ 成功获取 accuracy/recall:', {
+            accuracy: this.accuracy,
+            recall: this.recall
+          });
+          
+          // 停止轮询
+          this.stopAccuracyRecallPolling();
+        }
+      } catch (error) {
+        console.error('❌ 获取 accuracy/recall 失败:', error);
+        // 注意：失败后继续轮询，不停止
+      }
+    },
+    
+    /**
+     * 停止 accuracy/recall 轮询
+     */
+    stopAccuracyRecallPolling() {
+      if (this.accuracyRecallTimer) {
+        clearInterval(this.accuracyRecallTimer);
+        this.accuracyRecallTimer = null;
+        console.log('🛑 停止 accuracy/recall 轮询');
+      }
     },
     
     /**
@@ -764,7 +1030,144 @@ export default {
   transform: translateX(-50%);
   width: 50%;
   z-index: 100;
-  opacity: 0.9;
+}
+
+.custom-alert {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(10, 30, 60, 0.95) 0%, rgba(20, 50, 90, 0.95) 100%);
+  border: 2px solid #1a65a8;
+  box-shadow: 0 0 20px rgba(26, 101, 168, 0.5), 
+              0 0 40px rgba(26, 101, 168, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  animation: slideInDown 0.4s ease-out;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.alert-content {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif;
+}
+
+.alert-close {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #8bd3f9;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  margin-left: 12px;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.alert-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #c6f4ff;
+  transform: scale(1.1);
+}
+
+/* Success - 成功（蓝绿色） */
+.alert-success {
+  border-color: #00d4aa;
+  box-shadow: 0 0 20px rgba(0, 212, 170, 0.5), 
+              0 0 40px rgba(0, 212, 170, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.alert-success .alert-icon {
+  background: linear-gradient(135deg, #00d4aa 0%, #00a88a 100%);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(0, 212, 170, 0.6);
+}
+
+.alert-success .alert-content {
+  color: #00ffcc;
+}
+
+/* Info - 信息（科技蓝） */
+.alert-info {
+  border-color: #4ED8FF;
+  box-shadow: 0 0 20px rgba(78, 216, 255, 0.5), 
+              0 0 40px rgba(78, 216, 255, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.alert-info .alert-icon {
+  background: linear-gradient(135deg, #4ED8FF 0%, #1a8fc9 100%);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(78, 216, 255, 0.6);
+}
+
+.alert-info .alert-content {
+  color: #8bd3f9;
+}
+
+/* Warning - 警告（黄色） */
+.alert-warning {
+  border-color: #ffb74d;
+  box-shadow: 0 0 20px rgba(255, 183, 77, 0.5), 
+              0 0 40px rgba(255, 183, 77, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.alert-warning .alert-icon {
+  background: linear-gradient(135deg, #ffb74d 0%, #ff9800 100%);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(255, 183, 77, 0.6);
+}
+
+.alert-warning .alert-content {
+  color: #ffcc80;
+}
+
+/* Danger - 错误（红色） */
+.alert-danger {
+  border-color: #ff4d4d;
+  box-shadow: 0 0 20px rgba(255, 77, 77, 0.5), 
+              0 0 40px rgba(255, 77, 77, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.alert-danger .alert-icon {
+  background: linear-gradient(135deg, #ff4d4d 0%, #d32f2f 100%);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(255, 77, 77, 0.6);
+}
+
+.alert-danger .alert-content {
+  color: #ff8a80;
 }
 
 /* ================= 主要内容 ================= */
@@ -798,7 +1201,7 @@ export default {
   font-size: 1rem;
   font-weight: bold;
   color: #c6f4ff;
-  padding-left: 80px;
+  padding-left: 70px;
   height: 40px;
   line-height: 40px;
   flex-shrink: 0;
@@ -831,7 +1234,7 @@ export default {
   font-weight: 600;
   color: #8bd3f9;
   margin-bottom: 0.8vh;
-  padding-left: 20px;
+  padding-left: 5px;
 }
 
 .content-box {
@@ -1039,6 +1442,38 @@ export default {
 ::v-deep .highlight-text {
   color: #FF4242 !important;
   font-weight: 700;
+}
+
+/* ================= 加载转圈动画 ================= */
+.loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(78, 216, 255, 0.2);
+  border-top-color: #4ED8FF;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-left: 0.3em;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 针对底部大字体的加载动画 */
+.loading-spinner-large {
+  width: 28px;
+  height: 28px;
+  border-width: 3px;
+  border-color: rgba(78, 216, 255, 0.2);
+  border-top-color: #4ED8FF;
+  margin-left: 0;
 }
 
 </style>
