@@ -9,9 +9,6 @@
     </div>
     <div class="top-nav-right">
       <router-link to="/attributiondiagnosis" class="nav-btn nav-next">下一页</router-link>
-      <b-button @click="performDeviationDetection" variant="info" class="nav-btn nav-detect">
-        偏差检测
-      </b-button>
     </div>
 
     <div class="title-container" :style="bgImageStyle(assetNames.titleBg)">
@@ -40,7 +37,7 @@
         <div class="button-container">
           <b-button @click="fetchBackendData" variant="primary" :disabled="isLoading" class="inference-btn" :style="buttonBgStyle">
             <b-spinner small v-if="isLoading"></b-spinner>
-            {{ isLoading ? '获取数据中...' : '信息推理' }}
+            {{ isLoading ? '获取数据中...' : '决策认知' }}
           </b-button>
         </div>
       </div>
@@ -56,7 +53,7 @@
             <div class="assessment-middle-section">
               <div class="assessment-right-section">
                 <div class="icon-placeholder-red" :style="expertIconStyle"></div>
-                <span class="assessment-level">{{ expertDangerLevel.replace('!', '') }} 级战备</span>
+                <!-- <span class="assessment-level">{{ expertDangerLevel.replace('!', '') }} 级战备</span> -->
               </div>
               <div class="design-module-content text-scrollable">
                 <p class="text-content" v-html="performanceData"></p>
@@ -113,7 +110,7 @@
             <div class="assessment-middle-section">
               <div class="assessment-right-section">
                 <div class="icon-placeholder-red" :style="modelIconStyle"></div>
-                <span class="assessment-level">{{ modelDangerLevel.replace('!', '') }} 级战备</span>
+                <!-- <span class="assessment-level">{{ modelDangerLevel.replace('!', '') }} 级战备</span> -->
               </div>
               <div class="design-module-content text-scrollable">
                 <p class="text-content" v-html="performanceDataLocal"></p>
@@ -124,6 +121,13 @@
       </div>
 
       <div class="design-right-column">
+        <!-- 偏差检测按钮 - 移动到标题框上方中间位置 -->
+        <div class="bias-detection-container">
+          <b-button @click="performDeviationDetection" variant="info" class="nav-btn nav-detect use-asset-bg">
+            偏差检测
+          </b-button>
+        </div>
+        
         <div class="standalone-label" :style="fullWidthLabelStyle(assetNames.resultLabel, 28)">决策选择认知偏差检测结果</div>
         <div class="design-module result-log-module" :style="rightPanelBgStyle">
           <div class="design-module-content text-scrollable">
@@ -216,7 +220,7 @@ export default {
       // 注意：此计算属性当前未在模板中使用
       return this.highlightRandomWords(this.currentStageText, 1, 3);
     },
-    /* 仅对右侧“决策选择认知偏差检测结果”做随机标红 */
+    /* 仅对右侧"决策选择认知偏差检测结果"做随机标红 */
     highlightedSummaryText() {
       return this.highlightRandomWords(this.summaryText || '', 1, 3);
     },
@@ -294,8 +298,8 @@ export default {
       const levelImg = this.projectAssetUrl(this.getLevelImageName(expertLevel));
       if (!levelImg) return {};
       return {
-        width: '70px',
-        height: '60px',
+        width: '98px',
+        height: '84px',
         backgroundImage: `url('${levelImg}')`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: '100% 100%',
@@ -309,8 +313,8 @@ export default {
       const levelImg = this.projectAssetUrl(this.getLevelImageName(modelLevel));
       if (!levelImg) return {};
       return {
-        width: '70px',
-        height: '60px',
+        width: '98px',
+        height: '84px',
         backgroundImage: `url('${levelImg}')`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: '100% 100%',
@@ -904,20 +908,6 @@ export default {
   }
 }
 
-/* 新增：偏差检测按键的特定样式 */
-.nav-btn.nav-detect {
-  background: rgba(10, 50, 25, 0.9);
-  color: #00ffaa;
-  border-color: #007f5f;
-  width: 100px; /* 与下一页按钮对齐 */
-
-  &:hover {
-    background: rgba(20, 70, 40, 0.9);
-    color: #fff;
-  }
-}
-
-
 /* 标题 */
 .title-container {
   text-align: center;
@@ -961,7 +951,7 @@ export default {
     background: transparent;
     backdrop-filter: none;
     background-repeat: no-repeat;
-    background-size: 100% 100%;
+    background-size: '100% 100%';
   }
 
   .design-module .design-module-label {
@@ -991,17 +981,6 @@ export default {
   .top-nav-right .nav-btn.nav-next {
     width: 100px;
     background: url('~@/assets/images/step4/下一页按键.png') no-repeat center/contain;
-  }
-  
-  /* 新增：偏差检测按键的资源样式 */
-  .top-nav-right .nav-btn.nav-detect {
-    width: 100px;
-    height: 34px;
-    padding: 0;
-    /* (复用 "返回按键" 资源作为示例，建议替换为专用资源) */
-    background: url('~@/assets/images/step4/返回按键.png') no-repeat center/contain; 
-    color: #ffffff;
-    border: none;
   }
 
   .accuracy-box,
@@ -1043,6 +1022,44 @@ export default {
   /* 调整 gap 以适应可能的内容压缩 */
   gap: 10px; 
   height: 100%;
+}
+
+/* 新增：偏差检测按钮容器样式 */
+/* 在样式表中的相关样式 */
+.bias-detection-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+  height: 50px;
+  
+  .nav-btn.nav-detect {
+    background: rgba(10, 50, 25, 0.9);
+    color: #00ffaa;
+    border-color: #007f5f;
+    width: 150px;
+    height: 40px;
+    font-size: 1.1rem;
+    font-weight: bold;
+
+    &:hover {
+      background: rgba(20, 70, 40, 0.9);
+      color: #fff;
+    }
+    
+    /* 添加资源背景图片样式 */
+    &.use-asset-bg {
+      border: none;
+      background: transparent;
+      color: #ffffff;
+      text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+    }
+  }
+}
+
+/* 新增：推动右侧列的标题和文本框下移 "3行" */
+.design-right-column > .standalone-label {
+  margin-top: 0; /* 重置之前的样式 */
 }
 
 /* 通用模块样式 */
@@ -1171,6 +1188,15 @@ export default {
     background: transparent;
     line-height: 1;
   }
+    /* 偏差检测按键的资源样式 */
+  .bias-detection-container .nav-btn.nav-detect.use-asset-bg {
+    width: 200px;
+    height: 70px;
+    padding: 0;
+    background: url('~@/assets/images/step4/偏差检测按键.png') no-repeat center/contain;
+    color: #ffffff;
+    border: none;
+  }
 }
 
 /* 左下文本框尺寸与相对定位（保持在按钮上方的文档流位置） */
@@ -1208,7 +1234,8 @@ export default {
     font-weight: bold;
     @include sci-fi-border;
     /* 使用"开始测验.png"作为按钮底图 */
-    background: url('~@/assets/images/step4/开始测验.png') no-repeat center/contain, #00e0ff;
+    background-image: url('~@/assets/images/step4/开始测验.png');
+    // background: url('~@/assets/images/step4/开始测验.png') no-repeat center/contain, #00e0ff;
     color: #ffffff; /* 改为白色 */
     border: none;
     border-radius: 4px;
@@ -1307,7 +1334,8 @@ export default {
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    min-width: 80px;
+    min-width: 110px; /* <-- 修改这里 (原为 80px) */
+    justify-content: center; /* <-- 新增此行 */
 
     .icon-placeholder-red {
       width: 60px;
@@ -1398,6 +1426,7 @@ export default {
     align-items: center;
     gap: 10px;
     min-width: 120px; /* 减小最小宽度 */
+    align-self: center; /* <-- 新增此行 垂直居中*/
   }
 
   .pyramid-placeholder {
@@ -1425,9 +1454,26 @@ export default {
       font-weight: bold;
       white-space: nowrap; /* 防止文字换行 */
 
-      &.active-level {
-        color: #00e0ff;
-        text-shadow: 0 0 5px #00e0ff;
+      // &.active-level {
+      //   color: #00e0ff;
+      //   text-shadow: 0 0 5px #00e0ff;
+      // }
+      /* 新增：按顺序为激活的等级设置不同颜色 */
+      &:nth-child(1).active-level {
+        color: #FF0000;
+        text-shadow: 0 0 5px #FF0000;
+      }
+      &:nth-child(2).active-level {
+        color: #FFC118;
+        text-shadow: 0 0 5px #FFC118;
+      }
+      &:nth-child(3).active-level {
+        color: #2BC3FF;
+        text-shadow: 0 0 5px #2BC3FF;
+      }
+      &:nth-child(4).active-level {
+        color: #7EFF00;
+        text-shadow: 0 0 5px #7EFF00;
       }
     }
   }

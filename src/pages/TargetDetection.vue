@@ -32,8 +32,7 @@
             </div>
 
             <div class="action-buttons">
-              <button @click="startDetection" :disabled="isLoading"
-                class="btn-start-detect">
+              <button @click="startDetection" :disabled="isLoading" class="btn-start-detect">
                 <b-spinner small v-if="isLoading"></b-spinner>
                 <!-- 移除了 !selectedVideo 的禁用条件，因为加载时可能没有 selectedVideo -->
                 <span>{{ isLoading ? (progressMessage || '检测中...') : '开始目标检测' }}</span>
@@ -77,16 +76,17 @@
       <!-- 右侧列 -->
       <b-col cols="3" class="right-column px-2">
 
+        <div class="bias-button-container">
+          <button class="btn-start-bias" @click="handleStartBiasDetection"
+            :disabled="!canStartBiasDetection || isBiasTyping || isLoading">
+            开始偏差检测
+          </button>
+        </div>
+
         <div class="panel-header header-results">偏差检测结果</div>
 
         <div class="panel-right-top">
           <div class="panel-content">
-            <div class="description-actions">
-              <button class="btn-start-bias" @click="handleStartBiasDetection"
-                :disabled="!canStartBiasDetection || isBiasTyping || isLoading">
-                开始偏差检测
-              </button>
-            </div>
             <div class="description-box p-2 overflow-auto">
               <!-- 移除了原有的 "总结" v-if="showSummary" 部分 -->
               <div v-if="isLoading && !showBiasDetails" class="text-left small-text">
@@ -254,7 +254,7 @@ export default {
      */
     populateUIFromStorage(data) {
       console.log("正在填充UI:", data);
-      
+
       // 1. 恢复视频
       this.originalVideoURL = data.originalVideoPath;
       this.processedVideoURL = data.video_path;
@@ -265,13 +265,13 @@ export default {
 
       // 3. 模拟选中视频（用于左侧列表高亮）
       if (data.video_info && data.video_info.name) {
-         this.selectedVideo = { name: data.video_info.name, id: data.video_info.id || -1 };
+        this.selectedVideo = { name: data.video_info.name, id: data.video_info.id || -1 };
       } else if (data.originalVideoPath) {
-         // 备用方案：从路径中提取文件名
-         const videoName = getFilenameFromPath(data.originalVideoPath);
-         if(videoName) {
-           this.selectedVideo = { name: videoName, id: -1 };
-         }
+        // 备用方案：从路径中提取文件名
+        const videoName = getFilenameFromPath(data.originalVideoPath);
+        if (videoName) {
+          this.selectedVideo = { name: videoName, id: -1 };
+        }
       }
 
       // 4. 处理文本显示
@@ -282,7 +282,7 @@ export default {
       this.showBiasDetails = true;
       this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
       this.showAccuracy = true;
-      
+
       this.resultMessage = "已从缓存加载数据。";
       this.progressMessage = "加载完成";
       this.isLoading = false;
@@ -332,7 +332,7 @@ export default {
       console.log("[DEBUG] 3. 经过 parseLowSimilarityAspects 解析后的数组:", aspects);
 
       // 标准化到四个候选标签
-      const validLabels = new Set(['场景', '主要目标', '动作', '总结']);
+      const validLabels = new Set(['场景', '主要目标', '动作']);
       const labelsToHighlight = new Set();
       (aspects || []).forEach(item => {
         if (typeof item !== 'string') return;
@@ -540,16 +540,16 @@ export default {
       this.clearTypingIntervals();
       this.updateLabelsToHighlight(fullData.low_similarity_aspects);
       this.descriptionEntries = this.buildDescriptionEntries(fullData.video_description);
-      
+
       // 1. 提取总结（用于中间框）
       const summaryEntry = this.descriptionEntries.find(entry => entry.label === '总结');
       this.summaryTextOnly = summaryEntry ? summaryEntry.text : '未找到总结信息。';
       this.summaryHighlight = summaryEntry ? summaryEntry.highlight : false;
-      
+
       // 2. 提取详情（用于右侧框）
       this.biasDetailEntries = this.descriptionEntries.filter(entry => entry.label !== '总结');
       this.biasDisplayTexts = this.biasDetailEntries.map(() => ''); // 重置打字内容
-      
+
       // 3. 重置显示状态
       this.showBiasDetails = false;
       this.showAccuracy = false;
@@ -660,15 +660,15 @@ export default {
         const response = await axios.get(`${API_BASE_URL}/videos`);
         this.videoList = response.data.videos;
         console.log("视频列表获取成功", this.videoList);
-        
+
         // 如果是从缓存加载的，尝试匹配并高亮选中的视频
         if (this.selectedVideo && this.selectedVideo.name) {
           const matchedVideo = this.videoList.find(v => v.name === this.selectedVideo.name);
-          if(matchedVideo) {
+          if (matchedVideo) {
             this.selectedVideo = matchedVideo; // 更新为从列表获取的完整对象
           }
         }
-        
+
       } catch (error) {
         console.error("获取视频列表失败", error);
         this.videoList = [];
@@ -761,7 +761,7 @@ export default {
         this.fullResult.deviceType = fullData.deviceType;
         this.fullResult.key_frame_path = fullData.key_frame_path;
         this.fullResult.key_frame_detection = fullData.key_frame_detection;
-        
+
         // 逻辑点 3：拆分总结和详情
         this.prepareDescriptionDisplay(fullData);
 
@@ -1137,8 +1137,8 @@ export default {
   background: none;
   border: none;
   cursor: pointer;
-  width: 220px;
-  height: 50px;
+  width: 170px;
+  height: 72px;
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -1165,9 +1165,12 @@ export default {
   /* 移除了 justify-content: space-around; */
   display: flex;
   flex-direction: column;
-  justify-content: flex-start; /* 从顶部开始排列 */
-  align-items: center; /* 居中对齐 */
-  gap: 5px; /* 模块间的小间距 */
+  justify-content: flex-start;
+  /* 从顶部开始排列 */
+  align-items: center;
+  /* 居中对齐 */
+  gap: 5px;
+  /* 模块间的小间距 */
 }
 
 .video-section {
@@ -1175,8 +1178,10 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 0; /* 移除底部外边距，使其更紧凑 */
-  flex-shrink: 0; /* 防止视频框被压缩 */
+  margin-bottom: 0;
+  /* 移除底部外边距，使其更紧凑 */
+  flex-shrink: 0;
+  /* 防止视频框被压缩 */
 }
 
 .video-label {
@@ -1191,7 +1196,8 @@ export default {
   font-weight: bold;
   line-height: 35px;
   text-align: center;
-  margin-bottom: 5px; /* 减小标题和框的间距 */
+  margin-bottom: 5px;
+  /* 减小标题和框的间距 */
 }
 
 .label-processed {
@@ -1200,7 +1206,8 @@ export default {
 
 .video-frame {
   width: 95%;
-  height: 280px; /* 稍微减小高度以为总结框腾出空间 */
+  height: 280px;
+  /* 稍微减小高度以为总结框腾出空间 */
   background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -1226,18 +1233,22 @@ export default {
   width: 95%;
   /* 自动高度，最小高度约3行 */
   min-height: 90px;
-  max-height: 120px; /* 限制最大高度 */
+  max-height: 120px;
+  /* 限制最大高度 */
   height: auto;
-  
-  background-image: url('~@/assets/images/step1/-s-框-小视频.png'); /* 复用视频框背景 */
+
+  background-image: url('~@/assets/images/step1/-s-框-小视频.png');
+  /* 复用视频框背景 */
   background-repeat: no-repeat;
   background-size: 100% 100%;
   padding: 15px;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 5px; /* 与上方视频框的间距 */
-  flex-shrink: 0; /* 防止被压缩 */
+  margin-top: 5px;
+  /* 与上方视频框的间距 */
+  flex-shrink: 0;
+  /* 防止被压缩 */
 }
 
 .summary-content {
@@ -1248,16 +1259,20 @@ export default {
   color: #eee;
   white-space: pre-wrap;
   overflow-y: auto;
-  text-align: left; /* 确保文本左对齐 */
-  padding: 5px; /* 内部增加一点padding */
+  text-align: left;
+  /* 确保文本左对齐 */
+  padding: 5px;
+  /* 内部增加一点padding */
 
   &::-webkit-scrollbar {
     width: 6px;
   }
+
   &::-webkit-scrollbar-thumb {
     background: #00e5ff;
     border-radius: 3px;
   }
+
   &::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.3);
   }
@@ -1271,6 +1286,14 @@ export default {
   background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
 }
 
+.bias-button-container {
+  height: 40px; /* 匹配中间列 .video-label (35px) + margin-bottom (5px) */
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* 按钮靠右 */
+  margin-bottom: 5px; /* 按钮和下方标题框的间距 */
+}
+
 .description-box {
   flex-grow: 1;
   background-color: rgba(0, 0, 0, 0.2);
@@ -1280,8 +1303,10 @@ export default {
   line-height: 1.6;
   padding: 10px !important;
   overflow: auto;
-  display: flex; /* 确保内部元素（v-html渲染的div）可以正常布局 */
-  flex-direction: column; /* 垂直排列 v-html 渲染的行 */
+  display: flex;
+  /* 确保内部元素（v-html渲染的div）可以正常布局 */
+  flex-direction: column;
+  /* 垂直排列 v-html 渲染的行 */
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -1296,21 +1321,20 @@ export default {
     background: rgba(0, 0, 0, 0.3);
   }
 
-  }
+}
 
-.description-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 10px;
+/* 添加这个新规则以移除 <p> 标签的缩进 */
+.description-box p {
+  text-indent: 0;
 }
 
 .btn-start-bias {
   background: none;
   border: none;
   cursor: pointer;
-  width: 160px;
-  height: 36px;
-  background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
+  width: 170px;
+  height: 72px;
+  background-image: url('~@/assets/images/step1/偏差检测按键.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   color: #fff;
@@ -1340,17 +1364,18 @@ export default {
 /* 全局样式，确保能应用到v-html生成的内容 和 新的总结框 */
 <style lang="scss">
 .text-highlight {
-  color: #ff4d4d !important; /* 确保颜色覆盖 */
+  color: #ff4d4d !important;
+  /* 确保颜色覆盖 */
   font-weight: bold;
   background-color: rgba(255, 77, 77, 0.1);
   padding: 1px 3px;
   border-radius: 3px;
-  /* display: inline-block; */ /* 移除，以防破坏 pre-wrap 布局 */
+  /* display: inline-block; */
+  /* 移除，以防破坏 pre-wrap 布局 */
 }
 </style>
 
 <style lang="scss" scoped>
-
 // 移除原代码中所有冗余或冲突的 .description-box>>>.text-highlight 规则
 
 .small-text {
@@ -1394,8 +1419,8 @@ export default {
   background: none;
   border: none;
   cursor: pointer;
-  width: 200px;
-  height: 48px;
+  width: 190px;
+  height: 72px;
   background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -1417,10 +1442,13 @@ export default {
 /* 7. 响应式调整 (修改) */
 @media (max-width: 1400px) {
   .video-frame {
-    height: 250px; /* 调整高度 */
+    height: 250px;
+    /* 调整高度 */
   }
+
   .summary-box-middle {
-    min-height: 80px; /* 调整高度 */
+    min-height: 80px;
+    /* 调整高度 */
     max-height: 100px;
   }
 
@@ -1479,5 +1507,4 @@ export default {
     min-height: 150px;
   }
 }
-
 </style>
