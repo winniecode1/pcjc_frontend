@@ -33,6 +33,10 @@
             <div class="content-box scrollable" v-html="highlightBrackets(module1BiasTestResult)"></div>
           </div>
           <div class="metric-group">
+              <div class="metric-item">模型内部偏差测试结果: 
+                <span v-if="module1InternalBias !== null && module1InternalBias !== undefined">{{ formatPercent(module1InternalBias, 0) }}</span>
+                <span v-else class="loading-spinner"></span>
+              </div>
               <div class="metric-item">认知传播偏差测试结果: 
                 <span v-if="module1PropagationBias !== null && module1PropagationBias !== undefined">{{ formatPercent(module1PropagationBias, 0) }}</span>
                 <span v-else class="loading-spinner"></span>
@@ -142,7 +146,13 @@
               <span v-else class="loading-spinner loading-spinner-large"></span>
             </div>
         </div>
-        <button class="export-btn" @click="exportResult">结果导出</button>
+        <button 
+          class="export-btn" 
+          :class="{ 'export-btn-disabled': isExportDisabled }"
+          :disabled="isExportDisabled"
+          @click="exportResult">
+          结果导出
+        </button>
     </div>
   </div>
 </template>
@@ -177,6 +187,7 @@ export default {
       
       // 模块1数据
       module1BiasTestResult: '',
+      module1InternalBias: null,
       module1PropagationBias: null,
       module1IsBiasModule: null,
       
@@ -239,6 +250,15 @@ export default {
         }
       }
       return attributes;
+    },
+    
+    /**
+     * 判断导出按钮是否应该禁用
+     * 当 accuracy 或 recall 还在加载中（为null/undefined）时，禁用导出按钮
+     */
+    isExportDisabled() {
+      return this.accuracy === null || this.accuracy === undefined || 
+             this.recall === null || this.recall === undefined;
     }
   },
   mounted() {
@@ -615,6 +635,11 @@ export default {
       const singleTask = module1.single_task_stage;
       if (singleTask) {
         this.module1BiasTestResult = this.safeGet(singleTask, 'prediction.caption', '');
+      }
+      
+      const moduleTestStage = module1.module_test_stage;
+      if (moduleTestStage) {
+        this.module1InternalBias = this.safeGet(moduleTestStage, 'prediction.cognitive_bias', null);
       }
       
       const analysisTask = module1.analysis_task;
@@ -1435,6 +1460,11 @@ export default {
   padding-right: 25px;
   text-align: right;
   font-family: 'DingTalk-JinBuTi', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
+  transition: all 0.3s ease;
+}
+
+.export-btn-disabled {
+  cursor: not-allowed !important;
 }
 
 
