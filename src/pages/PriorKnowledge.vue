@@ -115,25 +115,20 @@
 
         <!-- 偏差检测准确率面板 -->
         <div class="panel-right-accuracy">
-          <template v-if="isLoading">
-            <div class="accuracy-content">
-              <span class="accuracy-label">偏差检测准确率</span>
-              <span class="accuracy-value">计算中...</span>
-            </div>
-          </template>
-          <template v-else>
-            <div class="accuracy-content">
-              <span class="accuracy-label">偏差检测准确率</span>
-              <span class="accuracy-value">
-                <template v-if="accuracyRate !== '—'">
-                  {{ accuracyRate }}
-                </template>
-                <template v-else>
-                  N/A
-                </template>
-              </span>
-            </div>
-          </template>
+          <div class="accuracy-content">
+            <span class="accuracy-label">偏差检测准确率</span>
+            <span class="accuracy-value">
+              <template v-if="accuracyRate !== '—'">
+                {{ accuracyRate }}
+              </template>
+              <template v-else-if="isLoading || isWaitingForAccuracy">
+                计算中...
+              </template>
+              <template v-else>
+                N/A
+              </template>
+            </span>
+          </div>
         </div>
 
         <!-- 结果导出按钮 -->
@@ -183,13 +178,14 @@ export default {
           fullHeight: window.innerHeight,
           originalImageURL: null,
           tagInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
-          predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
+          predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息", "场景信息"],
           propertyColors: {}, // 用于存储属性颜色
           isLoading: false,
           accuracyRate: '—',
           cachedAccuracy: '—',
           accuracyTimer: null,
           isColorized: false,
+          isWaitingForAccuracy: false, // 标志：是否在等待准确率显示（点击按钮后的延迟期间）
           finalResult: null,
           nodes: [], // 用于存储后端返回的节点数据
           links: [], // 用于存储后端返回的链接数据
@@ -202,11 +198,16 @@ export default {
       },
   mounted() {
     window.addEventListener('resize', this.handleResize);
-    this.renderGraph();
     // 页面加载时加载视频
     this.loadVideoFromStorage();
-    // 页面加载时尝试读取模块二缓存
+    // 页面加载时尝试读取模块二缓存（如果存在会调用 renderGraph）
     this.loadModule2FromStorage();
+    // 如果没有缓存，使用默认节点渲染图谱
+    if (!localStorage.getItem('module2Res')) {
+      this.$nextTick(() => {
+        this.renderGraph();
+      });
+    }
     // this.downloadJsonData();
   },
   beforeDestroy() {
@@ -304,25 +305,17 @@ export default {
       svg.selectAll('*').remove();
 
       try {
-        if (this.nodes.length == 0) {
-          const response = await axios.get('http://10.109.253.71:8001/module2/knowledge/all')
-          console.log('Backend response:', response.data);
-          const data = response.data;
-
-          if (data.knowledge_list && data.knowledge_list.nodes && data.knowledge_list.links) {
-            this.nodes = data.knowledge_list.nodes || [];
-            this.links = data.knowledge_list.links || [];
-          }
-        }
+        // 如果 nodes 为空，直接使用默认节点，不从后端获取所有知识图谱数据
+        // module2Res 中的数据应该已经在 loadModule2FromStorage 中加载了
+        // 如果 nodes 仍然为空，说明缓存中没有 nodes，使用默认节点
 
         // 使用从后端获取的nodes和links，如果没有则使用默认数据
-        // let renderNodes = this.nodes.length ? JSON.parse(JSON.stringify(this.nodes)) : [
-        //   { id: '飞机', color: '#87CEEB' },
-        //   { id: '战斗机', color: '#FF6B6B' },
-        //   { id: '无人机', color: '#95E1D3' },
-        //   { id: '运输机', color: '#FFD93D' }
-        // ];
-        let renderNodes = this.nodes.length ? JSON.parse(JSON.stringify(this.nodes)) : []
+        let renderNodes = this.nodes.length ? JSON.parse(JSON.stringify(this.nodes)) : [
+          { id: '飞机', color: '#87CEEB' },
+          { id: '战斗机', color: '#FF6B6B' },
+          { id: '无人机', color: '#95E1D3' },
+          { id: '运输机', color: '#FFD93D' }
+        ];
 
         // 清理后端节点的x/y/fx/fy，避免拖拽报错
         renderNodes.forEach(node => {
@@ -342,13 +335,11 @@ export default {
           centerNode.fy = height / 2;
         }
 
-        // const renderLinks = this.links.length ? this.links : [
-        //   { source: '飞机', target: '战斗机' },
-        //   { source: '飞机', target: '无人机' },
-        //   { source: '飞机', target: '运输机' }
-        // ];
-
-        const renderLinks = this.links.length ? this.links : []
+        const renderLinks = this.links.length ? this.links : [
+          { source: '飞机', target: '战斗机' },
+          { source: '飞机', target: '无人机' },
+          { source: '飞机', target: '运输机' }
+        ];
 
         const simulation = d3.forceSimulation(renderNodes)
           .force('link', d3.forceLink(renderLinks).id(d => d.id).distance(150))
@@ -459,6 +450,8 @@ export default {
 
     startInfer() {
       this.isLoading = true;
+      this.isWaitingForAccuracy = true; // 立即标记为等待准确率显示
+      this.accuracyRate = '—'; // 重置准确率，以便显示"计算中..."
 
       axios.get('http://10.109.253.71:8001/module2/list', {
         params: {
@@ -503,6 +496,7 @@ export default {
             { label: '形状信息：', value: predictData.shape || '未知', color: this.propertyColors.shape || '#000' },
             { label: '尺寸信息：', value: predictData.size || '未知', color: this.propertyColors.size || '#000' },
             { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
+            { label: '场景信息：', value: predictData.scene || '未知', color: this.propertyColors.scene || '#000' },
           ];
           // 将预测信息存入localStorage，供群体协商界面使用
           localStorage.setItem('predictInfoList', JSON.stringify(this.predictInfoList));
@@ -516,14 +510,16 @@ export default {
           console.log("---------------------------------");
         }
 
-        // 处理准确率：延迟3分钟显示
+        // 处理准确率：点击按钮后延迟3分钟显示
         this.cachedAccuracy = data.accuracy !== undefined ? (data.accuracy * 100) + '%' : '—';
         this.accuracyRate = '—';
+        this.isWaitingForAccuracy = true; // 标记为等待准确率显示
         if (this.accuracyTimer) {
           clearTimeout(this.accuracyTimer);
         }
         this.accuracyTimer = setTimeout(() => {
           this.accuracyRate = this.cachedAccuracy;
+          this.isWaitingForAccuracy = false; // 延迟时间到，停止等待
           this.accuracyTimer = null;
         }, 180000);
 
@@ -534,6 +530,8 @@ export default {
       }).catch(err => {
         console.log(err);
         this.accuracyRate = '—';
+        this.cachedAccuracy = '—';
+        this.isWaitingForAccuracy = false; // 出错时停止等待
       }).finally(() => {
         this.isLoading = false;
       });
@@ -578,18 +576,18 @@ export default {
             { label: '形状信息：', value: predictData.shape || '未知', color: this.propertyColors.shape || '#000' },
             { label: '尺寸信息：', value: predictData.size || '未知', color: this.propertyColors.size || '#000' },
             { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
+            { label: '场景信息：', value: predictData.scene || '未知', color: this.propertyColors.scene || '#000' },
           ];
         }
-        // 准确率延迟
-        this.cachedAccuracy = data.accuracy !== undefined ? (data.accuracy * 100) + '%' : '—';
-        this.accuracyRate = '—';
-        if (this.accuracyTimer) {
-          clearTimeout(this.accuracyTimer);
+        // 准确率：初始加载时立即显示
+        if (data.accuracy !== undefined) {
+          this.accuracyRate = (data.accuracy * 100) + '%';
+          this.cachedAccuracy = this.accuracyRate;
+        } else {
+          this.accuracyRate = '—';
+          this.cachedAccuracy = '—';
         }
-        this.accuracyTimer = setTimeout(() => {
-          this.accuracyRate = this.cachedAccuracy;
-          this.accuracyTimer = null;
-        }, 180000);
+        this.isWaitingForAccuracy = false; // 初始加载不需要等待
         // 渲染图谱
         this.$nextTick(() => {
           this.renderGraph();
@@ -837,8 +835,9 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  min-height: 200px;
+  min-height: 530px;
   width: 100%;
+  margin-top: 20px;
 }
 
 /* 偏差检测准确率面板 */
@@ -854,7 +853,7 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100px;
-  margin-top: -20px;
+  margin-top: 15px;
 }
 
 /* 结果导出按钮区域 */
@@ -867,6 +866,7 @@ body {
   padding: 10px 0;
   min-height: 70px;
   background: none;
+  margin-top: 15px;
 }
 
 /* 兼容旧样式 */

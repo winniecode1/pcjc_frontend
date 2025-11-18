@@ -873,7 +873,7 @@ export default {
   padding: 20px 30px 30px 30px;
   display: flex;
   flex-direction: column;
-  background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
+ background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
 }
 
 
@@ -996,6 +996,18 @@ export default {
 .header-results {
   margin-bottom: 5px !important;
   margin-top: -20px;
+}
+
+/* 调整左侧两个标题的垂直位置，让它们在背景图中间 */
+.design-module.video-module .panel-header,
+.design-module.text-module-left .panel-header {
+  margin-top: -8px;
+  margin-bottom: 5px;
+}
+
+/* 调整右侧标题的垂直位置 */
+.panel-right-top .panel-header.header-results {
+  margin-top: -25px;
 }
 
 /* 设计模块特定样式 */
