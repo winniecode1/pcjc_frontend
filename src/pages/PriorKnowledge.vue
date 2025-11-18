@@ -1207,23 +1207,31 @@ body {
   flex-shrink: 0;
 }
 
-.btn-start-detect {
+.btn-start-detect{
   background: none;
   border: none;
   cursor: pointer;
-  width: auto;
-  min-width: 150px;
-  max-width: 250px;
-  height: 100%;
+  width: 170px;
+  height: 72px;
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
+
   color: #fff;
   font-size: 1.1rem;
   font-weight: bold;
   display: inline-flex;
   justify-content: center;
   align-items: center;
+
+  &:disabled {
+    filter: grayscale(80%);
+    cursor: not-allowed;
+  }
+
+  span {
+    margin-left: 8px;
+  }
 }
 
 .btn-start-detect:disabled {
