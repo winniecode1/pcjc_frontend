@@ -21,7 +21,7 @@
         <div class="design-module video-module" :style="videoPanelBgStyle">
           <div class="design-module-content video-content-wrapper">
             <video v-if="testVideoUrl" :src="testVideoUrl" controls class="test-video-player"
-              @error="handleVideoError"></video>
+              @error="handleVideoError" autoplay muted></video>
             <div v-else class="video-placeholder-text">
               {{ testVideoMessage }}
             </div>
