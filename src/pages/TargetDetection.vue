@@ -68,7 +68,7 @@
         <!-- 新增：总结文本框 -->
         <div class="summary-box-middle">
           <div class="summary-content overflow-auto" :class="{ 'text-highlight': summaryHighlight }">
-            {{ summaryTextOnly || '总结将在此显示...' }}
+            {{ summaryTypingText || '视频的文本描述将在此显示……' }}
           </div>
         </div>
       </b-col>
@@ -104,7 +104,7 @@
                 </div>
               </div>
               <div v-else-if="canStartBiasDetection" class="text-left small-text hint-text">
-                点击“开始偏差检测”查看其余信息
+                点击“开始偏差检测”，开始分析多模态目标检测结果的偏差
               </div>
 
               <p v-if="fullResult.key_frame_detection" class="mb-1 text-left">
@@ -201,6 +201,10 @@ export default {
       biasTypingInterval: null,
       biasTypingTimeout: null,
       accuracyTimeout: null,
+      // 【新增】总结文本打字状态
+      summaryFullText: '', // 存储完整的总结文本
+      summaryTypingText: '', // 存储正在打字的文本
+      summaryTypingInterval: null, // 总结的打字定时器
       // 移除了 showSummary
       showBiasDetails: false,
       showAccuracy: false,
@@ -490,10 +494,17 @@ export default {
       this.showAccuracy = false;
       this.labelsToHighlight = [];
       this.isBiasTyping = false;
+      // 【修改点 3】：重置总结打字相关的字段
+      this.summaryFullText = '';
+      this.summaryTypingText = '';
       this.clearTypingIntervals();
     },
     clearTypingIntervals() {
-      // 移除了 summaryTypingInterval
+      // 移除了 summaryTypingInterval 【修改点 2：将 summaryTypingInterval 添加回来】
+      if (this.summaryTypingInterval) {
+        clearInterval(this.summaryTypingInterval);
+        this.summaryTypingInterval = null;
+      }
       if (this.biasTypingInterval) {
         clearInterval(this.biasTypingInterval);
         this.biasTypingInterval = null;
@@ -543,8 +554,12 @@ export default {
 
       // 1. 提取总结（用于中间框）
       const summaryEntry = this.descriptionEntries.find(entry => entry.label === '总结');
-      this.summaryTextOnly = summaryEntry ? summaryEntry.text : '未找到总结信息。';
+      // this.summaryTextOnly = summaryEntry ? summaryEntry.text : '未找到总结信息。';
       //this.summaryHighlight = summaryEntry ? summaryEntry.highlight : false;
+      // 【修改点 1】：将完整的总结文本存入 summaryFullText
+      this.summaryFullText = summaryEntry ? summaryEntry.text : '未找到总结信息。';
+      this.summaryTextOnly = ''; // 清空，准备打字显示
+      this.summaryTypingText = ''; // 【新增】清空打字文本
 
       // 2. 提取详情（用于右侧框）
       this.biasDetailEntries = this.descriptionEntries.filter(entry => entry.label !== '总结');
@@ -553,6 +568,28 @@ export default {
       // 3. 重置显示状态
       this.showBiasDetails = false;
       this.showAccuracy = false;
+    },
+    /**
+     * 【新增】启动总结文本的打字效果
+     */
+    startSummaryTyping() {
+      if (!this.summaryFullText || this.summaryTypingInterval) {
+        return;
+      }
+      
+      this.summaryTypingText = ''; // 从头开始
+      let charIndex = 0;
+      
+      this.summaryTypingInterval = setInterval(() => {
+        // 使用 this.summaryFullText 来获取完整的文本
+        this.summaryTypingText = this.summaryFullText.slice(0, charIndex + 1);
+        charIndex += 1;
+
+        if (charIndex >= this.summaryFullText.length) {
+          clearInterval(this.summaryTypingInterval);
+          this.summaryTypingInterval = null;
+        }
+      }, this.typingSpeed);
     },
     updateLabelsToHighlight(rawAspects) {
       const aspects = this.parseLowSimilarityAspects(rawAspects);
@@ -764,6 +801,9 @@ export default {
 
         // 逻辑点 3：拆分总结和详情
         this.prepareDescriptionDisplay(fullData);
+
+        // 【修改点 4】：分析成功后立即启动总结的打字效果
+        this.startSummaryTyping();
 
         // ---- 提取文件名和路径修正 (用于构造新接口 URL) ----
         // 原始路径字符串 (可能包含完整路径)
