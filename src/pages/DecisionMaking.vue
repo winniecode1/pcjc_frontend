@@ -35,7 +35,8 @@
         </div>
 
         <div class="button-container">
-          <b-button @click="fetchBackendData" variant="primary" :disabled="isLoading" class="inference-btn" :style="buttonBgStyle">
+          <b-button @click="fetchBackendData" variant="primary" :disabled="isLoading" class="inference-btn"
+            :style="buttonBgStyle">
             <b-spinner small v-if="isLoading"></b-spinner>
             {{ isLoading ? '获取数据中...' : '决策认知' }}
           </b-button>
@@ -46,16 +47,20 @@
         <div class="design-module assessment-module commander-assessment" :style="commanderPanelBgStyle">
           <div class="assessment-content">
             <div class="assessment-left-section">
-              <img v-if="designAssetsEnabled" :src="fileUrl(assetNames.commanderIcon)" alt="指挥员评估" class="assessment-module-icon" />
+              <img v-if="designAssetsEnabled" :src="fileUrl(assetNames.commanderIcon)" alt="指挥员评估"
+                class="assessment-module-icon" />
               <div v-else class="icon-placeholder-commander"></div>
               <div class="assessment-title">指挥员评估</div>
             </div>
             <div class="assessment-middle-section">
               <div class="assessment-right-section">
                 <div class="icon-placeholder-red" :style="expertIconStyle"></div>
-                <!-- <span class="assessment-level">{{ expertDangerLevel.replace('!', '') }} 级战备</span> -->
               </div>
               <div class="design-module-content text-scrollable">
+                <div v-if="isAssessing" class="loading-overlay">
+                  <b-spinner small></b-spinner>
+                  <span>加载中...</span>
+                </div>
                 <p class="text-content" v-html="performanceDataLocal"></p>
               </div>
             </div>
@@ -103,16 +108,20 @@
         <div class="design-module assessment-module machine-assessment" :style="systemPanelBgStyle">
           <div class="assessment-content">
             <div class="assessment-left-section">
-              <img v-if="designAssetsEnabled" :src="fileUrl(assetNames.machineIcon)" alt="机器评估" class="assessment-module-icon" />
+              <img v-if="designAssetsEnabled" :src="fileUrl(assetNames.machineIcon)" alt="机器评估"
+                class="assessment-module-icon" />
               <div v-else class="icon-placeholder-machine"></div>
               <div class="assessment-title">机器评估</div>
             </div>
             <div class="assessment-middle-section">
               <div class="assessment-right-section">
                 <div class="icon-placeholder-red" :style="modelIconStyle"></div>
-                <!-- <span class="assessment-level">{{ modelDangerLevel.replace('!', '') }} 级战备</span> -->
               </div>
               <div class="design-module-content text-scrollable">
+                <div v-if="isAssessing" class="loading-overlay">
+                  <b-spinner small></b-spinner>
+                  <span>加载中...</span>
+                </div>
                 <p class="text-content" v-html="performanceData"></p>
               </div>
             </div>
@@ -123,15 +132,53 @@
       <div class="design-right-column">
         <!-- 偏差检测按钮 - 移动到标题框上方中间位置 -->
         <div class="bias-detection-container">
-          <b-button @click="performDeviationDetection" variant="info" class="nav-btn nav-detect use-asset-bg">
-            偏差检测
+          <b-button @click="performDeviationDetection" variant="info" :disabled="isBiasDetecting"
+            class="nav-btn nav-detect use-asset-bg">
+            <b-spinner small v-if="isBiasDetecting"></b-spinner>
+            {{ isBiasDetecting ? '检测中...' : '偏差检测' }}
           </b-button>
         </div>
-        
+
         <div class="standalone-label" :style="fullWidthLabelStyle(assetNames.resultLabel, 28)">决策选择认知偏差检测结果</div>
+
+        <!-- 重构右侧文本框为三个部分 -->
         <div class="design-module result-log-module" :style="rightPanelBgStyle">
           <div class="design-module-content text-scrollable">
-            <p class="text-content" v-html="highlightedSummaryText"></p>
+            <!-- 行为信息部分 -->
+            <div class="result-section">
+              <div class="section-header">行为信息：</div>
+              <div class="section-content">
+                <div v-if="isBiasResultLoading" class="loading-overlay">
+                  <b-spinner small></b-spinner>
+                  <span>加载中...</span>
+                </div>
+                <p class="result-text">{{ behaviorInfo || '暂无行为信息' }}</p>
+              </div>
+            </div>
+
+            <!-- 相同点部分 -->
+            <div class="result-section">
+              <div class="section-header">相同点：</div>
+              <div class="section-content">
+                <div v-if="isBiasResultLoading" class="loading-overlay">
+                  <b-spinner small></b-spinner>
+                  <span>加载中...</span>
+                </div>
+                <p class="result-text">{{ samePoints || '暂无相同点信息' }}</p>
+              </div>
+            </div>
+
+            <!-- 不同点部分 - 红色文字 -->
+            <div class="result-section">
+              <div class="section-header">不同点：</div>
+              <div class="section-content">
+                <div v-if="isBiasResultLoading" class="loading-overlay">
+                  <b-spinner small></b-spinner>
+                  <span>加载中...</span>
+                </div>
+                <p class="result-text different-points">{{ differentPoints || '暂无不同点信息' }}</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -165,6 +212,9 @@ export default {
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
       isLoading: false,
+      isBiasDetecting: false, // 新增：偏差检测加载状态
+      isAssessing: false, // 新增：评估模块加载状态
+      isBiasResultLoading: false, // 新增：偏差检测结果加载状态
       /* 设计稿资源配置（使用项目内 step4 素材） */
       designAssetsEnabled: true,
       assetNames: {
@@ -205,7 +255,10 @@ export default {
       currentStageText: '', // 保留此字段，以防将来使用
       performanceData: '',
       performanceDataLocal: '正在加载本地性能数据...',
-      summaryText: '正在加载总结文本...',
+      // 新增：右侧三个文本框的数据
+      behaviorInfo: '正在加载行为信息...',
+      samePoints: '正在加载相同点信息...',
+      differentPoints: '正在加载不同点信息...',
       imageList: [null, null, null, null],
       deviationDetectionAccuracy: 100,
       modelDangerLevel: 'N/A',
@@ -220,11 +273,7 @@ export default {
       // 注意：此计算属性当前未在模板中使用
       return this.highlightRandomWords(this.currentStageText, 1, 3);
     },
-    /* 仅对右侧"决策选择认知偏差检测结果"做随机标红 */
-    highlightedSummaryText() {
-      return this.highlightRandomWords(this.summaryText || '', 1, 3);
-    },
-    /* 左下文本框：当内容为 JSON 字符串时，仅提取三个字段并换行展示 */
+    /* 精简左下角文本 - 只保留前两段 */
     formattedThirdStageText() {
       const source = this.thirdStageText;
       if (!source) return '';
@@ -237,10 +286,11 @@ export default {
           }
         }
         if (typeof data === 'object' && data !== null) {
+          // 只保留前两个字段，删除第三段
           const takeKeys = [
             'consensus_summary',
-            'deviation_analysis',
-            'deviation_analysis_report'
+            'deviation_analysis'
+            // 删除 'deviation_analysis_report'
           ];
           const parts = takeKeys
             .map(k => data[k])
@@ -291,7 +341,7 @@ export default {
     accuracyBgStyle() {
       return this.bgImageStyle(this.assetNames.accuracy);
     },
-    // 指挥员评估战备等级图标样式
+    // 指挥员评估战备等级图标样式 - 优化对齐
     expertIconStyle() {
       if (!this.designAssetsEnabled) return {};
       const expertLevel = this.extractLevelFromString(this.expertDangerLevel);
@@ -303,10 +353,11 @@ export default {
         backgroundImage: `url('${levelImg}')`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: '100% 100%',
-        border: 'none'
+        border: 'none',
+        margin: 'auto' // 添加居中对齐
       };
     },
-    // 机器评估战备等级图标样式
+    // 机器评估战备等级图标样式 - 优化对齐
     modelIconStyle() {
       if (!this.designAssetsEnabled) return {};
       const modelLevel = this.extractLevelFromString(this.modelDangerLevel);
@@ -318,7 +369,8 @@ export default {
         backgroundImage: `url('${levelImg}')`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: '100% 100%',
-        border: 'none'
+        border: 'none',
+        margin: 'auto' // 添加居中对齐
       };
     }
 
@@ -416,9 +468,17 @@ export default {
           this.imageList = module4Data.imageList || [null, null, null, null];
           console.log('图像列表设置为：', this.imageList);
 
-          // 5. 填充偏差检测结果
-          this.summaryText = module4Data.summary || '暂无总结文本。';
-          console.log('总结文本 (右) 设置为：', this.summaryText);
+          // 5. 从summary中解析三个部分的数据
+          if (module4Data.summary) {
+            const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Data.summary);
+            this.behaviorInfo = behaviorInfo;
+            this.samePoints = samePoints;
+            this.differentPoints = differentPoints;
+          } else {
+            this.behaviorInfo = '暂无行为信息';
+            this.samePoints = '暂无相同点信息';
+            this.differentPoints = '暂无不同点信息';
+          }
 
           // 6. 填充准确率
           const accuracyValue = parseFloat(module4Data.average_comprehensive_accuracy);
@@ -430,7 +490,9 @@ export default {
           // 设置为空白/待处理状态
           this.performanceData = '请点击 "信息推理"';
           this.performanceDataLocal = '请点击 "信息推理"';
-          this.summaryText = '请点击 "信息推理"，然后点击 "偏差检测"';
+          this.behaviorInfo = '请点击 "信息推理"';
+          this.samePoints = '请点击 "信息推理"';
+          this.differentPoints = '请点击 "信息推理"';
           this.imageList = [null, null, null, null];
           this.deviationDetectionAccuracy = 'N/A';
           this.modelDangerLevel = 'N/A';
@@ -442,35 +504,57 @@ export default {
         // 设置为错误状态
         this.performanceData = '加载数据出错';
         this.performanceDataLocal = '加载数据出错';
-        this.summaryText = '加载数据出错';
+        this.behaviorInfo = '加载数据出错';
+        this.samePoints = '加载数据出错';
+        this.differentPoints = '加载数据出错';
         this.deviationDetectionAccuracy = 'N/A';
       }
     },
+    // 删除随机标红方法，不再使用
     highlightRandomWords(text, minCount, maxCount) {
-      if (!text) return '';
-      const words = text.split(/(\s+|[，。！？、：；])/);
-      const validWordIndices = words
-        .map((word, index) => ({ word, index }))
-        .filter(item => item.word.trim() && !/^[，。！？、：；]$/.test(item.word))
-        .map(item => item.index);
-
-      if (validWordIndices.length === 0) {
-        return text;
+      return text; // 直接返回原文本，不进行标红处理
+    },
+    /**
+     * 从summary文本中解析出行为信息、相同点和不同点
+     */
+    parseSummaryText(summaryText) {
+      if (!summaryText) {
+        return {
+          behaviorInfo: '暂无行为信息',
+          samePoints: '暂无相同点信息',
+          differentPoints: '暂无不同点信息'
+        };
       }
 
-      const countToHighlight = Math.floor(Math.random() * (maxCount - minCount + 1)) + minCount;
-      const actualCount = Math.min(countToHighlight, validWordIndices.length);
-      const shuffledIndices = validWordIndices.sort(() => 0.5 - Math.random());
-      const indicesToHighlight = new Set(shuffledIndices.slice(0, actualCount));
-
-      const highlightedWords = words.map((word, index) => {
-        if (indicesToHighlight.has(index)) {
-          return `<span style="color: red; font-weight: bold;">${word}</span>`;
+      try {
+        // 如果summary是JSON字符串，先解析
+        let summary = summaryText;
+        if (typeof summaryText === 'string' && summaryText.trim().startsWith('{')) {
+          const parsed = JSON.parse(summaryText);
+          summary = parsed.summary || summaryText;
         }
-        return word;
-      });
 
-      return highlightedWords.join('');
+        // 使用正则表达式匹配三个部分
+        const behaviorMatch = summary.match(/行为信息[：:]?\s*([^]*?)(?=相同点[：:]|$)/);
+        const samePointsMatch = summary.match(/相同点[：:]?\s*([^]*?)(?=不同点[：:]|$)/);
+        const differentPointsMatch = summary.match(/不同点[：:]?\s*([^]*?)$/);
+
+        // 提取内容并清理
+        const behaviorInfo = behaviorMatch ? behaviorMatch[1].trim().replace(/^[\n\s]+|[\n\s]+$/g, '') : '暂无行为信息';
+        const samePoints = samePointsMatch ? samePointsMatch[1].trim().replace(/^[\n\s]+|[\n\s]+$/g, '') : '暂无相同点信息';
+        const differentPoints = differentPointsMatch ? differentPointsMatch[1].trim().replace(/^[\n\s]+|[\n\s]+$/g, '') : '暂无不同点信息';
+
+        console.log('解析summary结果:', { behaviorInfo, samePoints, differentPoints });
+
+        return { behaviorInfo, samePoints, differentPoints };
+      } catch (error) {
+        console.error('解析summary文本失败:', error);
+        return {
+          behaviorInfo: '解析行为信息失败',
+          samePoints: '解析相同点失败',
+          differentPoints: '解析不同点失败'
+        };
+      }
     },
     /* 获取项目内 step4 素材的打包 URL */
     projectAssetUrl(name) {
@@ -543,6 +627,7 @@ export default {
      */
     async fetchBackendData() {
       this.isLoading = true;
+      this.isAssessing = true; // 开始评估加载状态
       const model = this.apiConfig.weaponModel;
       console.log('开始获取数据，武器型号：', model);
 
@@ -608,7 +693,7 @@ export default {
 
           // 步骤 3：填充评估和等级 (不含 summaryText)
           this.parseBackendData(mainData.data);
-          
+
           // 步骤 4：*不* 填充准确率或总结文本
           // (相关代码已被移除)
 
@@ -622,6 +707,7 @@ export default {
         this.deviationDetectionAccuracy = 'N/A'; // 出错时重置
       } finally {
         this.isLoading = false;
+        this.isAssessing = false; // 结束评估加载状态
         console.log('数据获取流程结束');
       }
     },
@@ -646,9 +732,6 @@ export default {
       this.performanceDataLocal = rawPerformanceDataLocal;
       console.log('本地性能数据 (中-底) 设置为：', this.performanceDataLocal);
 
-      // (已移除) this.summaryText = ...
-      // (已移除) this.currentStageText = ...
-
       const modelLevelNum = this.getLevelNum(backendData.model_analysis_danger_level);
       const expertLevelNum = this.getLevelNum(backendData.local_txt_danger_level);
       console.log('模型危险等级：', backendData.model_analysis_danger_level, '转换后：', modelLevelNum);
@@ -663,37 +746,60 @@ export default {
     /**
      * 逻辑3：点击 "偏差检测"
      * 1. 从 localStorage 读取 module4Res
-     * 2. 填充 "偏差检测结果" (summaryText)
+     * 2. 填充 "偏差检测结果" (behaviorInfo, samePoints, differentPoints)
      * 3. 填充 "准确率" (deviationDetectionAccuracy)
      */
     performDeviationDetection() {
       console.log('偏差检测按钮点击');
+      this.isBiasDetecting = true; // 设置按钮加载状态
+      this.isBiasResultLoading = true; // 设置结果加载状态
+
       try {
         const module4ResStr = localStorage.getItem('module4Res');
         if (module4ResStr) {
           const module4Res = JSON.parse(module4ResStr);
           console.log('从localStorage读取module4Res成功', module4Res);
 
-          // 步骤 2：填充 决策选择认知偏差检测结果文本
-          this.summaryText = module4Res.summary || '暂无总结文本。';
-          console.log('总结文本 (右) 设置为：', this.summaryText);
+          // 模拟加载延迟
+          setTimeout(() => {
+            // 步骤 2：从summary中解析三个文本框数据
+            if (module4Res.summary) {
+              const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Res.summary);
+              this.behaviorInfo = behaviorInfo;
+              this.samePoints = samePoints;
+              this.differentPoints = differentPoints;
+            } else {
+              this.behaviorInfo = '暂无行为信息';
+              this.samePoints = '暂无相同点信息';
+              this.differentPoints = '暂无不同点信息';
+            }
 
-          // 步骤 3：填充 准确率数字
-          const accuracyValue = parseFloat(module4Res.average_comprehensive_accuracy);
-          this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
-          console.log('偏差检测准确率设置为：', this.deviationDetectionAccuracy);
+            // 步骤 3：填充 准确率数字
+            const accuracyValue = parseFloat(module4Res.average_comprehensive_accuracy);
+            this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
+            console.log('偏差检测准确率设置为：', this.deviationDetectionAccuracy);
+
+            this.isBiasDetecting = false; // 清除按钮加载状态
+            this.isBiasResultLoading = false; // 清除结果加载状态
+          }, 1500); // 模拟1.5秒加载时间
 
         } else {
           console.warn('LocalStorage 中未找到 module4Res，无法执行偏差检测。');
-          this.summaryText = '请先点击 "信息推理" 获取数据，然后再点击 "偏差检测"。';
+          this.behaviorInfo = '请先点击 "信息推理" 获取数据，然后再点击 "偏差检测"。';
+          this.samePoints = '请先点击 "信息推理" 获取数据';
+          this.differentPoints = '请先点击 "信息推理" 获取数据';
           this.deviationDetectionAccuracy = 'N/A';
-          // 可选：弹窗提示
-          // alert('请先点击 "信息推理" 获取数据。');
+          this.isBiasDetecting = false;
+          this.isBiasResultLoading = false;
         }
       } catch (e) {
         console.error('执行偏差检测失败:', e);
-        this.summaryText = '加载偏差检测结果时出错，请检查LocalStorage数据。';
+        this.behaviorInfo = '加载偏差检测结果时出错，请检查LocalStorage数据。';
+        this.samePoints = '加载数据出错';
+        this.differentPoints = '加载数据出错';
         this.deviationDetectionAccuracy = 'N/A';
+        this.isBiasDetecting = false;
+        this.isBiasResultLoading = false;
       }
     },
     getLevelNum(backendLevel) {
@@ -704,7 +810,6 @@ export default {
         '危险等级4': 4
       };
       const result = numMap[backendLevel] || 4;
-      // console.log('等级转换：', backendLevel, '→', result); // 此日志过于频繁，可注释掉
       return result;
     },
     getLevelImageName(level) {
@@ -759,7 +864,10 @@ export default {
         const exportData = {
           "performance_data": this.performanceData,
           "performance_data_local": this.performanceDataLocal,
-          "summary": this.summaryText
+          "behavior_info": this.behaviorInfo,
+          "same_points": this.samePoints,
+          "different_points": this.differentPoints,
+          "deviation_detection_accuracy": this.deviationDetectionAccuracy
         };
 
         // 转换为JSON字符串
@@ -827,10 +935,12 @@ export default {
   z-index: 2;
   pointer-events: none;
 }
+
 .section::before {
   left: 0;
   background-image: url('~@/assets/images/step4/装饰-左.png');
 }
+
 .section::after {
   right: 0;
   background-image: url('~@/assets/images/step4/装饰-右.png');
@@ -882,10 +992,14 @@ export default {
 
 .top-nav-right {
   right: 20px;
-  display: flex; /* 改为 flex 布局 */
-  flex-direction: column; /* 垂直排列 */
-  gap: 10px; /* 按钮间距 */
-  align-items: flex-end; /* 右对齐 */
+  display: flex;
+  /* 改为 flex 布局 */
+  flex-direction: column;
+  /* 垂直排列 */
+  gap: 10px;
+  /* 按钮间距 */
+  align-items: flex-end;
+  /* 右对齐 */
 }
 
 .nav-btn {
@@ -897,8 +1011,10 @@ export default {
   border-radius: 4px;
   font-weight: bold;
   border: 1px solid #005f7f;
-  text-decoration: none; /* 确保 router-link 表现一致 */
-  display: inline-flex; /* 用于对齐 */
+  text-decoration: none;
+  /* 确保 router-link 表现一致 */
+  display: inline-flex;
+  /* 用于对齐 */
   align-items: center;
   justify-content: center;
 
@@ -962,7 +1078,8 @@ export default {
   .nav-btn {
     border: none;
     background: transparent;
-    color: #ffffff; /* 白色文字置顶 */
+    color: #ffffff;
+    /* 白色文字置顶 */
     text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
     display: inline-flex;
     align-items: center;
@@ -972,12 +1089,15 @@ export default {
     padding: 0;
     font-weight: bold;
   }
+
   .nav-btn.nav-home {
     background: url('~@/assets/images/step4/首页按键.png') no-repeat center/contain;
   }
+
   .nav-btn.nav-back {
     background: url('~@/assets/images/step4/返回按键.png') no-repeat center/contain;
   }
+
   .top-nav-right .nav-btn.nav-next {
     width: 100px;
     background: url('~@/assets/images/step4/下一页按键.png') no-repeat center/contain;
@@ -1020,33 +1140,31 @@ export default {
   display: flex;
   flex-direction: column;
   /* 调整 gap 以适应可能的内容压缩 */
-  gap: 10px; 
+  gap: 10px;
   height: 100%;
 }
 
 /* 新增：偏差检测按钮容器样式 */
-/* 在样式表中的相关样式 */
 .bias-detection-container {
   display: flex;
   justify-content: center;
   align-items: center;
   margin-bottom: 10px;
-  height: 50px;
-  
+  height: 60px;
+  /* 统一按钮高度 */
+
   .nav-btn.nav-detect {
-    background: rgba(10, 50, 25, 0.9);
-    color: #00ffaa;
-    border-color: #007f5f;
     width: 150px;
+    /* 统一按钮宽度 */
     height: 40px;
+    /* 统一按钮高度 */
     font-size: 1.1rem;
     font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 
-    &:hover {
-      background: rgba(20, 70, 40, 0.9);
-      color: #fff;
-    }
-    
     /* 添加资源背景图片样式 */
     &.use-asset-bg {
       border: none;
@@ -1057,9 +1175,16 @@ export default {
   }
 }
 
+.use-assets .bias-detection-container .nav-btn.nav-detect.use-asset-bg {
+  width: 200px;
+  /* 如果需要保持资源图片比例，可以单独设置 */
+  height: 70px;
+}
+
 /* 新增：推动右侧列的标题和文本框下移 "3行" */
-.design-right-column > .standalone-label {
-  margin-top: 0; /* 重置之前的样式 */
+.design-right-column>.standalone-label {
+  margin-top: 0;
+  /* 重置之前的样式 */
 }
 
 /* 通用模块样式 */
@@ -1096,6 +1221,7 @@ export default {
   &::-webkit-scrollbar-thumb {
     background: #00e0ff;
     border-radius: 4px;
+
     &:hover {
       background: #00b8d4;
     }
@@ -1116,10 +1242,26 @@ export default {
   line-height: 1.6;
   color: #e0e0e0;
   margin: 0;
+}
 
-  :deep(span) {
-    color: #ff4500 !important;
-    font-weight: bold;
+/* 加载中覆盖层样式 */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  color: #00e0ff;
+  font-size: 0.9rem;
+
+  .spinner-border-sm {
+    margin-bottom: 8px;
   }
 }
 
@@ -1188,7 +1330,8 @@ export default {
     background: transparent;
     line-height: 1;
   }
-    /* 偏差检测按键的资源样式 */
+
+  /* 偏差检测按键的资源样式 */
   .bias-detection-container .nav-btn.nav-detect.use-asset-bg {
     width: 200px;
     height: 70px;
@@ -1221,22 +1364,28 @@ export default {
 .button-container {
   flex: 0 0 auto;
   height: 60px;
+  /* 统一按钮高度 */
   display: flex;
-  justify-content: center; /* 居中对齐 */
+  justify-content: center;
+  /* 居中对齐 */
   align-items: center;
 
   .inference-btn {
-    width: auto; /* 改为自动宽度 */
-    min-width: 150px; /* 设置最小宽度 */
-    max-width: 250px; /* 设置最大宽度 */
-    height: 100%;
+    width: 170px;
+    /* 统一按钮宽度 */
+    height: 72px;
+    /* 统一按钮高度 */
     font-size: 1.1rem;
     font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     @include sci-fi-border;
     /* 使用"开始测验.png"作为按钮底图 */
     background-image: url('~@/assets/images/step4/开始测验.png');
-    // background: url('~@/assets/images/step4/开始测验.png') no-repeat center/contain, #00e0ff;
-    color: #ffffff; /* 改为白色 */
+    color: #ffffff;
+    /* 改为白色 */
     border: none;
     border-radius: 4px;
 
@@ -1258,21 +1407,30 @@ export default {
 
 /* 中列 */
 .assessment-module {
-  flex: 0 1 auto; /* 不自动增长，根据内容调整 */
+  flex: 0 1 auto;
+  /* 不自动增长，根据内容调整 */
   min-height: 150px;
-  max-height: 200px; /* 限制最大高度，让框更紧凑 */
-  overflow: hidden; /* 确保内容不超出 */
+  max-height: 200px;
+  /* 限制最大高度，让框更紧凑 */
+  overflow: hidden;
+  /* 确保内容不超出 */
   display: flex;
   flex-direction: column;
+  position: relative;
+  /* 为加载层添加相对定位 */
 
   &.machine-assessment {
-    order: 1; /* 机器评估在上 */
-    margin-bottom: 10px; /* 上边往下缩一点 */
+    order: 1;
+    /* 机器评估在上 */
+    margin-bottom: 10px;
+    /* 上边往下缩一点 */
   }
 
   &.commander-assessment {
-    order: 3; /* 指挥员评估在下 */
-    margin-top: 10px; /* 下边往上缩一点 */
+    order: 3;
+    /* 指挥员评估在下 */
+    margin-top: 10px;
+    /* 下边往上缩一点 */
   }
 
   .assessment-content {
@@ -1281,7 +1439,10 @@ export default {
     gap: 15px;
     flex-grow: 1;
     min-height: 0;
-    overflow: hidden; /* 防止内容超出 */
+    overflow: hidden;
+    /* 防止内容超出 */
+    align-items: flex-start;
+    /* 改为顶部对齐 */
   }
 
   .assessment-left-section {
@@ -1293,10 +1454,12 @@ export default {
     align-items: center;
     gap: 8px;
     min-width: 100px;
+    margin-top: 5px;
+    /* 添加顶部外边距使其下移 */
 
     .assessment-module-icon {
-      width: 50px;
-      height: 50px;
+      width: 40px;
+      height: 40px;
       object-fit: contain;
     }
 
@@ -1315,6 +1478,9 @@ export default {
       font-size: 0.95rem;
       white-space: nowrap;
       text-shadow: 0 0 5px rgba(0, 224, 255, 0.5);
+
+      margin-top: 2px;
+      /* 添加微小间距 */
     }
   }
 
@@ -1323,7 +1489,10 @@ export default {
     display: flex;
     gap: 15px;
     min-width: 0;
-    overflow: hidden; /* 防止内容超出 */
+    overflow: hidden;
+    /* 防止内容超出 */
+    align-items: flex-start;
+    /* 改为顶部对齐 */
   }
 
   .assessment-right-section {
@@ -1334,8 +1503,11 @@ export default {
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    min-width: 110px; /* <-- 修改这里 (原为 80px) */
-    justify-content: center; /* <-- 新增此行 */
+    min-width: 110px;
+    justify-content: flex-start;
+    /* 改为顶部对齐 */
+    margin-top: 5px;
+    /* 添加顶部外边距使其下移 */
 
     .icon-placeholder-red {
       width: 60px;
@@ -1344,6 +1516,9 @@ export default {
       border: 1px solid #ff7777;
       border-radius: 4px;
       opacity: 0.7;
+
+      margin-top: 0;
+      /* 确保没有额外上边距 */
     }
 
     .assessment-level {
@@ -1359,14 +1534,19 @@ export default {
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    position: relative;
+    /* 为加载层添加相对定位 */
   }
 }
 
 .behavior-module {
-  flex: 1 1 auto; /* 占据中间空间 */
+  flex: 1 1 auto;
+  /* 占据中间空间 */
   min-height: 200px;
-  order: 2; /* 确保在中间位置 */
-  padding-top: 18px; /* 为绝对定位的标题留出空间，避免与金字塔重叠 */
+  order: 2;
+  /* 确保在中间位置 */
+  padding-top: 18px;
+  /* 为绝对定位的标题留出空间，避免与金字塔重叠 */
 
   .design-module-label {
     width: 120px;
@@ -1375,28 +1555,38 @@ export default {
   .behavior-content {
     flex-grow: 1;
     display: flex;
-    align-items: stretch; /* 改为拉伸对齐，让图片自适应高度 */
-    justify-content: space-between; /* 左右分布，靠齐两侧 */
-    padding: 0 15px 15px 15px; /* 顶部 0，保持与标签紧邻 */
-    gap: 20px; /* 间距避免重叠 */
+    align-items: stretch;
+    /* 改为拉伸对齐，让图片自适应高度 */
+    justify-content: space-between;
+    /* 左右分布，靠齐两侧 */
+    padding: 0 15px 15px 15px;
+    /* 顶部 0，保持与标签紧邻 */
+    gap: 20px;
+    /* 间距避免重叠 */
     min-height: 0;
   }
 
   .flanking-image-column {
     display: flex;
     flex-direction: column;
-    gap: 15px; /* 增加图片之间的间距 */
+    gap: 15px;
+    /* 增加图片之间的间距 */
     flex-basis: 35%;
-    flex-grow: 1; /* 允许列自适应拉伸 */
+    flex-grow: 1;
+    /* 允许列自适应拉伸 */
     height: 100%;
-    width: auto; /* 宽度自动 */
+    width: auto;
+    /* 宽度自动 */
     min-width: 220px;
   }
 
   .image-item {
-    flex: 1 1 0; /* 允许图片项等比例拉伸，优先填充可用空间 */
-    width: 100%; /* 列内尽可能宽 */
-    min-height: 120px; /* 设置最小高度，确保在小屏幕上也有合理显示 */
+    flex: 1 1 0;
+    /* 允许图片项等比例拉伸，优先填充可用空间 */
+    width: 100%;
+    /* 列内尽可能宽 */
+    min-height: 120px;
+    /* 设置最小高度，确保在小屏幕上也有合理显示 */
     /* 移除固定的 aspect-ratio，允许根据容器高度自适应拉伸 */
     @include sci-fi-border;
     background: rgba(0, 0, 0, 0.3);
@@ -1410,7 +1600,8 @@ export default {
   .image-display {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* 填满16:9容器，保持比例 */
+    object-fit: cover;
+    /* 填满16:9容器，保持比例 */
   }
 
   .image-placeholder {
@@ -1419,14 +1610,17 @@ export default {
   }
 
   .pyramid-legend-group {
-    flex-basis: auto; /* 自动调整 */
+    flex-basis: auto;
+    /* 自动调整 */
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    min-width: 120px; /* 减小最小宽度 */
-    align-self: center; /* <-- 新增此行 垂直居中*/
+    min-width: 120px;
+    /* 减小最小宽度 */
+    align-self: center;
+    /* <-- 新增此行 垂直居中*/
   }
 
   .pyramid-placeholder {
@@ -1443,34 +1637,38 @@ export default {
 
   .level-legend {
     display: flex;
-    flex-wrap: wrap; /* 允许换行 */
-    gap: 8px; /* 减小间距 */
+    flex-wrap: wrap;
+    /* 允许换行 */
+    gap: 8px;
+    /* 减小间距 */
     justify-content: center;
-    max-width: 120px; /* 限制最大宽度，强制换行 */
+    max-width: 120px;
+    /* 限制最大宽度，强制换行 */
 
     .legend-item {
-      font-size: 0.65rem; /* 减小字体 */
+      font-size: 0.65rem;
+      /* 减小字体 */
       color: #aaa;
       font-weight: bold;
-      white-space: nowrap; /* 防止文字换行 */
+      white-space: nowrap;
+      /* 防止文字换行 */
 
-      // &.active-level {
-      //   color: #00e0ff;
-      //   text-shadow: 0 0 5px #00e0ff;
-      // }
       /* 新增：按顺序为激活的等级设置不同颜色 */
       &:nth-child(1).active-level {
         color: #FF0000;
         text-shadow: 0 0 5px #FF0000;
       }
+
       &:nth-child(2).active-level {
         color: #FFC118;
         text-shadow: 0 0 5px #FFC118;
       }
+
       &:nth-child(3).active-level {
         color: #2BC3FF;
         text-shadow: 0 0 5px #2BC3FF;
       }
+
       &:nth-child(4).active-level {
         color: #7EFF00;
         text-shadow: 0 0 5px #7EFF00;
@@ -1484,7 +1682,8 @@ export default {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* 确保内容不超出 */
+  overflow: hidden;
+  /* 确保内容不超出 */
   min-height: 0;
 }
 
@@ -1493,6 +1692,50 @@ export default {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+/* 新增：右侧三个文本框的样式 */
+.result-section {
+  margin-bottom: 15px;
+  position: relative;
+  /* 为加载层添加相对定位 */
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.section-header {
+  color: #00e5ff;
+  font-weight: bold;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.section-content {
+  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid #00e0ff;
+  border-radius: 5px;
+  padding: 12px;
+  min-height: 80px;
+  max-height: 120px;
+  overflow-y: auto;
+  position: relative;
+  /* 为加载层添加相对定位 */
+}
+
+.result-text {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
+  white-space: pre-line;
+  color: #e0e0e0;
+}
+
+/* 不同点文字红色 */
+.different-points {
+  color: #ff6b6b !important;
+  font-weight: bold;
 }
 
 .right-bottom-controls {
@@ -1536,7 +1779,8 @@ export default {
   @include sci-fi-border;
   /* 黄色导出按钮底图 */
   background: url('~@/assets/images/step4/结果导出按键.png') no-repeat center/contain, #00e0ff;
-  color: #ffffff; /* 改为白色 */
+  color: #ffffff;
+  /* 改为白色 */
   border: none;
   border-radius: 4px;
   cursor: pointer;
