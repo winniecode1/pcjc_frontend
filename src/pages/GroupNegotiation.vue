@@ -196,13 +196,12 @@
             偏差检测
           </button>
         </div>
-        <div class="panel-header header-results">群体协商认知偏差检测结果</div>
-
         <div class="panel-right-top">
           <div class="panel-content">
+            <div class="panel-header header-results" style="margin-top: 0px;">群体协商认知偏差检测结果</div>
             <div v-if="isRightLoadingResults" class="panel-overlay">加载中...</div>
             <template v-else>
-              <div class="result-section">
+              <div class="result-section result-section-main">
                 <div class="section-header">共识摘要：</div>
                 <div class="section-content">
                   <p class="result-text" v-html="formattedConsensusSummary || '***'"></p>
@@ -323,7 +322,8 @@ export default {
       isRound2Displayed: false,
       // 右侧分步显示控制
       isRightLoadingResults: false,
-      isRightLoadingAccuracy: false
+      isRightLoadingAccuracy: false,
+      pendingNegotiationResult: null // 新增：暂存群体协商结果
     };
   },
   beforeDestroy() {
@@ -432,6 +432,7 @@ export default {
             if (item.label.includes('形状')) predictData.shape = item.value;
             if (item.label.includes('尺寸')) predictData.size = item.value;
             if (item.label.includes('动力')) predictData.power = item.value;
+            if (item.label.includes('场景')) predictData.scene = item.value;
           });
 
           // 设置属性信息，去除括号及其内容
@@ -442,6 +443,7 @@ export default {
             `形状信息：${predictData.shape ? predictData.shape.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
             `尺寸信息：${predictData.size ? predictData.size.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
             `动力信息：${predictData.power ? predictData.power.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+            `场景信息：${predictData.scene ? predictData.scene.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
           ];
           
           // 设置其他需要的变量
@@ -450,9 +452,31 @@ export default {
           this.kind = predictData.kind;
           this.shape = predictData.shape;
 
-          const module2Res = JSON.parse(localStorage.getItem('module2Res'));
+          // 安全读取 module2Res，避免在 localStorage 中缺失或结构不符合时抛出异常
+          let module2Res = null;
+          try {
+            const module2ResStr = localStorage.getItem('module2Res');
+            if (module2ResStr) {
+              module2Res = JSON.parse(module2ResStr);
+            }
+          } catch (e) {
+            console.warn('解析 module2Res 失败:', e);
+            module2Res = null;
+          }
           // 这里如果没有ground_truth，可以设置一个默认值或空值
-          this.ground_truth = module2Res.result[0][0].model || '';
+          if (
+            module2Res &&
+            module2Res.result &&
+            Array.isArray(module2Res.result) &&
+            module2Res.result[0] &&
+            Array.isArray(module2Res.result[0]) &&
+            module2Res.result[0][0] &&
+            module2Res.result[0][0].model
+          ) {
+            this.ground_truth = module2Res.result[0][0].model;
+          } else {
+            this.ground_truth = '';
+          }
           
           // 保留原来的 attributeInfo 用于兼容
           this.attributeInfo = this.attributeInfoList.join('\n');
@@ -488,6 +512,7 @@ export default {
             `形状信息：${predictData.shape || '未知'}`,
             `尺寸信息：${predictData.size || '未知'}`,
             `动力信息：${predictData.power || '未知'}`,
+            `场景信息：${predictData.scene || '未知'}`,
           ];
           this.color = predictData.color;
           this.kind = predictData.kind;
@@ -592,9 +617,18 @@ export default {
       this.isRound1Displayed = false;
       this.isRound2Displayed = false;
       const module1ResStr = localStorage.getItem('module1Res');
-      const module1Res = JSON.parse(module1ResStr);
-       const imgPath = module1Res.key_frame_path.trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
-        console.log("从 LocalStorage 读取 'imagePath':", imgPath);
+      // 安全解析 module1Res，避免 localStorage 缺失或格式错误导致抛出异常
+      let imgPath = '';
+      if (module1ResStr) {
+        try {
+          const module1Res = JSON.parse(module1ResStr);
+          imgPath = (module1Res.key_frame_path || '').trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
+        } catch (e) {
+          console.warn('解析 module1Res 失败:', e);
+          imgPath = '';
+        }
+      }
+      console.log("从 LocalStorage 读取 'imagePath':", imgPath);
       const resdata = {
         color: this.color,
         kind: this.kind,
@@ -614,12 +648,8 @@ export default {
         
         // 模拟数据 - 实际使用时从API响应获取
         console.log("推理请求成功，结果:", data);
-        // 右侧最终/准确率准备（由偏差检测按钮控制显示节奏）
-        this.finalResult = data.final_model_name;
-        this.consensusSummary = (data.final_review && data.final_review.consensus_summary) || '';
-        this.disagreementPoints = (data.final_review && data.final_review.deviation_analysis) || '';
-        this.disagreementPointsHighlight = (data.final_review && data.final_review.deviation_analysis_report) || '';
-        this.accuracyRate = (data.accuracy !== undefined && data.accuracy !== null) ? data.accuracy : '—';
+          // 只暂存结果，不直接显示
+          this.pendingNegotiationResult = data;
 
         // 立刻显示一轮推理
         this.agentARound1Result = (data.negotiation_details && data.negotiation_details.initial_analyses && data.negotiation_details.initial_analyses.Agent_A) || '';
@@ -653,12 +683,32 @@ export default {
 
     // 右侧偏差检测按钮：不再请求后端，分步显示
     handleBiasDetect() {
-      // 若没有已有数据，直接返回
-      const stored = localStorage.getItem('module3Res');
-      if (!stored) {
+      // 从 localStorage 解析
+      let data = null;
+      if (!data) {
+        try {
+          const stored = localStorage.getItem('module3Res');
+          if (stored) {
+            data = JSON.parse(stored);
+          }
+        } catch (e) {
+          console.warn('解析 module3Res 失败:', e);
+          data = null;
+        }
+      }
+
+      if (!data) {
         alert('请先进行群体协商，以获取完整结果。');
         return;
       }
+
+      // 赋值到显示变量
+      this.finalResult = data.final_model_name;
+      this.consensusSummary = (data.final_review && data.final_review.consensus_summary) || '';
+      this.disagreementPoints = (data.final_review && data.final_review.deviation_analysis) || '';
+      this.disagreementPointsHighlight = (data.final_review && data.final_review.deviation_analysis_report) || '';
+      this.accuracyRate = (data.accuracy !== undefined && data.accuracy !== null) ? data.accuracy : '—';
+
       // 触发右侧加载流程
       this.isRightLoadingResults = true;
       this.isRightLoadingAccuracy = true;
@@ -838,14 +888,13 @@ export default {
   height: 55%;
   flex-shrink: 0;
   width: 100%;
-  // background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  // padding: 20px 30px 30px 30px;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1;
+  margin-bottom: 20px;
 }
 
 .panel-right-top .panel-content {
@@ -861,6 +910,17 @@ export default {
   flex: 1 1 0;
   margin-bottom: 10px;
 }
+
+.panel-right-top .result-section-main {
+  min-height: 220px;
+  background-color: rgba(0,0,0,0.25);
+  border-radius: 8px;
+  padding-top: 20px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(0,229,255,0.08);
+}
+
 
 .panel-right-top .result-section:first-child {
   flex: 3 1 0;
@@ -883,7 +943,6 @@ export default {
   flex-grow: 1;
   height: 100%;
   width: 100%;
-  // background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   padding: 20px 30px 30px 30px;
@@ -892,6 +951,7 @@ export default {
   position: relative;
   z-index: 1;
   gap: 15px;
+  margin-bottom: 20px;
 }
 
 .panel-content {
@@ -1046,23 +1106,31 @@ export default {
   flex-shrink: 0;
 }
 
-.btn-start-detect {
+.btn-start-detect{
   background: none;
   border: none;
   cursor: pointer;
-  width: auto;
-  min-width: 150px;
-  max-width: 250px;
-  height: 100%;
+  width: 170px;
+  height: 72px;
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
+
   color: #fff;
   font-size: 1.1rem;
   font-weight: bold;
   display: inline-flex;
   justify-content: center;
   align-items: center;
+
+  &:disabled {
+    filter: grayscale(80%);
+    cursor: not-allowed;
+  }
+
+  span {
+    margin-left: 8px;
+  }
 }
 
 .btn-start-detect:disabled {
@@ -1270,7 +1338,7 @@ export default {
   background-image: url('~@/assets/images/step1/-s-弹窗-偏差检测准确率.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
   padding: 20px 30px;
   display: flex;
   align-items: center;
