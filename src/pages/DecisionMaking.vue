@@ -56,7 +56,7 @@
                 <!-- <span class="assessment-level">{{ expertDangerLevel.replace('!', '') }} 级战备</span> -->
               </div>
               <div class="design-module-content text-scrollable">
-                <p class="text-content" v-html="performanceData"></p>
+                <p class="text-content" v-html="performanceDataLocal"></p>
               </div>
             </div>
           </div>
@@ -113,7 +113,7 @@
                 <!-- <span class="assessment-level">{{ modelDangerLevel.replace('!', '') }} 级战备</span> -->
               </div>
               <div class="design-module-content text-scrollable">
-                <p class="text-content" v-html="performanceDataLocal"></p>
+                <p class="text-content" v-html="performanceData"></p>
               </div>
             </div>
           </div>

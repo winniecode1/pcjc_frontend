@@ -82,7 +82,7 @@
             开始偏差检测
           </button>
         </div>
-
+        
         <div class="panel-header header-results">偏差检测结果</div>
 
         <div class="panel-right-top">
@@ -544,7 +544,7 @@ export default {
       // 1. 提取总结（用于中间框）
       const summaryEntry = this.descriptionEntries.find(entry => entry.label === '总结');
       this.summaryTextOnly = summaryEntry ? summaryEntry.text : '未找到总结信息。';
-      this.summaryHighlight = summaryEntry ? summaryEntry.highlight : false;
+      //this.summaryHighlight = summaryEntry ? summaryEntry.highlight : false;
 
       // 2. 提取详情（用于右侧框）
       this.biasDetailEntries = this.descriptionEntries.filter(entry => entry.label !== '总结');
@@ -1006,6 +1006,16 @@ export default {
   height: calc(100vh - 80px);
   /* 减去顶部栏高度和padding */
   padding: 0 !important;
+
+  .panel-header {
+    margin-bottom: 5px;
+    /* 减少标题间距 */
+  }
+
+  .header-accuracy {
+    margin-top: 8px;
+    /* 从15px减少 */
+  }
 }
 
 /* 面板通用样式 (不变) */
@@ -1030,8 +1040,9 @@ export default {
 }
 
 .panel-right-bottom {
-  flex-grow: 1;
-  height: 100%;
+  flex-grow: 0;
+  height: 100px !important; /* 固定高度，根据需要调整数值 */
+  min-height: 100px; /* 设置最小高度 */
 }
 
 .panel-content {
@@ -1287,11 +1298,14 @@ export default {
 }
 
 .bias-button-container {
-  height: 40px; /* 匹配中间列 .video-label (35px) + margin-bottom (5px) */
+  height: 40px;
+  /* 匹配中间列 .video-label (35px) + margin-bottom (5px) */
   display: flex;
   align-items: center;
-  justify-content: flex-end; /* 按钮靠右 */
-  margin-bottom: 5px; /* 按钮和下方标题框的间距 */
+  justify-content: center;
+  /* 按钮靠右 */
+  margin-bottom: 5px;
+  /* 按钮和下方标题框的间距 */
 }
 
 .description-box {
@@ -1333,7 +1347,7 @@ export default {
   border: none;
   cursor: pointer;
   width: 170px;
-  height: 72px;
+  height: 60px;
   background-image: url('~@/assets/images/step1/偏差检测按键.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -1343,6 +1357,8 @@ export default {
   display: inline-flex;
   justify-content: center;
   align-items: center;
+  position: relative;
+  top: -15px;
 
   &:disabled {
     filter: grayscale(80%);
@@ -1400,10 +1416,12 @@ export default {
   justify-content: center;
   align-items: center;
 
-  font-size: 3.5rem;
+  font-size: 2rem;
   font-weight: bold;
   color: #00e5ff;
   text-shadow: 0 0 10px #00e5ff;
+  padding: 0; /* 减少内边距 */
+  line-height: 1;
 }
 
 /* 导出按钮的容器 (不变) */
@@ -1453,7 +1471,7 @@ export default {
   }
 
   .metric-box {
-    font-size: 2.8rem;
+    font-size: 1.8rem;
   }
 
   [class^="panel-"] {
@@ -1504,7 +1522,11 @@ export default {
   }
 
   .panel-right-bottom {
-    min-height: 150px;
+    flex-grow: 1;
+    height: 30%;
+    /* 减少高度 */
+    min-height: 120px;
+    /* 设置最小高度 */
   }
 }
 </style>
