@@ -854,7 +854,7 @@ export default {
       const currentTime = Date.now();
       const timestampData = {
         startTime: currentTime,
-        expireTime: currentTime + 20 * 60 * 1000  // 20分钟后过期
+        expireTime: currentTime + 2 * 60 * 60 * 1000  // 2小时后过期
       };
       
       localStorage.setItem(TIMESTAMP_KEY, JSON.stringify(timestampData));
