@@ -151,7 +151,7 @@
 }
 
 .home-page-context-priori-knowledge-text {
-  transform: translateY(-48px) rotate(4deg);
+  transform: translateY(-28px) rotate(4deg);
   margin-left: 7px;
   height: 74px;
   width: 232px;
@@ -237,7 +237,7 @@
 }
 
 .home-page-context-selection-text {
-  transform: translateY(-51px) rotate(-4deg);
+  transform: translateY(-25px) rotate(-4deg);
   margin-left: 33px;
   height: 74px;
   width: 232px;

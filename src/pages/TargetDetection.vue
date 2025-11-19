@@ -315,6 +315,8 @@ export default {
       // 这将填充 summaryTextOnly 和 biasDetailEntries
       this.prepareDescriptionDisplay(data);
 
+      this.summaryTypingText = this.summaryFullText;
+
       // 5. 立即显示所有结果（跳过打字效果）
       this.showBiasDetails = true;
       this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
@@ -1070,6 +1072,10 @@ export default {
   flex-direction: column;
   height: calc(100vh - 80px);
   padding: 0 !important;
+  /* 关键修改：强制内容靠上对齐，不留弹性空隙 */
+  justify-content: flex-start !important; 
+  /* 关键修改：给子元素之间设置固定的死间距 */
+  gap: 10px; 
 }
 
 /* 面板通用样式 */
@@ -1089,9 +1095,13 @@ export default {
 }
 
 .panel-right-top {
-  height: 50%; /* 原来是 55%，稍微改小一点可以让整体往上收 */
+  /* 关键修改：不要写 height: 55%，改用 flex 自动填充剩余空间 */
+  flex: 1; 
+  /* 关键修改：防止内容过多撑爆容器 */
+  min-height: 0; 
+  /* 保持原来的样式 */
   flex-shrink: 0;
-  margin-bottom: 0; /* 确保没有额外的底部边距 */
+  margin-bottom: 0;
 }
 
 .panel-right-bottom {
@@ -1324,11 +1334,14 @@ export default {
 }
 
 .bias-button-container {
-  height: 40px;
+  /* 修改这里：原为 height: 40px; 太小了，改为 auto 或更大 */
+  min-height: 70px; 
+  height: auto;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 5px;
+  padding: 8px 0; /* 增加一点内边距 */
 }
 
 .description-box {
@@ -1361,8 +1374,11 @@ export default {
   background: none;
   border: none;
   cursor: pointer;
-  width: 170px;
-  height: 60px;
+/* --- 修改 START: 调整大小 --- */
+  width: auto;            /* 宽度自适应 */
+  min-width: 150px;       /* 最小宽度 */
+  max-width: 250px;       /* 最大宽度 */
+  height: 50px;           /* 按照 GroupNegotiation 的高度 */
   background-image: url('~@/assets/images/step1/偏差检测按键.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -1423,19 +1439,26 @@ export default {
 /* 导出按钮的容器 */
 .action-buttons-right {
   flex-shrink: 0;
-  text-align: center; /* 如果你想居中，或者保持 right */
-  /* 原来是 margin-top: auto; 这会导致按钮被推到最底部 */
-  margin-top: 5px;  /* 改为 5px，让它紧贴上面的框 */
-  padding-top: 5px; /* 减小上方内边距 */
-  padding-bottom: 0;
+  text-align: right; /* 或者是 center，看你喜好 */
+  
+  /* 【核心修复】：绝对不要用 margin-top: auto */
+  /* margin-top: auto;  <-- 删掉这行 */
+  display: flex;             /* 使用 Flex 布局 */
+  justify-content: center;   /* 水平居中 */
+  align-items: center;       /* 垂直居中 */
+  /* 改为固定的、紧凑的间距 */
+  margin-top: 5px !important; 
+  padding-top: 0 !important;
+  padding-bottom: 10px;
 }
 
 .btn-export-result {
   background: none;
   border: none;
   cursor: pointer;
-  width: 190px;
-  height: 72px;
+  width: 100%;            /* 占满容器 */
+  max-width: 280px;       /* 限制最大宽度 */
+  height: 60px;           /* 调整高度 */
   background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
