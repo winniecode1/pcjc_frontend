@@ -304,18 +304,38 @@ export default {
 
       svg.selectAll('*').remove();
 
+      const g = svg.append('g');
+
+      // 1. 先定义 zoom 行为
+      const zoom = d3.zoom()
+        .scaleExtent([0.1, 4])
+        .on('zoom', zoomed);
+
+      // 2. 应用 zoom 到 SVG（不是 g 元素！）
+      svg.call(zoom);
+
+      // 3. zoom 事件处理函数
+      function zoomed() {
+        // 在 D3 v5 中必须使用 d3.event.transform
+        g.attr('transform', d3.event.transform);
+      }
+
       try {
         // 如果 nodes 为空，直接使用默认节点，不从后端获取所有知识图谱数据
         // module2Res 中的数据应该已经在 loadModule2FromStorage 中加载了
         // 如果 nodes 仍然为空，说明缓存中没有 nodes，使用默认节点
 
+        const response = await axios.get('http://10.109.253.71:8001/module2/knowledge/all')
+        const data = response.data
+
         // 使用从后端获取的nodes和links，如果没有则使用默认数据
-        let renderNodes = this.nodes.length ? JSON.parse(JSON.stringify(this.nodes)) : [
-          { id: '飞机', color: '#87CEEB' },
-          { id: '战斗机', color: '#FF6B6B' },
-          { id: '无人机', color: '#95E1D3' },
-          { id: '运输机', color: '#FFD93D' }
-        ];
+        let renderNodes = this.nodes.length ? JSON.parse(JSON.stringify(this.nodes)) : data.knowledge_list.nodes
+        // let renderNodes = this.nodes.length ? JSON.parse(JSON.stringify(this.nodes)) : [
+        //   { id: '飞机', color: '#87CEEB' },
+        //   { id: '战斗机', color: '#FF6B6B' },
+        //   { id: '无人机', color: '#95E1D3' },
+        //   { id: '运输机', color: '#FFD93D' }
+        // ];
 
         // 清理后端节点的x/y/fx/fy，避免拖拽报错
         renderNodes.forEach(node => {
@@ -326,7 +346,7 @@ export default {
         });
 
         // 默认将id为'飞机'的节点放在中央，如果不存在则将第一个节点放在中央
-        const centerNode = renderNodes.find(node => node.is_center === true) || renderNodes[0];
+        const centerNode = renderNodes.find(node => node.id === '飞机') || renderNodes[0];
         if (centerNode) {
           centerNode.x = width / 2;
           centerNode.y = height / 2;
@@ -335,11 +355,13 @@ export default {
           centerNode.fy = height / 2;
         }
 
-        const renderLinks = this.links.length ? this.links : [
-          { source: '飞机', target: '战斗机' },
-          { source: '飞机', target: '无人机' },
-          { source: '飞机', target: '运输机' }
-        ];
+        const renderLinks = this.links.length ? this.links : data.knowledge_list.links
+
+        // const renderLinks = this.links.length ? this.links : [
+        //   { source: '飞机', target: '战斗机' },
+        //   { source: '飞机', target: '无人机' },
+        //   { source: '飞机', target: '运输机' }
+        // ];
 
         const simulation = d3.forceSimulation(renderNodes)
           .force('link', d3.forceLink(renderLinks).id(d => d.id).distance(150))
@@ -349,7 +371,7 @@ export default {
           .force('collide', d3.forceCollide().radius(40));
 
         // 添加箭头标记
-        const defs = svg.append('defs');
+        const defs = g.append('defs');
         defs.append('marker')
           .attr('id', 'arrow')
           .attr('orient', 'auto')
@@ -363,7 +385,7 @@ export default {
           .attr('d', 'M3 5 L8 0 L3 -5')
           .attr('fill', '#999');
 
-        const link = svg.append('g')
+        const link = g.append('g')
           .attr('class', 'links')
           .selectAll('line')
           .data(renderLinks)
@@ -376,7 +398,7 @@ export default {
           .attr('stroke-width', 2)
           .attr('marker-end', 'url(#arrow)');
 
-        const nodeGroup = svg.append('g')
+        const nodeGroup = g.append('g')
           .attr('class', 'nodes')
           .selectAll('g')
           .data(renderNodes)
@@ -396,8 +418,8 @@ export default {
         nodeGroup.append('text')
           .attr('text-anchor', 'middle')
           .attr('dy', 5)
-          .attr("fill", "#F7F7F7") // 浅灰色，提高深色背景下可读性
-          .style('font-size', '14px')
+          .attr("fill", "#6c6c6c") // 浅灰色，提高深色背景下可读性
+          .style('font-size', '16px')
           .style('pointer-events', 'none')
           .text(d => d.id);
 
@@ -410,8 +432,8 @@ export default {
           })
           .on('drag', function(d) {
             const radius = 30;
-            d.fx = Math.max(radius, Math.min(width - radius, d3.event.x));
-            d.fy = Math.max(radius, Math.min(height - radius, d3.event.y));
+            d.fx = d3.event.x;
+            d.fy = d3.event.y;
           })
           .on('end', function(d) {
             if (!d3.event.active) simulation.alphaTarget(0);
@@ -431,8 +453,8 @@ export default {
           // 限制节点在边界内
           renderNodes.forEach(d => {
             const radius = 30;
-            d.x = Math.max(radius, Math.min(width - radius, d.x));
-            d.y = Math.max(radius, Math.min(height - radius, d.y));
+            d.x = d.x;
+            d.y = d.y;
           });
 
           link
