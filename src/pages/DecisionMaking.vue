@@ -72,12 +72,20 @@
           <div class="behavior-content">
             <div class="flanking-image-column">
               <div class="image-item">
-                <img :src="imageList[0]" v-if="imageList[0]" alt="图像 1" class="image-display">
-                <div class="image-placeholder" v-else>图像 1</div>
+                <div v-if="isImageLoading" class="loading-overlay">
+                  <b-spinner style="width: 2rem; height: 2rem;" label="Loading..."></b-spinner>
+                  <span style="margin-top: 8px;">加载中...</span>
+                </div>
+                <img :src="imageList[0]" v-if="imageList[0] && !isImageLoading" alt="图像 1" class="image-display">
+                <div class="image-placeholder" v-else-if="!isImageLoading">图像 1</div>
               </div>
               <div class="image-item">
-                <img :src="imageList[2]" v-if="imageList[2]" alt="图像 3" class="image-display">
-                <div class="image-placeholder" v-else>图像 3</div>
+                <div v-if="isImageLoading" class="loading-overlay">
+                  <b-spinner style="width: 2rem; height: 2rem;" label="Loading..."></b-spinner>
+                  <span style="margin-top: 8px;">加载中...</span>
+                </div>
+                <img :src="imageList[2]" v-if="imageList[2] && !isImageLoading" alt="图像 3" class="image-display">
+                <div class="image-placeholder" v-else-if="!isImageLoading">图像 3</div>
               </div>
             </div>
 
@@ -94,12 +102,20 @@
 
             <div class="flanking-image-column">
               <div class="image-item">
-                <img :src="imageList[1]" v-if="imageList[1]" alt="图像 2" class="image-display">
-                <div class="image-placeholder" v-else>图像 2</div>
+                <div v-if="isImageLoading" class="loading-overlay">
+                  <b-spinner style="width: 2rem; height: 2rem;" label="Loading..."></b-spinner>
+                  <span style="margin-top: 8px;">加载中...</span>
+                </div>
+                <img :src="imageList[1]" v-if="imageList[1] && !isImageLoading" alt="图像 2" class="image-display">
+                <div class="image-placeholder" v-else-if="!isImageLoading">图像 2</div>
               </div>
               <div class="image-item">
-                <img :src="imageList[3]" v-if="imageList[3]" alt="图像 4" class="image-display">
-                <div class="image-placeholder" v-else>图像 4</div>
+                <div v-if="isImageLoading" class="loading-overlay">
+                  <b-spinner style="width: 2rem; height: 2rem;" label="Loading..."></b-spinner>
+                  <span style="margin-top: 8px;">加载中...</span>
+                </div>
+                <img :src="imageList[3]" v-if="imageList[3] && !isImageLoading" alt="图像 4" class="image-display">
+                <div class="image-placeholder" v-else-if="!isImageLoading">图像 4</div>
               </div>
             </div>
           </div>
@@ -130,53 +146,50 @@
       </div>
 
       <div class="design-right-column">
-        <!-- 偏差检测按钮 - 移动到标题框上方中间位置 -->
-        <div class="bias-detection-container">
-          <b-button @click="performDeviationDetection" variant="info" :disabled="isBiasDetecting"
-            class="nav-btn nav-detect use-asset-bg">
-            <b-spinner small v-if="isBiasDetecting"></b-spinner>
-            {{ isBiasDetecting ? '检测中...' : '偏差检测' }}
-          </b-button>
-        </div>
+        <div class="right-top-content">
+          <div class="bias-detection-container">
+            <b-button @click="performDeviationDetection" variant="info" :disabled="isBiasDetecting"
+              class="nav-btn nav-detect use-asset-bg">
+              <b-spinner small v-if="isBiasDetecting"></b-spinner>
+              {{ isBiasDetecting ? '检测中...' : '偏差检测' }}
+            </b-button>
+          </div>
 
-        <div class="standalone-label" :style="fullWidthLabelStyle(assetNames.resultLabel, 28)">决策选择认知偏差检测结果</div>
+          <div class="standalone-label" :style="fullWidthLabelStyle(assetNames.resultLabel, 28)">决策选择认知偏差检测结果</div>
 
-        <!-- 重构右侧文本框为三个部分 -->
-        <div class="design-module result-log-module" :style="rightPanelBgStyle">
-          <div class="design-module-content text-scrollable">
-            <!-- 行为信息部分 -->
-            <div class="result-section">
-              <div class="section-header">行为信息：</div>
-              <div class="section-content">
-                <div v-if="isBiasResultLoading" class="loading-overlay">
-                  <b-spinner small></b-spinner>
-                  <span>加载中...</span>
+          <div class="design-module result-log-module" :style="rightPanelBgStyle">
+            <div class="design-module-content text-scrollable">
+              <div class="result-section">
+                <div class="section-header">行为信息：</div>
+                <div class="section-content">
+                  <div v-if="isBiasResultLoading" class="loading-overlay">
+                    <b-spinner small></b-spinner>
+                    <span>加载中...</span>
+                  </div>
+                  <p class="result-text">{{ behaviorInfo || '暂无行为信息' }}</p>
                 </div>
-                <p class="result-text">{{ behaviorInfo || '暂无行为信息' }}</p>
               </div>
-            </div>
 
-            <!-- 相同点部分 -->
-            <div class="result-section">
-              <div class="section-header">相同点：</div>
-              <div class="section-content">
-                <div v-if="isBiasResultLoading" class="loading-overlay">
-                  <b-spinner small></b-spinner>
-                  <span>加载中...</span>
+              <div class="result-section">
+                <div class="section-header">相同点：</div>
+                <div class="section-content">
+                  <div v-if="isBiasResultLoading" class="loading-overlay">
+                    <b-spinner small></b-spinner>
+                    <span>加载中...</span>
+                  </div>
+                  <p class="result-text">{{ samePoints || '暂无相同点信息' }}</p>
                 </div>
-                <p class="result-text">{{ samePoints || '暂无相同点信息' }}</p>
               </div>
-            </div>
 
-            <!-- 不同点部分 - 红色文字 -->
-            <div class="result-section">
-              <div class="section-header">不同点：</div>
-              <div class="section-content">
-                <div v-if="isBiasResultLoading" class="loading-overlay">
-                  <b-spinner small></b-spinner>
-                  <span>加载中...</span>
+              <div class="result-section">
+                <div class="section-header">不同点：</div>
+                <div class="section-content">
+                  <div v-if="isBiasResultLoading" class="loading-overlay">
+                    <b-spinner small></b-spinner>
+                    <span>加载中...</span>
+                  </div>
+                  <p class="result-text different-points">{{ differentPoints || '暂无不同点信息' }}</p>
                 </div>
-                <p class="result-text different-points">{{ differentPoints || '暂无不同点信息' }}</p>
               </div>
             </div>
           </div>
@@ -212,13 +225,12 @@ export default {
       windowWidth: window.innerWidth,
       windowHeight: window.innerHeight,
       isLoading: false,
-      isBiasDetecting: false, // 新增：偏差检测加载状态
-      isAssessing: false, // 新增：评估模块加载状态
-      isBiasResultLoading: false, // 新增：偏差检测结果加载状态
-      /* 设计稿资源配置（使用项目内 step4 素材） */
+      isImageLoading: false, // 新增：控制图片的加载状态
+      isBiasDetecting: false,
+      isAssessing: false,
+      isBiasResultLoading: false,
       designAssetsEnabled: true,
       assetNames: {
-        /* 若某项为 null 将退回到默认描边样式 */
         panel: null,
         rightPanel: '决策选择认知偏差检测结果文本框.png',
         label: null,
@@ -228,7 +240,6 @@ export default {
         titleBg: '标题栏.png',
         pyramid: '金字塔图.png',
         iconRed: null,
-        /* 模块面板与标题框 */
         videoPanel: '原视频框.png',
         leftTextPanel: '左下文本框.png',
         commanderPanel: '指挥员评估文本框.png',
@@ -236,12 +247,10 @@ export default {
         videoLabel: '视频演示标题框.png',
         behaviorLabel: '可视化行为标题框.png',
         resultLabel: '决策选择认知偏差检测结果标题框.png',
-        /* 战备等级图标 */
         level1: '一级战备图片.png',
         level2: '二级战备图片.png',
         level3: '三级战备图片.png',
         level4: '四级战备图片.png',
-        /* 评估模块图标 */
         machineIcon: '机器评估图标.png',
         commanderIcon: '指挥员评估图标.png'
       },
@@ -252,10 +261,9 @@ export default {
         apiKey: process.env.VUE_APP_DASHSCOPE_API_KEY
       },
       thirdStageText: '正在加载第三阶段文字信息...',
-      currentStageText: '', // 保留此字段，以防将来使用
+      currentStageText: '',
       performanceData: '',
       performanceDataLocal: '正在加载本地性能数据...',
-      // 新增：右侧三个文本框的数据
       behaviorInfo: '正在加载行为信息...',
       samePoints: '正在加载相同点信息...',
       differentPoints: '正在加载不同点信息...',
@@ -270,10 +278,8 @@ export default {
   },
   computed: {
     highlightedCurrentStageText() {
-      // 注意：此计算属性当前未在模板中使用
       return this.highlightRandomWords(this.currentStageText, 1, 3);
     },
-    /* 精简左下角文本 - 只保留前两段 */
     formattedThirdStageText() {
       const source = this.thirdStageText;
       if (!source) return '';
@@ -286,11 +292,9 @@ export default {
           }
         }
         if (typeof data === 'object' && data !== null) {
-          // 只保留前两个字段，删除第三段
           const takeKeys = [
             'consensus_summary',
             'deviation_analysis'
-            // 删除 'deviation_analysis_report'
           ];
           const parts = takeKeys
             .map(k => data[k])
@@ -299,10 +303,8 @@ export default {
             return parts.map(s => this.escapeToHtml(s)).join('<br/><br/>');
           }
         }
-        // 非 JSON 或未包含目标字段时，原样返回
         return typeof source === 'string' ? this.escapeToHtml(source) : String(source);
       } catch (e) {
-        // 解析失败，返回原文本
         return typeof source === 'string' ? this.escapeToHtml(source) : String(source);
       }
     },
@@ -341,7 +343,6 @@ export default {
     accuracyBgStyle() {
       return this.bgImageStyle(this.assetNames.accuracy);
     },
-    // 指挥员评估战备等级图标样式 - 优化对齐
     expertIconStyle() {
       if (!this.designAssetsEnabled) return {};
       const expertLevel = this.extractLevelFromString(this.expertDangerLevel);
@@ -354,10 +355,9 @@ export default {
         backgroundRepeat: 'no-repeat',
         backgroundSize: '100% 100%',
         border: 'none',
-        margin: 'auto' // 添加居中对齐
+        margin: 'auto'
       };
     },
-    // 机器评估战备等级图标样式 - 优化对齐
     modelIconStyle() {
       if (!this.designAssetsEnabled) return {};
       const modelLevel = this.extractLevelFromString(this.modelDangerLevel);
@@ -370,22 +370,21 @@ export default {
         backgroundRepeat: 'no-repeat',
         backgroundSize: '100% 100%',
         border: 'none',
-        margin: 'auto' // 添加居中对齐
+        margin: 'auto'
       };
     }
 
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);
-    this.initializeDataFromStorage(); // 加载 module3Res (左侧文本)
-    this.loadVideoFromStorage(); // 加载 module1Res (视频)
-    this.loadDataFromModule4Res(); // 加载 module4Res (所有结果) 或设置为空白
+    this.initializeDataFromStorage();
+    this.loadVideoFromStorage();
+    this.loadDataFromModule4Res();
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
   },
   methods: {
-    /* 简单转义，避免意外的 HTML 注入；保留换行 */
     escapeToHtml(text) {
       return String(text)
         .replace(/&/g, '&amp;')
@@ -397,23 +396,15 @@ export default {
       this.windowWidth = window.innerWidth;
       this.windowHeight = window.innerHeight;
     },
-    /**
-     * 逻辑1A：从 localStorage 加载先决条件数据 (module3Res)
-     */
     initializeDataFromStorage() {
       try {
         const module3ResStr = localStorage.getItem('module3Res');
         if (module3ResStr) {
           const module3Res = JSON.parse(module3ResStr);
-          console.log('✅ 成功从 LocalStorage 读取 module3Res:', module3Res);
           if (module3Res.final_review) {
             this.thirdStageText = module3Res.final_review;
-            console.log('--- thirdStageText 更新为:', this.thirdStageText);
-          } else {
-            console.warn('--- module3Res 中缺少 final_review 字段。');
           }
         } else {
-          console.warn('⚠️ LocalStorage 中未找到 module3Res，使用默认值。');
           this.thirdStageText = '未找到第三阶段信息，正在使用默认武器型号。';
         }
 
@@ -423,52 +414,26 @@ export default {
           const videoName = module1Res.video_name;
           if (videoName) {
             this.apiConfig.weaponModel = videoName;
-            console.log('--- ✅ 成功从 module1Res 提取 weaponModel (video_name) ---');
-            console.log('--- 提取的武器型号 (video_name) 更新为:', this.apiConfig.weaponModel);
-          } else {
-            console.warn('--- module1Res 中缺少 "video_name" 字段，weaponModel 使用默认值。');
           }
-        } else {
-          console.warn('⚠️ LocalStorage 中未找到 module1Res，weaponModel 使用默认值。');
         }
       } catch (e) {
-        console.error('❌ 解析 LocalStorage 数据失败:', e);
         this.thirdStageText = '加载信息时发生错误，请检查 LocalStorage 数据格式。';
       }
     },
-    /**
-     * 逻辑1B：从 localStorage 加载 module4Res (如果存在)
-     * 如果 module4Res 存在，则加载所有数据 ("恢复" 状态)
-     * 如果不存在，则将结果设置为空白/待处理状态
-     */
     loadDataFromModule4Res() {
       try {
         const module4ResStr = localStorage.getItem('module4Res');
         if (module4ResStr) {
-          console.log('✅ 发现 module4Res，正在加载所有页面数据...');
           const module4Data = JSON.parse(module4ResStr);
-
-          // 1. 填充指挥员评估
           this.performanceData = module4Data.performancedata || '暂无性能数据。';
-          console.log('性能数据 (中-顶) 设置为：', this.performanceData);
-
-          // 2. 填充机器评估
           this.performanceDataLocal = module4Data.performance_data_local || '暂无本地性能数据。';
-          console.log('本地性能数据 (中-底) 设置为：', this.performanceDataLocal);
-
-          // 3. 填充等级
           const modelLevelNum = this.getLevelNum(module4Data.modelanalysisdangerlevel);
           const expertLevelNum = this.getLevelNum(module4Data.local_txt_danger_level);
           this.modelDangerLevel = `${modelLevelNum} !`;
           this.expertDangerLevel = `${expertLevelNum} !`;
           this.currentLevel = modelLevelNum;
-          console.log('当前战备等级设置为：', this.currentLevel);
-
-          // 4. 填充图片列表
           this.imageList = module4Data.imageList || [null, null, null, null];
-          console.log('图像列表设置为：', this.imageList);
 
-          // 5. 从summary中解析三个部分的数据
           if (module4Data.summary) {
             const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Data.summary);
             this.behaviorInfo = behaviorInfo;
@@ -480,14 +445,10 @@ export default {
             this.differentPoints = '暂无不同点信息';
           }
 
-          // 6. 填充准确率
           const accuracyValue = parseFloat(module4Data.average_comprehensive_accuracy);
           this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
-          console.log('偏差检测准确率设置为：', this.deviationDetectionAccuracy);
 
         } else {
-          console.log('ℹ️ LocalStorage 中未找到 module4Res，将以空白状态启动。');
-          // 设置为空白/待处理状态
           this.performanceData = '请点击 "信息推理"';
           this.performanceDataLocal = '请点击 "信息推理"';
           this.behaviorInfo = '请点击 "信息推理"';
@@ -500,8 +461,6 @@ export default {
           this.currentLevel = 4;
         }
       } catch (e) {
-        console.error('❌ 解析 module4Res 失败:', e);
-        // 设置为错误状态
         this.performanceData = '加载数据出错';
         this.performanceDataLocal = '加载数据出错';
         this.behaviorInfo = '加载数据出错';
@@ -510,13 +469,9 @@ export default {
         this.deviationDetectionAccuracy = 'N/A';
       }
     },
-    // 删除随机标红方法，不再使用
     highlightRandomWords(text, minCount, maxCount) {
-      return text; // 直接返回原文本，不进行标红处理
+      return text;
     },
-    /**
-     * 从summary文本中解析出行为信息、相同点和不同点
-     */
     parseSummaryText(summaryText) {
       if (!summaryText) {
         return {
@@ -527,28 +482,22 @@ export default {
       }
 
       try {
-        // 如果summary是JSON字符串，先解析
         let summary = summaryText;
         if (typeof summaryText === 'string' && summaryText.trim().startsWith('{')) {
           const parsed = JSON.parse(summaryText);
           summary = parsed.summary || summaryText;
         }
 
-        // 使用正则表达式匹配三个部分
         const behaviorMatch = summary.match(/行为信息[：:]?\s*([^]*?)(?=相同点[：:]|$)/);
         const samePointsMatch = summary.match(/相同点[：:]?\s*([^]*?)(?=不同点[：:]|$)/);
         const differentPointsMatch = summary.match(/不同点[：:]?\s*([^]*?)$/);
 
-        // 提取内容并清理
         const behaviorInfo = behaviorMatch ? behaviorMatch[1].trim().replace(/^[\n\s]+|[\n\s]+$/g, '') : '暂无行为信息';
         const samePoints = samePointsMatch ? samePointsMatch[1].trim().replace(/^[\n\s]+|[\n\s]+$/g, '') : '暂无相同点信息';
         const differentPoints = differentPointsMatch ? differentPointsMatch[1].trim().replace(/^[\n\s]+|[\n\s]+$/g, '') : '暂无不同点信息';
 
-        console.log('解析summary结果:', { behaviorInfo, samePoints, differentPoints });
-
         return { behaviorInfo, samePoints, differentPoints };
       } catch (error) {
-        console.error('解析summary文本失败:', error);
         return {
           behaviorInfo: '解析行为信息失败',
           samePoints: '解析相同点失败',
@@ -556,7 +505,6 @@ export default {
         };
       }
     },
-    /* 获取项目内 step4 素材的打包 URL */
     projectAssetUrl(name) {
       if (!this.designAssetsEnabled || !name) return '';
       try {
@@ -566,11 +514,9 @@ export default {
         return '';
       }
     },
-    /* 向后兼容模板中对 fileUrl 的调用 */
     fileUrl(name) {
       return this.projectAssetUrl(name);
     },
-    /* 指定标题框图片并设置尺寸 */
     labelImageStyle(name, width = 160, height = 28) {
       if (!this.designAssetsEnabled || !name) return {};
       const url = this.projectAssetUrl(name);
@@ -583,7 +529,6 @@ export default {
         color: '#e6faff'
       };
     },
-    /* 宽度自适应的独立标题条（与模块同宽） */
     fullWidthLabelStyle(name, height = 28) {
       if (!this.designAssetsEnabled || !name) return {};
       const url = this.projectAssetUrl(name);
@@ -605,55 +550,28 @@ export default {
       };
     },
     formatAndLogModule4Res(module4Res) {
-      console.groupCollapsed("%c✅ Module 4 结果已存储 (module4Res)", "color: #ffc107; font-weight: bold;");
       const module4ResString = JSON.stringify(module4Res, null, 2);
-      console.log("%c原始 JSON 字符串:", "font-weight: bold; color: #17a2b8;", module4ResString);
-      const tableData = Object.entries(module4Res).map(([key, value]) => ({
-        Key: key,
-        Value: (typeof value === 'object' && value !== null)
-          ? `[${Array.isArray(value) ? 'Array' : 'Object'}] ${JSON.stringify(value).substring(0, 50)}...`
-          : value
-      }));
-      console.log("%c对象内容 (表格展示):", "font-weight: bold; color: #28a745;");
-      console.table(tableData);
-      console.groupEnd();
     },
-    /**
-     * 逻辑2：点击 "信息推理"
-     * 1. 调用所有 API
-     * 2. 将 *所有* 结果存入 localStorage (module4Res)
-     * 3. 填充 "指挥员评估"、"机器评估" 和 "可视化行为" (图片)
-     * 4. *不* 填充 "偏差检测结果" 或 "准确率"
-     */
     async fetchBackendData() {
       this.isLoading = true;
-      this.isAssessing = true; // 开始评估加载状态
+      this.isAssessing = true;
+      this.isImageLoading = true; // 开始加载图片
       const model = this.apiConfig.weaponModel;
-      console.log('开始获取数据，武器型号：', model);
 
       try {
-        console.log('开始调用分析接口：', `${API_BASE_URL}/analyze-weapon`);
         const requestBody = { weapon_model: model };
-        console.log('分析接口请求参数：', requestBody);
-
         const mainResponse = await axios.post(`${API_BASE_URL}/analyze-weapon`, requestBody);
-        console.log('分析接口响应状态：', mainResponse.status, mainResponse.statusText);
         const mainData = mainResponse.data;
 
         if (mainData.status === 'success') {
-          console.log('开始调用准确率接口：', `${IMAGE_API_BASE_URL}/statistics/accuracy`);
           const accuracyResponse = await axios.get(`${IMAGE_API_BASE_URL}/statistics/accuracy`);
-          console.log('准确率接口响应状态：', accuracyResponse.status, accuracyResponse.statusText);
           const accuracyData = accuracyResponse.data;
 
-          console.log('开始调用图片列表接口：', `${IMAGE_API_BASE_URL}/weapon-all-images`);
           const imageResponse = await axios.get(`${IMAGE_API_BASE_URL}/weapon-all-images`, {
             params: { weapon_model: model }
           });
           const imageData = imageResponse.data;
-          console.log('图片列表接口返回数据：', imageData);
 
-          // 步骤 3.1：填充图片列表 (this.imageList)
           if (imageData.images && Array.isArray(imageData.images)) {
             this.imageList = imageData.images
               .map(img => img.url)
@@ -663,18 +581,15 @@ export default {
             }
           } else {
             this.imageList = [null, null, null, null];
-            console.warn('图片列表接口返回格式不正确');
           }
-          console.log('更新图像列表 (从图片接口)：', this.imageList);
 
-          // 步骤 2：构建 module4Res 对象 (包含所有数据)
           const module4Res = {
             weapon_model: mainData.data.weapon_model,
             performancedata: mainData.data.performancedata,
             performance_data_local: mainData.data.performance_data_local,
             summary: mainData.data.summary,
-            image_paths: mainData.data.image_paths, // 保留原始字段
-            imageList: this.imageList, // 新增：保存用于UI的图片列表
+            image_paths: mainData.data.image_paths,
+            imageList: this.imageList,
             behavior_status: mainData.data.behavior_status,
             comprehensive_score: mainData.data.comprehensive_score,
             modelanalysisdangerlevel: mainData.data.model_analysis_danger_level,
@@ -686,83 +601,51 @@ export default {
             coredimensionratingaccuracy: mainData.data.core_dimension_rating_accuracy,
             average_comprehensive_accuracy: accuracyData['average_comprehensive_accuracy']
           };
-          // 步骤 2.1：将所有结果存入 localStorage
           localStorage.setItem('module4Res', JSON.stringify(module4Res));
-          console.log('模块四后端返回值已按目标格式存入localStorage的module4Res');
-          this.formatAndLogModule4Res(module4Res); // 打印存储内容
+          this.formatAndLogModule4Res(module4Res);
 
-          // 步骤 3：填充评估和等级 (不含 summaryText)
           this.parseBackendData(mainData.data);
-
-          // 步骤 4：*不* 填充准确率或总结文本
-          // (相关代码已被移除)
-
         } else {
-          console.error('后端返回错误：', (mainData.error && mainData.error.message) || '未知错误');
           this.currentStageText = `分析接口数据获取失败：${(mainData.error && mainData.error.message) || '未知错误'}`;
         }
       } catch (error) {
-        console.error('接口调用失败：', error);
         this.currentStageText = '接口调用失败，请检查网络、CORS配置或后端服务';
-        this.deviationDetectionAccuracy = 'N/A'; // 出错时重置
+        this.deviationDetectionAccuracy = 'N/A';
       } finally {
         this.isLoading = false;
-        this.isAssessing = false; // 结束评估加载状态
-        console.log('数据获取流程结束');
+        this.isAssessing = false;
+        this.isImageLoading = false; // 结束图片加载
       }
     },
-    /**
-     * 解析 "信息推理" 数据，仅填充评估和等级
-     * (已移除 summaryText 和 currentStageText 的设置)
-     */
     parseBackendData(backendData) {
-      console.log('开始解析主接口返回数据：', backendData);
-
       const currentThirdStageText = String(this.thirdStageText);
       if (!currentThirdStageText || currentThirdStageText.includes('正在加载') || currentThirdStageText.includes('未找到')) {
         this.thirdStageText = `发现目标武器型号：${backendData.weapon_model}，位于指定区域，行为模式初步匹配已知威胁，待进一步分析验证`;
-        console.log('第三阶段文本被后端数据补充设置为：', this.thirdStageText);
       }
 
       const rawPerformanceData = backendData.performance_data || '暂无性能数据。';
       this.performanceData = rawPerformanceData;
-      console.log('性能数据 (中-顶) 设置为：', this.performanceData);
 
       const rawPerformanceDataLocal = backendData.performance_data_local || '暂无本地性能数据。';
       this.performanceDataLocal = rawPerformanceDataLocal;
-      console.log('本地性能数据 (中-底) 设置为：', this.performanceDataLocal);
 
       const modelLevelNum = this.getLevelNum(backendData.model_analysis_danger_level);
       const expertLevelNum = this.getLevelNum(backendData.local_txt_danger_level);
-      console.log('模型危险等级：', backendData.model_analysis_danger_level, '转换后：', modelLevelNum);
-      console.log('专家危险等级：', backendData.local_txt_danger_level, '转换后：', expertLevelNum);
 
       this.modelDangerLevel = `${modelLevelNum} !`;
       this.expertDangerLevel = `${expertLevelNum} !`;
 
       this.currentLevel = modelLevelNum;
-      console.log('当前战备等级设置为：', this.currentLevel);
     },
-    /**
-     * 逻辑3：点击 "偏差检测"
-     * 1. 从 localStorage 读取 module4Res
-     * 2. 填充 "偏差检测结果" (behaviorInfo, samePoints, differentPoints)
-     * 3. 填充 "准确率" (deviationDetectionAccuracy)
-     */
     performDeviationDetection() {
-      console.log('偏差检测按钮点击');
-      this.isBiasDetecting = true; // 设置按钮加载状态
-      this.isBiasResultLoading = true; // 设置结果加载状态
+      this.isBiasDetecting = true;
+      this.isBiasResultLoading = true;
 
       try {
         const module4ResStr = localStorage.getItem('module4Res');
         if (module4ResStr) {
           const module4Res = JSON.parse(module4ResStr);
-          console.log('从localStorage读取module4Res成功', module4Res);
-
-          // 模拟加载延迟
           setTimeout(() => {
-            // 步骤 2：从summary中解析三个文本框数据
             if (module4Res.summary) {
               const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Res.summary);
               this.behaviorInfo = behaviorInfo;
@@ -774,17 +657,14 @@ export default {
               this.differentPoints = '暂无不同点信息';
             }
 
-            // 步骤 3：填充 准确率数字
             const accuracyValue = parseFloat(module4Res.average_comprehensive_accuracy);
             this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
-            console.log('偏差检测准确率设置为：', this.deviationDetectionAccuracy);
 
-            this.isBiasDetecting = false; // 清除按钮加载状态
-            this.isBiasResultLoading = false; // 清除结果加载状态
-          }, 1500); // 模拟1.5秒加载时间
+            this.isBiasDetecting = false;
+            this.isBiasResultLoading = false;
+          }, 1500);
 
         } else {
-          console.warn('LocalStorage 中未找到 module4Res，无法执行偏差检测。');
           this.behaviorInfo = '请先点击 "信息推理" 获取数据，然后再点击 "偏差检测"。';
           this.samePoints = '请先点击 "信息推理" 获取数据';
           this.differentPoints = '请先点击 "信息推理" 获取数据';
@@ -793,7 +673,6 @@ export default {
           this.isBiasResultLoading = false;
         }
       } catch (e) {
-        console.error('执行偏差检测失败:', e);
         this.behaviorInfo = '加载偏差检测结果时出错，请检查LocalStorage数据。';
         this.samePoints = '加载数据出错';
         this.differentPoints = '加载数据出错';
@@ -820,47 +699,36 @@ export default {
         default: return this.assetNames.level4;
       }
     },
-    // 从等级字符串中提取数字等级（如 "1 !" -> 1）
     extractLevelFromString(levelString) {
       if (!levelString) return 4;
       const match = levelString.toString().match(/(\d+)/);
       return match ? parseInt(match[1], 10) : 4;
     },
-    /**
-     * 逻辑1C：从 localStorage 加载视频 (module1Res)
-     */
     loadVideoFromStorage() {
       try {
         const module1ResStr = localStorage.getItem('module1Res');
         if (module1ResStr) {
           const module1Res = JSON.parse(module1ResStr);
           const videoPath = module1Res.originalVideoPath;
-          console.log("【测试】从 module1Res 对象中读取 'originalVideoPath':", videoPath);
 
           if (videoPath && videoPath !== '无原视频路径') {
             this.testVideoUrl = videoPath;
           } else {
             this.testVideoMessage = '在 module1Res 中未找到或路径无效。';
-            console.warn(this.testVideoMessage);
           }
         } else {
           this.testVideoMessage = '未在 LocalStorage 中找到 "module1Res" 对象。';
-          console.warn(this.testVideoMessage);
         }
       } catch (e) {
-        console.error('加载测试视频失败:', e);
         this.testVideoMessage = '加载视频时出错，请检查 module1Res 格式。';
       }
     },
     handleVideoError(e) {
-      console.error("测试视频加载失败:", e);
       this.testVideoMessage = "视频加载失败，请检查 LocalStorage 中的 URL 是否正确。";
       this.testVideoUrl = null;
     },
-    // 导出数据为JSON文件
     exportData() {
       try {
-        // 准备要导出的数据
         const exportData = {
           "performance_data": this.performanceData,
           "performance_data_local": this.performanceDataLocal,
@@ -870,28 +738,18 @@ export default {
           "deviation_detection_accuracy": this.deviationDetectionAccuracy
         };
 
-        // 转换为JSON字符串
         const jsonStr = JSON.stringify(exportData, null, 2);
-
-        // 创建Blob对象
         const blob = new Blob([jsonStr], { type: 'application/json' });
-
-        // 创建下载链接
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `decision_making_data_${new Date().toISOString().slice(0, 10)}.json`;
 
-        // 触发下载
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
 
-        // 释放URL对象
         URL.revokeObjectURL(link.href);
-
-        console.log('数据导出成功');
       } catch (error) {
-        console.error('导出数据失败:', error);
         alert('导出失败，请重试');
       }
     }
@@ -907,10 +765,8 @@ export default {
   box-sizing: border-box;
 }
 
-/* 根容器：深色科幻主题，占满屏幕 */
 .section {
   background-color: #030a1c;
-  /* 使用项目内背景图 */
   background-image: url('~@/assets/images/step4/背景.png');
   background-size: cover;
   background-position: center top;
@@ -922,7 +778,6 @@ export default {
   width: 100%;
 }
 
-/* 两侧装饰条 */
 .section::before,
 .section::after {
   content: "";
@@ -946,13 +801,11 @@ export default {
   background-image: url('~@/assets/images/step4/装饰-右.png');
 }
 
-/* 隐藏原有的浅色背景 */
 .register,
 .img_box {
   display: none;
 }
 
-/* CSS 模拟组件图片样式 */
 @mixin sci-fi-border {
   border: 2px solid;
   border-image-slice: 1;
@@ -976,7 +829,6 @@ export default {
   white-space: nowrap;
 }
 
-/* 顶部导航按钮 */
 .top-nav-left,
 .top-nav-right {
   position: absolute;
@@ -993,13 +845,9 @@ export default {
 .top-nav-right {
   right: 20px;
   display: flex;
-  /* 改为 flex 布局 */
   flex-direction: column;
-  /* 垂直排列 */
   gap: 10px;
-  /* 按钮间距 */
   align-items: flex-end;
-  /* 右对齐 */
 }
 
 .nav-btn {
@@ -1012,9 +860,7 @@ export default {
   font-weight: bold;
   border: 1px solid #005f7f;
   text-decoration: none;
-  /* 确保 router-link 表现一致 */
   display: inline-flex;
-  /* 用于对齐 */
   align-items: center;
   justify-content: center;
 
@@ -1024,7 +870,6 @@ export default {
   }
 }
 
-/* 标题 */
 .title-container {
   text-align: center;
   padding: 15px 0;
@@ -1036,7 +881,6 @@ export default {
   position: relative;
   z-index: 5;
 
-  /* 标题栏底图（与 computed 的内联样式兼容，双保险） */
   &.use-assets,
   .use-assets & {
     &::before {
@@ -1060,7 +904,6 @@ export default {
   text-shadow: 0 0 10px #00e0ff, 0 0 15px #00e0ff;
 }
 
-/* 资源皮肤启用时的覆盖样式 */
 .use-assets {
   .design-module {
     border: none;
@@ -1068,6 +911,10 @@ export default {
     backdrop-filter: none;
     background-repeat: no-repeat;
     background-size: '100% 100%';
+  }
+
+  .design-module .design-module-content.text-scrollable {
+    overflow-y: auto !important;
   }
 
   .design-module .design-module-label {
@@ -1079,7 +926,6 @@ export default {
     border: none;
     background: transparent;
     color: #ffffff;
-    /* 白色文字置顶 */
     text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
     display: inline-flex;
     align-items: center;
@@ -1110,7 +956,6 @@ export default {
   }
 }
 
-/* 核心布局 */
 .core-layout-design {
   display: flex;
   height: calc(100vh - 80px);
@@ -1118,7 +963,6 @@ export default {
   gap: 20px;
 }
 
-/* 三列定义 */
 .design-left-column {
   width: 25%;
   display: flex;
@@ -1135,29 +979,33 @@ export default {
   height: 100%;
 }
 
+/* 修改右侧列布局方式 */
 .design-right-column {
   width: 30%;
   display: flex;
   flex-direction: column;
-  /* 调整 gap 以适应可能的内容压缩 */
-  gap: 10px;
+  /* 修改这里：改为 flex-start 或直接删除该属性，让内容自然从上往下排列 */
+  justify-content: flex-start; 
+  gap: 10px; /* 保持元素间的间距 */
   height: 100%;
 }
 
-/* 新增：偏差检测按钮容器样式 */
+.right-top-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .bias-detection-container {
   display: flex;
   justify-content: center;
   align-items: center;
   margin-bottom: 10px;
   height: 60px;
-  /* 统一按钮高度 */
 
   .nav-btn.nav-detect {
     width: 150px;
-    /* 统一按钮宽度 */
     height: 40px;
-    /* 统一按钮高度 */
     font-size: 1.1rem;
     font-weight: bold;
     display: inline-flex;
@@ -1165,7 +1013,6 @@ export default {
     justify-content: center;
     gap: 8px;
 
-    /* 添加资源背景图片样式 */
     &.use-asset-bg {
       border: none;
       background: transparent;
@@ -1177,17 +1024,13 @@ export default {
 
 .use-assets .bias-detection-container .nav-btn.nav-detect.use-asset-bg {
   width: 200px;
-  /* 如果需要保持资源图片比例，可以单独设置 */
   height: 70px;
 }
 
-/* 新增：推动右侧列的标题和文本框下移 "3行" */
 .design-right-column>.standalone-label {
   margin-top: 0;
-  /* 重置之前的样式 */
 }
 
-/* 通用模块样式 */
 .design-module {
   @include sci-fi-border;
   position: relative;
@@ -1201,33 +1044,31 @@ export default {
   }
 }
 
-/* 文本框滚动条样式 - 仅应用于文本内容区域 */
-.text-scrollable {
-  padding: 15px;
-  flex-grow: 1;
-  overflow-y: auto;
-  max-height: 100%;
-
-  /* 自定义滚动条样式 */
+.assessment-module .design-module-content.text-scrollable {
+  overflow-y: auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  
   &::-webkit-scrollbar {
-    width: 8px;
+    width: 8px !important;
+    display: block !important;
   }
-
+  
   &::-webkit-scrollbar-track {
-    background: rgba(10, 25, 50, 0.3);
-    border-radius: 4px;
+    background: rgba(10, 25, 50, 0.3) !important;
+    border-radius: 4px !important;
   }
-
+  
   &::-webkit-scrollbar-thumb {
-    background: #00e0ff;
-    border-radius: 4px;
-
+    background: #00e0ff !important;
+    border-radius: 4px !important;
+    
     &:hover {
-      background: #00b8d4;
+      background: #00b8d4 !important;
     }
   }
 }
-
 .assessment-module .design-module-content,
 .result-log-module .design-module-content,
 .text-module-left .design-module-content {
@@ -1242,9 +1083,10 @@ export default {
   line-height: 1.6;
   color: #e0e0e0;
   margin: 0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
-/* 加载中覆盖层样式 */
 .loading-overlay {
   position: absolute;
   top: 0;
@@ -1265,14 +1107,13 @@ export default {
   }
 }
 
-/* 左列 */
 .video-module {
   flex: 0 0 auto;
-  width: 95%; // 添加宽度设置
+  width: 95%;
   height: 250px;
-  background-image: url('~@/assets/images/step1/-s-框-小视频.png'); // 添加背景图片
-  background-repeat: no-repeat; // 确保背景不重复
-  background-size: 100% 100%; // 确保背景填满整个容器
+  background-image: url('~@/assets/images/step1/-s-框-小视频.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
 
   .video-content-wrapper {
     padding: 15px;
@@ -1302,7 +1143,6 @@ export default {
   flex-direction: column;
 }
 
-/* 独立标题条（与模块等宽，置于模块上方） */
 .standalone-label {
   display: flex;
   align-items: center;
@@ -1321,7 +1161,6 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  /* 确保在右列中正常显示 */
   flex-shrink: 0;
 }
 
@@ -1331,7 +1170,6 @@ export default {
     line-height: 1;
   }
 
-  /* 偏差检测按键的资源样式 */
   .bias-detection-container .nav-btn.nav-detect.use-asset-bg {
     width: 200px;
     height: 70px;
@@ -1342,7 +1180,6 @@ export default {
   }
 }
 
-/* 左下文本框尺寸与相对定位（保持在按钮上方的文档流位置） */
 .fixed-left-text {
   position: relative;
   width: 100%;
@@ -1359,22 +1196,20 @@ export default {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  padding-left: 15px;
+  padding-right: 15px;
 }
 
 .button-container {
   flex: 0 0 auto;
   height: 60px;
-  /* 统一按钮高度 */
   display: flex;
   justify-content: center;
-  /* 居中对齐 */
   align-items: center;
 
   .inference-btn {
     width: 170px;
-    /* 统一按钮宽度 */
     height: 72px;
-    /* 统一按钮高度 */
     font-size: 1.1rem;
     font-weight: bold;
     display: inline-flex;
@@ -1382,10 +1217,8 @@ export default {
     justify-content: center;
     gap: 8px;
     @include sci-fi-border;
-    /* 使用"开始测验.png"作为按钮底图 */
     background-image: url('~@/assets/images/step4/开始测验.png');
     color: #ffffff;
-    /* 改为白色 */
     border: none;
     border-radius: 4px;
 
@@ -1405,32 +1238,24 @@ export default {
   }
 }
 
-/* 中列 */
 .assessment-module {
-  flex: 0 1 auto;
-  /* 不自动增长，根据内容调整 */
+  flex: 0 0 auto;
+  height: 200px;
   min-height: 150px;
   max-height: 200px;
-  /* 限制最大高度，让框更紧凑 */
   overflow: hidden;
-  /* 确保内容不超出 */
   display: flex;
   flex-direction: column;
   position: relative;
-  /* 为加载层添加相对定位 */
 
   &.machine-assessment {
     order: 1;
-    /* 机器评估在上 */
     margin-bottom: 10px;
-    /* 上边往下缩一点 */
   }
 
   &.commander-assessment {
     order: 3;
-    /* 指挥员评估在下 */
     margin-top: 10px;
-    /* 下边往上缩一点 */
   }
 
   .assessment-content {
@@ -1439,49 +1264,9 @@ export default {
     gap: 15px;
     flex-grow: 1;
     min-height: 0;
+    height: 100%;
     overflow: hidden;
-    /* 防止内容超出 */
     align-items: flex-start;
-    /* 改为顶部对齐 */
-  }
-
-  .assessment-left-section {
-    flex-shrink: 0;
-    text-align: center;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    min-width: 100px;
-    margin-top: 5px;
-    /* 添加顶部外边距使其下移 */
-
-    .assessment-module-icon {
-      width: 40px;
-      height: 40px;
-      object-fit: contain;
-    }
-
-    .icon-placeholder-commander,
-    .icon-placeholder-machine {
-      width: 50px;
-      height: 50px;
-      background-color: rgba(0, 224, 255, 0.3);
-      border: 1px solid #00e0ff;
-      border-radius: 4px;
-    }
-
-    .assessment-title {
-      color: #e6faff;
-      font-weight: bold;
-      font-size: 0.95rem;
-      white-space: nowrap;
-      text-shadow: 0 0 5px rgba(0, 224, 255, 0.5);
-
-      margin-top: 2px;
-      /* 添加微小间距 */
-    }
   }
 
   .assessment-middle-section {
@@ -1490,63 +1275,28 @@ export default {
     gap: 15px;
     min-width: 0;
     overflow: hidden;
-    /* 防止内容超出 */
     align-items: flex-start;
-    /* 改为顶部对齐 */
-  }
-
-  .assessment-right-section {
-    flex-shrink: 0;
-    text-align: center;
-    padding: 10px 5px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    min-width: 110px;
-    justify-content: flex-start;
-    /* 改为顶部对齐 */
-    margin-top: 5px;
-    /* 添加顶部外边距使其下移 */
-
-    .icon-placeholder-red {
-      width: 60px;
-      height: 60px;
-      background-color: #ff4500;
-      border: 1px solid #ff7777;
-      border-radius: 4px;
-      opacity: 0.7;
-
-      margin-top: 0;
-      /* 确保没有额外上边距 */
-    }
-
-    .assessment-level {
-      color: #ff4500;
-      font-weight: bold;
-      font-size: 1rem;
-    }
+    height: 100%;
   }
 
   .assessment-module .design-module-content {
     flex: 1;
     min-width: 0;
     min-height: 0;
-    overflow-y: auto;
+    height: 100%;
+    overflow-y: auto !important;
     overflow-x: hidden;
     position: relative;
-    /* 为加载层添加相对定位 */
+    display: flex;
+    flex-direction: column;
   }
 }
 
 .behavior-module {
   flex: 1 1 auto;
-  /* 占据中间空间 */
   min-height: 200px;
   order: 2;
-  /* 确保在中间位置 */
   padding-top: 18px;
-  /* 为绝对定位的标题留出空间，避免与金字塔重叠 */
 
   .design-module-label {
     width: 120px;
@@ -1556,13 +1306,9 @@ export default {
     flex-grow: 1;
     display: flex;
     align-items: stretch;
-    /* 改为拉伸对齐，让图片自适应高度 */
     justify-content: space-between;
-    /* 左右分布，靠齐两侧 */
     padding: 0 15px 15px 15px;
-    /* 顶部 0，保持与标签紧邻 */
     gap: 20px;
-    /* 间距避免重叠 */
     min-height: 0;
   }
 
@@ -1570,24 +1316,17 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    /* 增加图片之间的间距 */
     flex-basis: 35%;
     flex-grow: 1;
-    /* 允许列自适应拉伸 */
     height: 100%;
     width: auto;
-    /* 宽度自动 */
     min-width: 220px;
   }
 
   .image-item {
     flex: 1 1 0;
-    /* 允许图片项等比例拉伸，优先填充可用空间 */
     width: 100%;
-    /* 列内尽可能宽 */
     min-height: 120px;
-    /* 设置最小高度，确保在小屏幕上也有合理显示 */
-    /* 移除固定的 aspect-ratio，允许根据容器高度自适应拉伸 */
     @include sci-fi-border;
     background: rgba(0, 0, 0, 0.3);
     display: flex;
@@ -1595,13 +1334,13 @@ export default {
     justify-content: center;
     overflow: hidden;
     border-radius: 4px;
+    position: relative; /* 确保遮罩层定位正确 */
   }
 
   .image-display {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    /* 填满16:9容器，保持比例 */
   }
 
   .image-placeholder {
@@ -1611,16 +1350,13 @@ export default {
 
   .pyramid-legend-group {
     flex-basis: auto;
-    /* 自动调整 */
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 10px;
     min-width: 120px;
-    /* 减小最小宽度 */
     align-self: center;
-    /* <-- 新增此行 垂直居中*/
   }
 
   .pyramid-placeholder {
@@ -1638,22 +1374,16 @@ export default {
   .level-legend {
     display: flex;
     flex-wrap: wrap;
-    /* 允许换行 */
     gap: 8px;
-    /* 减小间距 */
     justify-content: center;
     max-width: 120px;
-    /* 限制最大宽度，强制换行 */
 
     .legend-item {
       font-size: 0.65rem;
-      /* 减小字体 */
       color: #aaa;
       font-weight: bold;
       white-space: nowrap;
-      /* 防止文字换行 */
 
-      /* 新增：按顺序为激活的等级设置不同颜色 */
       &:nth-child(1).active-level {
         color: #FF0000;
         text-shadow: 0 0 5px #FF0000;
@@ -1677,14 +1407,16 @@ export default {
   }
 }
 
-/* 右列 */
+/* 右侧结果文本框样式调整 - 不再自动拉伸，只占用必要高度 */
 .result-log-module {
-  flex-grow: 1;
+  flex-grow: 0; /* 阻止自动拉伸 */
+  flex-shrink: 1;
+  height: auto; /* 高度由内容决定 */
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* 确保内容不超出 */
   min-height: 0;
+  margin-bottom: 10px;
 }
 
 .result-log-module .design-module-content {
@@ -1694,11 +1426,11 @@ export default {
   overflow-x: hidden;
 }
 
-/* 新增：右侧三个文本框的样式 */
 .result-section {
   margin-bottom: 15px;
   position: relative;
-  /* 为加载层添加相对定位 */
+  padding-left: 15px;
+  padding-right: 8px;
 
   &:last-child {
     margin-bottom: 0;
@@ -1710,6 +1442,7 @@ export default {
   font-weight: bold;
   font-size: 0.9rem;
   margin-bottom: 8px;
+  padding-left: 0;
 }
 
 .section-content {
@@ -1721,7 +1454,8 @@ export default {
   max-height: 120px;
   overflow-y: auto;
   position: relative;
-  /* 为加载层添加相对定位 */
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .result-text {
@@ -1730,57 +1464,65 @@ export default {
   margin: 0;
   white-space: pre-line;
   color: #e0e0e0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
-/* 不同点文字红色 */
 .different-points {
   color: #ff6b6b !important;
   font-weight: bold;
 }
 
+/* 右侧底部控件区域 - 垂直排列 */
 .right-bottom-controls {
   flex-shrink: 0;
   display: flex;
-  justify-content: space-between;
-  align-items: stretch;
-  gap: 15px;
+  flex-direction: column; /* 保持垂直排列 */
+  justify-content: flex-start;
+  align-items: center; /* 新增：让内部的元素（如变窄的按钮）居中对齐 */
+  gap: 10px;
+  width: 100%;
+  margin-top: 10px; /* 确保和上面的文本框有一点距离 */
 }
 
 .accuracy-box {
-  flex-grow: 1;
+  flex-grow: 0;
+  width: 100%;
   @include sci-fi-border;
-  padding: 10px;
+  padding: 5px 10px; /* 压缩 padding */
   text-align: center;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center; /* 内容居中 */
   border-radius: 4px;
-  /* 蓝色胶囊条背景 */
   background: url('~@/assets/images/step4/准确率框.png') no-repeat center/cover;
+  height: auto; /* 高度自适应内容 */
+  min-height: 70px; /* 确保不要太扁 */
 
   .accuracy-label {
     font-size: 0.9rem;
     color: #aaa;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
   }
 
   .accuracy-value {
-    font-size: 1.8rem;
+    font-size: 1.5rem; /* 稍微减小字体 */
     color: #00e0ff;
     font-weight: bold;
+    line-height: 1.2;
   }
 }
 
 .export-btn {
   flex-shrink: 0;
-  width: 120px;
+  width: 190px; /* 全宽 */
+  height: 72px; /* 增加点击区域 */
   font-size: 1.1rem;
   font-weight: bold;
   @include sci-fi-border;
-  /* 黄色导出按钮底图 */
   background: url('~@/assets/images/step4/结果导出按键.png') no-repeat center/contain, #00e0ff;
   color: #ffffff;
-  /* 改为白色 */
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -1794,7 +1536,6 @@ export default {
   }
 }
 
-/* 底部装饰条 */
 .core-layout-design::after {
   content: "";
   position: absolute;

@@ -8,7 +8,7 @@
         <button class="header-btn btn-back" @click="navigateHome">返回</button>
       </b-col>
       <b-col cols="6" class="text-center">
-        <!-- 标题已移除，与 step4 风格统一 -->
+        <h1 class="newTitle">多模态信息认知偏差检测模型</h1>
       </b-col>
       <b-col cols="3" class="text-right">
         <button class="header-btn btn-next" @click="navigateNextPage">下个页面</button>
@@ -82,7 +82,7 @@
             开始偏差检测
           </button>
         </div>
-        
+
         <div class="panel-header header-results">偏差检测结果</div>
 
         <div class="panel-right-top">
@@ -104,7 +104,7 @@
                 </div>
               </div>
               <div v-else-if="canStartBiasDetection" class="text-left small-text hint-text">
-                点击“开始偏差检测”，开始分析多模态目标检测结果的偏差
+                点击"开始偏差检测"，开始分析多模态目标检测结果的偏差
               </div>
 
               <p v-if="fullResult.key_frame_detection" class="mb-1 text-left">
@@ -222,6 +222,18 @@ export default {
     window.addEventListener('resize', this.handleResize);
     // 逻辑点 5：执行新的加载逻辑
     this.loadInitialData();
+    // 检查关键元素的样式
+    this.$nextTick(() => {
+      const rightColumn = document.querySelector('.right-column');
+      if (rightColumn) {
+        const styles = window.getComputedStyle(rightColumn);
+        console.log('Right column height:', styles.height);
+        console.log('Right column display:', styles.display);
+      }
+
+      // 如果检测到样式问题，动态修复
+      this.fixLayoutIssues();
+    });
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
@@ -252,6 +264,27 @@ export default {
         // 正常启动流程
         await this.fetchVideoList();
       }
+    },
+    fixLayoutIssues() {
+      // 动态添加内联样式作为最后手段
+      const style = document.createElement('style');
+      style.textContent = `
+      .right-column {
+        display: flex !important;
+        flex-direction: column !important;
+        height: calc(100vh - 80px) !important;
+      }
+      .panel-right-bottom {
+        flex-grow: 0 !important;
+        height: 100px !important;
+        min-height: 100px !important;
+      }
+      .action-buttons-right {
+        margin-top: auto !important;
+        padding-top: 15px !important;
+      }
+    `;
+      document.head.appendChild(style);
     },
     /**
      * 逻辑点 5：根据缓存的 module1Res 填充 UI
@@ -576,10 +609,10 @@ export default {
       if (!this.summaryFullText || this.summaryTypingInterval) {
         return;
       }
-      
+
       this.summaryTypingText = ''; // 从头开始
       let charIndex = 0;
-      
+
       this.summaryTypingInterval = setInterval(() => {
         // 使用 this.summaryFullText 来获取完整的文本
         this.summaryTypingText = this.summaryFullText.slice(0, charIndex + 1);
@@ -951,14 +984,9 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-/* 样式保持不变 */
+/* 重构样式 - 清理无效规则，保持页面外观不变 */
 
-/* * =========================================
- * 新UI样式（暗黑科技风）
- * =========================================
- */
-
-/* 1. 全局和背景 (不变) */
+/* 1. 全局和背景 */
 .section {
   width: 100%;
   min-height: 100vh;
@@ -986,23 +1014,20 @@ export default {
   z-index: -1;
 }
 
-/* 2. 顶部标题栏 (不变) */
+/* 2. 顶部标题栏 */
 .header-bar {
   width: 100%;
   flex-shrink: 0;
   padding: 0 20px;
   height: 60px;
 }
-
-.header-title {
-  font-size: calc(1.2vw + 0.8rem);
-  color: #00e5ff;
+.newTitle {
+  font-size: calc(1.2vw + 1rem);
+  color: #00e0ff;
   font-weight: bolder;
   letter-spacing: 0.1em;
-  margin: 0;
-  text-shadow: 0 0 5px #00e5ff;
+  text-shadow: 0 0 10px #00e0ff, 0 0 15px #00e0ff;
 }
-
 .header-btn {
   background: none;
   border: none;
@@ -1029,7 +1054,7 @@ export default {
   background-image: url('~@/assets/images/step1/-s-按钮-绿色.png');
 }
 
-/* 3. 核心内容区 (不变) */
+/* 3. 核心内容区 */
 .content-row {
   flex-grow: 1;
   width: 100%;
@@ -1037,28 +1062,17 @@ export default {
   margin: 0;
 }
 
-/* 三列通用高度 (不变) */
+/* 三列通用高度 */
 .left-column,
 .middle-column,
 .right-column {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 80px);
-  /* 减去顶部栏高度和padding */
   padding: 0 !important;
-
-  .panel-header {
-    margin-bottom: 5px;
-    /* 减少标题间距 */
-  }
-
-  .header-accuracy {
-    margin-top: 8px;
-    /* 从15px减少 */
-  }
 }
 
-/* 面板通用样式 (不变) */
+/* 面板通用样式 */
 [class^="panel-"] {
   width: 100%;
   background-repeat: no-repeat;
@@ -1068,21 +1082,22 @@ export default {
   flex-direction: column;
 }
 
-/* 特定面板的高度和边距 (不变) */
+/* 特定面板的高度和边距 */
 .panel-left {
   flex-grow: 1;
   height: 100%;
 }
 
 .panel-right-top {
-  height: 55%;
+  height: 50%; /* 原来是 55%，稍微改小一点可以让整体往上收 */
   flex-shrink: 0;
+  margin-bottom: 0; /* 确保没有额外的底部边距 */
 }
 
 .panel-right-bottom {
   flex-grow: 0;
-  height: 100px !important; /* 固定高度，根据需要调整数值 */
-  min-height: 100px; /* 设置最小高度 */
+  height: 100px !important;
+  min-height: 100px;
 }
 
 .panel-content {
@@ -1092,29 +1107,26 @@ export default {
   overflow: hidden;
 }
 
-/* 面板标题 (不变) */
+/* 面板标题 */
 .panel-header {
   height: 35px;
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-
   color: #fff;
   font-size: 1rem;
   font-weight: bold;
-  padding-left: 0;
   margin-bottom: 10px;
-
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
 .header-accuracy {
-  margin-top: 15px;
+  margin-top: 10px;
 }
 
-/* 4. 左侧列 (不变) */
+/* 4. 左侧列 */
 .panel-left {
   background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
 }
@@ -1157,11 +1169,6 @@ export default {
   border-color: #00e5ff;
 }
 
-/* 隐藏 b-form-file (如果不再使用) */
-.upload-area {
-  display: none;
-}
-
 .selector-circle {
   display: inline-block;
   width: 16px;
@@ -1193,7 +1200,6 @@ export default {
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-
   color: #fff;
   font-size: 1.1rem;
   font-weight: bold;
@@ -1211,17 +1217,13 @@ export default {
   }
 }
 
-/* 5. 中间列 (修改) */
+/* 5. 中间列 */
 .middle-column {
-  /* 移除了 justify-content: space-around; */
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  /* 从顶部开始排列 */
   align-items: center;
-  /* 居中对齐 */
   gap: 5px;
-  /* 模块间的小间距 */
 }
 
 .video-section {
@@ -1230,9 +1232,7 @@ export default {
   flex-direction: column;
   align-items: center;
   margin-bottom: 0;
-  /* 移除底部外边距，使其更紧凑 */
   flex-shrink: 0;
-  /* 防止视频框被压缩 */
 }
 
 .video-label {
@@ -1241,14 +1241,12 @@ export default {
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-
   color: #fff;
   font-size: 0.9rem;
   font-weight: bold;
   line-height: 35px;
   text-align: center;
   margin-bottom: 5px;
-  /* 减小标题和框的间距 */
 }
 
 .label-processed {
@@ -1258,7 +1256,6 @@ export default {
 .video-frame {
   width: 95%;
   height: 280px;
-  /* 稍微减小高度以为总结框腾出空间 */
   background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -1279,17 +1276,13 @@ export default {
   font-size: 1rem;
 }
 
-/* 新增：中间总结框样式 */
+/* 中间总结框样式 */
 .summary-box-middle {
   width: 95%;
-  /* 自动高度，最小高度约3行 */
   min-height: 90px;
   max-height: 120px;
-  /* 限制最大高度 */
   height: auto;
-
   background-image: url('~@/assets/images/step1/-s-框-小视频.png');
-  /* 复用视频框背景 */
   background-repeat: no-repeat;
   background-size: 100% 100%;
   padding: 15px;
@@ -1297,9 +1290,7 @@ export default {
   justify-content: center;
   align-items: center;
   margin-top: 5px;
-  /* 与上方视频框的间距 */
   flex-shrink: 0;
-  /* 防止被压缩 */
 }
 
 .summary-content {
@@ -1311,9 +1302,7 @@ export default {
   white-space: pre-wrap;
   overflow-y: auto;
   text-align: left;
-  /* 确保文本左对齐 */
   padding: 5px;
-  /* 内部增加一点padding */
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -1329,23 +1318,17 @@ export default {
   }
 }
 
-
-/* 6. 右侧列 (重点修正 CSS 在这里) */
-
-/* 右上方面板 (容器样式不变) */
+/* 6. 右侧列 */
 .panel-right-top {
   background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
 }
 
 .bias-button-container {
   height: 40px;
-  /* 匹配中间列 .video-label (35px) + margin-bottom (5px) */
   display: flex;
   align-items: center;
   justify-content: center;
-  /* 按钮靠右 */
   margin-bottom: 5px;
-  /* 按钮和下方标题框的间距 */
 }
 
 .description-box {
@@ -1358,9 +1341,7 @@ export default {
   padding: 10px !important;
   overflow: auto;
   display: flex;
-  /* 确保内部元素（v-html渲染的div）可以正常布局 */
   flex-direction: column;
-  /* 垂直排列 v-html 渲染的行 */
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -1374,12 +1355,6 @@ export default {
   &::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.3);
   }
-
-}
-
-/* 添加这个新规则以移除 <p> 标签的缩进 */
-.description-box p {
-  text-indent: 0;
 }
 
 .btn-start-bias {
@@ -1415,28 +1390,10 @@ export default {
   color: #9fc5ff;
   margin-bottom: 6px;
 }
-</style>
-
-/* 全局样式，确保能应用到v-html生成的内容 和 新的总结框 */
-<style lang="scss">
-.text-highlight {
-  color: #ff4d4d !important;
-  /* 确保颜色覆盖 */
-  font-weight: bold;
-  background-color: rgba(255, 77, 77, 0.1);
-  padding: 1px 3px;
-  border-radius: 3px;
-  /* display: inline-block; */
-  /* 移除，以防破坏 pre-wrap 布局 */
-}
-</style>
-
-<style lang="scss" scoped>
-// 移除原代码中所有冗余或冲突的 .description-box>>>.text-highlight 规则
 
 .small-text {
   font-size: 0.9rem;
-  line-height: 1.6; // 确保行高生效
+  line-height: 1.6;
 }
 
 .text-red {
@@ -1445,7 +1402,7 @@ export default {
   font-size: 0.95rem;
 }
 
-/* 右下方面板 (不变) */
+/* 右下方面板 */
 .panel-right-bottom {
   background-image: url('~@/assets/images/step1/-s-弹窗-偏差检测准确率.png');
 }
@@ -1455,22 +1412,22 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-
   font-size: 2rem;
   font-weight: bold;
   color: #00e5ff;
   text-shadow: 0 0 10px #00e5ff;
-  padding: 0; /* 减少内边距 */
+  padding: 0;
   line-height: 1;
 }
 
-/* 导出按钮的容器 (不变) */
+/* 导出按钮的容器 */
 .action-buttons-right {
   flex-shrink: 0;
-  text-align: right;
-  margin-top: auto;
-  padding-top: 15px;
-  padding-bottom: 10px;
+  text-align: center; /* 如果你想居中，或者保持 right */
+  /* 原来是 margin-top: auto; 这会导致按钮被推到最底部 */
+  margin-top: 5px;  /* 改为 5px，让它紧贴上面的框 */
+  padding-top: 5px; /* 减小上方内边距 */
+  padding-bottom: 0;
 }
 
 .btn-export-result {
@@ -1482,7 +1439,6 @@ export default {
   background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-
   color: #333;
   font-size: 1.1rem;
   font-weight: bold;
@@ -1490,23 +1446,20 @@ export default {
   justify-content: center;
   align-items: center;
 
-  /* 导出按钮的 disabled 样式 */
   &:disabled {
     filter: grayscale(80%);
     cursor: not-allowed;
   }
 }
 
-/* 7. 响应式调整 (修改) */
+/* 7. 响应式调整 */
 @media (max-width: 1400px) {
   .video-frame {
     height: 250px;
-    /* 调整高度 */
   }
 
   .summary-box-middle {
     min-height: 80px;
-    /* 调整高度 */
     max-height: 100px;
   }
 
@@ -1524,7 +1477,6 @@ export default {
 }
 
 @media (max-width: 1200px) {
-
   .left-column,
   .middle-column,
   .right-column {
@@ -1564,9 +1516,18 @@ export default {
   .panel-right-bottom {
     flex-grow: 1;
     height: 30%;
-    /* 减少高度 */
     min-height: 120px;
-    /* 设置最小高度 */
   }
+}
+</style>
+
+<style lang="scss">
+/* 全局样式 */
+.text-highlight {
+  color: #ff4d4d !important;
+  font-weight: bold;
+  background-color: rgba(255, 77, 77, 0.1);
+  padding: 1px 3px;
+  border-radius: 3px;
 }
 </style>
