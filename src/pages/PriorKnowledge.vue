@@ -178,7 +178,7 @@ export default {
           fullHeight: window.innerHeight,
           originalImageURL: null,
           tagInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
-          predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息", "场景信息"],
+          predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
           propertyColors: {}, // 用于存储属性颜色
           isLoading: false,
           accuracyRate: '—',
@@ -518,7 +518,7 @@ export default {
             { label: '形状信息：', value: predictData.shape || '未知', color: this.propertyColors.shape || '#000' },
             { label: '尺寸信息：', value: predictData.size || '未知', color: this.propertyColors.size || '#000' },
             { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
-            { label: '场景信息：', value: predictData.scene || '未知', color: this.propertyColors.scene || '#000' },
+            // { label: '场景信息：', value: predictData.scene || '未知', color: this.propertyColors.scene || '#000' },
           ];
           // 将预测信息存入localStorage，供群体协商界面使用
           localStorage.setItem('predictInfoList', JSON.stringify(this.predictInfoList));
@@ -605,7 +605,7 @@ export default {
             { label: '形状信息：', value: predictData.shape || '未知', color: this.propertyColors.shape || '#000' },
             { label: '尺寸信息：', value: predictData.size || '未知', color: this.propertyColors.size || '#000' },
             { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
-            { label: '场景信息：', value: predictData.scene || '未知', color: this.propertyColors.scene || '#000' },
+            // { label: '场景信息：', value: predictData.scene || '未知', color: this.propertyColors.scene || '#000' },
           ];
         }
         // 准确率：初始加载时立即显示
