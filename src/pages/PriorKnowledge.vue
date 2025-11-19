@@ -533,7 +533,7 @@ export default {
         }
 
         // 处理准确率：点击按钮后延迟3分钟显示
-        this.cachedAccuracy = data.accuracy !== undefined ? (data.accuracy * 100) + '%' : '—';
+        this.cachedAccuracy = data.accuracy !== undefined ? (Math.round(data.accuracy * 10000) / 100).toFixed(2) + '%' : '—';
         this.accuracyRate = '—';
         this.isWaitingForAccuracy = true; // 标记为等待准确率显示
         if (this.accuracyTimer) {
@@ -543,7 +543,7 @@ export default {
           this.accuracyRate = this.cachedAccuracy;
           this.isWaitingForAccuracy = false; // 延迟时间到，停止等待
           this.accuracyTimer = null;
-        }, 180000);
+        }, 1800000);
 
         // 重新渲染图谱
         this.$nextTick(() => {
