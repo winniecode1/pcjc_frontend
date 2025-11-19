@@ -396,7 +396,7 @@ export default {
         nodeGroup.append('text')
           .attr('text-anchor', 'middle')
           .attr('dy', 5)
-          .attr("fill", "#000")
+          .attr("fill", "#F7F7F7") // 浅灰色，提高深色背景下可读性
           .style('font-size', '14px')
           .style('pointer-events', 'none')
           .text(d => d.id);
@@ -543,6 +543,13 @@ export default {
         if (!cacheStr) {
           console.log('未找到 module2Res 缓存');
           return;
+        }
+        // 发现缓存 -> 启用颜色显示（页面初次加载如果存在 module2Res 则显示颜色）
+        try {
+          this.isColorized = true;
+          console.log('检测到 module2Res 缓存，启用颜色显示');
+        } catch (e) {
+          console.warn('设置 isColorized 时出错:', e);
         }
         const data = JSON.parse(cacheStr);
         // 图谱
