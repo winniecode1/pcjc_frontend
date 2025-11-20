@@ -33,11 +33,11 @@
             <div class="content-box scrollable" v-html="highlightBrackets(module1BiasTestResult)"></div>
           </div>
           <div class="metric-group">
-              <div class="metric-item">模型内部偏差测试结果: 
+              <div class="metric-item">模型内部偏差结果: 
                 <span v-if="module1InternalBias !== null && module1InternalBias !== undefined">{{ formatPercent(module1InternalBias, 0) }}</span>
                 <span v-else class="loading-spinner"></span>
               </div>
-              <div class="metric-item">认知传播偏差测试结果: 
+              <div class="metric-item">认知传播偏差结果: 
                 <span v-if="module1PropagationBias !== null && module1PropagationBias !== undefined">{{ formatPercent(module1PropagationBias, 0) }}</span>
                 <span v-else class="loading-spinner"></span>
               </div>
@@ -66,11 +66,11 @@
               </div>
             </div>
           <div class="metric-group">
-              <div class="metric-item">模型内部偏差测试结果: 
+              <div class="metric-item">模型内部偏差结果: 
                 <span v-if="module2InternalBias !== null && module2InternalBias !== undefined">{{ formatPercent(module2InternalBias, 0) }}</span>
                 <span v-else class="loading-spinner"></span>
               </div>
-              <div class="metric-item">认知传播偏差测试结果: 
+              <div class="metric-item">认知传播偏差结果: 
                 <span v-if="module2PropagationBias !== null && module2PropagationBias !== undefined">{{ formatPercent(module2PropagationBias, 0) }}</span>
                 <span v-else class="loading-spinner"></span>
               </div>
@@ -91,11 +91,11 @@
             <div class="content-box scrollable" v-html="highlightBrackets(module3BiasTestResult)"></div>
           </div>
           <div class="metric-group">
-              <div class="metric-item">模型内部偏差测试结果: 
+              <div class="metric-item">模型内部偏差结果: 
                 <span v-if="module3InternalBias !== null && module3InternalBias !== undefined">{{ formatPercent(module3InternalBias, 0) }}</span>
                 <span v-else class="loading-spinner"></span>
               </div>
-              <div class="metric-item">认知传播偏差测试结果: 
+              <div class="metric-item">认知传播偏差结果: 
                 <span v-if="module3PropagationBias !== null && module3PropagationBias !== undefined">{{ formatPercent(module3PropagationBias, 0) }}</span>
                 <span v-else class="loading-spinner"></span>
               </div>
@@ -116,7 +116,7 @@
             <div class="content-box scrollable" v-html="highlightBrackets(module4BiasTestResult)"></div>
           </div>
           <div class="metric-group">
-            <div class="metric-item">模型内部偏差测试结果: 
+            <div class="metric-item">模型内部偏差结果: 
               <span v-if="module4InternalBias !== null && module4InternalBias !== undefined">{{ formatPercent(module4InternalBias, 0) }}</span>
               <span v-else class="loading-spinner"></span>
             </div>
