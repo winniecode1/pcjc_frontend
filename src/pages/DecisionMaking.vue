@@ -274,7 +274,7 @@ export default {
       currentLevel: 4,
       testVideoUrl: null,
       testVideoMessage: '正在从 LocalStorage 加载视频...',
-      tempModule4Res: null, // 暂存数据用于延迟显示
+      tempModule4Res: null, 
     };
   },
   computed: {
@@ -397,7 +397,6 @@ export default {
         if (module4ResStr) {
           const module4Data = JSON.parse(module4ResStr);
           
-          // Bug Fix: Try both keys for performance data
           this.performanceData = module4Data.performance_data || module4Data.performancedata || '暂无性能数据。';
           this.performanceDataLocal = module4Data.performance_data_local || '暂无本地性能数据。';
           
@@ -408,8 +407,6 @@ export default {
           this.currentLevel = modelLevelNum;
           this.imageList = module4Data.imageList || [null, null, null, null];
 
-          // 如果已有偏差数据，可以直接展示，或者等待用户点击按钮
-          // 这里选择重置右侧偏差数据，等待用户点击“偏差检测”
           this.behaviorInfo = '请点击 "偏差检测"';
           this.samePoints = '请点击 "偏差检测"';
           this.differentPoints = '请点击 "偏差检测"';
@@ -542,9 +539,8 @@ export default {
 
           const module4Res = {
             weapon_model: mainData.data.weapon_model,
-            // Bug fix: ensure we save performance_data correctly. Backend usually sends snake_case.
             performance_data: mainData.data.performance_data, 
-            performancedata: mainData.data.performance_data, // Keep for backward compatibility if needed
+            performancedata: mainData.data.performance_data, 
             performance_data_local: mainData.data.performance_data_local,
             summary: mainData.data.summary,
             image_paths: mainData.data.image_paths,
@@ -606,7 +602,6 @@ export default {
         if (module4ResStr) {
           const module4Res = JSON.parse(module4ResStr);
           
-          // 1. 5秒后显示文本信息
           setTimeout(() => {
             if (module4Res.summary) {
               const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Res.summary);
@@ -622,11 +617,10 @@ export default {
             this.isBiasResultLoading = false;
           }, 5000);
 
-          // 2. 2分钟(120秒)后显示准确率
           setTimeout(() => {
              const accuracyValue = parseFloat(module4Res.average_comprehensive_accuracy);
              this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
-          }, 120000); // 120000ms = 2 minutes
+          }, 120000); 
 
         } else {
           this.behaviorInfo = '请先点击 "决策认知" 获取数据，然后再点击 "偏差检测"。';
@@ -938,27 +932,29 @@ export default {
   width: 30%;
   display: flex;
   flex-direction: column;
-  /* justify-content: space-between; 确保底部按钮沉底 */
   justify-content: flex-start;
-  gap: 10px;
+  /* 修改：组件间距改为 5px */
+  gap: 5px; 
   height: 100%;
+  /* 修改：整体稍微往上提 */
+  margin-top: -10px; 
 }
 
 .right-top-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  flex: 1; /* 让上部分占据剩余空间，但不无限拉伸 */
+  /* 修改：内部间距改为 5px */
+  gap: 5px; 
+  flex: 1; 
   min-height: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 .bias-detection-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 10px;
+  /* 修改：减小下方边距 */
+  margin-bottom: 5px;
   height: 60px;
   flex-shrink: 0;
 
@@ -988,9 +984,10 @@ export default {
 }
 
 .design-right-column>.standalone-label {
-/* 修改这里：使用负值将下面的元素“拉”上来 */
-  margin-top: -40px;  /* 试着设为 -20px 到 -40px 之间的值 */
+/* 修改：加大负边距，将标题往上拉 */
+  margin-top: -45px;
   flex-shrink: 0;
+  margin-bottom: 0px;
 }
 
 .design-module {
@@ -1223,7 +1220,7 @@ export default {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 5px; /* 修改：减小间距 */
     min-width: 120px;
     align-self: center;
   }
@@ -1231,13 +1228,17 @@ export default {
   .level-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 4px; /* 修改：紧凑排列 */
     justify-content: center;
+    width: 140px; /* 修改：限制宽度以强制换行 */
     
     .legend-item {
       font-size: 0.65rem;
       color: #aaa;
       font-weight: bold;
+      flex: 0 0 45%; /* 修改：强制两个一行 */
+      text-align: center;
+      margin-bottom: 2px;
       
       &:nth-child(1).active-level { color: #FF0000; text-shadow: 0 0 5px #FF0000; }
       &:nth-child(2).active-level { color: #FFC118; text-shadow: 0 0 5px #FFC118; }
@@ -1254,8 +1255,7 @@ export default {
   flex-direction: column;
   overflow: hidden;
   margin-bottom: 0px;
-  /* 拉长文本框 */
-  min-height: 480px; 
+  min-height: 200px; 
 }
 
 .result-log-module .design-module-content {
@@ -1285,15 +1285,13 @@ export default {
   position: relative;
 }
 
-/* 缩小 行为信息 和 不同点 */
 .small-section .section-content {
-  height: 60px; /* 缩小半行左右 */
+  height: 60px; 
   min-height: 60px;
 }
 
-/* 拉长 相同点 */
 .large-section .section-content {
-  height: 220px; /* 拉长四行左右 */
+  height: 220px; 
   min-height: 220px;
 }
 
@@ -1316,10 +1314,11 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  /* 修改：组件间距改为 5px */
+  gap: 5px;
   width: 100%;
-  margin-top: auto; /* 确保沉底，与左侧按钮对齐 */
-  padding-bottom: 0;
+  margin-top: 0; 
+  transform: none; /* 去掉之前添加的位移 */
 }
 
 .accuracy-box {
@@ -1334,11 +1333,16 @@ export default {
   background: url('~@/assets/images/step4/原视频框.png') no-repeat center/cover;
   height: auto;
   min-height: 70px;
-  /* 修改这里：添加负的上边距，把它往上提 */
-  margin-top: -20px; 
-  
-  /* 如果还是不够，可以适当减小下边距 */
-  margin-bottom: 10px;
+  /* --- 修改这里 --- */
+  /* 方法：使用相对定位强制上移 */
+  position: relative; 
+  top: -20px; /* 调整这个数字：-20px, -30px 等，直到位置满意 */
+  /* 修改：加大负的上边距，把它往上提 */
+  margin-top: 0; 
+  /* 修改：减小下边距 */
+  margin-bottom: 5px;
+  position: static; /* 如果之前加了 relative，这里改回 static 或者删掉 */
+  top: auto;        /* 如果之前加了 top，这里改回 auto 或者删掉 */
 
   .accuracy-label {
     font-size: 0.9rem;
@@ -1393,7 +1397,6 @@ export default {
   align-items: center;
   padding: 8px 0 0 0;
   min-height: 70px;
-  /* 可以添加负的下边距 */
   margin-bottom: -10px;
   background: none !important;
 }
@@ -1406,8 +1409,6 @@ export default {
   width: auto;
   min-width: 150px;
   max-width: 250px;
-  /* 注意：这里使用了 Step3 的绿色按钮图片，请确保你的项目中该路径下有图片，
-     或者改为 '~@/assets/images/step4/偏差检测按键.png' */
   background-image: url('~@/assets/images/step3/greenbutton.png'); 
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -1418,9 +1419,9 @@ export default {
   justify-content: center;
   align-items: center;
   min-height: 50px;
-  /* GroupNegotiation 中的特殊定位调整 */
-  margin-bottom: -80px; 
-  margin-top: -80px;
+  /* 修改：微调位置，配合整体上移 */
+  margin-bottom: -85px; 
+  margin-top: -85px;
 }
 
 .btn-bias-detect:disabled {
@@ -1442,7 +1443,6 @@ export default {
 
 /* 4. 结果导出按钮本体 */
 .btn-export-result {
-  /* 注意：这里使用了 Step1 的按钮图片，请确认路径是否需要改为 step4 */
   background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -1461,7 +1461,6 @@ export default {
   transition: all 0.3s ease;
   position: relative;
   padding: 0;
-  /* GroupNegotiation 中的特殊定位调整 */
   margin-top: -20px;
 }
 
