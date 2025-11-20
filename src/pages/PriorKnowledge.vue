@@ -21,7 +21,7 @@
       <!-- 左侧视频和按钮区域 -->
       <div class="design-left-column">
         <div class="design-module video-module">
-          <div class="panel-header">多模态信息认知传播结果</div>
+          <div class="panel-header">无人机侦查数据</div>
           <div class="design-module-content video-content-wrapper">
             <video v-if="videoUrl" :src="videoUrl" controls autoplay loop muted class="video-display" @error="handleVideoError"></video>
             <div v-else class="placeholder-text">
@@ -31,7 +31,7 @@
         </div>
 
         <div class="design-module text-module-left fixed-left-text">
-          <div class="panel-header">视频理解内容</div>
+          <div class="panel-header">多模态认知传播信息</div>
           <div class="design-module-content text-scrollable">
             <p class="text-content" v-if="VIDEO_DESCRIPTION">{{ VIDEO_DESCRIPTION }}</p>
             <p class="text-content text-muted" v-else>暂无视频描述信息</p>
@@ -345,15 +345,35 @@ export default {
           delete node.fy;
         });
 
-        // 默认将id为'飞机'的节点放在中央，如果不存在则将第一个节点放在中央
-        const centerNode = renderNodes.find(node => node.id === '飞机') || renderNodes[0];
-        if (centerNode) {
-          centerNode.x = width / 2;
-          centerNode.y = height / 2;
-          // 为中心节点设置更强的固定力
-          centerNode.fx = width / 2;
-          centerNode.fy = height / 2;
-        }
+        const centerNode = renderNodes.find(node => node.is_center) || renderNodes[0];
+          if (centerNode) {
+            centerNode.x = width / 2;
+            centerNode.y = height / 2;
+            // 为中心节点设置更强的固定力
+            centerNode.fx = width / 2;
+            centerNode.fy = height / 2;
+          }
+
+        // if (this.nodes.length) {
+        //   // 默认将id为'飞机'的节点放在中央，如果不存在则将第一个节点放在中央
+        //   const centerNode = renderNodes.find(node => node.id === '飞机') || renderNodes[0];
+        //   if (centerNode) {
+        //     centerNode.x = width / 2;
+        //     centerNode.y = height / 2;
+        //     // 为中心节点设置更强的固定力
+        //     centerNode.fx = width / 2;
+        //     centerNode.fy = height / 2;
+        //   }
+        // } else {
+        //   const centerNode = renderNodes.find(node => node.is_center) || renderNodes[0];
+        //   if (centerNode) {
+        //     centerNode.x = width / 2;
+        //     centerNode.y = height / 2;
+        //     // 为中心节点设置更强的固定力
+        //     centerNode.fx = width / 2;
+        //     centerNode.fy = height / 2;
+        //   }
+        // }
 
         const renderLinks = this.links.length ? this.links : data.knowledge_list.links
 
@@ -543,7 +563,7 @@ export default {
           this.accuracyRate = this.cachedAccuracy;
           this.isWaitingForAccuracy = false; // 延迟时间到，停止等待
           this.accuracyTimer = null;
-        }, 1800000);
+        }, 180000);
 
         // 重新渲染图谱
         this.$nextTick(() => {
