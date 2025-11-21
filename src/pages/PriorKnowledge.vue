@@ -696,24 +696,59 @@ export default {
     // 新增：下载JSON数据的函数
     async downloadJsonData() {
       try {
-        const response = await axios.get('http://10.109.253.71:8001/module2/export');
-        const dataToExport = response.data.result_list;
-        console.log('获取到的JSON数据:', dataToExport);
+        const response = await axios.get('http://10.109.253.71:8001/module2/export', {
+          responseType: 'blob', // 关键：告诉 axios 期望一个 Blob
+          headers: {
+            'Accept': 'application/zip' // 明确声明接受的MIME类型
+          }
+        });
 
-        // 转换为JSON字符串并创建下载链接
-        const jsonStr = JSON.stringify(dataToExport, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
+        console.log("文件导出：", response)
 
+        // 验证响应状态码
+        if (response.status !== 200) {
+          throw new Error(`服务器返回异常状态码: ${response.status}`);
+        }
+
+        // 解析文件名（优先从Content-Disposition获取）
+        let fileName = 'results.zip';
+        const contentDisposition = response.headers['content-disposition'];
+        console.log("contentDisposition=", contentDisposition)
+        if (contentDisposition && contentDisposition.includes('filename=')) {
+          const matches = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (matches && matches[1]) {
+            fileName = matches[1].replace(/['"]/g, '');
+            // 处理URL编码的文件名
+            fileName = decodeURIComponent(fileName);
+          }
+        }
+
+        // 验证文件类型
+        const contentType = response.headers['content-type'];
+        if (!contentType || !contentType.includes('application/zip')) {
+          throw new Error('服务器返回非ZIP文件格式');
+        }
+
+        // 从 response 中创建 Blob
+        const blob = new Blob([response.data], { type: 'application/zip' });
+
+        // 创建一个临时的 URL
+        const downloadUrl = window.URL.createObjectURL(blob);
+
+        // 创建一个 <a> 标签来触发下载
         const link = document.createElement('a');
-        link.href = url;
-        link.download = 'my_data.json';
+        link.href = downloadUrl;
+        link.setAttribute('download', fileName);
+
+        // 将 <a> 标签添加到 DOM 中 (在某些浏览器中是必需的)
         document.body.appendChild(link);
+
+        // 触发点击
         link.click();
 
-        // 清理资源
+        // 清理
         document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(downloadUrl);
       } catch (error) {
         console.error('获取并下载JSON失败:', error);
       }
