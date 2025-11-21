@@ -5,10 +5,10 @@
 
     <div class="top-nav-left">
       <router-link to="/" class="nav-btn nav-home">首页</router-link>
-      <router-link to="/group-negotiation" class="nav-btn nav-back">返回</router-link>
+      <router-link to="/group-negotiation" class="nav-btn nav-back">上个页面</router-link>
     </div>
     <div class="top-nav-right">
-      <router-link to="/attributiondiagnosis" class="nav-btn nav-next">下一页</router-link>
+      <router-link to="/attributiondiagnosis" class="nav-btn nav-next">下个页面</router-link>
     </div>
 
     <div class="title-container" :style="bgImageStyle(assetNames.titleBg)">
@@ -67,7 +67,7 @@
                     v-if="formattedPerformanceDataLocalList && formattedPerformanceDataLocalList.length > 0">
                     <li v-for="(item, idx) in formattedPerformanceDataLocalList" :key="'local-' + idx"
                       :class="{ 'first-item': idx === 0 }">
-                      {{ item }}
+                      <span v-html="item"></span>
                     </li>
                   </ul>
                   <p class="text-content text-muted" v-else>暂无评估信息</p>
@@ -152,7 +152,7 @@
                   <ul class="info-list" v-if="formattedPerformanceDataList && formattedPerformanceDataList.length > 0">
                     <li v-for="(item, idx) in formattedPerformanceDataList" :key="'machine-' + idx"
                       :class="{ 'first-item': idx === 0 }">
-                      {{ item }}
+                      <span v-html="item"></span>
                     </li>
                   </ul>
                   <p class="text-content text-muted" v-else>暂无评估信息</p>
@@ -167,7 +167,7 @@
         <div class="panel-right-bias-button">
           <button class="btn-bias-detect" @click="performDeviationDetection" :disabled="isBiasDetecting">
             <b-spinner small v-if="isBiasDetecting" style="margin-right:5px;"></b-spinner>
-            {{ isBiasDetecting ? '开始偏差检测...' : '决策选择偏差检测' }}
+            {{ isBiasDetecting ? '开始偏差检测...' : '偏差检测' }}
           </button>
         </div>
         <div class="panel-right-top">
@@ -402,6 +402,14 @@ export default {
         '良好': '(★★)',
         '一般': '(★)'
       };
+      // 定义需要加粗的属性标题
+      const attributeTitles = [
+        '态势感知与目标锁定能力',
+        '生存能力与防护',
+        '机动性与飞行性能',
+        '武器系统',
+        '作战半径和航程'
+      ];
       const textStr = String(text);
       const result = [];
 
@@ -416,7 +424,9 @@ export default {
         if (fullMatch) {
           const [, attrName, content, rating, extraContent] = fullMatch;
           const stars = ratingMap[rating] || rating;
-          let formattedItem = `${attrName}：${content.trim()}。${stars}`;
+          // 检查属性标题是否需要加粗
+          const boldAttrName = attributeTitles.includes(attrName) ? `<strong>${attrName}</strong>` : attrName;
+          let formattedItem = `${boldAttrName}：${content.trim()}。${stars}`;
           if (extraContent) {
             formattedItem += `：${extraContent}`;
           }
@@ -426,13 +436,26 @@ export default {
           if (simpleMatch) {
             const [, content, rating, extraContent] = simpleMatch;
             const stars = ratingMap[rating] || rating;
-            let formattedItem = `${content.trim()}。${stars}`;
+            // 检查内容中是否包含属性标题
+            let formattedContent = content.trim();
+            attributeTitles.forEach(title => {
+              if (formattedContent.includes(title)) {
+                formattedContent = formattedContent.replace(title, `<strong>${title}</strong>`);
+              }
+            });
+            let formattedItem = `${formattedContent}。${stars}`;
             if (extraContent) {
               formattedItem += `：${extraContent}`;
             }
             result.push(formattedItem);
           } else {
             let formattedItem = trimmed;
+            // 检查是否包含属性标题
+            attributeTitles.forEach(title => {
+              if (formattedItem.includes(title)) {
+                formattedItem = formattedItem.replace(title, `<strong>${title}</strong>`);
+              }
+            });
             formattedItem = formattedItem.replace(/[（(]([^：:)]+)(?:[：:]([^）)]+))?[）)]/g, (match, rating, extraContent) => {
               const stars = ratingMap[rating] || rating;
               if (extraContent) {
@@ -1121,6 +1144,11 @@ export default {
   padding-right: 0;
 }
 
+.info-list li strong {
+  font-weight: bold;
+  color: #fff;
+}
+
 .info-list li:before {
   display: none;
 }
@@ -1132,14 +1160,10 @@ export default {
   left: 0;
   width: 100%;
   height: 2px;
-  background-image: url('~@/assets/images/step2/blueline.png');
+  background-image: url('~@/assets/images/step2/yellowline.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   background-position: center;
-}
-
-.info-list li.first-item::after {
-  background-image: url('~@/assets/images/step2/yellowline.png');
 }
 
 .text-content {
@@ -1249,8 +1273,8 @@ export default {
   align-items: center;
 
   .inference-btn {
-    width: 250px;
-    height: 100px;
+    width: 170px;
+    height: 72px;
     font-size: 1.1rem;
     font-weight: bold;
     display: inline-flex;
@@ -1629,8 +1653,10 @@ export default {
   background: none;
   border: none;
   cursor: pointer;
-  width: 250px;
-  height: 100px;
+  width: auto;            /* 宽度自适应 */
+  min-width: 150px;       /* 最小宽度 */
+  max-width: 250px;       /* 最大宽度 */
+  height: 50px;
   background-image: url('~@/assets/images/step3/greenbutton.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;

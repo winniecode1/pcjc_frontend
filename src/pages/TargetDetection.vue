@@ -5,7 +5,7 @@
     <b-row class="header-bar align-item-s-center no-gutters">
       <b-col cols="3" class="text-left">
         <button class="header-btn btn-home" @click="navigateHome">首页</button>
-        <button class="header-btn btn-back" @click="navigateHome">返回</button>
+        <button class="header-btn btn-back" @click="navigateHome">上个页面</button>
       </b-col>
       <b-col cols="6" class="text-center">
         <h1 class="newTitle">多模态信息认知偏差检测模型</h1>
@@ -46,7 +46,7 @@
       <b-col cols="5" class="middle-column mx-2 px-1">
         <!-- 原视频 -->
         <div class="video-section">
-          <div class="video-label label-original">原视频</div>
+          <div class="video-label label-original">无人机侦察数据</div>
           <div class="video-frame">
             <video v-if="originalVideoURL" ref="originalVideo" :src="originalVideoURL" controls class="video-display"
               playsinline @error="handleVideoError"></video>
@@ -347,7 +347,7 @@ export default {
     },
     /**
      * 【标红修正】根据 low_similarity_aspects 列表高亮对应标签的行。
-     * 目前有四行：场景、主要目标、动作、总结。仅高亮列表中出现的那些行。
+     * 目前有四行：场景、目标、行为、总结。仅高亮列表中出现的那些行。
      */
     formatDescription(description) {
       // DEBUG 0: 函数开始
@@ -371,15 +371,15 @@ export default {
       console.log("[DEBUG] 3. 经过 parseLowSimilarityAspects 解析后的数组:", aspects);
 
       // 标准化到四个候选标签
-      const validLabels = new Set(['场景', '主要目标', '动作']);
+      const validLabels = new Set(['场景', '目标', '行为']);
       const labelsToHighlight = new Set();
       (aspects || []).forEach(item => {
         if (typeof item !== 'string') return;
         // 清理和标准化标签名称
         const name = item.trim().replace(/^["'《【\s]+|["'》】\s]+$/g, '');
         if (name === '目标') {
-          console.log("[DEBUG] 4. '目标' 映射为 '主要目标'");
-          labelsToHighlight.add('主要目标');
+          console.log("[DEBUG] 4. '目标' 映射为 '目标'");
+          labelsToHighlight.add('目标');
         }
         if (validLabels.has(name)) {
           labelsToHighlight.add(name);
@@ -446,8 +446,8 @@ export default {
 
     /**
      * 解析后端返回的 low_similarity_aspects，兼容多种格式：
-     * - 数组：["动作","总结"]
-     * - 字符串（JSON 或包含数组片段的字符串）：'{"data": ["动作","总结"]}' 或 '["动作","总结"]' 或 "{'["动作","总结"]...'}"
+     * - 数组：["行为","总结"]
+     * - 字符串（JSON 或包含数组片段的字符串）：'{"data": ["行为","总结"]}' 或 '["行为","总结"]' 或 "{'["行为","总结"]...'}"
      */
     parseLowSimilarityAspects(raw) {
       try {
@@ -628,13 +628,13 @@ export default {
     },
     updateLabelsToHighlight(rawAspects) {
       const aspects = this.parseLowSimilarityAspects(rawAspects);
-      const validLabels = new Set(['场景', '主要目标', '动作', '总结']);
+      const validLabels = new Set(['场景', '目标', '行为', '总结']);
       const labels = new Set();
       (aspects || []).forEach(item => {
         if (typeof item !== 'string') return;
         const name = item.trim().replace(/^["'《【\s]+|["'》】\s]+$/g, '');
         if (name === '目标') {
-          labels.add('主要目标');
+          labels.add('目标');
         }
         if (validLabels.has(name)) {
           labels.add(name);
@@ -651,7 +651,7 @@ export default {
         if (match) {
           let label = match[1].trim();
           if (label === '目标') {
-            label = '主要目标';
+            label = '目标';
           }
           const value = match[2].trim();
           return {
@@ -826,8 +826,8 @@ export default {
         this.fullResult.task_id = fullData.task_id;
         this.fullResult.video_description = fullData.video_description;
         this.fullResult.video_info = fullData.video_info; // 保存视频信息
-        this.fullResult.accuracy_results = fullData.overall_accuracy;
-        this.fullResult.overall_accuracy = fullData.overall_accuracy;
+        this.fullResult.accuracy_results = fullData.current_accuracy;
+        this.fullResult.overall_accuracy = fullData.current_accuracy;
         this.fullResult.low_similarity_aspects = fullData.low_similarity_aspects;
         this.fullResult.video_path = fullData.video_path;
         this.fullResult.deviceType = fullData.deviceType;
@@ -1053,7 +1053,7 @@ export default {
 }
 
 .btn-next {
-  background-image: url('~@/assets/images/step1/-s-按钮-绿色.png');
+  background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png');
 }
 
 /* 3. 核心内容区 */
@@ -1091,7 +1091,7 @@ export default {
 /* 特定面板的高度和边距 */
 .panel-left {
   flex-grow: 1;
-  height: 100%;
+  height: 100px;
 }
 
 .panel-right-top {
@@ -1420,7 +1420,7 @@ export default {
 
 /* 右下方面板 */
 .panel-right-bottom {
-  background-image: url('~@/assets/images/step1/-s-弹窗-偏差检测准确率.png');
+  background-image: url('~@/assets/images/step4/准确率框.png');
 }
 
 .metric-box {
@@ -1456,9 +1456,8 @@ export default {
   background: none;
   border: none;
   cursor: pointer;
-  width: 100%;            /* 占满容器 */
-  max-width: 280px;       /* 限制最大宽度 */
-  height: 60px;           /* 调整高度 */
+  width: 160px;
+  height: 50px;          /* 调整高度 */
   background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
