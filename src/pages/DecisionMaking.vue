@@ -17,11 +17,11 @@
 
     <div class="core-layout-design">
       <div class="design-left-column">
-        <div class="standalone-label" :style="fullWidthLabelStyle(assetNames.videoLabel, 30)">视频演示</div>
         <div class="design-module video-module" :style="videoPanelBgStyle">
+          <div class="panel-header">无人机侦察数据</div>
           <div class="design-module-content video-content-wrapper">
-            <video v-if="testVideoUrl" :src="testVideoUrl" controls class="test-video-player"
-              @error="handleVideoError" autoplay muted></video>
+            <video v-if="testVideoUrl" :src="testVideoUrl" controls class="test-video-player" @error="handleVideoError"
+              autoplay loop muted></video>
             <div v-else class="video-placeholder-text">
               {{ testVideoMessage }}
             </div>
@@ -29,6 +29,7 @@
         </div>
 
         <div class="design-module text-module-left fixed-left-text" :style="leftTextPanelBgStyle">
+          <div class="panel-header">群体协商认知传播信息</div>
           <div class="design-module-content text-scrollable">
             <p class="text-content" v-html="formattedThirdStageText"></p>
           </div>
@@ -38,7 +39,7 @@
           <b-button @click="fetchBackendData" variant="primary" :disabled="isLoading" class="inference-btn"
             :style="buttonBgStyle">
             <b-spinner small v-if="isLoading"></b-spinner>
-            {{ isLoading ? '获取数据中...' : '决策认知' }}
+            {{ isLoading ? '开始决策认知...' : '决策认知' }}
           </b-button>
         </div>
       </div>
@@ -61,14 +62,23 @@
                   <b-spinner small></b-spinner>
                   <span>加载中...</span>
                 </div>
-                <p class="text-content" v-html="performanceDataLocal"></p>
+                <div class="description-box assessment-content-box">
+                  <ul class="info-list"
+                    v-if="formattedPerformanceDataLocalList && formattedPerformanceDataLocalList.length > 0">
+                    <li v-for="(item, idx) in formattedPerformanceDataLocalList" :key="'local-' + idx"
+                      :class="{ 'first-item': idx === 0 }">
+                      {{ item }}
+                    </li>
+                  </ul>
+                  <p class="text-content text-muted" v-else>暂无评估信息</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         <div class="design-module behavior-module" :style="behaviorPanelBgStyle">
-          <div class="design-module-label" :style="labelImageStyle(assetNames.behaviorLabel, 120, 28)">可视化行为</div>
+          <div class="design-module-label" :style="labelImageStyle(assetNames.behaviorLabel, 200, 35)">辅助决策行为信息</div>
           <div class="behavior-content">
             <div class="flanking-image-column">
               <div class="image-item">
@@ -93,10 +103,10 @@
               <div class="pyramid-placeholder" v-if="!designAssetsEnabled"></div>
               <img v-else :src="fileUrl(assetNames.pyramid)" alt="金字塔" style="width:120px;height:120px;opacity:.95;" />
               <div class="level-legend">
-                <div class="legend-item" :class="{ 'active-level': currentLevel === 1 }">一级战备</div>
-                <div class="legend-item" :class="{ 'active-level': currentLevel === 2 }">二级战备</div>
-                <div class="legend-item" :class="{ 'active-level': currentLevel === 3 }">三级战备</div>
-                <div class="legend-item" :class="{ 'active-level': currentLevel === 4 }">四级战备</div>
+                <div class="legend-item level-1">一级战备</div>
+                <div class="legend-item level-2">二级战备</div>
+                <div class="legend-item level-3">三级战备</div>
+                <div class="legend-item level-4">四级战备</div>
               </div>
             </div>
 
@@ -138,7 +148,15 @@
                   <b-spinner small></b-spinner>
                   <span>加载中...</span>
                 </div>
-                <p class="text-content" v-html="performanceData"></p>
+                <div class="description-box assessment-content-box">
+                  <ul class="info-list" v-if="formattedPerformanceDataList && formattedPerformanceDataList.length > 0">
+                    <li v-for="(item, idx) in formattedPerformanceDataList" :key="'machine-' + idx"
+                      :class="{ 'first-item': idx === 0 }">
+                      {{ item }}
+                    </li>
+                  </ul>
+                  <p class="text-content text-muted" v-else>暂无评估信息</p>
+                </div>
               </div>
             </div>
           </div>
@@ -146,61 +164,67 @@
       </div>
 
       <div class="design-right-column">
-        <div class="right-top-content">
-          <div class="bias-detection-container">
-            <b-button @click="performDeviationDetection" variant="info" :disabled="isBiasDetecting"
-              class="btn-bias-detect">
-              <b-spinner small v-if="isBiasDetecting"></b-spinner>
-              {{ isBiasDetecting ? '检测中...' : '偏差检测' }}
-            </b-button>
-          </div>
-
-          <div class="standalone-label" :style="fullWidthLabelStyle(assetNames.resultLabel, 28)">决策选择认知偏差检测结果</div>
-
-          <div class="design-module result-log-module" :style="rightPanelBgStyle">
-            <div class="design-module-content text-scrollable">
-              <div class="result-section small-section">
-                <div class="section-header">行为信息：</div>
-                <div class="section-content">
-                  <div v-if="isBiasResultLoading" class="loading-overlay">
-                    <b-spinner small></b-spinner>
-                    <span>加载中...</span>
+        <div class="panel-right-bias-button">
+          <button class="btn-bias-detect" @click="performDeviationDetection" :disabled="isBiasDetecting">
+            <b-spinner small v-if="isBiasDetecting" style="margin-right:5px;"></b-spinner>
+            {{ isBiasDetecting ? '开始偏差检测...' : '决策选择偏差检测' }}
+          </button>
+        </div>
+        <div class="panel-right-top">
+          <div class="panel-content">
+            <div class="panel-header header-results">决策选择认知偏差检测结果</div>
+            <div class="results-scroll-container">
+              <div v-if="isBiasResultLoading" class="panel-overlay">加载中...</div>
+              <template v-else>
+                <div class="result-section small-section">
+                  <div class="section-header">行为信息：</div>
+                  <div class="section-content">
+                    <p class="result-text">{{ behaviorInfo || '暂无行为信息' }}</p>
                   </div>
-                  <p class="result-text">{{ behaviorInfo || '暂无行为信息' }}</p>
                 </div>
-              </div>
 
-              <div class="result-section large-section">
-                <div class="section-header">相同点：</div>
-                <div class="section-content">
-                  <div v-if="isBiasResultLoading" class="loading-overlay">
-                    <b-spinner small></b-spinner>
-                    <span>加载中...</span>
+                <div class="result-section consensus-section">
+                  <div class="section-header">共识信息：</div>
+                  <div class="section-content">
+                    <p class="result-text">{{ samePoints || '暂无共识信息' }}</p>
                   </div>
-                  <p class="result-text">{{ samePoints || '暂无相同点信息' }}</p>
                 </div>
-              </div>
 
-              <div class="result-section small-section">
-                <div class="section-header">不同点：</div>
-                <div class="section-content">
-                  <div v-if="isBiasResultLoading" class="loading-overlay">
-                    <b-spinner small></b-spinner>
-                    <span>加载中...</span>
+                <div class="result-section different-section">
+                  <div class="section-header">分歧信息：</div>
+                  <div class="section-content">
+                    <p class="result-text different-points">{{ differentPoints || '暂无分歧信息' }}</p>
                   </div>
-                  <p class="result-text different-points">{{ differentPoints || '暂无不同点信息' }}</p>
                 </div>
-              </div>
+              </template>
             </div>
           </div>
         </div>
 
-        <div class="right-bottom-controls">
-          <div class="accuracy-box" :style="accuracyBgStyle">
-            <div class="accuracy-label">偏差检测准确率</div>
-            <div class="accuracy-value">{{ deviationDetectionAccuracy }}<span v-if="deviationDetectionAccuracy !== 'N/A' && deviationDetectionAccuracy !== '计算中...'">%</span></div>
-          </div>
-          <button class="btn-export-result" :style="exportBtnBgStyle" @click="exportData">结果导出</button>
+        <div class="panel-right-accuracy">
+          <template v-if="isBiasResultLoading">
+            <div class="loading-spinner">加载中...</div>
+          </template>
+          <template v-else>
+            <div class="accuracy-content">
+              <span class="accuracy-label">偏差检测准确率</span>
+              <span class="accuracy-value">
+                <template
+                  v-if="deviationDetectionAccuracy !== 'N/A' && deviationDetectionAccuracy !== '计算中...' && deviationDetectionAccuracy !== null && deviationDetectionAccuracy !== undefined && deviationDetectionAccuracy !== ''">
+                  {{ deviationDetectionAccuracy }}%
+                </template>
+                <template v-else>
+                  N/A
+                </template>
+              </span>
+            </div>
+          </template>
+        </div>
+
+        <div class="panel-right-button">
+          <button @click="exportData" class="btn-export-result" :disabled="isBiasDetecting">
+            结果导出
+          </button>
         </div>
       </div>
     </div>
@@ -274,7 +298,7 @@ export default {
       currentLevel: 4,
       testVideoUrl: null,
       testVideoMessage: '正在从 LocalStorage 加载视频...',
-      tempModule4Res: null, 
+      tempModule4Res: null,
     };
   },
   computed: {
@@ -305,6 +329,12 @@ export default {
       } catch (e) {
         return typeof source === 'string' ? this.escapeToHtml(source) : String(source);
       }
+    },
+    formattedPerformanceDataList() {
+      return this.formatAssessmentTextToList(this.performanceData);
+    },
+    formattedPerformanceDataLocalList() {
+      return this.formatAssessmentTextToList(this.performanceDataLocal);
     },
     videoPanelBgStyle() { return this.bgImageStyle(this.assetNames.videoPanel); },
     leftTextPanelBgStyle() { return this.bgImageStyle(this.assetNames.leftTextPanel); },
@@ -363,6 +393,60 @@ export default {
         .replace(/>/g, '&gt;')
         .replace(/\n/g, '<br/>');
     },
+    formatAssessmentTextToList(text) {
+      if (!text) return [];
+      const ratingMap = {
+        '顶级': '(★★★★★)',
+        '卓越': '(★★★★)',
+        '优秀': '(★★★)',
+        '良好': '(★★)',
+        '一般': '(★)'
+      };
+      const textStr = String(text);
+      const result = [];
+
+      const items = textStr.split(/[;\n]/).filter(item => item.trim());
+
+      items.forEach(item => {
+        const trimmed = item.trim();
+        if (!trimmed) return;
+
+        const fullMatch = trimmed.match(/^([^：:]+)[：:](.+?)[。.]?[（(]([^：:)]+)(?:[：:]([^）)]+))?[）)]/);
+
+        if (fullMatch) {
+          const [, attrName, content, rating, extraContent] = fullMatch;
+          const stars = ratingMap[rating] || rating;
+          let formattedItem = `${attrName}：${content.trim()}。${stars}`;
+          if (extraContent) {
+            formattedItem += `：${extraContent}`;
+          }
+          result.push(formattedItem);
+        } else {
+          const simpleMatch = trimmed.match(/^(.+?)[。.]?[（(]([^：:)]+)(?:[：:]([^）)]+))?[）)]/);
+          if (simpleMatch) {
+            const [, content, rating, extraContent] = simpleMatch;
+            const stars = ratingMap[rating] || rating;
+            let formattedItem = `${content.trim()}。${stars}`;
+            if (extraContent) {
+              formattedItem += `：${extraContent}`;
+            }
+            result.push(formattedItem);
+          } else {
+            let formattedItem = trimmed;
+            formattedItem = formattedItem.replace(/[（(]([^：:)]+)(?:[：:]([^）)]+))?[）)]/g, (match, rating, extraContent) => {
+              const stars = ratingMap[rating] || rating;
+              if (extraContent) {
+                return `${stars}：${extraContent}`;
+              }
+              return stars;
+            });
+            result.push(formattedItem);
+          }
+        }
+      });
+
+      return result;
+    },
     handleResize() {
       this.windowWidth = window.innerWidth;
       this.windowHeight = window.innerHeight;
@@ -396,10 +480,10 @@ export default {
         const module4ResStr = localStorage.getItem('module4Res');
         if (module4ResStr) {
           const module4Data = JSON.parse(module4ResStr);
-          
+
           this.performanceData = module4Data.performance_data || module4Data.performancedata || '暂无性能数据。';
           this.performanceDataLocal = module4Data.performance_data_local || '暂无本地性能数据。';
-          
+
           const modelLevelNum = this.getLevelNum(module4Data.modelanalysisdangerlevel);
           const expertLevelNum = this.getLevelNum(module4Data.local_txt_danger_level);
           this.modelDangerLevel = `${modelLevelNum} !`;
@@ -407,11 +491,25 @@ export default {
           this.currentLevel = modelLevelNum;
           this.imageList = module4Data.imageList || [null, null, null, null];
 
-          this.behaviorInfo = '请点击 "偏差检测"';
-          this.samePoints = '请点击 "偏差检测"';
-          this.differentPoints = '请点击 "偏差检测"';
-          this.deviationDetectionAccuracy = 'N/A';
+          // 如果存在 summary 数据，自动填充偏差检测结果文本
+          if (module4Data.summary) {
+            const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Data.summary);
+            this.behaviorInfo = behaviorInfo;
+            this.samePoints = samePoints;
+            this.differentPoints = differentPoints;
+          } else {
+            this.behaviorInfo = '请点击 "偏差检测"';
+            this.samePoints = '请点击 "偏差检测"';
+            this.differentPoints = '请点击 "偏差检测"';
+          }
 
+          // 如果存在准确率数据，自动填充偏差检测准确率
+          if (module4Data.average_comprehensive_accuracy !== undefined && module4Data.average_comprehensive_accuracy !== null) {
+            const accuracyValue = parseFloat(module4Data.average_comprehensive_accuracy);
+            this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
+          } else {
+            this.deviationDetectionAccuracy = 'N/A';
+          }
         } else {
           this.performanceData = '请点击 "决策认知"';
           this.performanceDataLocal = '请点击 "决策认知"';
@@ -539,8 +637,8 @@ export default {
 
           const module4Res = {
             weapon_model: mainData.data.weapon_model,
-            performance_data: mainData.data.performance_data, 
-            performancedata: mainData.data.performance_data, 
+            performance_data: mainData.data.performance_data,
+            performancedata: mainData.data.performance_data,
             performance_data_local: mainData.data.performance_data_local,
             summary: mainData.data.summary,
             image_paths: mainData.data.image_paths,
@@ -601,7 +699,7 @@ export default {
         const module4ResStr = localStorage.getItem('module4Res');
         if (module4ResStr) {
           const module4Res = JSON.parse(module4ResStr);
-          
+
           setTimeout(() => {
             if (module4Res.summary) {
               const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Res.summary);
@@ -618,10 +716,9 @@ export default {
           }, 5000);
 
           setTimeout(() => {
-             const accuracyValue = parseFloat(module4Res.average_comprehensive_accuracy);
-             this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
-          }, 120000); 
-
+            const accuracyValue = parseFloat(module4Res.average_comprehensive_accuracy);
+            this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
+          }, 120000);
         } else {
           this.behaviorInfo = '请先点击 "决策认知" 获取数据，然后再点击 "偏差检测"。';
           this.samePoints = '请先点击 "决策认知" 获取数据';
@@ -781,7 +878,7 @@ export default {
 .top-nav-left,
 .top-nav-right {
   position: absolute;
-  top: 25px;
+  top: 10px;
   z-index: 10;
 }
 
@@ -879,8 +976,8 @@ export default {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 90px;
-    height: 34px;
+    width: 120px;
+    height: 40px;
     padding: 0;
     font-weight: bold;
   }
@@ -928,66 +1025,16 @@ export default {
   height: 100%;
 }
 
+/* --- 右侧列样式更新 --- */
 .design-right-column {
   width: 30%;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  /* 修改：组件间距改为 5px */
-  gap: 5px; 
+  gap: 5px;
   height: 100%;
-  /* 修改：整体稍微往上提 */
-  margin-top: -10px; 
-}
-
-.right-top-content {
-  display: flex;
-  flex-direction: column;
-  /* 修改：内部间距改为 5px */
-  gap: 5px; 
-  flex: 1; 
-  min-height: 0;
-}
-
-.bias-detection-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  /* 修改：减小下方边距 */
-  margin-bottom: 5px;
-  height: 60px;
-  flex-shrink: 0;
-
-  .nav-btn.nav-detect {
-    width: 150px;
-    height: 50px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-
-    &.use-asset-bg {
-      border: none;
-      background: transparent;
-      color: #ffffff;
-      text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
-    }
-  }
-}
-
-.use-assets .bias-detection-container .nav-btn.nav-detect.use-asset-bg {
-  width: 200px;
-  height: 70px;
-  background: url('~@/assets/images/step4/偏差检测按键.png') no-repeat center/contain;
-}
-
-.design-right-column>.standalone-label {
-/* 修改：加大负边距，将标题往上拉 */
-  margin-top: -45px;
-  flex-shrink: 0;
-  margin-bottom: 0px;
+  position: relative;
+  z-index: 2;
 }
 
 .design-module {
@@ -1013,18 +1060,86 @@ export default {
 .text-module-left .design-module-content {
   overflow-y: auto;
   max-height: 100%;
-  
+
   &::-webkit-scrollbar {
     width: 8px;
   }
+
   &::-webkit-scrollbar-track {
     background: rgba(10, 25, 50, 0.3);
     border-radius: 4px;
   }
+
   &::-webkit-scrollbar-thumb {
     background: #00e0ff;
     border-radius: 4px;
   }
+}
+
+.assessment-content-box {
+  flex-grow: 1;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  color: #eee;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  padding: 15px !important;
+  overflow-y: auto;
+  border-radius: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.assessment-content-box::-webkit-scrollbar {
+  width: 6px;
+}
+
+.assessment-content-box::-webkit-scrollbar-thumb {
+  background: #00e5ff;
+  border-radius: 3px;
+}
+
+.assessment-content-box::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.info-list li {
+  position: relative;
+  padding: 10px 0;
+  margin: 0;
+  line-height: 1.6;
+  color: #e8f4ff;
+  font-size: 0.95rem;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.info-list li:before {
+  display: none;
+}
+
+.info-list li::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-image: url('~@/assets/images/step2/blueline.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: center;
+}
+
+.info-list li.first-item::after {
+  background-image: url('~@/assets/images/step2/yellowline.png');
 }
 
 .text-content {
@@ -1054,7 +1169,7 @@ export default {
 
 .video-module {
   flex: 0 0 auto;
-  width: 95%;
+  width: 100%;
   height: 250px;
   background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-repeat: no-repeat;
@@ -1111,12 +1226,19 @@ export default {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  padding: 10px 25px 30px 25px;
+}
+
+.fixed-left-text .panel-header {
+  margin-top: 0;
+  margin-bottom: 10px;
+  padding-left: 0;
 }
 
 .fixed-left-text .design-module-content {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 15px;
+  padding: 0;
 }
 
 .button-container {
@@ -1127,8 +1249,8 @@ export default {
   align-items: center;
 
   .inference-btn {
-    width: 170px;
-    height: 72px;
+    width: 250px;
+    height: 100px;
     font-size: 1.1rem;
     font-weight: bold;
     display: inline-flex;
@@ -1149,9 +1271,16 @@ export default {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  
-  &.machine-assessment { order: 1; margin-bottom: 10px; }
-  &.commander-assessment { order: 3; margin-top: 10px; }
+
+  &.machine-assessment {
+    order: 1;
+    margin-bottom: 10px;
+  }
+
+  &.commander-assessment {
+    order: 3;
+    margin-top: 10px;
+  }
 
   .assessment-content {
     display: flex;
@@ -1180,7 +1309,12 @@ export default {
   order: 2;
   padding-top: 18px;
 
-  .design-module-label { width: 120px; }
+  .design-module-label {
+    // width: 120px;
+    justify-content: center !important; /* 强制文字水平居中 */
+    padding-left: 5 !important;         /* 去除全局样式中设置的左侧缩进 */
+    align-items: center;
+  }
 
   .behavior-content {
     flex-grow: 1;
@@ -1220,7 +1354,7 @@ export default {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px; /* 修改：减小间距 */
+    gap: 5px;
     min-width: 120px;
     align-self: center;
   }
@@ -1228,71 +1362,173 @@ export default {
   .level-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px; /* 修改：紧凑排列 */
+    gap: 4px;
     justify-content: center;
-    width: 140px; /* 修改：限制宽度以强制换行 */
-    
+    width: 140px;
+
     .legend-item {
       font-size: 0.65rem;
-      color: #aaa;
       font-weight: bold;
-      flex: 0 0 45%; /* 修改：强制两个一行 */
+      flex: 0 0 45%;
       text-align: center;
       margin-bottom: 2px;
-      
-      &:nth-child(1).active-level { color: #FF0000; text-shadow: 0 0 5px #FF0000; }
-      &:nth-child(2).active-level { color: #FFC118; text-shadow: 0 0 5px #FFC118; }
-      &:nth-child(3).active-level { color: #2BC3FF; text-shadow: 0 0 5px #2BC3FF; }
-      &:nth-child(4).active-level { color: #7EFF00; text-shadow: 0 0 5px #7EFF00; }
+
+      &.level-1 {
+        color: #FF0000;
+        text-shadow: 0 0 5px #FF0000;
+      }
+
+      &.level-2 {
+        color: #FFC118;
+        text-shadow: 0 0 5px #FFC118;
+      }
+
+      &.level-3 {
+        color: #2BC3FF;
+        text-shadow: 0 0 5px #2BC3FF;
+      }
+
+      &.level-4 {
+        color: #7EFF00;
+        text-shadow: 0 0 5px #7EFF00;
+      }
     }
   }
 }
 
-/* 右侧结果区域调整 */
-.result-log-module {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  margin-bottom: 0px;
-  min-height: 200px; 
+/* 面板标题 */
+.panel-header {
+  padding-left: 0 !important;
+  justify-content: center !important;
+  display: flex;      /* 确保是 flex 布局 */
+  align-items: center; /* 实现垂直居中 */
+  width: 300px; /* 您可以根据需要修改这个数值，例如 320px 或 100% */
+  margin: 5px auto 10px auto !important;/* 关键修改：25px(顶部间隔), auto(水平居中), 10px(底部间隔) */
 }
 
-.result-log-module .design-module-content {
+.panel-header,
+.design-module-label {
+  height: 35px;
+  background-image: url('~@/assets/images/step1/-s-二级标题.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  flex-shrink: 0;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: bold;
+  padding-left: 0;
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.panel-right-top {
+  height: 63%;
+  /* Increased from 55% */
+  flex-shrink: 0;
+  width: 100%;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 20px;
+  background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
+}
+
+.panel-right-top .panel-content {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 25px 30px 25px;
+  /* Reduced top padding */
+  height: 100%;
+}
+
+.results-scroll-container {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 15px;
+  position: relative;
+  min-height: 0;
+  margin-top: 10px;
+}
+
+.results-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.results-scroll-container::-webkit-scrollbar-thumb {
+  background: #00e5ff;
+  border-radius: 3px;
+}
+
+.results-scroll-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.panel-right-top .panel-header.header-results {
+  margin-top: 0;
+  margin-bottom: 10px;
+  padding-left: 0;
 }
 
 .result-section {
-  margin-bottom: 10px;
-  position: relative;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.result-section:last-child {
+  margin-bottom: 0;
 }
 
 .section-header {
   color: #00e5ff;
   font-weight: bold;
   font-size: 0.9rem;
-  margin-bottom: 5px;
+  margin-bottom: 10px;
 }
 
 .section-content {
   background-color: rgba(0, 0, 0, 0.3);
   border: 1px solid #00e0ff;
   border-radius: 5px;
-  padding: 10px;
+  padding: 15px;
   overflow-y: auto;
   position: relative;
 }
 
-.small-section .section-content {
-  height: 60px; 
-  min-height: 60px;
+/* Added custom scrollbar styles to match machine assessment */
+.section-content::-webkit-scrollbar {
+  width: 6px;
 }
 
-.large-section .section-content {
-  height: 220px; 
-  min-height: 220px;
+.section-content::-webkit-scrollbar-thumb {
+  background: #00e5ff;
+  border-radius: 3px;
+}
+
+.section-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.small-section .section-content {
+  min-height: 60px;
+  max-height: 60px;
+}
+
+.consensus-section .section-content {
+  min-height: 180px;
+  /* Reduced from 220px */
+  max-height: 180px;
+  /* Reduced from 220px */
+  overflow-y: auto;
+}
+
+.different-section .section-content {
+  min-height: 60px;
+  overflow-y: auto;
 }
 
 .result-text {
@@ -1308,128 +1544,64 @@ export default {
   font-weight: bold;
 }
 
-/* 底部控件区域，对齐左侧按钮 */
-.right-bottom-controls {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  /* 修改：组件间距改为 5px */
-  gap: 5px;
-  width: 100%;
-  margin-top: 0; 
-  transform: none; /* 去掉之前添加的位移 */
-}
-
-.accuracy-box {
-  width: 100%;
-  @include sci-fi-border;
-  padding: 5px 10px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background: url('~@/assets/images/step4/原视频框.png') no-repeat center/cover;
-  height: auto;
-  min-height: 70px;
-  /* --- 修改这里 --- */
-  /* 方法：使用相对定位强制上移 */
-  position: relative; 
-  top: -20px; /* 调整这个数字：-20px, -30px 等，直到位置满意 */
-  /* 修改：加大负的上边距，把它往上提 */
-  margin-top: 0; 
-  /* 修改：减小下边距 */
-  margin-bottom: 5px;
-  position: static; /* 如果之前加了 relative，这里改回 static 或者删掉 */
-  top: auto;        /* 如果之前加了 top，这里改回 auto 或者删掉 */
-
-  .accuracy-label {
-    font-size: 0.9rem;
-    color: #aaa;
-  }
-
-  .accuracy-value {
-    font-size: 1.5rem;
-    color: #00e0ff;
-    font-weight: bold;
-  }
-}
-
-.export-btn {
-  width: 190px;
-  height: 60px; /* 与左侧按钮高度保持一致 */
-  font-size: 1.1rem;
-  font-weight: bold;
-  @include sci-fi-border;
-  background: url('~@/assets/images/step4/结果导出按键.png') no-repeat center/contain, #00e0ff;
-  color: #ffffff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-
-  &:hover {
-    background-color: #fff;
-    color: #030a1c;
-    box-shadow: 0 0 15px #00e0ff;
-  }
-}
-
-.core-layout-design::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  width: min(1120px, 96%);
-  height: 40px;
-  background: url('~@/assets/images/step4/底部.png') no-repeat center/contain;
-  pointer-events: none;
-  opacity: .95;
-}
-
-/* 1. 偏差检测按钮容器 */
-.panel-right-bias-button {
+.panel-right-accuracy {
   flex-shrink: 0;
   width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 8px 0 0 0;
-  min-height: 70px;
-  margin-bottom: -10px;
-  background: none !important;
-}
-
-/* 2. 偏差检测按钮本体 */
-.btn-bias-detect {
-  background: none;
-  border: none;
-  cursor: pointer;
-  width: auto;
-  min-width: 150px;
-  max-width: 250px;
-  background-image: url('~@/assets/images/step3/greenbutton.png'); 
+  background-image: url('~@/assets/images/step4/准确率框.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  color: #fff;
-  font-size: 1.1rem;
-  font-weight: bold;
-  display: inline-flex;
-  justify-content: center;
+  margin-bottom: 20px;
+  padding: 20px 30px;
+  display: flex;
   align-items: center;
-  min-height: 50px;
-  /* 修改：微调位置，配合整体上移 */
-  margin-bottom: -85px; 
-  margin-top: -85px;
+  justify-content: center;
+  min-height: 100px;
+  margin-top: -20px;
 }
 
-.btn-bias-detect:disabled {
-  filter: grayscale(80%);
-  cursor: not-allowed;
+.accuracy-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0 15px;
 }
 
-/* 3. 结果导出按钮容器 */
+.accuracy-label {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.accuracy-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #00e5ff;
+  text-shadow: 0 0 10px #00e5ff, 0 0 20px rgba(0, 229, 255, 0.5);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.loading-spinner {
+  color: #00e5ff;
+  font-size: 1.2rem;
+  text-shadow: 0 0 5px #00e5ff;
+}
+
+.panel-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
 .panel-right-button {
   flex-shrink: 0;
   width: 100%;
@@ -1439,19 +1611,57 @@ export default {
   padding: 10px 0;
   min-height: 70px;
   background: none !important;
+  background-image: none !important;
 }
 
-/* 4. 结果导出按钮本体 */
+.panel-right-bias-button {
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 0 12px 0;
+  min-height: 70px;
+  background: none !important;
+}
+
+.btn-bias-detect {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 250px;
+  height: 100px;
+  background-image: url('~@/assets/images/step3/greenbutton.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: bold;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: -50px;
+  margin-top: -60px;
+}
+
+.btn-bias-detect:disabled {
+  filter: grayscale(80%);
+  cursor: not-allowed;
+}
+
 .btn-export-result {
+  background-color: transparent !important;
+  /* 关键：去掉按钮默认的白色/灰色背景 */
+  box-shadow: none !important;
+  /* 保险起见：去掉默认阴影 */
   background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   background-position: center;
   border: none;
   cursor: pointer;
-  width: 100%;
-  max-width: 280px;
-  height: 60px;
+  width: 160px;
+  height: 50px;
   color: #333;
   font-size: 1.1rem;
   font-weight: bold;
@@ -1472,5 +1682,18 @@ export default {
 .btn-export-result:disabled {
   filter: grayscale(80%);
   cursor: not-allowed;
+}
+
+.core-layout-design::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(1120px, 96%);
+  height: 40px;
+  background: url('~@/assets/images/step4/底部.png') no-repeat center/contain;
+  pointer-events: none;
+  opacity: .95;
 }
 </style>
