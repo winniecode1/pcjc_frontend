@@ -31,6 +31,11 @@
           <div class="result-section">
             <div class="section-title">根因诊断与定位结果</div>
             <div class="content-box scrollable" v-html="highlightBrackets(module1BiasTestResult)"></div>
+            <!-- 诊断中遮罩层 -->
+            <div v-if="module1InternalBias === null || module1InternalBias === undefined" class="diagnosis-overlay">
+              <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
+              <div class="diagnosis-text">正在诊断中，请等待</div>
+            </div>
           </div>
           <div class="metric-group">
               <div class="metric-item">模型内部偏差结果: 
@@ -64,6 +69,11 @@
                     </div>
                   </div>
               </div>
+              <!-- 诊断中遮罩层 -->
+              <div v-if="module2InternalBias === null || module2InternalBias === undefined" class="diagnosis-overlay">
+                <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
+                <div class="diagnosis-text">正在诊断中，请等待</div>
+              </div>
             </div>
           <div class="metric-group">
               <div class="metric-item">模型内部偏差结果: 
@@ -89,6 +99,11 @@
           <div class="result-section">
             <div class="section-title">根因诊断与定位结果</div>
             <div class="content-box scrollable" v-html="highlightBrackets(module3BiasTestResult)"></div>
+            <!-- 诊断中遮罩层 -->
+            <div v-if="module3InternalBias === null || module3InternalBias === undefined" class="diagnosis-overlay">
+              <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
+              <div class="diagnosis-text">正在诊断中，请等待</div>
+            </div>
           </div>
           <div class="metric-group">
               <div class="metric-item">模型内部偏差结果: 
@@ -114,6 +129,11 @@
           <div class="result-section">
             <div class="section-title">根因诊断与定位结果</div>
             <div class="content-box scrollable" v-html="highlightBrackets(module4BiasTestResult)"></div>
+            <!-- 诊断中遮罩层 -->
+            <div v-if="module4InternalBias === null || module4InternalBias === undefined" class="diagnosis-overlay">
+              <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
+              <div class="diagnosis-text">正在诊断中，请等待</div>
+            </div>
           </div>
           <div class="metric-group">
             <div class="metric-item">模型内部偏差结果: 
@@ -1252,6 +1272,7 @@ export default {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  position: relative; /* 为遮罩层定位 */
 }
 
 .section-title {
@@ -1504,6 +1525,61 @@ export default {
   border-color: rgba(78, 216, 255, 0.2);
   border-top-color: #4ED8FF;
   margin-left: 0;
+}
+
+/* ================= 诊断中遮罩层 ================= */
+.diagnosis-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 30, 60, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10;
+  border-radius: 4px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.diagnosis-icon {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.diagnosis-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: #4ED8FF;
+  text-shadow: 0 0 10px rgba(78, 216, 255, 0.5);
+  letter-spacing: 1px;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif;
 }
 
 </style>
