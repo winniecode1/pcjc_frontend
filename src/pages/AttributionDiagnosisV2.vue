@@ -4,7 +4,7 @@
     <b-row class="header-bar align-items-center no-gutters">
       <b-col cols="3" class="text-left">
         <button class="header-btn btn-home" @click="$router.push('/')">首页</button>
-        <button class="header-btn btn-back" @click="$router.back()">返回</button>
+        <button class="header-btn btn-back" @click="$router.back()">上个界面</button>
       </b-col>
     </b-row>
 
@@ -1056,11 +1056,11 @@ export default {
   font-weight: bold;
   background-repeat: no-repeat;
   background-size: 100% 100%;
+  margin: 0 5px;
 }
 
 .btn-home {
-  background-image: url('~@/assets/images/step1/-s-按钮-蓝色.png');
-  margin-right: 10px;
+  background-image: url('~@/assets/images/step4/首页按键.png');
 }
 
 .btn-back {
@@ -1474,7 +1474,7 @@ export default {
   height: 50px;
   border: none;
   cursor: pointer;
-  color: white;
+  color: #333;
   font-weight: bold;
   font-size: 1.1rem;
   padding: 0;
