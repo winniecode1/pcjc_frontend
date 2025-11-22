@@ -30,15 +30,15 @@
                 <span class="selector-circle"></span>
               </div>
             </div>
-
-            <div class="action-buttons">
-              <button @click="startDetection" :disabled="isLoading" class="btn-start-detect">
-                <b-spinner small v-if="isLoading"></b-spinner>
-                <!-- 移除了 !selectedVideo 的禁用条件，因为加载时可能没有 selectedVideo -->
-                <span>{{ isLoading ? (progressMessage || '检测中...') : '开始目标检测' }}</span>
-              </button>
-            </div>
           </div>
+        </div>
+
+        <div class="action-buttons">
+          <button @click="startDetection" :disabled="isLoading" class="btn-start-detect">
+            <b-spinner small v-if="isLoading"></b-spinner>
+            <!-- 移除了 !selectedVideo 的禁用条件，因为加载时可能没有 selectedVideo -->
+            <span>{{ isLoading ? (progressMessage || '检测中...') : '开始目标检测' }}</span>
+          </button>
         </div>
       </b-col>
 
@@ -49,7 +49,7 @@
           <div class="video-label label-original">无人机侦察数据</div>
           <div class="video-frame">
             <video v-if="originalVideoURL" ref="originalVideo" :src="originalVideoURL" controls class="video-display"
-              playsinline @error="handleVideoError"></video>
+              playsinline muted loop @error="handleVideoError"></video>
             <div v-else class="placeholder-text">请选择视频</div>
           </div>
         </div>
@@ -57,18 +57,19 @@
         <!-- 检测结果视频 -->
         <div class="video-section">
           <div class="video-label label-processed">多模态检测结果 </div>
-          <div class="video-frame">
-            <video v-if="processedVideoURL" ref="processedVideo" :src="processedVideoURL" controls class="video-display"
-              :key="processedVideoURL" playsinline @error="handleVideoError"></video>
-            <div v-else-if="isLoading" class="placeholder-text">等待处理结果...</div>
-            <div v-else class="placeholder-text">检测结果将在这里显示</div>
+          <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
+            <video v-if="processedVideoURL && !isLoading" ref="processedVideo" :src="processedVideoURL" controls
+              class="video-display" :key="processedVideoURL" playsinline muted loop @error="handleVideoError"></video>
+            <div v-if="isLoading" class="placeholder-text loading-text">目标检测中……</div>
+            <div v-else-if="!processedVideoURL" class="placeholder-text">检测结果将在这里显示</div>
           </div>
         </div>
 
         <!-- 新增：总结文本框 -->
-        <div class="summary-box-middle">
-          <div class="summary-content overflow-auto" :class="{ 'text-highlight': summaryHighlight }">
-            {{ summaryTypingText || '视频的文本描述将在此显示……' }}
+        <div class="summary-box-middle" :class="{ 'loading-overlay': isLoading }">
+          <div class="summary-content overflow-auto"
+            :class="{ 'text-highlight': summaryHighlight, 'loading-text': isLoading }">
+            {{ isLoading ? '目标检测中……' : (summaryTypingText || '目标检测中……') }}
           </div>
         </div>
       </b-col>
@@ -78,18 +79,23 @@
 
         <div class="bias-button-container">
           <button class="btn-start-bias" @click="handleStartBiasDetection"
-            :disabled="!canStartBiasDetection || isBiasTyping || isLoading">
-            开始偏差检测
+            :disabled="!canStartBiasDetection || isBiasTyping || isLoading || isBiasDetecting">
+            <b-spinner small v-if="isBiasDetecting"></b-spinner>
+            <span>{{ isBiasDetecting ? '检测中...' : '开始偏差检测' }}</span>
           </button>
         </div>
 
         <div class="panel-header header-results">偏差检测结果</div>
 
-        <div class="panel-right-top">
+        <div class="panel-right-top" :class="{ 'loading-overlay': isBiasDetecting && !showBiasDetails }">
           <div class="panel-content">
-            <div class="description-box p-2 overflow-auto">
+            <div class="description-box p-2 overflow-auto"
+              :class="{ 'loading-text': isBiasDetecting && !showBiasDetails }">
               <!-- 移除了原有的 "总结" v-if="showSummary" 部分 -->
-              <div v-if="isLoading && !showBiasDetails" class="text-left small-text">
+              <div v-if="isBiasDetecting && !showBiasDetails" class="text-left small-text">
+                计算中…
+              </div>
+              <div v-else-if="isLoading && !showBiasDetails" class="text-left small-text">
                 {{ progressMessage || '正在加载...' }}
               </div>
               <div v-else-if="!showBiasDetails && !isLoading" class="text-left small-text">
@@ -103,11 +109,11 @@
                   {{ biasDisplayTexts[index] }}
                 </div>
               </div>
-              <div v-else-if="canStartBiasDetection" class="text-left small-text hint-text">
+              <div v-else-if="canStartBiasDetection && !isBiasDetecting" class="text-left small-text hint-text">
                 点击"开始偏差检测"，开始分析多模态目标检测结果的偏差
               </div>
 
-              <p v-if="fullResult.key_frame_detection" class="mb-1 text-left">
+              <p v-if="fullResult.key_frame_detection && showBiasDetails" class="mb-1 text-left">
                 <span class="text-red">id:{{ fullResult.key_frame_detection.frame_idx }} {{ getMainObject() }} {{
                   getMainConfidence().toFixed(2) }}</span>
               </p>
@@ -115,12 +121,14 @@
           </div>
         </div>
 
-        <div class="panel-header header-accuracy">偏差检测准确率</div>
-
-        <div class="panel-right-bottom">
+        <div class="panel-right-bottom" :class="{ 'loading-overlay': isBiasDetecting }">
           <div class="panel-content">
-            <div class="metric-box">
-              <template v-if="showAccuracy && fullResult.overall_accuracy !== undefined">
+            <div class="accuracy-label">偏差检测准确率：</div>
+            <div class="metric-box" :class="{ 'loading-text': isBiasDetecting }">
+              <template v-if="isBiasDetecting">
+                计算中
+              </template>
+              <template v-else-if="showAccuracy && fullResult.overall_accuracy !== undefined">
                 {{ (fullResult.overall_accuracy * 100).toFixed(2) + '%' }}
               </template>
               <template v-else>
@@ -131,8 +139,9 @@
         </div>
 
         <div class="action-buttons-right">
-          <button class="btn-export-result" @click="exportResults" :disabled="!taskId || isLoading">
-            <span>结果导出</span>
+          <button class="btn-export-result" @click="exportResults" :disabled="!taskId || isLoading || isExporting">
+            <b-spinner small v-if="isExporting"></b-spinner>
+            <span>{{ isExporting ? '导出中...' : '结果导出' }}</span>
           </button>
         </div>
 
@@ -210,7 +219,10 @@ export default {
       showAccuracy: false,
       isBiasTyping: false,
       labelsToHighlight: [],
-      typingSpeed: 60
+      typingSpeed: 60,
+      // 新增：按钮加载状态
+      isBiasDetecting: false,
+      isExporting: false
     };
   },
   computed: {
@@ -580,6 +592,25 @@ export default {
       });
     },
     /**
+     * 从偏差检测结果文本中提取"目标："之后的内容作为 deviceType
+     * @param {string} description - 偏差检测结果文本，例如 "场景：...\n目标：飞机\n行为：..."
+     * @returns {string} 提取的目标内容，如果未找到则返回 "N/A"
+     */
+    extractDeviceTypeFromDescription(description) {
+      if (!description || typeof description !== 'string') {
+        return "N/A";
+      }
+      const lines = description.split(/\r?\n/);
+      for (const line of lines) {
+        // 匹配"目标："或"目标:"之后的内容（支持全角和半角冒号）
+        const match = line.match(/^目标[：:]\s*(.+)$/);
+        if (match && match[1]) {
+          return match[1].trim();
+        }
+      }
+      return "N/A";
+    },
+    /**
      * 逻辑点 3：拆分总结和详情
      */
     prepareDescriptionDisplay(fullData) {
@@ -670,25 +701,29 @@ export default {
     // 移除了 startSummaryTyping 和 resetSummaryTyping
     handleStartBiasDetection() {
       if (!this.canStartBiasDetection) return;
+      // 设置加载状态
+      this.isBiasDetecting = true;
       // 清理之前的定时器
       this.clearBiasTimeouts();
-      // 立即显示偏差检测结果区域（详情），但不显示准确率
-      this.showBiasDetails = true;
+      // 初始状态：不显示偏差检测结果和准确率
+      this.showBiasDetails = false;
       this.showAccuracy = false;
       this.resetBiasTyping(); // 重置打字状态
 
-      // 等待2秒后开始逐字显示偏差检测结果的详情行
+      // 等待30秒后显示偏差检测结果并开始逐字显示
       this.biasTypingTimeout = setTimeout(() => {
+        this.showBiasDetails = true;
         this.isBiasTyping = true;
         this.startBiasTypingSequence(0);
         this.biasTypingTimeout = null;
-      }, 2000);
+      }, 30000); // 30秒 = 30000毫秒
 
-      // 再等待5秒后（总共7秒）显示准确率
+      // 再等待5分钟后显示准确率，并清除加载状态
       this.accuracyTimeout = setTimeout(() => {
         this.showAccuracy = true;
+        this.isBiasDetecting = false; // 清除加载状态
         this.accuracyTimeout = null;
-      }, 7000);
+      }, 300000); // 5分钟 = 300000毫秒
     },
     clearBiasTimeouts() {
       if (this.biasTypingTimeout) {
@@ -713,6 +748,10 @@ export default {
       if (index >= this.biasDetailEntries.length) {
         this.isBiasTyping = false;
         this.biasTypingInterval = null;
+        // 如果准确率已经显示，确保清除加载状态
+        if (this.showAccuracy) {
+          this.isBiasDetecting = false;
+        }
         return;
       }
       const entry = this.biasDetailEntries[index];
@@ -740,7 +779,6 @@ export default {
             this.selectedVideo = matchedVideo; // 更新为从列表获取的完整对象
           }
         }
-
       } catch (error) {
         console.error("获取视频列表失败", error);
         this.videoList = [];
@@ -748,6 +786,10 @@ export default {
     },
     selectVideo(video) {
       this.selectedVideo = video;
+
+      // 切换视频时立即清空 localStorage
+      localStorage.clear();
+      console.log("选择新视频，LocalStorage 已清空。");
 
       // 切换视频时清空处理中视频和结果面板
       this.resetResultState();
@@ -830,7 +872,8 @@ export default {
         this.fullResult.overall_accuracy = fullData.current_accuracy;
         this.fullResult.low_similarity_aspects = fullData.low_similarity_aspects;
         this.fullResult.video_path = fullData.video_path;
-        this.fullResult.deviceType = fullData.deviceType;
+        // 【修改】：从偏差检测结果文本中提取 deviceType
+        this.fullResult.deviceType = this.extractDeviceTypeFromDescription(fullData.video_description);
         this.fullResult.key_frame_path = fullData.key_frame_path;
         this.fullResult.key_frame_detection = fullData.key_frame_detection;
 
@@ -884,7 +927,8 @@ export default {
           const module1Res = {
             ...fullData, // 复制所有后端返回的字段
 
-            deviceType: fullData.deviceType || "N/A",
+            // 【修改】：从偏差检测结果文本中提取 deviceType（"目标："之后的内容）
+            deviceType: this.fullResult.deviceType || this.extractDeviceTypeFromDescription(fullData.video_description) || "N/A",
 
             // 使用处理后的完整 URL 覆盖原有的路径字段
             key_frame_path: fullImagePathURL, // 保持与后端字段一致
@@ -937,6 +981,7 @@ export default {
       }
 
       console.log(`正在请求导出任务: ${this.taskId}`);
+      this.isExporting = true;
 
       try {
         const response = await axios.get(`${API_BASE_URL}/export_results/${this.taskId}`, {
@@ -979,6 +1024,8 @@ export default {
         } else {
           alert("导出结果失败，请查看控制台日志。");
         }
+      } finally {
+        this.isExporting = false;
       }
     }
   }
@@ -987,6 +1034,17 @@ export default {
 
 <style lang="scss" scoped>
 /* 重构样式 - 清理无效规则，保持页面外观不变 */
+/* 字体定义 */
+@font-face {
+  font-family: 'DOUYUFont';
+  src: url('~@/assets/douyuFont-2.otf') format('opentype');
+}
+
+@font-face {
+  font-family: 'DINAlternate-Bold';
+  src: url('~@/assets/douyuFont-2.otf') format('opentype');
+  font-weight: 700;
+}
 
 /* 1. 全局和背景 */
 .section {
@@ -1023,22 +1081,38 @@ export default {
   padding: 0 20px;
   height: 60px;
 }
+
 .newTitle {
-  font-size: calc(1.2vw + 1rem);
-  color: #00e0ff;
-  font-weight: bolder;
-  letter-spacing: 0.1em;
-  text-shadow: 0 0 10px #00e0ff, 0 0 15px #00e0ff;
+  /* 多模态信息认知偏差检测模型 */
+  width: 524px;
+  height: 40px;
+  font-family: 'DOUYUFont', sans-serif;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 31px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(191, 245, 255, 1) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+  line-height: 40px;
 }
+
 .header-btn {
+  /* 首页 */
+  font-family: 'DOUYUFont', sans-serif;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 14px;
+  font-style: normal;
   background: none;
   border: none;
   cursor: pointer;
   width: 120px;
   height: 40px;
-  color: #fff;
-  font-size: 0.9rem;
-  font-weight: bold;
   background-repeat: no-repeat;
   background-size: 100% 100%;
   margin: 0 5px;
@@ -1073,9 +1147,9 @@ export default {
   height: calc(100vh - 80px);
   padding: 0 !important;
   /* 关键修改：强制内容靠上对齐，不留弹性空隙 */
-  justify-content: flex-start !important; 
+  justify-content: flex-start !important;
   /* 关键修改：给子元素之间设置固定的死间距 */
-  gap: 10px; 
+  gap: 10px;
 }
 
 /* 面板通用样式 */
@@ -1096,12 +1170,14 @@ export default {
 
 .panel-right-top {
   /* 关键修改：不要写 height: 55%，改用 flex 自动填充剩余空间 */
-  flex: 1; 
+  flex: 1;
   /* 关键修改：防止内容过多撑爆容器 */
-  min-height: 0; 
+  min-height: 0;
   /* 保持原来的样式 */
   flex-shrink: 0;
   margin-bottom: 0;
+  width: 400px;
+  height: 570px;
 }
 
 .panel-right-bottom {
@@ -1119,17 +1195,35 @@ export default {
 
 /* 面板标题 */
 .panel-header {
-  height: 35px;
+  font-family: 'DOUYUFont', sans-serif;
+  font-weight: 400;
+  font-size: 18px;
+  font-style: normal;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(191, 245, 255, 1) 100%);
+  box-shadow: 3px 3px 2px 0px rgba(0, 255, 255, 0.2);
+  height: 40px;
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   color: #fff;
-  font-size: 1rem;
-  font-weight: bold;
   margin-bottom: 10px;
   display: flex;
   justify-content: center;
   align-items: center;
+  text-align: center;
+}
+
+.panel-header.header-results {
+  width: 400px;
+  height: 50px;
+}
+
+/* 选择数据标题框 */
+.header-select-data {
+  width: 398px;
+  height: 40px;
+  border: 1px solid;
+  border-image: linear-gradient(90deg, rgba(6, 142, 255, 1) 0%, rgba(0, 229, 253, 1) 100%) 1;
 }
 
 .header-accuracy {
@@ -1139,11 +1233,16 @@ export default {
 /* 4. 左侧列 */
 .panel-left {
   background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
+  position: absolute;
+  width: 400px;
+  height: 630px;
+  top: 45px;
+  left: 10px;
 }
 
 .server-video-list {
   flex-grow: 1;
-  max-height: calc(100% - 80px);
+  max-height: calc(100% - 10px);
   padding-right: 10px;
 
   &::-webkit-scrollbar {
@@ -1202,17 +1301,22 @@ export default {
 }
 
 .btn-start-detect {
+  /* 开始目标检测 */
+  font-family: 'DOUYUFont', sans-serif;
+  font-weight: 400;
+  font-size: 18px;
+  font-style: normal;
+  width: 250px;
+  height: 100px;
+  top: 940px;
+  left: 135px;
   background: none;
   border: none;
   cursor: pointer;
-  width: 170px;
-  height: 72px;
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   color: #fff;
-  font-size: 1.1rem;
-  font-weight: bold;
   display: inline-flex;
   justify-content: center;
   align-items: center;
@@ -1246,25 +1350,49 @@ export default {
 }
 
 .video-label {
-  width: 200px;
-  height: 35px;
+  width: 260px;
+  height: 40px;
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   color: #fff;
-  font-size: 0.9rem;
-  font-weight: bold;
-  line-height: 35px;
+  font-family: 'DOUYUFont', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  font-style: normal;
+  margin-bottom: 2px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   text-align: center;
-  margin-bottom: 5px;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('~@/assets/images/step1/-s-二级标题.png');
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    z-index: -1;
+  }
+
+  /* 文字渐变效果 */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(191, 245, 255, 1) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .label-processed {
-  font-size: 0.8rem;
+  font-size: 14px;
 }
 
 .video-frame {
-  width: 95%;
+  width: 600px;
   height: 280px;
   background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-repeat: no-repeat;
@@ -1275,10 +1403,34 @@ export default {
   align-items: center;
 }
 
+/* 上面视频外框（原视频） */
+.video-section:first-of-type .video-frame {
+  width: 800px;
+  height: 320px;
+}
+
+/* 下面视频外框（检测结果视频） */
+.video-section:nth-of-type(2) .video-frame {
+  width: 800px;
+  height: 300px;
+}
+
 .video-display {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+}
+
+/* 上面视频显示区域（原视频） */
+.video-section:first-of-type .video-frame .video-display {
+  width: 650px;
+  height: 280px;
+}
+
+/* 下面视频展示区域（检测结果视频） */
+.video-section:nth-of-type(2) .video-frame .video-display {
+  width: 660px;
+  height: 260px;
 }
 
 .placeholder-text {
@@ -1288,30 +1440,28 @@ export default {
 
 /* 中间总结框样式 */
 .summary-box-middle {
-  width: 95%;
-  min-height: 90px;
-  max-height: 120px;
-  height: auto;
+  width: 600px;
+  height: 70px;
   background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  padding: 15px;
+  padding: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 5px;
+  margin-top: 0;
   flex-shrink: 0;
 }
 
 .summary-content {
   width: 100%;
   height: 100%;
-  font-size: 0.9rem;
+  font-size: 1.2rem;
   line-height: 1.6;
   color: #eee;
   white-space: pre-wrap;
   overflow-y: auto;
-  text-align: left;
+  text-align: center;
   padding: 5px;
 
   &::-webkit-scrollbar {
@@ -1335,13 +1485,14 @@ export default {
 
 .bias-button-container {
   /* 修改这里：原为 height: 40px; 太小了，改为 auto 或更大 */
-  min-height: 70px; 
+  min-height: 70px;
   height: auto;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 5px;
-  padding: 8px 0; /* 增加一点内边距 */
+  padding: 8px 0;
+  /* 增加一点内边距 */
 }
 
 .description-box {
@@ -1374,26 +1525,28 @@ export default {
   background: none;
   border: none;
   cursor: pointer;
-/* --- 修改 START: 调整大小 --- */
-  width: auto;            /* 宽度自适应 */
-  min-width: 150px;       /* 最小宽度 */
-  max-width: 250px;       /* 最大宽度 */
-  height: 50px;           /* 按照 GroupNegotiation 的高度 */
+  width: 250px;
+  height: 100px;
   background-image: url('~@/assets/images/step1/偏差检测按键.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   color: #fff;
-  font-size: 0.9rem;
-  font-weight: bold;
+  font-family: 'DOUYUFont', sans-serif;
+  font-size: 23px;
+  font-weight: 400;
+  font-style: normal;
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  position: relative;
-  top: -15px;
+  gap: 8px;
 
   &:disabled {
     filter: grayscale(80%);
     cursor: not-allowed;
+  }
+
+  span {
+    margin-left: 0;
   }
 }
 
@@ -1421,33 +1574,63 @@ export default {
 /* 右下方面板 */
 .panel-right-bottom {
   background-image: url('~@/assets/images/step4/准确率框.png');
+  width: 400px;
+  height: 90px;
+}
+
+.panel-right-bottom .panel-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-direction: row;
+  padding: 10px 20px;
+}
+
+.accuracy-label {
+  font-family: 'DOUYUFont', sans-serif;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 17px;
+  font-style: normal;
+  text-align: left;
+  flex-shrink: 0;
 }
 
 .metric-box {
-  flex-grow: 1;
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
-  font-size: 2rem;
-  font-weight: bold;
-  color: #00e5ff;
-  text-shadow: 0 0 10px #00e5ff;
+  font-family: 'DINAlternate-Bold', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  font-style: normal;
+  color: #FFFFFF;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(191, 245, 255, 1) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-align: right;
   padding: 0;
-  line-height: 1;
+  line-height: 1.2;
+  flex-shrink: 0;
 }
 
 /* 导出按钮的容器 */
 .action-buttons-right {
   flex-shrink: 0;
-  text-align: right; /* 或者是 center，看你喜好 */
-  
+  text-align: right;
+  /* 或者是 center，看你喜好 */
+
   /* 【核心修复】：绝对不要用 margin-top: auto */
   /* margin-top: auto;  <-- 删掉这行 */
-  display: flex;             /* 使用 Flex 布局 */
-  justify-content: center;   /* 水平居中 */
-  align-items: center;       /* 垂直居中 */
+  display: flex;
+  /* 使用 Flex 布局 */
+  justify-content: center;
+  /* 水平居中 */
+  align-items: center;
+  /* 垂直居中 */
   /* 改为固定的、紧凑的间距 */
-  margin-top: 5px !important; 
+  margin-top: 5px !important;
   padding-top: 0 !important;
   padding-bottom: 10px;
 }
@@ -1456,21 +1639,28 @@ export default {
   background: none;
   border: none;
   cursor: pointer;
-  width: 160px;
-  height: 50px;          /* 调整高度 */
+  width: 250px;
+  height: 100px;
   background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  color: #333;
-  font-size: 1.1rem;
-  font-weight: bold;
+  color: #fff;
+  font-family: 'DOUYUFont', sans-serif;
+  font-size: 23px;
+  font-weight: 400;
+  font-style: normal;
   display: inline-flex;
   justify-content: center;
   align-items: center;
+  gap: 8px;
 
   &:disabled {
     filter: grayscale(80%);
     cursor: not-allowed;
+  }
+
+  span {
+    margin-left: 0;
   }
 }
 
@@ -1499,6 +1689,7 @@ export default {
 }
 
 @media (max-width: 1200px) {
+
   .left-column,
   .middle-column,
   .right-column {
@@ -1551,5 +1742,18 @@ export default {
   background-color: rgba(255, 77, 77, 0.1);
   padding: 1px 3px;
   border-radius: 3px;
+}
+
+/* 加载状态样式 */
+.loading-overlay {
+  position: relative;
+  filter: grayscale(80%) brightness(0.6);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.loading-text {
+  color: #aaa !important;
+  font-style: italic;
 }
 </style>
