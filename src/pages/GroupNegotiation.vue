@@ -6,7 +6,7 @@
     <b-row class="header-bar align-item-s-center no-gutters">
       <b-col cols="3" class="text-left">
         <button class="header-btn btn-home" @click="navigateHome">首页</button>
-        <button class="header-btn btn-back" @click="navigateBack">返回</button>
+        <button class="header-btn btn-back" @click="navigateBack">上个页面</button>
       </b-col>
       <b-col cols="6" class="text-center">
         <!-- <h1 class="header-title">群体协商认知偏差检测模型</h1> -->
@@ -17,7 +17,7 @@
     </b-row>
 
     <!-- 主要内容区域 -->
-    <div class="row content-row">
+    <div class="content-row">
       <!-- 左侧视频和按钮区域 -->
       <div class="design-left-column">
         <div class="design-module video-module">
@@ -42,7 +42,7 @@
         </div>
 
         <div class="design-module text-module-left fixed-left-text">
-          <div class="panel-header">属性信息</div>
+          <div class="panel-header">先验知识认知传播信息</div>
           <div class="design-module-content text-scrollable">
             <div class="description-box attribute-content">
               <ul class="info-list" v-if="attributeInfoList && attributeInfoList.length > 0">
@@ -61,27 +61,27 @@
 
         <div class="button-container">
           <button @click="startNegotiation" class="btn-start-detect" :disabled="!isApiLoaded || isLoading">
-            <span>{{ isLoading ? '协商中...' : '群体协商' }}</span>
+            <span>{{ isLoading ? '协商中...' : '开始群体协商' }}</span>
           </button>
         </div>
       </div>
 
       <!-- 中间：智能体推理 -->
-      <div class="col-md-5 middle-column">
+      <div class="middle-column">
         <div class="panel-left h-100">
           <div class="panel-content">
             <!-- 一轮推理 -->
-            <div class="panel-header mb-3">一轮推理</div>
+            <div class="panel-header mb-3">一轮群体协商</div>
             
             <div class="reasoning-section">
               <!-- 智能体A推理结果 -->
               <div class="agent-box">
                 <div class="agent-header">
-                  <img class="agent-avatar" :src="require('@/assets/images/step3/agent.png')" alt="Agent" />
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/agent.svg')" alt="Agent" />
                   <div class="agent-label">智能体A</div>
                 </div>
                 <div class="agent-content">
-                  <div v-if="isLoadingRound1" class="panel-overlay">加载中...</div>
+                  <div v-if="isLoadingRound1" class="panel-overlay">计算中...</div>
                   <p v-if="typeof agentARound1Result === 'object' && agentARound1Result !== null" class="agent-result">
                     <span class="result-line">推理型号：{{ agentARound1Result.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentARound1Result.reason || '***' }}</span>
@@ -93,11 +93,11 @@
               <!-- 智能体B推理结果 -->
               <div class="agent-box">
                 <div class="agent-header">
-                  <img class="agent-avatar" :src="require('@/assets/images/step3/agent.png')" alt="Agent" />
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/agent.svg')" alt="Agent" />
                   <div class="agent-label">智能体B</div>
                 </div>
                 <div class="agent-content">
-                  <div v-if="isLoadingRound1" class="panel-overlay">加载中...</div>
+                  <div v-if="isLoadingRound1" class="panel-overlay">计算中...</div>
                   <p v-if="typeof agentBRound1Result === 'object' && agentBRound1Result !== null" class="agent-result">
                     <span class="result-line">推理型号：{{ agentBRound1Result.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentBRound1Result.reason || '***' }}</span>
@@ -109,11 +109,11 @@
               <!-- 智能体C推理结果 -->
               <div class="agent-box">
                 <div class="agent-header">
-                  <img class="agent-avatar" :src="require('@/assets/images/step3/agent.png')" alt="Agent" />
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/agent.svg')" alt="Agent" />
                   <div class="agent-label">智能体C</div>
                 </div>
                 <div class="agent-content">
-                  <div v-if="isLoadingRound1" class="panel-overlay">加载中...</div>
+                  <div v-if="isLoadingRound1" class="panel-overlay">计算中...</div>
                   <p v-if="typeof agentCRound1Result === 'object' && agentCRound1Result !== null" class="agent-result">
                     <span class="result-line">推理型号：{{ agentCRound1Result.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentCRound1Result.reason || '***' }}</span>
@@ -124,19 +124,19 @@
             </div>
 
             <!-- 二轮推理 -->
-            <div class="panel-header my-3">二轮推理</div>
+            <div class="panel-header my-3">二轮群体协商</div>
             
             <div class="reasoning-section">
               <!-- 智能体A-B协商 -->
               <div class="agent-box negotiation">
                 <div class="agent-header">
-                  <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" />
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/AB.svg')" alt="Agents" />
                   <!-- <div class="negotiation-sign">⇄</div>
                   <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" /> -->
-                  <div class="agent-label">A&B</div>
+                  <div class="agent-label">智能体A&智能体B</div>
                 </div>
                 <div class="agent-content">
-                  <div v-if="isLoadingRound2" class="panel-overlay">加载中...</div>
+                  <div v-if="isLoadingRound2" class="panel-overlay">计算中...</div>
                   <p v-if="typeof agentABNegotiation === 'object' && agentABNegotiation !== null" class="agent-result">
                     <span class="result-line">推理型号：{{ agentABNegotiation.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentABNegotiation.reason || '***' }}</span>
@@ -148,13 +148,13 @@
               <!-- 智能体B-C协商 -->
               <div class="agent-box negotiation">
                 <div class="agent-header">
-                  <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" />
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/BC.svg')" alt="Agents" />
                   <!-- <div class="negotiation-sign">⇄</div>
                   <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" /> -->
-                  <div class="agent-label">B&C</div>
+                  <div class="agent-label">智能体B&智能体C</div>
                 </div>
                 <div class="agent-content">
-                  <div v-if="isLoadingRound2" class="panel-overlay">加载中...</div>
+                  <div v-if="isLoadingRound2" class="panel-overlay">计算中...</div>
                   <p v-if="typeof agentBCNegotiation === 'object' && agentBCNegotiation !== null" class="agent-result">
                     <span class="result-line">推理型号：{{ agentBCNegotiation.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentBCNegotiation.reason || '***' }}</span>
@@ -166,13 +166,13 @@
               <!-- 智能体C-A协商 -->
               <div class="agent-box negotiation">
                 <div class="agent-header">
-                  <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" />
+                  <img class="agent-avatar" :src="require('@/assets/images/step3/CA.svg')" alt="Agents" />
                   <!-- <div class="negotiation-sign">⇄</div>
                   <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" /> -->
-                  <div class="agent-label">C&A</div>
+                  <div class="agent-label">智能体C&智能体A</div>
                 </div>
                 <div class="agent-content">
-                  <div v-if="isLoadingRound2" class="panel-overlay">加载中...</div>
+                  <div v-if="isLoadingRound2" class="panel-overlay">计算中...</div>
                   <p v-if="typeof agentCANegotiation === 'object' && agentCANegotiation !== null" class="agent-result">
                     <span class="result-line">推理型号：{{ agentCANegotiation.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentCANegotiation.reason || '***' }}</span>
@@ -186,20 +186,22 @@
       </div>
 
       <!-- 右侧：协商结果 -->
-      <div class="col-md-3 right-column">
+      <div class="right-column">
         <div class="panel-right-bias-button">
           <button
             class="btn-bias-detect"
             @click="handleBiasDetect"
             :disabled="isRightLoadingResults || isRightLoadingAccuracy || isLoadingRound1 || isLoadingRound2"
           >
-            偏差检测
+            群体协商偏差检测
           </button>
         </div>
         <div class="panel-right-top">
           <div class="panel-content">
-            <div class="panel-header header-results" style="margin-top: 0px;">群体协商认知偏差检测结果</div>
-            <div v-if="isRightLoadingResults" class="panel-overlay">加载中...</div>
+            <div class="panel-header header-results">
+              <span>群体协商认知偏差检测结果</span>
+            </div>
+            <div v-if="isRightLoadingResults" class="panel-overlay">计算中...</div>
             <template v-else>
               <div class="result-section result-section-main">
                 <div class="section-header">共识摘要：</div>
@@ -220,7 +222,7 @@
 
         <div class="panel-right-bottom" style="margin-top: -10px;">
           <div class="panel-content">
-            <div v-if="isRightLoadingResults" class="panel-overlay">加载中...</div>
+            <div v-if="isRightLoadingResults" class="panel-overlay">计算中...</div>
             <template v-else>
               <div class="final-result-section">
                 <div class="final-result-title">协商后详细型号</div>
@@ -235,7 +237,7 @@
         <!-- 偏差检测准确率面板 -->
         <div class="panel-right-accuracy">
           <template v-if="isRightLoadingAccuracy">
-            <div class="loading-spinner">加载中...</div>
+            <div class="loading-spinner">计算中...</div>
           </template>
           <template v-else>
             <div class="accuracy-content">
@@ -432,7 +434,7 @@ export default {
             if (item.label.includes('形状')) predictData.shape = item.value;
             if (item.label.includes('尺寸')) predictData.size = item.value;
             if (item.label.includes('动力')) predictData.power = item.value;
-            if (item.label.includes('场景')) predictData.scene = item.value;
+            if (item.label.includes('轮廓')) predictData.outline = item.value;
           });
 
           // 设置属性信息，去除括号及其内容
@@ -443,7 +445,7 @@ export default {
             `形状信息：${predictData.shape ? predictData.shape.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
             `尺寸信息：${predictData.size ? predictData.size.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
             `动力信息：${predictData.power ? predictData.power.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
-            `场景信息：${predictData.scene ? predictData.scene.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+            `轮廓信息：${predictData.outline ? predictData.outline.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
           ];
           
           // 设置其他需要的变量
@@ -512,7 +514,7 @@ export default {
             `形状信息：${predictData.shape || '未知'}`,
             `尺寸信息：${predictData.size || '未知'}`,
             `动力信息：${predictData.power || '未知'}`,
-            `场景信息：${predictData.scene || '未知'}`,
+            `轮廓信息：${predictData.outline || '未知'}`,
           ];
           this.color = predictData.color;
           this.kind = predictData.kind;
@@ -736,7 +738,7 @@ export default {
   width: 100%;
   min-height: 100vh;
   color: #fff;
-  font-family: "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  font-family: "DingTalk-JinBuTi";
   z-index: 1;
   padding: 10px;
   margin: 0;
@@ -772,6 +774,7 @@ export default {
 }
 
 .header-title {
+  font-family: "DingTalk-JinBuTi";
   font-size: calc(1.2vw + 0.8rem);
   color: #00e5ff;
   font-weight: bolder;
@@ -787,11 +790,17 @@ export default {
   width: 120px;
   height: 40px;
   color: #fff;
-  font-size: 0.9rem;
-  font-weight: bold;
+  font-size: 14px;
+  font-weight: 400;
   background-repeat: no-repeat;
   background-size: 100% 100%;
   margin: 0 5px;
+  width: 110px;
+  height: 40px;
+  font-family: 'DOUYUFont';
+  font-style: normal;
+  text-decoration: none;
+  text-align: center;
 }
 
 .btn-home {
@@ -817,10 +826,13 @@ export default {
   flex-grow: 1;
   width: 100%;
   max-width: 100%;
-  margin: 0;
-  margin-left: 50px;
+  margin: 0 !important;
+  padding: 0 15px;
+  box-sizing: border-box;
   position: relative;
   z-index: 2;
+  display: flex;
+  flex-wrap: nowrap;
 }
 
 /* 三列通用高度 */
@@ -836,20 +848,26 @@ export default {
 }
 
 .design-left-column {
-  width: 25%;
+  width: 25% !important;
   gap: 15px;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .middle-column {
-  width: 45%;
+  width: 45% !important;
   gap: 20px;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .right-column {
-  width: 30%;
+  width: 30% !important;
   gap: 5px;
   position: relative;
   z-index: 2;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .panel-content {
@@ -870,10 +888,10 @@ export default {
   width: 100%;
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  padding: 20px 30px 30px 30px;
+  // padding: 20px 30px 30px 30px;
   display: flex;
   flex-direction: column;
- background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
+//  background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
 }
 
 
@@ -885,73 +903,91 @@ export default {
 }
 
 .panel-right-top {
-  height: 55%;
   flex-shrink: 0;
-  width: 100%;
+  background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
+  margin-bottom: 15px;
+  padding: 0;
   display: flex;
   flex-direction: column;
+  min-height: 420px;
+  width: 100%;
+  margin-top: 20px;
   position: relative;
   z-index: 1;
-  margin-bottom: 20px;
 }
 
 .panel-right-top .panel-content {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  padding: 8px 12px 12px 12px;
+  margin: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
-/* 右侧顶部面板内：共识摘要与分歧点按3:2比例分配可用高度 */
+/* 右侧顶部面板内：共识摘要与分歧点高度一致 */
 .panel-right-top .result-section {
   display: flex;
   flex-direction: column;
-  /* 作为基线占位，具体比例在下面两个选择器中定义 */
+  /* 两个区域使用相同的flex值，确保高度一致 */
   flex: 1 1 0;
   margin-bottom: 10px;
+  align-items: stretch;
+  /* 确保两个区域高度完全一致 */
+  min-height: 0;
 }
 
 .panel-right-top .result-section-main {
-  min-height: 220px;
   background-color: rgba(0,0,0,0.25);
   border-radius: 8px;
-  padding-top: 20px;
-  padding-bottom: 10px;
-  margin-bottom: 10px;
+  padding-top: 15px;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
   box-shadow: 0 2px 8px rgba(0,229,255,0.08);
 }
 
-
-.panel-right-top .result-section:first-child {
-  flex: 3 1 0;
-}
-
 .panel-right-top .result-section:last-child {
-  flex: 2 1 0;
   margin-bottom: 0;
 }
 
 .panel-right-top .section-content {
-  /* 让内容区域自适应填充并可滚动 */
+  /* 让内容区域高度一致，自适应填充并可滚动 */
   flex: 1 1 0;
   min-height: 0;
   max-height: none;
   overflow-y: auto;
+  /* 确保两个内容框高度完全一致 */
+  display: flex;
+  flex-direction: column;
+  /* 确保内容不超出 */
+  overflow: hidden;
+}
+
+.panel-right-top .section-content .result-text {
+  overflow-y: auto;
+  max-height: 100%;
 }
 
 .panel-right-bottom {
-  flex-grow: 1;
-  height: 100%;
+  flex-grow: 0;
+  flex-shrink: 0;
+  height: auto;
+  min-height: 100px;
+  max-height: 140px;
   width: 100%;
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  padding: 20px 30px 30px 30px;
+  padding: 15px 25px 25px 25px;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1;
-  gap: 15px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 15px;
 }
 
 .panel-content {
@@ -965,56 +1001,91 @@ export default {
 
 /* 面板标题 */
 .panel-header {
-  padding-left: 50px !important;
-  justify-content: flex-start !important;
-}
-.panel-header, .design-module-label {
-  height: 35px;
+  width: 94px;
+  height: 24px;
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   flex-shrink: 0;
-
   color: #fff;
-  font-size: 1rem;
-  font-weight: bold;
-  padding-left: 0;
-  margin-bottom: 5px;
-
+  font-family: "DOUYUFont";
+  font-weight: 400;
+  font-size: 14px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: left;
+  box-shadow: 3px 3px 2px 0px rgba(0, 255, 255, 0.2);
+  padding: 0 20px 0 15px;
+  margin: 0;
+  margin-bottom: 0;
   display: flex;
   justify-content: flex-start;
   align-items: center;
+  box-sizing: border-box;
 }
 
-/* 中间列的标题居中显示 */
-.middle-column .panel-left .panel-header {
-  justify-content: center !important;
-  padding-left: 0 !important;
+.panel-header span {
+  transform: translateY(0);
 }
 
-/* 右侧标题特殊样式 */
 .header-results {
-  margin-bottom: 5px !important;
-  margin-top: -20px;
+  font-size: 14px !important;
+  margin-bottom: 8px !important;
+  padding-left: 15px !important;
+  padding-right: 20px !important;
+  justify-content: flex-start !important;
 }
 
-/* 调整左侧两个标题的垂直位置，让它们在背景图中间 */
-.design-module.video-module .panel-header,
-.design-module.text-module-left .panel-header {
-  margin-top: -8px;
-  margin-bottom: 5px;
+/* 中间列的标题左对齐显示 */
+.middle-column .panel-left .panel-header {
+  justify-content: flex-start !important;
+  padding-left: 15px !important;
 }
 
-/* 调整右侧标题的垂直位置 */
-.panel-right-top .panel-header.header-results {
-  margin-top: -25px;
+.design-module-label {
+  width: 94px;
+  height: 24px;
+  background-image: url('~@/assets/images/step1/-s-二级标题.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  flex-shrink: 0;
+  color: #fff;
+  font-family: "DOUYUFont";
+  font-weight: 400;
+  font-size: 14px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: left;
+  box-shadow: 3px 3px 2px 0px rgba(0, 255, 255, 0.2);
+  padding: 0 20px;
+  margin: 0;
+  margin-bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 5px;
+  box-sizing: border-box;
 }
 
 /* 设计模块特定样式 */
 .design-module {
   position: relative;
-  padding-top: 15px;
+  padding-top: 0;
   border-radius: 5px;
+}
+
+/* 设计模块内的标题需要特殊处理，因为没有 span 包裹 */
+.design-module .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  line-height: 17px;
+  height: 24px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding-left: 15px !important;
+  padding-right: 20px;
 }
 
 .design-module-label {
@@ -1116,24 +1187,30 @@ export default {
   justify-content: center;
   align-items: center;
   flex-shrink: 0;
+  gap: 15px;
 }
 
 .btn-start-detect{
   background: none;
   border: none;
   cursor: pointer;
-  width: 170px;
-  height: 72px;
+  width: 250px;
+  height: 100px;
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
 
   color: #fff;
-  font-size: 1.1rem;
-  font-weight: bold;
+  font-family: "DOUYUFont";
+  font-weight: 400;
+  font-size: 18px;
+  font-style: normal;
+  text-decoration: none;
   display: inline-flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
+  padding-right: 20px;
+  line-height: 1;
 
   &:disabled {
     filter: grayscale(80%);
@@ -1142,6 +1219,7 @@ export default {
 
   span {
     margin-left: 8px;
+    transform: translateY(8px);
   }
 }
 
@@ -1162,6 +1240,7 @@ export default {
 
 .placeholder-text {
   color: #88a;
+  font-family: "DingTalk-JinBuTi";
   font-size: 1rem;
   text-align: center;
   padding: 20px;
@@ -1173,11 +1252,13 @@ export default {
   line-height: 1.6;
   margin: 0;
   padding: 0;
+  font-family: "DingTalk-JinBuTi";
   font-size: 0.9rem;
 }
 
 .text-muted {
   color: #888888;
+  font-family: "DingTalk-JinBuTi";
   font-style: italic;
 }
 
@@ -1225,6 +1306,7 @@ export default {
   margin: 0;
   line-height: 1.6;
   color: #ffffff;
+  font-family: "DingTalk-JinBuTi";
   font-size: 0.95rem;
   padding-left: 0;
   padding-right: 0;
@@ -1289,17 +1371,20 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
+  font-family: "DingTalk-JinBuTi";
   font-weight: bold;
   font-size: 1rem;
 }
 
 .negotiation-sign {
   color: #ff6b6b;
+  font-family: "DingTalk-JinBuTi";
   font-size: 1.2rem;
 }
 
 .agent-label {
   color: #00e5ff;
+  font-family: "DingTalk-JinBuTi";
   font-weight: bold;
   font-size: 0.9rem;
 }
@@ -1313,6 +1398,7 @@ export default {
 }
 
 .agent-result {
+  font-family: "DingTalk-JinBuTi";
   font-size: 0.85rem;
   line-height: 1.5;
   margin: 0;
@@ -1347,16 +1433,16 @@ export default {
 .panel-right-accuracy {
   flex-shrink: 0;
   width: 100%;
-  background-image: url('~@/assets/images/step1/-s-弹窗-偏差检测准确率.png');
+  background-image: url('~@/assets/images/step5/底部多主体和不一致的背景.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  margin-bottom: 20px;
+  margin-bottom: 0;
   padding: 20px 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100px;
-  margin-top: -20px;
+  margin-top: 8px;
 }
 
 .result-section {
@@ -1365,22 +1451,29 @@ export default {
 
 .section-header {
   color: #00e5ff;
+  font-family: "DingTalk-JinBuTi";
   font-weight: bold;
   font-size: 0.9rem;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  /* 确保标题在result-section中垂直居中 */
+  height: auto;
 }
 
 .section-content {
   background-color: rgba(0, 0, 0, 0.3);
   border: 1px solid #00e5ff;
   border-radius: 5px;
-  padding: 15px;
-  min-height: 120px;
-  max-height: 125px;
+  padding: 10px;
+  min-height: 0;
   overflow-y: auto;
 }
 
 .result-text {
+  font-family: "DingTalk-JinBuTi";
   font-size: 0.85rem;
   line-height: 1.5;
   margin: 0;
@@ -1394,37 +1487,44 @@ export default {
 .final-result-section {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  flex-grow: 1;
+  gap: 10px;
+  flex-grow: 0;
   min-height: 0;
 }
 
 .final-result-title {
-  color: #00e5ff;
-  font-size: 0.9rem;
-  text-align: center;
+  color: #4ED8FF;
+  font-family: 'DOUYUFont';
+  font-weight: 400;
+  font-size: 16px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: left;
   margin: 0;
+  margin-bottom: 0px;
   line-height: 1.4;
 }
 
 .final-model-display {
-  background-color: rgba(0, 0, 0, 0.5);
-  border: 2px solid #00e5ff;
-  border-radius: 8px;
-  padding: 20px 15px;
+  // background-color: rgba(0, 0, 0, 0.5);
+  // border: 2px solid #00e5ff;
+  // border-radius: 8px;
+  padding: 0px;
   text-align: center;
-  margin: 10px 0;
+  margin: 0;
 }
 
 .final-model-text {
-  color: #00e5ff;
-  font-size: 1.2rem;
-  font-weight: bold;
+  color: #fff;
+  font-family: "DingTalk-JinBuTi";
+  font-size: 20px;
+  font-weight: 400;
   margin: 0;
-  text-shadow: 0 0 5px #00e5ff;
+  // text-shadow: 0 0 5px #00e5ff;
 }
 
 .metric-box {
+  font-family: "DingTalk-JinBuTi";
   font-size: 2.5rem;
   font-weight: bold;
   color: #00e5ff;
@@ -1446,10 +1546,10 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 10px 0;
+  padding: 5px 0;
   min-height: 70px;
-  background: none !important;
-  background-image: none !important;
+  background: none;
+  margin-top: 8px;
 }
 
 /* 新增：右侧偏差检测按钮区域与样式（与左下角按钮尺寸风格一致） */
@@ -1459,31 +1559,35 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 8px 0 12px 0;
-  min-height: 70px;
-  background: none !important;
+  padding: 0 0 5px 0;
+  background: none;
+  min-height: 40px;
 }
 
 .btn-bias-detect {
   background: none;
   border: none;
   cursor: pointer;
-  width: auto;
-  min-width: 150px;
-  max-width: 250px;
-  height: 100%;
+  width: 250px;
+  height: 100px;
   background-image: url('~@/assets/images/step3/greenbutton.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
+  background-color: transparent;
   color: #fff;
-  font-size: 1.1rem;
-  font-weight: bold;
+  font-family: 'DOUYUFont';
+  font-weight: 400;
+  font-size: 14px;
+  font-style: normal;
+  text-decoration: none;
   display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 50px;
-  margin-bottom: -50px;
-  margin-top: -60px;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding-right: 20px;
+  padding-bottom: 35px;
+  line-height: 1;
+  margin-bottom: -45px;
+  margin-top: -25px;
 }
 
 .btn-bias-detect:disabled {
@@ -1502,14 +1606,17 @@ export default {
 
 .accuracy-label {
   color: #fff;
-  font-size: 1rem;
-  font-weight: bold;
-  white-space: nowrap;
+  font-family: 'DOUYUFont';
+  font-weight: 400;
+  font-size: 16px;
+  font-style: normal;
+  text-decoration: none;
+  margin-bottom: 12px;
 }
 
 .accuracy-value {
-  font-size: 2.5rem;
-  font-weight: bold;
+  font-size: 34px;
+  font-weight: 700;
   color: #00e5ff;
   text-shadow: 0 0 10px #00e5ff, 0 0 20px rgba(0, 229, 255, 0.5);
   letter-spacing: 0.05em;
@@ -1517,25 +1624,28 @@ export default {
 }
 
 .btn-export-result {
-  background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
+  background-image: url('~@/assets/images/step5/按钮-结果导出.png');
   background-repeat: no-repeat;
+  background-color: transparent;
   background-size: 100% 100%;
   background-position: center;
   border: none;
   cursor: pointer;
-  width: 100%;
-  max-width: 280px;
-  height: 60px;
-  color: #333;
-  font-size: 1.1rem;
-  font-weight: bold;
+  width: 250px;
+  height: 100px;
+  font-family: DOUYUFont;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 23px;
+  font-style: normal;
+  text-decoration: none;
   display: inline-flex;
-  justify-content: center;
-  align-items: center;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding-bottom: 28px;
   transition: all 0.3s ease;
   position: relative;
-  padding: 0;
-  margin-top: -20px;
+  padding-right: 20px;
 }
 
 .btn-export-result:hover:not(:disabled) {
@@ -1564,6 +1674,7 @@ export default {
 
 .loading-spinner {
   color: #00e5ff;
+  font-family: "DingTalk-JinBuTi";
   font-size: 1.2rem;
   text-shadow: 0 0 5px #00e5ff;
 }
@@ -1579,6 +1690,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: "DingTalk-JinBuTi";
   z-index: 5;
 }
 /* 8. 滚动条样式 */

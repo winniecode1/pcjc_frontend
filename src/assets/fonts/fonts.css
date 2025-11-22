@@ -2,3 +2,19 @@
 /*  font-family: 'HelveticaNeue';*/
 /*  src: url('../fonts/HelveticaNeue.ttc');*/
 /*}*/
+
+@font-face {
+  font-family: 'DOUYUFont';
+  src: url('../douyuFont-2.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap; /* 优化字体加载，避免闪烁 */
+}
+
+@font-face {
+  font-family: 'DingTalk-JinBuTi';
+  src: local('DingTalk-JinBuTi'), local('DingTalkJinBuTi');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap; /* 优化字体加载，避免闪烁 */
+}

@@ -6,7 +6,7 @@
     <b-row class="header-bar align-item-s-center no-gutters">
       <b-col cols="3" class="text-left">
         <button class="header-btn btn-home" @click="navigateHome">首页</button>
-        <button class="header-btn btn-back" @click="navigateBack">返回</button>
+        <button class="header-btn btn-back" @click="navigateBack">上个页面</button>
       </b-col>
       <b-col cols="6" class="text-center">
         <!-- <h1 class="header-title">先验知识认知偏差检测模型</h1> -->
@@ -33,14 +33,35 @@
         <div class="design-module text-module-left fixed-left-text">
           <div class="panel-header">多模态认知传播信息</div>
           <div class="design-module-content text-scrollable">
-            <p class="text-content" v-if="VIDEO_DESCRIPTION">{{ VIDEO_DESCRIPTION }}</p>
-            <p class="text-content text-muted" v-else>暂无视频描述信息</p>
+            <!-- 首先显示原有的视频描述信息 -->
+            <p v-if="VIDEO_DESCRIPTION" class="text-content" style="white-space: pre-wrap; margin-bottom: 15px;">{{ VIDEO_DESCRIPTION }}</p>
+            <p v-else class="text-content text-muted" style="margin-bottom: 15px;">暂无视频描述信息</p>
+            
+            <!-- 然后在下面显示细粒度检测的结果：图片、颜色、形状、轮廓 -->
+            <div v-if="multimodalDetectionInfo">
+              <img v-if="multimodalDetectionInfo.image" :src="multimodalDetectionInfo.image" class="multimodal-image" />
+              <div v-if="multimodalDetectionInfo.color" class="multimodal-info-item">
+                <span class="info-label">颜色：</span>
+                <span>{{ multimodalDetectionInfo.color }}</span>
+              </div>
+              <div v-if="multimodalDetectionInfo.shape" class="multimodal-info-item">
+                <span class="info-label">形状：</span>
+                <span>{{ multimodalDetectionInfo.shape }}</span>
+              </div>
+              <div v-if="multimodalDetectionInfo.outline" class="multimodal-info-item">
+                <span class="info-label">轮廓：</span>
+                <span>{{ multimodalDetectionInfo.outline }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="button-container">
-          <button @click="startNegotiation" class="btn-start-detect" :disabled="isLoading">
-            <span>加载先验知识</span>
+          <button @click="startNegotiation" class="btn-start-detect" :disabled="false">
+            <span>开始细粒度检测</span>
+          </button>
+          <button @click="queryPriorKnowledge" class="btn-start-detect" :disabled="isLoading || isQueryingPriorKnowledge">
+            <span>查询先验知识</span>
           </button>
         </div>
       </div>
@@ -53,9 +74,10 @@
           </div>
           <div class="panel-content">
             <div class="graph-container" ref="graphContainer" style="height: calc(100% - 40px);">
-              <div class="graph-title">领域先验知识</div>
+              <!-- <div class="graph-title">领域先验知识</div> -->
               <svg ref="graphSvg" style="width: 100%; height: calc(100% - 30px);"></svg>
-              <div v-if="isLoading" class="panel-loading">加载中...</div>
+              <div v-if="isQueryingPriorKnowledge" class="panel-loading">计算中...</div>
+              <div v-else-if="isLoading" class="panel-loading">加载中...</div>
             </div>
           </div>
         </div>
@@ -64,8 +86,8 @@
       <!-- 右侧标签和预测信息区域 -->
       <div class="col-md-3 right-column">
         <div class="panel-right-bias">
-          <button class="btn-bias-detect" @click="onBiasDetectClick" :disabled="isLoading">
-            偏差检测
+          <button class="btn-bias-detect" @click="onBiasDetectClick" :disabled="false">
+            先验知识偏差检测
           </button>
         </div>
         <!-- 标签信息面板 -->
@@ -94,7 +116,8 @@
             <span>先验知识认知偏差检测结果</span>
           </div>
           <div class="panel-content panel-content-right">
-            <div v-if="isLoading" class="description-box predict-content">加载中...</div>
+            <div v-if="isQueryingPriorKnowledge" class="description-box predict-content">计算中...</div>
+            <div v-else-if="isLoading" class="description-box predict-content">加载中...</div>
             <div v-else class="description-box predict-content">
               <ul class="info-list">
                 <li
@@ -178,7 +201,7 @@ export default {
           fullHeight: window.innerHeight,
           originalImageURL: null,
           tagInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
-          predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
+          predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息", "轮廓信息"],
           propertyColors: {}, // 用于存储属性颜色
           isLoading: false,
           accuracyRate: '—',
@@ -193,21 +216,28 @@ export default {
           videoUrl: null,
           videoMessage: '正在从 LocalStorage 加载视频...',
           // 视频描述信息
-          VIDEO_DESCRIPTION: ''
+          VIDEO_DESCRIPTION: '',
+          // 存储从get_image_base64接口获取的图片信息
+          imageBase64: '',
+          // 查询先验知识状态
+          isQueryingPriorKnowledge: false,
+          // 存储细粒度检测的结果数据
+          listResultData: null,
+          // 细粒度检测的多模态信息（图片、颜色、形状、轮廓），显示在原有信息下面
+          multimodalDetectionInfo: null
         };
       },
   mounted() {
     window.addEventListener('resize', this.handleResize);
     // 页面加载时加载视频
     this.loadVideoFromStorage();
-    // 页面加载时尝试读取模块二缓存（如果存在会调用 renderGraph）
-    this.loadModule2FromStorage();
-    // 如果没有缓存，使用默认节点渲染图谱
-    if (!localStorage.getItem('module2Res')) {
-      this.$nextTick(() => {
-        this.renderGraph();
-      });
-    }
+    // 页面加载时调用get_image_base64接口获取图片信息
+    this.loadImageBase64();
+    // 初始加载时不显示缓存数据，只在用户点击查询按钮后显示
+    // 使用默认节点渲染图谱
+    this.$nextTick(() => {
+      this.renderGraph();
+    });
     // this.downloadJsonData();
   },
   beforeDestroy() {
@@ -491,9 +521,12 @@ export default {
     },
 
     startInfer() {
-      this.isLoading = true;
-      this.isWaitingForAccuracy = true; // 立即标记为等待准确率显示
-      this.accuracyRate = '—'; // 重置准确率，以便显示"计算中..."
+      // 使用独立的变量来控制细粒度检测的加载状态，不影响中间和右侧的显示
+      // this.isLoading = true; // 移除这行，避免触发中间和右侧的加载状态显示
+      
+      // 不清空中间和右侧的数据，保持默认设置不变
+      // 只清空细粒度检测的结果信息
+      this.multimodalDetectionInfo = null;
 
       axios.get('http://10.109.253.71:8001/module2/list', {
         params: {
@@ -503,79 +536,42 @@ export default {
       }).then(res => {
         console.log('Backend response:', res.data);
         const data = res.data;
+        
+        // 保存list接口返回的数据，供查询先验知识按钮使用
+        this.listResultData = data;
 
-        // 处理图谱数据
-        if (data.knowledge_info && data.knowledge_info.length > 0) {
-          this.nodes = data.knowledge_info[0].nodes || [];
-          this.links = data.knowledge_info[0].links || [];
+        // 在"多模态认知传播信息"框内展示图像信息和颜色、形状、轮廓
+        // 使用之前存储的imageBase64
+        const multimodalContent = {};
+        if (this.imageBase64) {
+          multimodalContent.image = `data:image/png;base64,${this.imageBase64}`;
         }
-
-        // 处理标签信息
-        if (data.label_info && data.label_info.length > 0 && data.label_info[0].length > 0) {
-          const labelData = data.label_info[0][0];
-          this.tagInfoList = [
-            `小类信息：${labelData.kind || '未知'}`,
-            `火力信息：${labelData.firepower || '未知'}`,
-            `颜色信息：${labelData.color || '未知'}`,
-            `形状信息：${labelData.shape || '未知'}`,
-            `尺寸信息：${labelData.size || '未知'}`,
-            `动力信息：${labelData.power || '未知'}`
-          ];
-        }
-
-        // 处理属性颜色
-        if (data.property_color && data.property_color.length > 0 && data.property_color[0].length > 0) {
-          this.propertyColors = data.property_color[0][0];
-        }
-
-        // 处理预测信息
+        
+        // 获取颜色、形状、轮廓信息
         if (data.result && data.result.length > 0 && data.result[0].length > 0) {
           const predictData = data.result[0][0];
-          this.predictInfoList = [
-            { label: '小类信息：', value: predictData.kind || '未知', color: this.propertyColors.kind || '#000' },
-            { label: '火力信息：', value: predictData.firepower || '未知', color: this.propertyColors.firepower || '#000' },
-            { label: '颜色信息：', value: predictData.color || '未知', color: this.propertyColors.color || '#000' },
-            { label: '形状信息：', value: predictData.shape || '未知', color: this.propertyColors.shape || '#000' },
-            { label: '尺寸信息：', value: predictData.size || '未知', color: this.propertyColors.size || '#000' },
-            { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
-            // { label: '场景信息：', value: predictData.scene || '未知', color: this.propertyColors.scene || '#000' },
-          ];
-          // 将预测信息存入localStorage，供群体协商界面使用
-          localStorage.setItem('predictInfoList', JSON.stringify(this.predictInfoList));
-          localStorage.setItem('module2Res', JSON.stringify(res.data));
-          console.log('预测信息、模块2返回值已存入localStorage');
-
-          // 【新增】方便调试：打印 localStorage
-          console.log("--- localStorage 已更新 (模块二) ---");
-          console.log("predictInfoList:", localStorage.getItem('predictInfoList'));
-          console.log("module2Res:", localStorage.getItem('module2Res'));
-          console.log("---------------------------------");
+          if (predictData.color) {
+            multimodalContent.color = predictData.color;
+          }
+          if (predictData.shape) {
+            multimodalContent.shape = predictData.shape;
+          }
+          if (predictData.outline) {
+            multimodalContent.outline = predictData.outline;
+          }
         }
+        
+        // 更新细粒度检测的信息（不替换原有的VIDEO_DESCRIPTION）
+        this.multimodalDetectionInfo = Object.keys(multimodalContent).length > 0 ? multimodalContent : null;
 
-        // 处理准确率：点击按钮后延迟3分钟显示
-        this.cachedAccuracy = data.accuracy !== undefined ? (Math.round(data.accuracy * 10000) / 100).toFixed(2) + '%' : '—';
-        this.accuracyRate = '—';
-        this.isWaitingForAccuracy = true; // 标记为等待准确率显示
-        if (this.accuracyTimer) {
-          clearTimeout(this.accuracyTimer);
-        }
-        this.accuracyTimer = setTimeout(() => {
-          this.accuracyRate = this.cachedAccuracy;
-          this.isWaitingForAccuracy = false; // 延迟时间到，停止等待
-          this.accuracyTimer = null;
-        }, 180000);
-
-        // 重新渲染图谱
+        // 中间和右侧不展示拿到的信息，保持为空状态
+      }).catch(err => {
+        console.log(err);
+        this.multimodalDetectionInfo = null;
+        // 出错时也要重新渲染图谱
         this.$nextTick(() => {
           this.renderGraph();
         });
-      }).catch(err => {
-        console.log(err);
-        this.accuracyRate = '—';
-        this.cachedAccuracy = '—';
-        this.isWaitingForAccuracy = false; // 出错时停止等待
-      }).finally(() => {
-        this.isLoading = false;
       });
     },
     // 从本地缓存加载模块二结果
@@ -625,7 +621,7 @@ export default {
             { label: '形状信息：', value: predictData.shape || '未知', color: this.propertyColors.shape || '#000' },
             { label: '尺寸信息：', value: predictData.size || '未知', color: this.propertyColors.size || '#000' },
             { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
-            // { label: '场景信息：', value: predictData.scene || '未知', color: this.propertyColors.scene || '#000' },
+            { label: '轮廓信息：', value: predictData.outline || '未知', color: this.propertyColors.outline || '#000' },
           ];
         }
         // 准确率：初始加载时立即显示
@@ -645,9 +641,128 @@ export default {
         console.error('读取 module2Res 缓存失败:', e);
       }
     },
-    // 偏差检测按钮：启用颜色显示
+    // 偏差检测按钮：显示计算中，3min后显示准确率
     onBiasDetectClick() {
       this.isColorized = true;
+      // 显示计算中
+      this.accuracyRate = '—';
+      this.isWaitingForAccuracy = true;
+      
+      // 如果有缓存的数据，使用缓存的准确率
+      if (this.listResultData && this.listResultData.accuracy !== undefined) {
+        this.cachedAccuracy = (Math.round(this.listResultData.accuracy * 10000) / 100).toFixed(2) + '%';
+      } else if (this.cachedAccuracy === '—' && this.listResultData && this.listResultData.accuracy !== undefined) {
+        this.cachedAccuracy = (Math.round(this.listResultData.accuracy * 10000) / 100).toFixed(2) + '%';
+      }
+      
+      // 清除之前的定时器
+      if (this.accuracyTimer) {
+        clearTimeout(this.accuracyTimer);
+      }
+      
+      // 3分钟后显示准确率
+      this.accuracyTimer = setTimeout(() => {
+        this.accuracyRate = this.cachedAccuracy;
+        this.isWaitingForAccuracy = false;
+        this.accuracyTimer = null;
+      }, 180000); // 3分钟 = 180000毫秒
+    },
+    
+    // 查询先验知识按钮
+    queryPriorKnowledge() {
+      if (!this.listResultData) {
+        console.warn('请先进行细粒度检测');
+        return;
+      }
+      
+      this.isQueryingPriorKnowledge = true;
+      
+      // 中间图谱和右侧预测信息显示"计算中..."
+      // 2秒后显示结果
+      setTimeout(() => {
+        const data = this.listResultData;
+        
+        // 处理图谱数据
+        if (data.knowledge_info && data.knowledge_info.length > 0) {
+          this.nodes = data.knowledge_info[0].nodes || [];
+          this.links = data.knowledge_info[0].links || [];
+        }
+
+        // 处理标签信息
+        if (data.label_info && data.label_info.length > 0 && data.label_info[0].length > 0) {
+          const labelData = data.label_info[0][0];
+          this.tagInfoList = [
+            `小类信息：${labelData.kind || '未知'}`,
+            `火力信息：${labelData.firepower || '未知'}`,
+            `颜色信息：${labelData.color || '未知'}`,
+            `形状信息：${labelData.shape || '未知'}`,
+            `尺寸信息：${labelData.size || '未知'}`,
+            `动力信息：${labelData.power || '未知'}`
+          ];
+        }
+
+        // 处理属性颜色
+        if (data.property_color && data.property_color.length > 0 && data.property_color[0].length > 0) {
+          this.propertyColors = data.property_color[0][0];
+        }
+
+        // 处理预测信息
+        if (data.result && data.result.length > 0 && data.result[0].length > 0) {
+          const predictData = data.result[0][0];
+          this.predictInfoList = [
+            { label: '小类信息：', value: predictData.kind || '未知', color: this.propertyColors.kind || '#000' },
+            { label: '火力信息：', value: predictData.firepower || '未知', color: this.propertyColors.firepower || '#000' },
+            { label: '颜色信息：', value: predictData.color || '未知', color: this.propertyColors.color || '#000' },
+            { label: '形状信息：', value: predictData.shape || '未知', color: this.propertyColors.shape || '#000' },
+            { label: '尺寸信息：', value: predictData.size || '未知', color: this.propertyColors.size || '#000' },
+            { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
+            { label: '轮廓信息：', value: predictData.outline || '未知', color: this.propertyColors.outline || '#000' },
+          ];
+          // 将预测信息存入localStorage，供群体协商界面使用
+          localStorage.setItem('predictInfoList', JSON.stringify(this.predictInfoList));
+          localStorage.setItem('module2Res', JSON.stringify(data));
+          console.log('预测信息、模块2返回值已存入localStorage');
+        }
+        
+        // 缓存准确率（但不显示，等待点击偏差检测按钮）
+        if (data.accuracy !== undefined) {
+          this.cachedAccuracy = (Math.round(data.accuracy * 10000) / 100).toFixed(2) + '%';
+        }
+
+        // 重新渲染图谱
+        this.$nextTick(() => {
+          this.renderGraph();
+        });
+        
+        this.isQueryingPriorKnowledge = false;
+      }, 2000); // 2秒后显示结果
+    },
+    
+    // 加载图片base64数据
+    loadImageBase64() {
+      axios.get('http://10.109.253.71:8001/module2/get_image_base64', {
+        params: {
+          img_path: `${IMG_PATH_URL}`
+        }
+      }).then(res => {
+        console.log('Image base64 loaded:', res.data);
+        // 存储图片信息，不在界面上显示
+        // 接口返回格式: {"result": ["iVBORw..", "success"]}
+        if (res.data && res.data.result && Array.isArray(res.data.result) && res.data.result.length > 0) {
+          // 从result数组的第一个元素获取base64字符串
+          const base64String = res.data.result[0];
+          // 移除可能的data URI前缀
+          this.imageBase64 = base64String.replace(/^data:image\/[a-z]+;base64,/, '');
+        } else if (res.data && res.data.image_base64) {
+          // 兼容其他可能的格式
+          this.imageBase64 = res.data.image_base64;
+        } else if (res.data && typeof res.data === 'string') {
+          // 如果返回的就是base64字符串
+          this.imageBase64 = res.data.replace(/^data:image\/[a-z]+;base64,/, '');
+        }
+      }).catch(err => {
+        console.error('加载图片base64失败:', err);
+      });
     },
     // 从 LocalStorage 加载视频
     loadVideoFromStorage() {
@@ -828,11 +943,17 @@ body {
   width: 120px;
   height: 40px;
   color: #fff;
-  font-size: 0.9rem;
-  font-weight: bold;
+  font-size: 14px;
+  font-weight: 400;
   background-repeat: no-repeat;
   background-size: 100% 100%;
   margin: 0 5px;
+  width: 110px;
+  height: 40px;
+  font-family: 'DOUYUFont';
+  font-style: normal;
+text-decoration: none;
+/* text-align: left; */
 }
 
 .btn-home {
@@ -875,7 +996,7 @@ body {
 
 .right-column {
   width: 30%;
-  gap: 15px;
+  gap: 8px;
 }
 
 /* 面板通用样式 */
@@ -915,29 +1036,29 @@ body {
   background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  margin-bottom: 15px;
+  margin-bottom: 8px;
   padding: 0;
   display: flex;
   flex-direction: column;
   min-height: 530px;
   width: 100%;
-  margin-top: 20px;
+  margin-top: 8px;
 }
 
 /* 偏差检测准确率面板 */
 .panel-right-accuracy {
   flex-shrink: 0;
   width: 100%;
-  background-image: url('~@/assets/images/step1/-s-弹窗-偏差检测准确率.png');
+  background-image: url('~@/assets/images/step5/底部多主体和不一致的背景.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  margin-bottom: -5px;
+  margin-bottom: 0;
   padding: 20px 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100px;
-  margin-top: 15px;
+  margin-top: 8px;
 }
 
 /* 结果导出按钮区域 */
@@ -947,10 +1068,10 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 10px 0;
+  padding: 5px 0;
   min-height: 70px;
   background: none;
-  margin-top: 15px;
+  margin-top: 8px;
 }
 
 /* 兼容旧样式 */
@@ -988,22 +1109,48 @@ body {
 /* 面板标题 */
 .panel-header {
   padding-left: 50px !important;
+  
+  
 }
 .panel-header, .design-module-label {
-  height: 35px;
+  width: 94px;
+  height: 24px;
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   flex-shrink: 0;
   color: #fff;
-  font-size: 1rem;
-  font-weight: bold;
+  font-family: "DOUYUFont";
+  font-weight: 400;
+  font-size: 14px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: left;
+  box-shadow: 3px 3px 2px 0px rgba(0, 255, 255, 0.2);
   padding: 0 20px;
   margin: 0;
   margin-bottom: 0;
   display: flex;
   justify-content: center;
-  /* align-items: center; */
+  align-items: center;
+  padding-top: 5px;
+  box-sizing: border-box;
+}
+
+.panel-header span {
+  transform: translateY(5px);
+}
+
+/* 设计模块内的标题需要特殊处理，因为没有 span 包裹 */
+.design-module .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  /* padding-top: 5px;
+  padding-bottom: 3px; */
+  box-sizing: border-box;
+  line-height: 17px;
+  height: 24px;
 }
 
 /* 设计模块特定样式 */
@@ -1030,6 +1177,12 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  font-family: "DingTalk-JinBuTi";
+  font-weight: 400;
+  font-size: 18px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: justify;
 }
 
 /* 视频模块样式 */
@@ -1102,6 +1255,32 @@ body {
   flex-grow: 1;
   overflow-y: auto;
   max-height: 100%;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+.multimodal-image {
+  max-width: 100%;
+  height: auto;
+  margin-bottom: 15px;
+  border-radius: 4px;
+}
+
+.multimodal-info-item {
+  margin-bottom: 10px;
+  line-height: 1.6;
+  color: #e8f4ff;
+  font-family: "DingTalk-JinBuTi";
+  font-weight: 400;
+  font-size: 18px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: justify;
+}
+
+.multimodal-info-item .info-label {
+  font-weight: 400;
+  color: #e8f4ff;
 }
 
 .text-scrollable::-webkit-scrollbar {
@@ -1171,6 +1350,12 @@ body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  font-family: "DingTalk-JinBuTi";
+  font-weight: 400 !important;
+  font-size: 16px !important;
+  font-style: normal;
+  text-decoration: none;
+  text-align: justify;
 }
 
 .description-box::-webkit-scrollbar {
@@ -1190,6 +1375,9 @@ body {
   list-style: none;
   padding: 0;
   margin: 0;
+  font-family: "DingTalk-JinBuTi";
+  font-weight: 400;
+  font-size: 16px;
 }
 
 .info-list li {
@@ -1198,7 +1386,9 @@ body {
   margin: 0;
   line-height: 1.6;
   color: #e8f4ff;
-  font-size: 0.95rem;
+  font-family: "DingTalk-JinBuTi" !important;
+  font-weight: 400 !important;
+  font-size: 16px !important;
   padding-left: 0;
   padding-right: 0;
 }
@@ -1246,14 +1436,17 @@ body {
 
 .accuracy-label {
   color: #fff;
-  font-size: 1rem;
-  font-weight: bold;
-  white-space: nowrap;
+  font-family: 'DOUYUFont';
+  font-weight: 400;
+  font-size: 16px;
+  font-style: normal;
+  text-decoration: none;
+  margin-bottom: 12px;
 }
 
 .accuracy-value {
-  font-size: 2.5rem;
-  font-weight: bold;
+  font-size: 34px;
+  font-weight: 700;
   color: #00e5ff;
   text-shadow: 0 0 10px #00e5ff, 0 0 20px rgba(0, 229, 255, 0.5);
   letter-spacing: 0.05em;
@@ -1289,24 +1482,30 @@ body {
   justify-content: center;
   align-items: center;
   flex-shrink: 0;
+  gap: 15px;
 }
 
 .btn-start-detect{
   background: none;
   border: none;
   cursor: pointer;
-  width: 170px;
-  height: 72px;
+  width: 250px;
+  height: 100px;
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
 
   color: #fff;
-  font-size: 1.1rem;
-  font-weight: bold;
+  font-family: "DOUYUFont";
+  font-weight: 400;
+  font-size: 14px;
+  font-style: normal;
+  text-decoration: none;
   display: inline-flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
+  padding-right: 8px;
+  line-height: 1;
 
   &:disabled {
     filter: grayscale(80%);
@@ -1315,6 +1514,7 @@ body {
 
   span {
     margin-left: 8px;
+    transform: translateY(8px);
   }
 }
 
@@ -1328,24 +1528,28 @@ body {
 }
 
 .btn-export-result {
-  background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
+  background-image: url('~@/assets/images/step5/按钮-结果导出.png');
   background-repeat: no-repeat;
+  background-color: transparent;
   background-size: 100% 100%;
   background-position: center;
   border: none;
   cursor: pointer;
-  width: 100%;
-  max-width: 280px;
-  height: 60px;
-  color: #333;
-  font-size: 1.1rem;
-  font-weight: bold;
+  width: 250px;
+  height: 100px;
+  font-family: DOUYUFont;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 23px;
+  font-style: normal;
+  text-decoration: none;
   display: inline-flex;
-  justify-content: center;
-  align-items: center;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding-bottom: 28px;
   transition: all 0.3s ease;
   position: relative;
-  padding: 0;
+  padding-right: 20px;
 }
 
 .btn-export-result:hover:not(:disabled) {
@@ -1440,7 +1644,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 0 0 10px 0;
+  padding: 0 0 5px 0;
   background: none;
   min-height: 40px;
 }
@@ -1449,22 +1653,26 @@ body {
   background: none;
   border: none;
   cursor: pointer;
-  width: auto;
-  min-width: 150px;
-  max-width: 250px;
-  min-height: 50px;
-  height: 100%;
+  width: 250px;
+  height: 100px;
   background-image: url('~@/assets/images/step3/greenbutton.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
+  background-color: transparent;
   color: #fff;
-  font-size: 1.1rem;
-  font-weight: bold;
+  font-family: 'DOUYUFont';
+  font-weight: 400;
+  font-size: 14px;
+  font-style: normal;
+  text-decoration: none;
   display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: -50px;
-  margin-top: -30px;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding-right: 20px;
+  padding-bottom: 35px;
+  line-height: 1;
+  margin-bottom: -45px;
+  margin-top: -25px;
 }
 
 .btn-bias-detect:disabled {
