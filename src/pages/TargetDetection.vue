@@ -35,7 +35,7 @@
         <div class="action-buttons">
           <button @click="startDetection" :disabled="isLoading" class="btn-start-detect">
             <b-spinner small v-if="isLoading" class="btn-spinner-pos"></b-spinner>
-            <span class="btn-text-pos">{{ isLoading ? (progressMessage || '检测中...') : '开始目标检测' }}</span>
+            <span class="btn-text-pos">{{ isLoading ? (progressMessage || '计算中...') : '开始目标检测' }}</span>
           </button>
         </div>
       </b-col>
@@ -55,7 +55,7 @@
           <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
             <video v-if="processedVideoURL && !isLoading" ref="processedVideo" :src="processedVideoURL" controls
               class="video-display" :key="processedVideoURL" playsinline muted loop @error="handleVideoError"></video>
-            <div v-if="isLoading" class="placeholder-text loading-text">目标检测中……</div>
+            <div v-if="isLoading" class="placeholder-text loading-text">计算中……</div>
             <div v-else-if="!processedVideoURL" class="placeholder-text">检测结果将在这里显示</div>
           </div>
         </div>
@@ -63,7 +63,7 @@
         <div class="summary-box-middle" :class="{ 'loading-overlay': isLoading }">
           <div class="summary-content overflow-auto"
             :class="{ 'text-highlight': summaryHighlight, 'loading-text': isLoading }">
-            {{ isLoading ? '目标检测中……' : (summaryTypingText || '目标检测中……') }}
+            {{ isLoading ? '计算中……' : (summaryTypingText || '计算中……') }}
           </div>
         </div>
       </b-col>
@@ -74,7 +74,7 @@
           <button class="btn-start-bias" @click="handleStartBiasDetection"
             :disabled="!canStartBiasDetection || isBiasTyping || isLoading || isBiasDetecting">
             <b-spinner small v-if="isBiasDetecting" class="btn-spinner-pos"></b-spinner>
-            <span class="btn-text-pos">{{ isBiasDetecting ? '检测中...' : '多模态信息偏差检测' }}</span>
+            <span class="btn-text-pos">{{ isBiasDetecting ? '计算中...' : '多模态信息偏差检测' }}</span>
           </button>
         </div>
 
@@ -89,7 +89,7 @@
                 计算中…
               </div>
               <div v-else-if="isLoading && !showBiasDetails" class="text-left small-text">
-                {{ progressMessage || '正在加载...' }}
+                {{ progressMessage || '计算中...' }}
               </div>
               <div v-else-if="!showBiasDetails && !isLoading" class="text-left small-text">
                 {{ resultMessage || '检测完成后显示结果' }}
