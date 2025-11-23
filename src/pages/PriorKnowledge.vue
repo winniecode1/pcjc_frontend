@@ -652,7 +652,8 @@ export default {
         }
         // 准确率：初始加载时立即显示
         if (data.accuracy !== undefined) {
-          this.accuracyRate = (data.accuracy * 100) + '%';
+          // this.accuracyRate = (data.accuracy * 100) + '%';
+          this.accuracyRate = String(data.accuracy * 100).padEnd(5, '0').slice(0, 5) + '%';
           this.cachedAccuracy = this.accuracyRate;
         } else {
           this.accuracyRate = '—';
