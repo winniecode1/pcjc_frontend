@@ -17,9 +17,8 @@
 
     <b-row class="justify-content-center content-row no-gutters">
 
-      <!-- 左侧列 -->
       <b-col cols="3" class="left-column px-2">
-        <div class="panel-header header-select-data">选择数据</div>
+        <div class="panel-header header-select-data clean-header">选择数据</div>
 
         <div class="panel-left">
           <div class="panel-content">
@@ -35,16 +34,13 @@
 
         <div class="action-buttons">
           <button @click="startDetection" :disabled="isLoading" class="btn-start-detect">
-            <b-spinner small v-if="isLoading"></b-spinner>
-            <!-- 移除了 !selectedVideo 的禁用条件，因为加载时可能没有 selectedVideo -->
-            <span>{{ isLoading ? (progressMessage || '检测中...') : '开始目标检测' }}</span>
+            <b-spinner small v-if="isLoading" class="btn-spinner-pos"></b-spinner>
+            <span class="btn-text-pos">{{ isLoading ? (progressMessage || '计算中...') : '开始目标检测' }}</span>
           </button>
         </div>
       </b-col>
 
-      <!-- 中间列 -->
       <b-col cols="5" class="middle-column mx-2 px-1">
-        <!-- 原视频 -->
         <div class="video-section">
           <div class="video-label label-original">无人机侦察数据</div>
           <div class="video-frame">
@@ -54,55 +50,51 @@
           </div>
         </div>
 
-        <!-- 检测结果视频 -->
         <div class="video-section">
           <div class="video-label label-processed">多模态检测结果 </div>
           <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
             <video v-if="processedVideoURL && !isLoading" ref="processedVideo" :src="processedVideoURL" controls
               class="video-display" :key="processedVideoURL" playsinline muted loop @error="handleVideoError"></video>
-            <div v-if="isLoading" class="placeholder-text loading-text">目标检测中……</div>
+            <div v-if="isLoading" class="placeholder-text loading-text">计算中……</div>
             <div v-else-if="!processedVideoURL" class="placeholder-text">检测结果将在这里显示</div>
           </div>
         </div>
 
-        <!-- 新增：总结文本框 -->
         <div class="summary-box-middle" :class="{ 'loading-overlay': isLoading }">
           <div class="summary-content overflow-auto"
             :class="{ 'text-highlight': summaryHighlight, 'loading-text': isLoading }">
-            {{ isLoading ? '目标检测中……' : (summaryTypingText || '目标检测中……') }}
+            {{ isLoading ? '计算中……' : (summaryTypingText || '计算中……') }}
           </div>
         </div>
       </b-col>
 
-      <!-- 右侧列 -->
       <b-col cols="3" class="right-column px-2">
 
         <div class="bias-button-container">
           <button class="btn-start-bias" @click="handleStartBiasDetection"
             :disabled="!canStartBiasDetection || isBiasTyping || isLoading || isBiasDetecting">
-            <b-spinner small v-if="isBiasDetecting"></b-spinner>
-            <span>{{ isBiasDetecting ? '检测中...' : '开始偏差检测' }}</span>
+            <b-spinner small v-if="isBiasDetecting" class="btn-spinner-pos"></b-spinner>
+            <span class="btn-text-pos">{{ isBiasDetecting ? '计算中...' : '多模态信息偏差检测' }}</span>
           </button>
         </div>
 
-        <div class="panel-header header-results">偏差检测结果</div>
+        <div class="panel-header header-results clean-header">偏差检测结果</div>
 
         <div class="panel-right-top" :class="{ 'loading-overlay': isBiasDetecting && !showBiasDetails }">
           <div class="panel-content">
             <div class="description-box p-2 overflow-auto"
               :class="{ 'loading-text': isBiasDetecting && !showBiasDetails }">
-              <!-- 移除了原有的 "总结" v-if="showSummary" 部分 -->
+              
               <div v-if="isBiasDetecting && !showBiasDetails" class="text-left small-text">
                 计算中…
               </div>
               <div v-else-if="isLoading && !showBiasDetails" class="text-left small-text">
-                {{ progressMessage || '正在加载...' }}
+                {{ progressMessage || '计算中...' }}
               </div>
               <div v-else-if="!showBiasDetails && !isLoading" class="text-left small-text">
                 {{ resultMessage || '检测完成后显示结果' }}
               </div>
 
-              <!-- 偏差详情（除总结外） -->
               <div v-if="showBiasDetails">
                 <div v-for="(entry, index) in biasDetailEntries" :key="entry.label"
                   class="typing-text text-left small-text" :class="{ 'text-highlight': entry.highlight }">
@@ -140,8 +132,8 @@
 
         <div class="action-buttons-right">
           <button class="btn-export-result" @click="exportResults" :disabled="!taskId || isLoading || isExporting">
-            <b-spinner small v-if="isExporting"></b-spinner>
-            <span>{{ isExporting ? '导出中...' : '结果导出' }}</span>
+            <b-spinner small v-if="isExporting" class="btn-spinner-pos"></b-spinner>
+            <span class="btn-text-pos">{{ isExporting ? '导出中...' : '结果导出' }}</span>
           </button>
         </div>
 
@@ -160,17 +152,9 @@ const FRONTEND_BASE_URL = 'http://10.109.253.71:8889';
 const BASE_DIR = "/home/wuzhixuan/Project/PCJC/1";
 const VIDEO_DIR = "/home/wuzhixuan/Project/PCJC/datasets/Vedio"
 
-/**
- * 【关键修正工具函数】从完整的文件路径中提取文件名
- * 作用：从 /home/.../detected_video.mp4 中提取 detected_video.mp4
- * @param {string} fullPath - 完整路径，例如 /home/.../detected_video.mp4 或 C:\path\to\file.mp4
- * @returns {string|null} 文件名，例如 detected_video.mp4
- */
 function getFilenameFromPath(fullPath) {
   if (!fullPath || typeof fullPath !== 'string') return null;
-  // 使用 split 方法按路径分隔符（/ 或 \）分割，并取最后一个元素
   const parts = fullPath.split(/[/\\]/);
-  // pop() 方法移除并返回数组的最后一个元素，即文件名
   return parts.pop() || null;
 }
 
@@ -186,8 +170,8 @@ export default {
     return {
       fullWidth: window.innerWidth,
       fullHeight: window.innerHeight,
-      videoList: [], // 用于存储视频列表
-      selectedVideo: null, // 用于存储选中的视频
+      videoList: [],
+      selectedVideo: null,
       originalVideoURL: null,
       processedVideoURL: null,
       taskId: null,
@@ -203,24 +187,19 @@ export default {
       descriptionEntries: [],
       biasDetailEntries: [],
       biasDisplayTexts: [],
-      // 移除了 summaryFullText 和 summaryTypingText
-      summaryTextOnly: '', // 新增：用于中间总结框
-      summaryHighlight: false, // 新增：用于中间总结框高亮
-      // 移除了 summaryTypingInterval
+      summaryTextOnly: '',
+      summaryHighlight: false,
       biasTypingInterval: null,
       biasTypingTimeout: null,
       accuracyTimeout: null,
-      // 【新增】总结文本打字状态
-      summaryFullText: '', // 存储完整的总结文本
-      summaryTypingText: '', // 存储正在打字的文本
-      summaryTypingInterval: null, // 总结的打字定时器
-      // 移除了 showSummary
+      summaryFullText: '',
+      summaryTypingText: '',
+      summaryTypingInterval: null,
       showBiasDetails: false,
       showAccuracy: false,
       isBiasTyping: false,
       labelsToHighlight: [],
       typingSpeed: 60,
-      // 新增：按钮加载状态
       isBiasDetecting: false,
       isExporting: false
     };
@@ -232,18 +211,8 @@ export default {
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);
-    // 逻辑点 5：执行新的加载逻辑
     this.loadInitialData();
-    // 检查关键元素的样式
     this.$nextTick(() => {
-      const rightColumn = document.querySelector('.right-column');
-      if (rightColumn) {
-        const styles = window.getComputedStyle(rightColumn);
-        console.log('Right column height:', styles.height);
-        console.log('Right column display:', styles.display);
-      }
-
-      // 如果检测到样式问题，动态修复
       this.fixLayoutIssues();
     });
   },
@@ -252,33 +221,25 @@ export default {
     this.clearTypingIntervals();
   },
   methods: {
-    /**
-     * 逻辑点 5：页面加载逻辑
-     */
     async loadInitialData() {
       const module1ResStr = localStorage.getItem('module1Res');
       if (module1ResStr) {
         console.log("检测到 module1Res，正在从缓存加载数据...");
         try {
           const module1Res = JSON.parse(module1ResStr);
-          // 恢复 UI 状态
           this.populateUIFromStorage(module1Res);
-          // 仍然加载视频列表，以便用户可以切换
           await this.fetchVideoList();
         } catch (e) {
           console.error("解析 module1Res 失败:", e);
-          // 解析失败，清空缓存并按正常流程启动
           localStorage.clear();
           await this.fetchVideoList();
         }
       } else {
         console.log("未检测到 module1Res，正常启动...");
-        // 正常启动流程
         await this.fetchVideoList();
       }
     },
     fixLayoutIssues() {
-      // 动态添加内联样式作为最后手段
       const style = document.createElement('style');
       style.textContent = `
       .right-column {
@@ -298,55 +259,36 @@ export default {
     `;
       document.head.appendChild(style);
     },
-    /**
-     * 逻辑点 5：根据缓存的 module1Res 填充 UI
-     */
     populateUIFromStorage(data) {
       console.log("正在填充UI:", data);
-
-      // 1. 恢复视频
       this.originalVideoURL = data.originalVideoPath;
       this.processedVideoURL = data.video_path;
-
-      // 2. 恢复任务 ID 和结果
       this.taskId = data.task_id;
-      this.fullResult = data; // 假设 data 包含所有需要的结果字段
-
-      // 3. 模拟选中视频（用于左侧列表高亮）
+      this.fullResult = data;
+      
       if (data.video_info && data.video_info.name) {
         this.selectedVideo = { name: data.video_info.name, id: data.video_info.id || -1 };
       } else if (data.originalVideoPath) {
-        // 备用方案：从路径中提取文件名
         const videoName = getFilenameFromPath(data.originalVideoPath);
         if (videoName) {
           this.selectedVideo = { name: videoName, id: -1 };
         }
       }
 
-      // 4. 处理文本显示
-      // 这将填充 summaryTextOnly 和 biasDetailEntries
       this.prepareDescriptionDisplay(data);
-
       this.summaryTypingText = this.summaryFullText;
-
-      // 5. 立即显示所有结果（跳过打字效果）
       this.showBiasDetails = true;
       this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
       this.showAccuracy = true;
-
       this.resultMessage = "已从缓存加载数据。";
       this.progressMessage = "加载完成";
       this.isLoading = false;
-
-      // 尝试同步播放
       this.syncAndPlayVideos();
     },
     navigateHome() {
-      // "首页" 和 "返回" 都跳转到根路径（使用相对路径确保在当前端口下正确导航）
       window.location.href = '/';
     },
     navigateNextPage() {
-      // "下个页面" 跳转到指定页面（使用相对路径确保在当前端口下正确导航）
       window.location.href = '/prior-knowledge';
     },
     handleResize() {
@@ -357,40 +299,17 @@ export default {
       console.error("视频加载错误:", e);
       this.resultMessage = "处理后视频加载失败，请检查服务器日志和网络。";
     },
-    /**
-     * 【标红修正】根据 low_similarity_aspects 列表高亮对应标签的行。
-     * 目前有四行：场景、目标、行为、总结。仅高亮列表中出现的那些行。
-     */
     formatDescription(description) {
-      // DEBUG 0: 函数开始
-      console.log("--- [DEBUG] formatDescription START (Fixed) ---");
-
-      if (!description) {
-        console.log("[DEBUG] 1. 传入的 description 为空，已停止。");
-        console.log("--- [DEBUG] formatDescription END ---");
-        return '';
-      }
-
-      // DEBUG 1: 检查原始数据
+      if (!description) return '';
       const rawAspects = this.fullResult && this.fullResult.low_similarity_aspects;
-      console.log("[DEBUG] 1. 传入的 description (原始文本):", JSON.stringify(description));
-      console.log("[DEBUG] 2. 传入的 low_similarity_aspects (原始数据):", rawAspects);
-
-      // 1) 解析需要高亮的标签集合
       const aspects = this.parseLowSimilarityAspects(rawAspects);
-
-      // DEBUG 2: 检查解析后的标签
-      console.log("[DEBUG] 3. 经过 parseLowSimilarityAspects 解析后的数组:", aspects);
-
-      // 标准化到四个候选标签
+      
       const validLabels = new Set(['场景', '目标', '行为']);
       const labelsToHighlight = new Set();
       (aspects || []).forEach(item => {
         if (typeof item !== 'string') return;
-        // 清理和标准化标签名称
         const name = item.trim().replace(/^["'《【\s]+|["'》】\s]+$/g, '');
         if (name === '目标') {
-          console.log("[DEBUG] 4. '目标' 映射为 '目标'");
           labelsToHighlight.add('目标');
         }
         if (validLabels.has(name)) {
@@ -399,68 +318,29 @@ export default {
       });
       const labelsArray = Array.from(labelsToHighlight);
 
-      // DEBUG 3: 检查最终要高亮的标签
-      console.log("[DEBUG] 5. 最终待高亮的标签数组 (labelsArray):", labelsArray);
-
-      // 2) 仅按换行符分割文本
-      // 使用 filter(line => line.trim() !== '') 排除空行
       const lines = description.split(/\r?\n/).filter(line => line.trim() !== '');
-
-      // DEBUG 4: 检查分割后的行
-      console.log(`[DEBUG] 6. 文本被分割为 ${lines.length} 行:`, lines);
-
       let html = '';
 
-      // 3) 遍历每一行
-      console.log("[DEBUG] 7. 开始逐行匹配...");
       lines.forEach((line, index) => {
         const trimmedLine = line.trim();
-
-        // 确保 shouldHighlight 在这里被正确计算
         const shouldHighlight = labelsArray.some(label => {
-          // 调用 shouldHighlightLine 进行精确匹配
-          const isMatch = this.shouldHighlightLine(trimmedLine, label);
-
-          if (isMatch) {
-            // 报告匹配成功
-            console.log(`[DEBUG]   -> 匹配成功! [行 ${index}] (标签: '${label}') (行内容: '${trimmedLine.substring(0, 20)}...')`);
-          }
-          return isMatch;
+          return this.shouldHighlightLine(trimmedLine, label);
         });
 
-        let lineContent = trimmedLine; // 默认内容
-
+        let lineContent = trimmedLine;
         if (shouldHighlight) {
-          // 标红处理：用 <span> 标红文本，使用内联样式作为备选
           lineContent = `<span class="text-highlight" style="color: #ff4d4d; font-weight: bold;">${trimmedLine}</span>`;
-          console.log(`[DEBUG]   -> 应用高亮样式! [行 ${index}]`);
-        } else if (labelsArray.length > 0) {
-          // 报告未匹配 (如果有标签要高亮的话)
-          console.log(`[DEBUG]   -> 未匹配. [行 ${index}] (行内容: '${trimmedLine.substring(0, 20)}...')`);
         }
-
-        // 使用div包裹每一行，确保样式正确应用
         html += `<div>${lineContent}</div>`;
       });
-
-      // DEBUG 7: 检查最终输出的 HTML
-      console.log("[DEBUG] 8. 最终生成的 HTML:", html);
-      console.log("--- [DEBUG] formatDescription END ---");
       return html;
     },
     shouldHighlightLine(text, label) {
       if (!text || !label) return false;
       const escapeRegExp = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      // 匹配：开头 + 0或多空格 + 标签 + 0或多空格 + (全角或半角冒号)
       const pattern = new RegExp(`^\\s*${escapeRegExp(label)}\\s*[：:]`);
       return pattern.test(text);
     },
-
-    /**
-     * 解析后端返回的 low_similarity_aspects，兼容多种格式：
-     * - 数组：["行为","总结"]
-     * - 字符串（JSON 或包含数组片段的字符串）：'{"data": ["行为","总结"]}' 或 '["行为","总结"]' 或 "{'["行为","总结"]...'}"
-     */
     parseLowSimilarityAspects(raw) {
       try {
         if (!raw) return [];
@@ -535,19 +415,17 @@ export default {
       this.descriptionEntries = [];
       this.biasDetailEntries = [];
       this.biasDisplayTexts = [];
-      this.summaryTextOnly = ''; // 重置中间总结框
+      this.summaryTextOnly = '';
       this.summaryHighlight = false;
       this.showBiasDetails = false;
       this.showAccuracy = false;
       this.labelsToHighlight = [];
       this.isBiasTyping = false;
-      // 【修改点 3】：重置总结打字相关的字段
       this.summaryFullText = '';
       this.summaryTypingText = '';
       this.clearTypingIntervals();
     },
     clearTypingIntervals() {
-      // 移除了 summaryTypingInterval 【修改点 2：将 summaryTypingInterval 添加回来】
       if (this.summaryTypingInterval) {
         clearInterval(this.summaryTypingInterval);
         this.summaryTypingInterval = null;
@@ -591,18 +469,12 @@ export default {
         }
       });
     },
-    /**
-     * 从偏差检测结果文本中提取"目标："之后的内容作为 deviceType
-     * @param {string} description - 偏差检测结果文本，例如 "场景：...\n目标：飞机\n行为：..."
-     * @returns {string} 提取的目标内容，如果未找到则返回 "N/A"
-     */
     extractDeviceTypeFromDescription(description) {
       if (!description || typeof description !== 'string') {
         return "N/A";
       }
       const lines = description.split(/\r?\n/);
       for (const line of lines) {
-        // 匹配"目标："或"目标:"之后的内容（支持全角和半角冒号）
         const match = line.match(/^目标[：:]\s*(.+)$/);
         if (match && match[1]) {
           return match[1].trim();
@@ -610,47 +482,28 @@ export default {
       }
       return "N/A";
     },
-    /**
-     * 逻辑点 3：拆分总结和详情
-     */
     prepareDescriptionDisplay(fullData) {
       this.clearTypingIntervals();
       this.updateLabelsToHighlight(fullData.low_similarity_aspects);
       this.descriptionEntries = this.buildDescriptionEntries(fullData.video_description);
-
-      // 1. 提取总结（用于中间框）
       const summaryEntry = this.descriptionEntries.find(entry => entry.label === '总结');
-      // this.summaryTextOnly = summaryEntry ? summaryEntry.text : '未找到总结信息。';
-      //this.summaryHighlight = summaryEntry ? summaryEntry.highlight : false;
-      // 【修改点 1】：将完整的总结文本存入 summaryFullText
       this.summaryFullText = summaryEntry ? summaryEntry.text : '未找到总结信息。';
-      this.summaryTextOnly = ''; // 清空，准备打字显示
-      this.summaryTypingText = ''; // 【新增】清空打字文本
-
-      // 2. 提取详情（用于右侧框）
+      this.summaryTextOnly = '';
+      this.summaryTypingText = '';
       this.biasDetailEntries = this.descriptionEntries.filter(entry => entry.label !== '总结');
-      this.biasDisplayTexts = this.biasDetailEntries.map(() => ''); // 重置打字内容
-
-      // 3. 重置显示状态
+      this.biasDisplayTexts = this.biasDetailEntries.map(() => '');
       this.showBiasDetails = false;
       this.showAccuracy = false;
     },
-    /**
-     * 【新增】启动总结文本的打字效果
-     */
     startSummaryTyping() {
       if (!this.summaryFullText || this.summaryTypingInterval) {
         return;
       }
-
-      this.summaryTypingText = ''; // 从头开始
+      this.summaryTypingText = '';
       let charIndex = 0;
-
       this.summaryTypingInterval = setInterval(() => {
-        // 使用 this.summaryFullText 来获取完整的文本
         this.summaryTypingText = this.summaryFullText.slice(0, charIndex + 1);
         charIndex += 1;
-
         if (charIndex >= this.summaryFullText.length) {
           clearInterval(this.summaryTypingInterval);
           this.summaryTypingInterval = null;
@@ -698,32 +551,26 @@ export default {
         };
       });
     },
-    // 移除了 startSummaryTyping 和 resetSummaryTyping
     handleStartBiasDetection() {
       if (!this.canStartBiasDetection) return;
-      // 设置加载状态
       this.isBiasDetecting = true;
-      // 清理之前的定时器
       this.clearBiasTimeouts();
-      // 初始状态：不显示偏差检测结果和准确率
       this.showBiasDetails = false;
       this.showAccuracy = false;
-      this.resetBiasTyping(); // 重置打字状态
+      this.resetBiasTyping();
 
-      // 等待30秒后显示偏差检测结果并开始逐字显示
       this.biasTypingTimeout = setTimeout(() => {
         this.showBiasDetails = true;
         this.isBiasTyping = true;
         this.startBiasTypingSequence(0);
         this.biasTypingTimeout = null;
-      }, 30000); // 30秒 = 30000毫秒
+      }, 30000);
 
-      // 再等待5分钟后显示准确率，并清除加载状态
       this.accuracyTimeout = setTimeout(() => {
         this.showAccuracy = true;
-        this.isBiasDetecting = false; // 清除加载状态
+        this.isBiasDetecting = false;
         this.accuracyTimeout = null;
-      }, 300000); // 5分钟 = 300000毫秒
+      }, 300000);
     },
     clearBiasTimeouts() {
       if (this.biasTypingTimeout) {
@@ -748,7 +595,6 @@ export default {
       if (index >= this.biasDetailEntries.length) {
         this.isBiasTyping = false;
         this.biasTypingInterval = null;
-        // 如果准确率已经显示，确保清除加载状态
         if (this.showAccuracy) {
           this.isBiasDetecting = false;
         }
@@ -771,12 +617,10 @@ export default {
         const response = await axios.get(`${API_BASE_URL}/videos`);
         this.videoList = response.data.videos;
         console.log("视频列表获取成功", this.videoList);
-
-        // 如果是从缓存加载的，尝试匹配并高亮选中的视频
         if (this.selectedVideo && this.selectedVideo.name) {
           const matchedVideo = this.videoList.find(v => v.name === this.selectedVideo.name);
           if (matchedVideo) {
-            this.selectedVideo = matchedVideo; // 更新为从列表获取的完整对象
+            this.selectedVideo = matchedVideo;
           }
         }
       } catch (error) {
@@ -786,32 +630,21 @@ export default {
     },
     selectVideo(video) {
       this.selectedVideo = video;
-
-      // 切换视频时立即清空 localStorage
       localStorage.clear();
       console.log("选择新视频，LocalStorage 已清空。");
-
-      // 切换视频时清空处理中视频和结果面板
       this.resetResultState();
-
-      // 正确构造原视频URL
       try {
-        // 确保API_BASE_URL末尾没有斜杠
         const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
-        // 构造正确的视频URL
         this.originalVideoURL = `${baseUrl}/video/${encodeURIComponent(video.name)}`;
-        console.log("原视频URL:", this.originalVideoURL); // 用于调试
+        console.log("原视频URL:", this.originalVideoURL);
         this.autoPlayOriginalVideo();
       } catch (error) {
         console.error("构造视频URL失败:", error);
         this.originalVideoURL = null;
       }
-
-      // 2. 确保圆圈亮起（已通过v-bind:class实现）
       console.log("已选择视频:", video.name);
     },
     async startDetection() {
-      // 逻辑点 4：首先清空 localStorage
       localStorage.clear();
       console.log("LocalStorage 已清空。");
 
@@ -830,19 +663,15 @@ export default {
       const videoPath = `${baseUrl}/${this.selectedVideo.name}`;
       console.log("Constructed video path for /batch_predict:", videoPath);
 
-      // 【关键修正点 A】：获取不带扩展名的视频名 (对应后端路由中的 <video_name>)
       let videoNameWithoutExtension = this.selectedVideo.name;
-      // 使用正则表达式匹配并移除末尾的 .xxx 扩展名
       const extensionIndex = videoNameWithoutExtension.lastIndexOf('.');
       if (extensionIndex > 0) {
         videoNameWithoutExtension = videoNameWithoutExtension.substring(0, extensionIndex);
       }
-      const videoNameEncoded = encodeURIComponent(videoNameWithoutExtension); // 对应后端路由中的 <video_name>
+      const videoNameEncoded = encodeURIComponent(videoNameWithoutExtension);
 
       try {
-        // 1. 调用后端分析接口
         const analyzeResponse = await axios.post(`${API_BASE_URL}/batch_predict`, {
-          // 将 video_name 替换为后端期望的 video_path
           video_path: videoPath
         });
 
@@ -858,47 +687,35 @@ export default {
 
         this.resultMessage = `任务ID: ${this.taskId}。处理时间预计 ${timeDisplay}。`;
 
-        // 2. 获取检测结果
         const fullResultResponse = await axios.get(
           `${API_BASE_URL}/get_detection_results/${this.taskId}?video_name=${videoNameEncoded}`
         );
         const fullData = fullResultResponse.data;
 
-        // 3. 更新界面结果 (确保所有字段都已从 fullData 复制过来)
         this.fullResult.task_id = fullData.task_id;
         this.fullResult.video_description = fullData.video_description;
-        this.fullResult.video_info = fullData.video_info; // 保存视频信息
+        this.fullResult.video_info = fullData.video_info;
         this.fullResult.accuracy_results = fullData.current_accuracy;
         this.fullResult.overall_accuracy = fullData.current_accuracy;
         this.fullResult.low_similarity_aspects = fullData.low_similarity_aspects;
         this.fullResult.video_path = fullData.video_path;
-        // 【修改】：从偏差检测结果文本中提取 deviceType
         this.fullResult.deviceType = this.extractDeviceTypeFromDescription(fullData.video_description);
         this.fullResult.key_frame_path = fullData.key_frame_path;
         this.fullResult.key_frame_detection = fullData.key_frame_detection;
 
-        // 逻辑点 3：拆分总结和详情
         this.prepareDescriptionDisplay(fullData);
-
-        // 【修改点 4】：分析成功后立即启动总结的打字效果
         this.startSummaryTyping();
 
-        // ---- 提取文件名和路径修正 (用于构造新接口 URL) ----
-        // 原始路径字符串 (可能包含完整路径)
         const raw_key_frame_path = fullData.key_frame_path;
         const raw_video_path = fullData.video_path;
 
-        // 【关键修正点 B】：从完整路径中提取纯文件名，用于构造新接口 URL (对应 <filename>)
         const key_frame_filename = getFilenameFromPath(raw_key_frame_path);
         const video_filename = getFilenameFromPath(raw_video_path);
 
         console.log("Extracted video filename:", video_filename);
         console.log("Extracted keyframe filename:", key_frame_filename);
-        // ----------------------------------------------------
 
-        // 4. 【关键修正点 C】: 构造处理后视频的 URL (用于播放器) - 对接新接口
         if (video_filename && this.taskId) {
-          // 格式: /output/<task_id>/<video_name_without_ext>/<filename>
           this.processedVideoURL = `${API_BASE_URL}/output/${this.taskId}/${videoNameEncoded}/${encodeURIComponent(video_filename)}`;
           console.log("Processed video URL (Fixed):", this.processedVideoURL);
           this.syncAndPlayVideos();
@@ -906,56 +723,38 @@ export default {
           this.processedVideoURL = null;
         }
 
-        // 5. 【关键修改】：整合所有后端结果并以 module1Res 的格式存储到 localStorage
         try {
-          // 构造 module1Res 中使用的完整路径 (使用新接口 URL)
           let fullImagePathURL = "无图像路径";
           if (key_frame_filename && key_frame_filename !== "无图像路径" && this.taskId) {
-            // 格式: /output/<task_id>/<video_name_without_ext>/<filename>
             fullImagePathURL = `${BASE_DIR}/output/${this.taskId}/${videoNameEncoded}/${encodeURIComponent(key_frame_filename)}`;
           }
 
           let fullProcessedVideoPathURL = "无视频路径";
           if (video_filename && video_filename !== "无视频路径" && this.taskId) {
-            // 格式: /output/<task_id>/<video_name_without_ext>/<filename>
             fullProcessedVideoPathURL = `${API_BASE_URL}/output/${this.taskId}/${videoNameEncoded}/${encodeURIComponent(video_filename)}`;
           }
 
           const originalVideoPath = this.originalVideoURL || "无原视频路径";
 
-          // --- 2. 构建 module1Res 最终对象 ---
           const module1Res = {
-            ...fullData, // 复制所有后端返回的字段
-
-            // 【修改】：从偏差检测结果文本中提取 deviceType（"目标："之后的内容）
+            ...fullData,
             deviceType: this.fullResult.deviceType || this.extractDeviceTypeFromDescription(fullData.video_description) || "N/A",
-
-            // 使用处理后的完整 URL 覆盖原有的路径字段
-            key_frame_path: fullImagePathURL, // 保持与后端字段一致
-            video_path: fullProcessedVideoPathURL, // 保持与后端字段一致
-
+            key_frame_path: fullImagePathURL,
+            video_path: fullProcessedVideoPathURL,
             originalVideoPath: originalVideoPath
           };
 
-          // 3. 将对象转换为 JSON 字符串并存储
           localStorage.setItem('module1Res', JSON.stringify(module1Res));
 
-          // 4. 方便调试：【格式化打印】存储的 module1Res 数据
           console.groupCollapsed("%c✅ Module 1 结果已存储 (module1Res)", "color: #17a2b8; font-weight: bold;");
-
-          // 打印原始 JSON 字符串
           console.log("%c原始 JSON 字符串:", "font-weight: bold; color: #ffc107;", localStorage.getItem('module1Res'));
-
-          // 打印对象所有键值对的表格
           const tableData = Object.entries(module1Res).map(([key, value]) => ({
             Key: key,
             Value: (typeof value === 'object' && value !== null) ? JSON.stringify(value).substring(0, 50) + '...' : value
           }));
-
           console.log("%c对象内容 (表格展示):", "font-weight: bold; color: #28a745;");
           console.table(tableData);
-
-          console.groupEnd(); // 结束分组
+          console.groupEnd();
         } catch (e) {
           console.error("保存 module1Res 到 localStorage 失败:", e);
         }
@@ -970,49 +769,28 @@ export default {
         this.isLoading = false;
       }
     },
-
-    /**
-     * 导出结果
-     */
     async exportResults() {
       if (!this.taskId) {
         alert("请先完成一次检测再导出结果。");
         return;
       }
-
       console.log(`正在请求导出任务: ${this.taskId}`);
       this.isExporting = true;
-
       try {
         const response = await axios.get(`${API_BASE_URL}/export_results/${this.taskId}`, {
-          responseType: 'blob', // 关键：告诉 axios 期望一个 Blob
+          responseType: 'blob',
         });
-
-        // 从 response 中创建 Blob
         const blob = new Blob([response.data], { type: 'application/zip' });
-
-        // 创建一个临时的 URL
         const downloadUrl = window.URL.createObjectURL(blob);
-
-        // 创建一个 <a> 标签来触发下载
         const link = document.createElement('a');
         link.href = downloadUrl;
-
-        // 设置下载的文件名 (后端已设置 Content-Disposition, 但这里是备用)
         link.download = `${this.taskId}_results.zip`;
-
-        // 将 <a> 标签添加到 DOM 中 (在某些浏览器中是必需的)
         document.body.appendChild(link);
-
-        // 触发点击
         link.click();
-
-        // 清理
         document.body.removeChild(link);
         window.URL.revokeObjectURL(downloadUrl);
       } catch (error) {
         console.error("导出结果失败:", error);
-        // 尝试将 blob 错误转换为 JSON 文本
         if (error.response && error.response.data && error.response.data.type === 'application/json') {
           try {
             const errorJson = await error.response.data.text();
@@ -1033,7 +811,6 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-/* 重构样式 - 清理无效规则，保持页面外观不变 */
 /* 字体定义 */
 @font-face {
   font-family: 'DOUYUFont';
@@ -1083,7 +860,6 @@ export default {
 }
 
 .newTitle {
-  /* 多模态信息认知偏差检测模型 */
   width: 524px;
   height: 40px;
   font-family: 'DOUYUFont', sans-serif;
@@ -1102,7 +878,6 @@ export default {
 }
 
 .header-btn {
-  /* 首页 */
   font-family: 'DOUYUFont', sans-serif;
   color: #FFFFFF;
   font-weight: 400;
@@ -1146,9 +921,7 @@ export default {
   flex-direction: column;
   height: calc(100vh - 80px);
   padding: 0 !important;
-  /* 关键修改：强制内容靠上对齐，不留弹性空隙 */
   justify-content: flex-start !important;
-  /* 关键修改：给子元素之间设置固定的死间距 */
   gap: 10px;
 }
 
@@ -1169,11 +942,8 @@ export default {
 }
 
 .panel-right-top {
-  /* 关键修改：不要写 height: 55%，改用 flex 自动填充剩余空间 */
   flex: 1;
-  /* 关键修改：防止内容过多撑爆容器 */
   min-height: 0;
-  /* 保持原来的样式 */
   flex-shrink: 0;
   margin-bottom: 0;
   width: 400px;
@@ -1193,44 +963,71 @@ export default {
   overflow: hidden;
 }
 
-/* 面板标题 */
+/* --- 修复 1：标题通用样式重置 (去光圈 + 强制居中) --- */
+
+/* 1. 基础重置 */
 .panel-header {
-  font-family: 'DOUYUFont', sans-serif;
-  font-weight: 400;
-  font-size: 18px;
-  font-style: normal;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(191, 245, 255, 1) 100%);
-  box-shadow: 3px 3px 2px 0px rgba(0, 255, 255, 0.2);
-  height: 40px;
-  background-image: url('~@/assets/images/step1/-s-二级标题.png');
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  color: #fff;
-  margin-bottom: 10px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  padding: 0 !important;
+  margin: 0 auto 10px auto !important; /* 保持原有的下边距 */
+  /* --- 新增/修改的代码开始 --- */
+  box-sizing: border-box !important; /* 关键：防止 padding 改变盒子总高度 */
+  
+  /* 调整方案 A：如果文字觉得【偏下】，加底部内边距把它顶上去 */
+  // padding-bottom: 8px !important;    /* 建议先尝试 5px-10px，数字越大文字越往上跑 */
+  
+  /* 调整方案 B：如果文字觉得【偏上】，改用 padding-top */
+  padding-top: 5px !important;
+  /* --- 新增/修改的代码结束 --- */
+  
+  /* 强制去除背景色、边框、阴影 */
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  
+  /* 确保字体样式 */
+  font-family: 'DOUYUFont', sans-serif !important;
+  color: #FFFFFF !important;
+  font-weight: 400 !important;
+  font-size: 18px !important;
 }
 
-.panel-header.header-results {
-  width: 400px;
-  height: 50px;
-}
-
-/* 选择数据标题框 */
+/* 2. 针对“选择数据”标题框的特定修复 */
 .header-select-data {
-  width: 398px;
-  height: 40px;
-  border: 1px solid;
-  border-image: linear-gradient(90deg, rgba(6, 142, 255, 1) 0%, rgba(0, 229, 253, 1) 100%) 1;
+  /* 强制覆盖为 none */
+  border: none !important; 
+  border-image: none !important;
+  
+  /* 尺寸与背景图 */
+  width: 400px !important;
+  height: 40px !important;
+  background-image: url('~@/assets/images/step1/-s-二级标题.png') !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100% !important;
 }
 
-.header-accuracy {
-  margin-top: 10px;
+/* 3. 针对“偏差检测结果”标题框的特定修复 */
+.panel-header.header-results {
+  /* 去除原有的 box-shadow */
+  box-shadow: none !important;
+  
+  width: 400px !important;
+  height: 50px !important; /* 保持你原有的高度设置 */
+  background-image: url('~@/assets/images/step1/-s-二级标题.png') !important;
 }
 
-/* 4. 左侧列 */
+/* 辅助类：确保没有残留样式 */
+.clean-header {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 选择数据面板 */
 .panel-left {
   background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
   position: absolute;
@@ -1293,6 +1090,8 @@ export default {
   background-color: #00e5ff;
 }
 
+/* --- 修复 2：按钮文字绝对定位系统 --- */
+
 .action-buttons {
   margin-top: auto;
   flex-shrink: 0;
@@ -1300,35 +1099,36 @@ export default {
   text-align: center;
 }
 
+/* 通用按钮容器设置 */
+.btn-start-detect,
+.btn-start-bias,
+.btn-export-result {
+  position: relative !important; /* 关键 */
+  display: block !important;     /* 取消 inline-flex */
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  justify-content: initial;
+  align-items: initial;
+  color: #fff;
+}
+
 .btn-start-detect {
-  /* 开始目标检测 */
-  font-family: 'DOUYUFont', sans-serif;
-  font-weight: 400;
-  font-size: 18px;
-  font-style: normal;
   width: 250px;
   height: 100px;
-  top: 940px;
-  left: 135px;
-  background: none;
-  border: none;
-  cursor: pointer;
+  font-size: 20px; 
+  /* top/left 建议用 margin 控制，此处保留原有样式的大致位置感 */
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  color: #fff;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
+  display: inline-block; /* 或 block，配合 margin */
+  margin: 0 auto;
+}
 
-  &:disabled {
-    filter: grayscale(80%);
-    cursor: not-allowed;
-  }
-
-  span {
-    margin-left: 8px;
-  }
+.btn-start-detect:disabled {
+  filter: grayscale(80%);
+  cursor: not-allowed;
 }
 
 /* 5. 中间列 */
@@ -1366,6 +1166,9 @@ export default {
   align-items: center;
   text-align: center;
   position: relative;
+  /* --- 新增/修改的代码开始 --- */
+  box-sizing: border-box;   /* 关键 */
+  padding-top: 5px !important;
 
   &::before {
     content: '';
@@ -1380,7 +1183,6 @@ export default {
     z-index: -1;
   }
 
-  /* 文字渐变效果 */
   background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(191, 245, 255, 1) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -1403,13 +1205,11 @@ export default {
   align-items: center;
 }
 
-/* 上面视频外框（原视频） */
 .video-section:first-of-type .video-frame {
   width: 800px;
   height: 320px;
 }
 
-/* 下面视频外框（检测结果视频） */
 .video-section:nth-of-type(2) .video-frame {
   width: 800px;
   height: 300px;
@@ -1421,13 +1221,11 @@ export default {
   object-fit: contain;
 }
 
-/* 上面视频显示区域（原视频） */
 .video-section:first-of-type .video-frame .video-display {
   width: 650px;
   height: 280px;
 }
 
-/* 下面视频展示区域（检测结果视频） */
 .video-section:nth-of-type(2) .video-frame .video-display {
   width: 660px;
   height: 260px;
@@ -1438,7 +1236,6 @@ export default {
   font-size: 1rem;
 }
 
-/* 中间总结框样式 */
 .summary-box-middle {
   width: 600px;
   height: 70px;
@@ -1484,7 +1281,6 @@ export default {
 }
 
 .bias-button-container {
-  /* 修改这里：原为 height: 40px; 太小了，改为 auto 或更大 */
   min-height: 70px;
   height: auto;
   display: flex;
@@ -1492,7 +1288,6 @@ export default {
   justify-content: center;
   margin-bottom: 5px;
   padding: 8px 0;
-  /* 增加一点内边距 */
 }
 
 .description-box {
@@ -1522,32 +1317,20 @@ export default {
 }
 
 .btn-start-bias {
-  background: none;
-  border: none;
-  cursor: pointer;
   width: 250px;
   height: 100px;
   background-image: url('~@/assets/images/step1/偏差检测按键.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  color: #fff;
   font-family: 'DOUYUFont', sans-serif;
-  font-size: 23px;
-  font-weight: 400;
-  font-style: normal;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
+  font-size: 16px;
+  display: block;
+  margin: 0 auto;
+}
 
-  &:disabled {
-    filter: grayscale(80%);
-    cursor: not-allowed;
-  }
-
-  span {
-    margin-left: 0;
-  }
+.btn-start-bias:disabled {
+  filter: grayscale(80%);
+  cursor: not-allowed;
 }
 
 .typing-text {
@@ -1571,7 +1354,6 @@ export default {
   font-size: 0.95rem;
 }
 
-/* 右下方面板 */
 .panel-right-bottom {
   background-image: url('~@/assets/images/step4/准确率框.png');
   width: 400px;
@@ -1615,53 +1397,58 @@ export default {
   flex-shrink: 0;
 }
 
-/* 导出按钮的容器 */
 .action-buttons-right {
   flex-shrink: 0;
   text-align: right;
-  /* 或者是 center，看你喜好 */
-
-  /* 【核心修复】：绝对不要用 margin-top: auto */
-  /* margin-top: auto;  <-- 删掉这行 */
   display: flex;
-  /* 使用 Flex 布局 */
   justify-content: center;
-  /* 水平居中 */
   align-items: center;
-  /* 垂直居中 */
-  /* 改为固定的、紧凑的间距 */
   margin-top: 5px !important;
   padding-top: 0 !important;
   padding-bottom: 10px;
 }
 
 .btn-export-result {
-  background: none;
-  border: none;
-  cursor: pointer;
   width: 250px;
   height: 100px;
   background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  color: #fff;
   font-family: 'DOUYUFont', sans-serif;
   font-size: 23px;
-  font-weight: 400;
-  font-style: normal;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
+  display: block;
+  margin: 0 auto;
+}
 
-  &:disabled {
-    filter: grayscale(80%);
-    cursor: not-allowed;
-  }
+.btn-export-result:disabled {
+  filter: grayscale(80%);
+  cursor: not-allowed;
+}
 
-  span {
-    margin-left: 0;
-  }
+/* --- 调试核心：按钮文字定位 --- */
+
+.btn-text-pos {
+  position: absolute;
+  /* 默认绝对居中 */
+  top: 60%;
+  left: 60%;
+  transform: translate(-50%, -50%);
+  
+  white-space: nowrap;
+  font-family: 'DOUYUFont', sans-serif;
+  // font-size: 23px; 
+  color: #FFFFFF;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Loading Spinner 位置 */
+.btn-spinner-pos {
+  position: absolute;
+  left: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
 }
 
 /* 7. 响应式调整 */
@@ -1689,7 +1476,6 @@ export default {
 }
 
 @media (max-width: 1200px) {
-
   .left-column,
   .middle-column,
   .right-column {
@@ -1744,7 +1530,6 @@ export default {
   border-radius: 3px;
 }
 
-/* 加载状态样式 */
 .loading-overlay {
   position: relative;
   filter: grayscale(80%) brightness(0.6);
