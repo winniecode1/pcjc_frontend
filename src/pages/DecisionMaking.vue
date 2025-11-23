@@ -18,7 +18,7 @@
     <div class="core-layout-design">
       <div class="design-left-column">
         <div class="design-module video-module" :style="videoPanelBgStyle">
-          <div class="panel-header">无人机侦察数据</div>
+          <div class="panel-header clean-header">无人机侦察数据</div>
           <div class="design-module-content video-content-wrapper">
             <video v-if="testVideoUrl" :src="testVideoUrl" controls class="test-video-player" @error="handleVideoError"
               autoplay loop muted></video>
@@ -29,7 +29,7 @@
         </div>
 
         <div class="design-module text-module-left fixed-left-text" :style="leftTextPanelBgStyle">
-          <div class="panel-header">群体协商认知传播信息</div>
+          <div class="panel-header clean-header">群体协商认知传播信息</div>
           <div class="design-module-content text-scrollable">
             <p class="text-content" v-html="formattedThirdStageText"></p>
           </div>
@@ -38,8 +38,8 @@
         <div class="button-container">
           <b-button @click="fetchBackendData" variant="primary" :disabled="isLoading" class="inference-btn"
             :style="buttonBgStyle">
-            <b-spinner small v-if="isLoading"></b-spinner>
-            {{ isLoading ? '开始决策认知...' : '决策认知' }}
+            <b-spinner small v-if="isLoading" class="btn-spinner-pos"></b-spinner>
+            <span class="btn-text-pos">{{ isLoading ? '开始决策认知...' : '开始决策认知' }}</span>
           </b-button>
         </div>
       </div>
@@ -60,7 +60,7 @@
               <div class="design-module-content text-scrollable">
                 <div v-if="isAssessing" class="loading-overlay">
                   <b-spinner small></b-spinner>
-                  <span>加载中...</span>
+                  <span>计算中...</span>
                 </div>
                 <div class="description-box assessment-content-box">
                   <ul class="info-list"
@@ -78,13 +78,13 @@
         </div>
 
         <div class="design-module behavior-module" :style="behaviorPanelBgStyle">
-          <div class="design-module-label" :style="labelImageStyle(assetNames.behaviorLabel, 200, 35)">辅助决策行为信息</div>
+          <div class="design-module-label clean-header" :style="labelImageStyle(assetNames.behaviorLabel, 200, 35)">辅助决策行为信息</div>
           <div class="behavior-content">
             <div class="flanking-image-column">
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
                   <b-spinner style="width: 2rem; height: 2rem;" label="Loading..."></b-spinner>
-                  <span style="margin-top: 8px;">加载中...</span>
+                  <span style="margin-top: 8px;">计算中...</span>
                 </div>
                 <img :src="imageList[0]" v-if="imageList[0] && !isImageLoading" alt="图像 1" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 1</div>
@@ -92,7 +92,7 @@
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
                   <b-spinner style="width: 2rem; height: 2rem;" label="Loading..."></b-spinner>
-                  <span style="margin-top: 8px;">加载中...</span>
+                  <span style="margin-top: 8px;">计算中...</span>
                 </div>
                 <img :src="imageList[2]" v-if="imageList[2] && !isImageLoading" alt="图像 3" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 3</div>
@@ -114,7 +114,7 @@
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
                   <b-spinner style="width: 2rem; height: 2rem;" label="Loading..."></b-spinner>
-                  <span style="margin-top: 8px;">加载中...</span>
+                  <span style="margin-top: 8px;">计算中...</span>
                 </div>
                 <img :src="imageList[1]" v-if="imageList[1] && !isImageLoading" alt="图像 2" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 2</div>
@@ -122,7 +122,7 @@
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
                   <b-spinner style="width: 2rem; height: 2rem;" label="Loading..."></b-spinner>
-                  <span style="margin-top: 8px;">加载中...</span>
+                  <span style="margin-top: 8px;">计算中...</span>
                 </div>
                 <img :src="imageList[3]" v-if="imageList[3] && !isImageLoading" alt="图像 4" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 4</div>
@@ -146,7 +146,7 @@
               <div class="design-module-content text-scrollable">
                 <div v-if="isAssessing" class="loading-overlay">
                   <b-spinner small></b-spinner>
-                  <span>加载中...</span>
+                  <span>计算中...</span>
                 </div>
                 <div class="description-box assessment-content-box">
                   <ul class="info-list" v-if="formattedPerformanceDataList && formattedPerformanceDataList.length > 0">
@@ -166,15 +166,15 @@
       <div class="design-right-column">
         <div class="panel-right-bias-button">
           <button class="btn-bias-detect" @click="performDeviationDetection" :disabled="isBiasDetecting">
-            <b-spinner small v-if="isBiasDetecting" style="margin-right:5px;"></b-spinner>
-            {{ isBiasDetecting ? '开始偏差检测...' : '偏差检测' }}
+            <b-spinner small v-if="isBiasDetecting" class="btn-spinner-pos"></b-spinner>
+            <span class="btn-text-pos">{{ isBiasDetecting ? '开始偏差检测...' : '决策认知偏差检测' }}</span>
           </button>
         </div>
         <div class="panel-right-top">
           <div class="panel-content">
-            <div class="panel-header header-results">决策选择认知偏差检测结果</div>
+            <div class="panel-header header-results clean-header">决策选择认知偏差检测结果</div>
             <div class="results-scroll-container">
-              <div v-if="isBiasResultLoading" class="panel-overlay">加载中...</div>
+              <div v-if="isBiasResultLoading" class="panel-overlay">计算中...</div>
               <template v-else>
                 <div class="result-section small-section">
                   <div class="section-header">行为信息：</div>
@@ -203,7 +203,7 @@
 
         <div class="panel-right-accuracy">
           <template v-if="isBiasResultLoading">
-            <div class="loading-spinner">加载中...</div>
+            <div class="loading-spinner">计算中...</div>
           </template>
           <template v-else>
             <div class="accuracy-content">
@@ -223,7 +223,7 @@
 
         <div class="panel-right-button">
           <button @click="exportData" class="btn-export-result" :disabled="isBiasDetecting">
-            结果导出
+            <span class="btn-text-pos">结果导出</span>
           </button>
         </div>
       </div>
@@ -827,6 +827,15 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+/* 字体定义 */
+@font-face {
+  font-family: 'DOUYUFont';
+  src: url('~@/assets/douyuFont-2.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* 基础重置 */
 * {
   margin: 0;
@@ -921,6 +930,8 @@ export default {
 
 .nav-btn {
   @include sci-fi-border;
+  font-family: 'DOUYUFont';
+  font-size: 14px;
   background: rgba(10, 25, 50, 0.9);
   color: #00e0ff;
   padding: 5px 15px;
@@ -966,11 +977,21 @@ export default {
 }
 
 .newTitle {
-  font-size: calc(1.2vw + 1rem);
-  color: #00e0ff;
-  font-weight: bolder;
-  letter-spacing: 0.1em;
-  text-shadow: 0 0 10px #00e0ff, 0 0 15px #00e0ff;
+  width: 484px;
+  height: 40px;
+  font-family: DOUYUFont;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 31px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(191, 245, 255, 1) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+  line-height: 40px;
 }
 
 .use-assets {
@@ -984,11 +1005,6 @@ export default {
 
   .design-module .design-module-content.text-scrollable {
     overflow-y: auto !important;
-  }
-
-  .design-module .design-module-label {
-    background: transparent;
-    border-radius: 0;
   }
 
   .nav-btn {
@@ -1048,7 +1064,6 @@ export default {
   height: 100%;
 }
 
-/* --- 右侧列样式更新 --- */
 .design-right-column {
   width: 30%;
   display: flex;
@@ -1067,10 +1082,6 @@ export default {
   display: flex;
   flex-direction: column;
   border-radius: 5px;
-
-  .design-module-label {
-    @include sci-fi-label;
-  }
 }
 
 .assessment-module .design-module-content.text-scrollable {
@@ -1104,8 +1115,13 @@ export default {
   background-color: transparent;
   border: none;
   box-shadow: none;
-  color: #eee;
-  font-size: 0.9rem;
+  color: #FFFFFF;
+  font-family: DOUYUFont;
+  font-weight: 400;
+  font-size: 14px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: left;
   line-height: 1.6;
   padding: 15px !important;
   overflow-y: auto;
@@ -1138,8 +1154,13 @@ export default {
   padding: 10px 0;
   margin: 0;
   line-height: 1.6;
-  color: #e8f4ff;
-  font-size: 0.95rem;
+  color: #FFFFFF;
+  font-family: DOUYUFont;
+  font-weight: 400;
+  font-size: 14px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: left;
   padding-left: 0;
   padding-right: 0;
 }
@@ -1175,6 +1196,16 @@ export default {
   margin: 0;
 }
 
+.assessment-module .text-content {
+  font-family: DOUYUFont;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 14px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: left;
+}
+
 .loading-overlay {
   position: absolute;
   top: 0;
@@ -1198,6 +1229,8 @@ export default {
   background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
+  position: relative;
+  padding-top: 0 !important;
 
   .video-content-wrapper {
     padding: 15px;
@@ -1224,6 +1257,7 @@ export default {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .standalone-label {
@@ -1250,7 +1284,7 @@ export default {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 10px 25px 30px 25px;
+  padding: 0 !important;
 }
 
 .fixed-left-text .panel-header {
@@ -1262,7 +1296,7 @@ export default {
 .fixed-left-text .design-module-content {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 0;
+  padding: 10px 25px 30px 25px !important;
 }
 
 .button-container {
@@ -1273,19 +1307,22 @@ export default {
   align-items: center;
 
   .inference-btn {
-    width: 170px;
-    height: 72px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    @include sci-fi-border;
+    position: relative !important;
+    width: 250px;
+    height: 100px;
+    font-family: DOUYUFont;
+    color: #FFFFFF;
+    font-weight: 400;
+    font-size: 20px;
+    font-style: normal;
+    text-decoration: none;
+    text-align: left;
+    display: block;
     background-image: url('~@/assets/images/step4/开始测验.png');
-    color: #ffffff;
     border: none;
     border-radius: 4px;
+    background-color: transparent;
+    box-shadow: none;
   }
 }
 
@@ -1313,6 +1350,13 @@ export default {
     height: 100%;
   }
 
+  .assessment-left-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
   .assessment-middle-section {
     flex: 1;
     display: flex;
@@ -1334,10 +1378,15 @@ export default {
   padding-top: 18px;
 
   .design-module-label {
-    // width: 120px;
-    justify-content: center !important; /* 强制文字水平居中 */
-    padding-left: 5 !important;         /* 去除全局样式中设置的左侧缩进 */
-    align-items: center;
+    width: 200px !important;
+    height: 35px !important;
+    margin: 0 auto 0 auto !important; /* 往上移动：从 5px 改为 0 */
+    // background: transparent !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 0 !important;
+    font-size: 12px !important;
+    line-height: 35px !important; /* 设置为与 height 相同，确保文字垂直居中 */
   }
 
   .behavior-content {
@@ -1420,36 +1469,77 @@ export default {
   }
 }
 
-/* 面板标题 */
-.panel-header {
-  padding-left: 0 !important;
-  justify-content: center !important;
-  display: flex;      /* 确保是 flex 布局 */
-  align-items: center; /* 实现垂直居中 */
-  width: 300px; /* 您可以根据需要修改这个数值，例如 320px 或 100% */
-  margin: 5px auto 10px auto !important;/* 关键修改：25px(顶部间隔), auto(水平居中), 10px(底部间隔) */
-}
-
+/* =========================================
+   核心修复：标题通用样式重置
+   ========================================= */
 .panel-header,
 .design-module-label {
-  height: 35px;
-  background-image: url('~@/assets/images/step1/-s-二级标题.png');
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  flex-shrink: 0;
-  color: #fff;
-  font-size: 1rem;
-  font-weight: bold;
-  padding-left: 0;
-  margin-bottom: 5px;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  /* 强制居中 */
+
+  /* 字体统一 */
+  font-family: DOUYUFont !important;
+  color: #FFFFFF !important;
+  font-weight: 400 !important;
+  font-size: 14px !important;
+  text-decoration: none !important;
+}
+
+/* 去除特定标题框的光圈和背景色 */
+.clean-header {
+  border: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important; /* 确保只显示背景图 */
+  outline: none !important;
+}
+
+/* 无人机侦察数据 & 群体协商认知传播信息 标题 */
+.video-module .panel-header,
+.text-module-left .panel-header {
+  width: 350px !important;
+  height: 50px !important;
+  margin-top: 5px !important;
+  margin-bottom: 0 !important;
+  background-image: url('~@/assets/images/step1/-s-二级标题.png') !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100% !important;
+}
+
+/* 机器评估和指挥员评估标题 */
+.assessment-title {
+  font-family: DOUYUFont;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 14px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: center;
   display: flex;
-  justify-content: flex-start;
   align-items: center;
+  justify-content: center;
+  margin-top: 5px;
+  width: auto;
+  white-space: nowrap;
+}
+
+/* 决策选择认知偏差检测结果标题框 */
+.panel-right-top .panel-header.header-results {
+  width: 350px !important; /* 保持一致宽度或根据原图调整 */
+  height: 50px !important;
+  margin-top: 5px !important;
+  margin-bottom: 0 !important;
+  background-image: url('~@/assets/images/step1/-s-二级标题.png') !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100% !important;
 }
 
 .panel-right-top {
   height: 63%;
-  /* Increased from 55% */
   flex-shrink: 0;
   width: 100%;
   background-repeat: no-repeat;
@@ -1465,8 +1555,7 @@ export default {
 .panel-right-top .panel-content {
   display: flex;
   flex-direction: column;
-  padding: 10px 25px 30px 25px;
-  /* Reduced top padding */
+  padding: 0 !important;
   height: 100%;
 }
 
@@ -1476,6 +1565,7 @@ export default {
   position: relative;
   min-height: 0;
   margin-top: 10px;
+  padding: 0 25px 30px 25px;
 }
 
 .results-scroll-container::-webkit-scrollbar {
@@ -1489,12 +1579,6 @@ export default {
 
 .results-scroll-container::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.3);
-}
-
-.panel-right-top .panel-header.header-results {
-  margin-top: 0;
-  margin-bottom: 10px;
-  padding-left: 0;
 }
 
 .result-section {
@@ -1523,7 +1607,6 @@ export default {
   position: relative;
 }
 
-/* Added custom scrollbar styles to match machine assessment */
 .section-content::-webkit-scrollbar {
   width: 6px;
 }
@@ -1544,9 +1627,7 @@ export default {
 
 .consensus-section .section-content {
   min-height: 180px;
-  /* Reduced from 220px */
   max-height: 180px;
-  /* Reduced from 220px */
   overflow-y: auto;
 }
 
@@ -1650,22 +1731,23 @@ export default {
 }
 
 .btn-bias-detect {
+  position: relative !important;
   background: none;
   border: none;
   cursor: pointer;
-  width: auto;            /* 宽度自适应 */
-  min-width: 150px;       /* 最小宽度 */
-  max-width: 250px;       /* 最大宽度 */
-  height: 50px;
+  width: 250px;
+  height: 100px;
   background-image: url('~@/assets/images/step3/greenbutton.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  color: #fff;
-  font-size: 1.1rem;
-  font-weight: bold;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
+  font-family: DOUYUFont;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 14px;
+  font-style: normal;
+  text-decoration: none;
+  display: block;
+  margin: 0 auto;
   margin-bottom: -50px;
   margin-top: -60px;
 }
@@ -1676,26 +1758,26 @@ export default {
 }
 
 .btn-export-result {
+  position: relative !important;
   background-color: transparent !important;
-  /* 关键：去掉按钮默认的白色/灰色背景 */
   box-shadow: none !important;
-  /* 保险起见：去掉默认阴影 */
   background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   background-position: center;
   border: none;
   cursor: pointer;
-  width: 160px;
-  height: 50px;
-  color: #333;
-  font-size: 1.1rem;
-  font-weight: bold;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
+  width: 250px;
+  height: 100px;
+  font-family: DOUYUFont;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 23px;
+  font-style: normal;
+  text-decoration: none;
+  display: block;
+  margin: 0 auto;
   transition: all 0.3s ease;
-  position: relative;
   padding: 0;
   margin-top: -20px;
 }
@@ -1709,6 +1791,40 @@ export default {
   filter: grayscale(80%);
   cursor: not-allowed;
 }
+
+/* =========================================
+   核心修复：按钮文字绝对定位调试
+   ========================================= */
+.btn-text-pos {
+  position: absolute;
+  /* 调整这里 top 和 left 的数值来移动文字 */
+  top: 60%;
+  left: 60%;
+  transform: translate(-50%, -50%); /* 保持居中基准 */
+
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Spinner 绝对定位 */
+.btn-spinner-pos {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* 独立微调示例（您可以根据需要取消注释并修改数值） */
+/* .inference-btn .btn-text-pos {
+  top: 48%;
+  left: 55%;
+}
+.btn-bias-detect .btn-text-pos {
+  top: 50%;
+  left: 50%;
+}
+*/
 
 .core-layout-design::after {
   content: "";
