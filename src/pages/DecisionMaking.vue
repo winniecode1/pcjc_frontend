@@ -78,7 +78,8 @@
         </div>
 
         <div class="design-module behavior-module" :style="behaviorPanelBgStyle">
-          <div class="design-module-label clean-header" :style="labelImageStyle(assetNames.behaviorLabel, 200, 35)">辅助决策行为信息</div>
+          <div class="design-module-label clean-header" :style="labelImageStyle(assetNames.behaviorLabel, 200, 35)">
+            辅助决策行为信息</div>
           <div class="behavior-content">
             <div class="flanking-image-column">
               <div class="image-item">
@@ -1380,13 +1381,21 @@ export default {
   .design-module-label {
     width: 200px !important;
     height: 35px !important;
-    margin: 0 auto 0 auto !important; /* 往上移动：从 5px 改为 0 */
+    margin: 0 auto 0 auto !important;
+    /* 往上移动：从 5px 改为 0 */
     // background: transparent !important;
     justify-content: center !important;
     align-items: center !important;
     padding: 0 !important;
     font-size: 12px !important;
-    line-height: 35px !important; /* 设置为与 height 相同，确保文字垂直居中 */
+    /* --- 修改开始 --- */
+    box-sizing: border-box !important;
+    /* 关键 */
+    line-height: normal !important;
+    /* 取消固定的 line-height，允许 padding 发挥作用 */
+    padding-top: 6px !important;
+    /* 增加这个值让文字往下移 (试着调 4px - 8px) */
+    /* --- 修改结束 --- */
   }
 
   .behavior-content {
@@ -1494,13 +1503,22 @@ export default {
 .clean-header {
   border: none !important;
   box-shadow: none !important;
-  background-color: transparent !important; /* 确保只显示背景图 */
+  background-color: transparent !important;
+  /* 确保只显示背景图 */
   outline: none !important;
 }
 
 /* 无人机侦察数据 & 群体协商认知传播信息 标题 */
 .video-module .panel-header,
 .text-module-left .panel-header {
+  /* 确保盒模型正确，防止 padding 撑大高度 */
+  box-sizing: border-box !important;
+
+  /* 核心修改：增加顶部内边距，把文字往下推 */
+  padding-top: 5px !important;
+  /* 建议值：8px - 12px，数字越大文字越靠下 */
+  padding-bottom: 0 !important;
+  /* 确保底部没有内边距反向顶它 */
   width: 350px !important;
   height: 50px !important;
   margin-top: 5px !important;
@@ -1529,7 +1547,17 @@ export default {
 
 /* 决策选择认知偏差检测结果标题框 */
 .panel-right-top .panel-header.header-results {
-  width: 350px !important; /* 保持一致宽度或根据原图调整 */
+
+  /* 确保盒模型正确，防止 padding 撑大高度 */
+  box-sizing: border-box !important;
+
+  /* 核心修改：增加顶部内边距，把文字往下推 */
+  padding-top: 5px !important;
+  /* 建议值：8px - 12px，数字越大文字越靠下 */
+  padding-bottom: 0 !important;
+  /* 确保底部没有内边距反向顶它 */
+  width: 350px !important;
+  /* 保持一致宽度或根据原图调整 */
   height: 50px !important;
   margin-top: 5px !important;
   margin-bottom: 0 !important;
@@ -1800,7 +1828,8 @@ export default {
   /* 调整这里 top 和 left 的数值来移动文字 */
   top: 60%;
   left: 60%;
-  transform: translate(-50%, -50%); /* 保持居中基准 */
+  transform: translate(-50%, -50%);
+  /* 保持居中基准 */
 
   white-space: nowrap;
   pointer-events: none;
