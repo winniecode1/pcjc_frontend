@@ -156,14 +156,14 @@
             <div class="metric-title">多主体解析准确率</div>
             <div class="metric-value">
               <span v-if="accuracy !== null && accuracy !== undefined">{{ formatPercent(accuracy, 0) }}</span>
-              <span v-else class="loading-spinner loading-spinner-large"></span>
+              <span v-else class="calculating-text">计算中...</span>
             </div>
         </div>
         <div class="metric-card recall-card">
             <div class="metric-title">不一致根因召回率</div>
             <div class="metric-value">
               <span v-if="recall !== null && recall !== undefined">{{ formatPercent(recall, 0) }}</span>
-              <span v-else class="loading-spinner loading-spinner-large"></span>
+              <span v-else class="calculating-text">计算中...</span>
             </div>
         </div>
         <button 
@@ -1463,6 +1463,28 @@ export default {
   font-family: 'DingTalk-JinBuTi', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
 }
 
+/* 计算中文本样式 */
+.calculating-text {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #4ED8FF;
+  font-family: 'DingTalk-JinBuTi', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
+  text-shadow: 0 0 8px rgba(78, 216, 255, 0.4);
+  animation: calculating 1.5s ease-in-out infinite;
+  letter-spacing: 1px;
+  position: relative;
+  top: -8px;
+}
+
+@keyframes calculating {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+  
 .export-btn {
   position: absolute;
   bottom: 4.8vh;
