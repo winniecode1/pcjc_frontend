@@ -57,7 +57,7 @@
         </div>
 
         <div class="button-container">
-          <button @click="startNegotiation" class="btn-start-detect" :disabled="false">
+          <button @click="startNegotiation" class="btn-start-detect" :disabled="isDetecting">
             <span>开始细粒度检测</span>
           </button>
           <button @click="queryPriorKnowledge" class="btn-start-detect" :disabled="isLoading || isQueryingPriorKnowledge">
@@ -221,6 +221,8 @@ export default {
           imageBase64: '',
           // 查询先验知识状态
           isQueryingPriorKnowledge: false,
+          // 细粒度检测状态（控制按钮禁用）
+          isDetecting: false,
           // 存储细粒度检测的结果数据
           listResultData: null,
           // 细粒度检测的多模态信息（图片、颜色、形状、轮廓），显示在原有信息下面
@@ -231,12 +233,18 @@ export default {
     window.addEventListener('resize', this.handleResize);
     // 页面加载时加载视频
     this.loadVideoFromStorage();
-    // 页面加载时调用get_image_base64接口获取图片信息
+    // 页面加载时调用get_image_base64接口获取图片信息（先加载，确保后续恢复多模态信息时图片可用）
     this.loadImageBase64();
-    // 初始加载时不显示缓存数据，只在用户点击查询按钮后显示
-    // 使用默认节点渲染图谱
+    // 页面加载时尝试读取模块二缓存（如果存在会调用 renderGraph）
+    // 使用 $nextTick 确保 imageBase64 已经加载完成（如果从缓存加载）
     this.$nextTick(() => {
-      this.renderGraph();
+      this.loadModule2FromStorage();
+      // 如果没有缓存，使用默认节点渲染图谱
+      if (!localStorage.getItem('module2Res')) {
+        this.$nextTick(() => {
+          this.renderGraph();
+        });
+      }
     });
     // this.downloadJsonData();
   },
@@ -521,8 +529,8 @@ export default {
     },
 
     startInfer() {
-      // 使用独立的变量来控制细粒度检测的加载状态，不影响中间和右侧的显示
-      // this.isLoading = true; // 移除这行，避免触发中间和右侧的加载状态显示
+      // 禁用按钮，直到检测完成并显示信息
+      this.isDetecting = true;
       
       // 不清空中间和右侧的数据，保持默认设置不变
       // 只清空细粒度检测的结果信息
@@ -563,8 +571,20 @@ export default {
         
         // 更新细粒度检测的信息（不替换原有的VIDEO_DESCRIPTION）
         this.multimodalDetectionInfo = Object.keys(multimodalContent).length > 0 ? multimodalContent : null;
+        
+        // 保存多模态检测信息到 localStorage，以便页面刷新后恢复
+        if (this.multimodalDetectionInfo) {
+          localStorage.setItem('multimodalDetectionInfo', JSON.stringify(this.multimodalDetectionInfo));
+        }
+        // 保存 imageBase64 到 localStorage
+        if (this.imageBase64) {
+          localStorage.setItem('imageBase64', this.imageBase64);
+        }
 
         // 中间和右侧不展示拿到的信息，保持为空状态
+        
+        // 检测完成，恢复按钮可用状态
+        this.isDetecting = false;
       }).catch(err => {
         console.log(err);
         this.multimodalDetectionInfo = null;
@@ -572,6 +592,8 @@ export default {
         this.$nextTick(() => {
           this.renderGraph();
         });
+        // 出错时也要恢复按钮可用状态
+        this.isDetecting = false;
       });
     },
     // 从本地缓存加载模块二结果
@@ -580,16 +602,20 @@ export default {
         const cacheStr = localStorage.getItem('module2Res');
         if (!cacheStr) {
           console.log('未找到 module2Res 缓存');
+          // 即使没有 module2Res，也尝试加载多模态检测信息
+          this.loadMultimodalDetectionInfo();
           return;
         }
         // 发现缓存 -> 启用颜色显示（页面初次加载如果存在 module2Res 则显示颜色）
-        try {
-          this.isColorized = true;
-          console.log('检测到 module2Res 缓存，启用颜色显示');
-        } catch (e) {
-          console.warn('设置 isColorized 时出错:', e);
-        }
+        this.isColorized = true;
+        console.log('检测到 module2Res 缓存，加载并显示数据');
         const data = JSON.parse(cacheStr);
+        
+        // 同时保存到 listResultData，供查询先验知识按钮使用
+        this.listResultData = data;
+        
+        // 加载多模态检测信息（图片、颜色、形状、轮廓）
+        this.loadMultimodalDetectionInfo();
         // 图谱
         if (data.knowledge_info && data.knowledge_info.length > 0) {
           this.nodes = data.knowledge_info[0].nodes || [];
@@ -740,6 +766,15 @@ export default {
     
     // 加载图片base64数据
     loadImageBase64() {
+      // 先尝试从 localStorage 加载
+      const cachedImageBase64 = localStorage.getItem('imageBase64');
+      if (cachedImageBase64) {
+        this.imageBase64 = cachedImageBase64;
+        console.log('从缓存加载 imageBase64');
+        return;
+      }
+      
+      // 如果缓存中没有，则从接口获取
       axios.get('http://10.109.253.71:8001/module2/get_image_base64', {
         params: {
           img_path: `${IMG_PATH_URL}`
@@ -753,16 +788,38 @@ export default {
           const base64String = res.data.result[0];
           // 移除可能的data URI前缀
           this.imageBase64 = base64String.replace(/^data:image\/[a-z]+;base64,/, '');
+          // 保存到 localStorage
+          localStorage.setItem('imageBase64', this.imageBase64);
         } else if (res.data && res.data.image_base64) {
           // 兼容其他可能的格式
           this.imageBase64 = res.data.image_base64;
+          localStorage.setItem('imageBase64', this.imageBase64);
         } else if (res.data && typeof res.data === 'string') {
           // 如果返回的就是base64字符串
           this.imageBase64 = res.data.replace(/^data:image\/[a-z]+;base64,/, '');
+          localStorage.setItem('imageBase64', this.imageBase64);
         }
       }).catch(err => {
         console.error('加载图片base64失败:', err);
       });
+    },
+    
+    // 加载多模态检测信息（图片、颜色、形状、轮廓）
+    loadMultimodalDetectionInfo() {
+      try {
+        const cachedInfo = localStorage.getItem('multimodalDetectionInfo');
+        if (cachedInfo) {
+          const info = JSON.parse(cachedInfo);
+          // 如果图片信息存在，需要从 imageBase64 重新构建图片 URL
+          if (info.image && this.imageBase64) {
+            info.image = `data:image/png;base64,${this.imageBase64}`;
+          }
+          this.multimodalDetectionInfo = info;
+          console.log('从缓存加载多模态检测信息:', this.multimodalDetectionInfo);
+        }
+      } catch (e) {
+        console.error('加载多模态检测信息失败:', e);
+      }
     },
     // 从 LocalStorage 加载视频
     loadVideoFromStorage() {
