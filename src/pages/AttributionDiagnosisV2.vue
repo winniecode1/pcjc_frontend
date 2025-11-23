@@ -1447,13 +1447,15 @@ export default {
 }
 
 .metric-title {
-  font-size: 0.85rem;
-  color: #8bd3f9;
+  font-family: 'DOUYUFont', sans-serif;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 11px;
+  font-style: normal;
   margin-bottom: 0.3vh;
   padding-left: 48px;
   text-align: left;
   width: 100%;
-  font-family: 'DingTalk-JinBuTi', 'PingFang SC', 'Microsoft YaHei', sans-serif !important;
 }
 
 .metric-value {
