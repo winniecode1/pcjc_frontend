@@ -577,7 +577,20 @@ export default {
     exportResults() {
       // 结果导出功能
       console.log('导出结果');
-      alert('结果导出功能已触发');
+      try {
+        // 创建隐藏的下载链接
+        const link = document.createElement('a');
+        link.href = 'http://10.109.253.71:8877/export';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        // 清理DOM
+        document.body.removeChild(link);
+        console.log('导出请求已发送');
+      } catch (error) {
+        console.error('导出失败:', error);
+        alert('导出失败，请稍后重试');
+      }
     },
     
     // 读取本地已存在的模块三结果并直接回显
