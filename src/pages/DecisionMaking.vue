@@ -206,7 +206,7 @@
           </template>
           <template v-else>
             <div class="accuracy-content">
-              <span class="accuracy-label">偏差检测准确率</span>
+              <span class="accuracy-label">偏差识别准确率</span>
               <span class="accuracy-value">
                 <template
                   v-if="deviationDetectionAccuracy !== 'N/A' && deviationDetectionAccuracy !== '计算中...' && deviationDetectionAccuracy !== null && deviationDetectionAccuracy !== undefined && deviationDetectionAccuracy !== ''">
@@ -236,6 +236,8 @@ import { BButton, BSpinner } from 'bootstrap-vue';
 
 const API_BASE_URL = 'http://10.109.253.71:12358';
 const IMAGE_API_BASE_URL = 'http://10.109.253.71:12358';
+// 偏差检测准确率延迟时间：4分钟（毫秒）
+const BIAS_DETECTION_DELAY = 4 * 60 * 1000; // 240000 毫秒
 
 export default {
   name: 'DecisionMaking',
@@ -298,6 +300,8 @@ export default {
       testVideoUrl: null,
       testVideoMessage: '正在从 LocalStorage 加载视频...',
       tempModule4Res: null,
+      // 新增：用于存储定时器ID
+      accuracyTimeout: null,
     };
   },
   computed: {
@@ -380,9 +384,13 @@ export default {
     this.initializeDataFromStorage();
     this.loadVideoFromStorage();
     this.loadDataFromModule4Res();
+    // 新增：检查倒计时状态
+    this.checkBiasTimerState();
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
+    // 新增：组件销毁时清除定时器（防止内存泄漏，但 localStorage 依然保留）
+    if (this.accuracyTimeout) clearTimeout(this.accuracyTimeout);
   },
   methods: {
     escapeToHtml(text) {
@@ -513,25 +521,41 @@ export default {
           this.currentLevel = modelLevelNum;
           this.imageList = module4Data.imageList || [null, null, null, null];
 
-          // 如果存在 summary 数据，自动填充偏差检测结果文本
+          // --- 修改开始：关于 summary 的显示逻辑 ---
+          // 只有当计时完成或从未开始时，才根据存储的数据显示。
+          // 如果正在计时中，这些会在 checkBiasTimerState 里被覆盖为 "计算中..."
           if (module4Data.summary) {
             const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Data.summary);
             this.behaviorInfo = behaviorInfo;
             this.samePoints = samePoints;
             this.differentPoints = differentPoints;
           } else {
+            // 默认文案
             this.behaviorInfo = '请点击 "偏差检测"';
             this.samePoints = '请点击 "偏差检测"';
             this.differentPoints = '请点击 "偏差检测"';
           }
 
-          // 如果存在准确率数据，自动填充偏差检测准确率
-          if (module4Data.average_comprehensive_accuracy !== undefined && module4Data.average_comprehensive_accuracy !== null) {
+          // --- 修改重点：准确率的加载逻辑 ---
+          // 只有在 localStorage 标记为"已完成"时，才直接显示准确率
+          // 如果正在计时，由 checkBiasTimerState 来处理，这里不设置
+          const isCompleted = localStorage.getItem('decisionBiasCompleted') === 'true';
+          const isTiming = localStorage.getItem('decisionBiasStartTime'); // 检查是否正在计时
+
+          if (isCompleted && module4Data.average_comprehensive_accuracy !== undefined && module4Data.average_comprehensive_accuracy !== null) {
+            // 已完成：直接显示准确率
             const accuracyValue = parseFloat(module4Data.average_comprehensive_accuracy);
             this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
+          } else if (isTiming) {
+            // 正在计时：先设置为"计算中..."，checkBiasTimerState 会恢复计时器
+            this.deviationDetectionAccuracy = '计算中...';
+            this.isBiasDetecting = true; // 确保按钮保持禁用状态
           } else {
+            // 未开始：显示 N/A
             this.deviationDetectionAccuracy = 'N/A';
+            this.isBiasDetecting = false;
           }
+          // --- 修改结束 ---
         } else {
           this.performanceData = '请点击 "开始决策认知"';
           this.performanceDataLocal = '请点击 "开始决策认知"';
@@ -677,6 +701,31 @@ export default {
             average_comprehensive_accuracy: accuracyData['average_comprehensive_accuracy']
           };
           localStorage.setItem('module4Res', JSON.stringify(module4Res));
+          // 在成功获取数据并保存到 localStorage 后，重置偏差检测相关状态：
+          localStorage.removeItem('decisionBiasStartTime');
+          localStorage.removeItem('decisionBiasCompleted');
+          if (this.accuracyTimeout) {
+            clearTimeout(this.accuracyTimeout);
+            this.accuracyTimeout = null;
+          }
+
+          // 重置偏差检测相关UI状态
+          this.deviationDetectionAccuracy = 'N/A';
+          this.isBiasDetecting = false;
+          this.isBiasResultLoading = false;
+
+          // 更新文本内容（如果有 summary）
+          if (mainData.data.summary) {
+            const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(mainData.data.summary);
+            this.behaviorInfo = behaviorInfo;
+            this.samePoints = samePoints;
+            this.differentPoints = differentPoints;
+          } else {
+            // 没有 summary，重置为默认提示
+            this.behaviorInfo = '请点击 "决策认知偏差检测"';
+            this.samePoints = '请点击 "决策认知偏差检测"';
+            this.differentPoints = '请点击 "决策认知偏差检测"';
+          }
 
           this.parseBackendData(mainData.data);
         } else {
@@ -709,19 +758,138 @@ export default {
       this.expertDangerLevel = `${expertLevelNum} !`;
       this.currentLevel = modelLevelNum;
     },
+    // 新增：检查计时器状态（核心逻辑）
+    checkBiasTimerState() {
+      // 1. 如果已经标记完成，直接结束，显示结果（由 loadDataFromModule4Res 处理了数据展示）
+      if (localStorage.getItem('decisionBiasCompleted') === 'true') {
+        this.isBiasDetecting = false;
+        this.isBiasResultLoading = false;
+        return;
+      }
+
+      const startTimeStr = localStorage.getItem('decisionBiasStartTime');
+      if (startTimeStr) {
+        const startTime = parseInt(startTimeStr, 10);
+        const now = Date.now();
+        const elapsed = now - startTime;
+
+        if (elapsed < BIAS_DETECTION_DELAY) {
+          // 2. 如果还在 4分钟内，恢复计时器
+          const remaining = BIAS_DETECTION_DELAY - elapsed;
+          console.log(`恢复决策偏差检测计时，剩余时间: ${Math.round(remaining / 1000)}秒`);
+
+          // 恢复 UI 状态
+          this.isBiasDetecting = true; // 禁用按钮
+          this.deviationDetectionAccuracy = '计算中...';
+
+          // 检查文本是否应该已经显示（5秒后）
+          const textDelay = 5000; // 文本延迟5秒
+          if (elapsed >= textDelay) {
+            // 已经超过5秒，文本应该显示，不需要 loading overlay
+            this.isBiasResultLoading = false;
+            // 恢复文本内容
+            const module4ResStr = localStorage.getItem('module4Res');
+            if (module4ResStr) {
+              try {
+                const module4Res = JSON.parse(module4ResStr);
+                if (module4Res.summary) {
+                  const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Res.summary);
+                  this.behaviorInfo = behaviorInfo;
+                  this.samePoints = samePoints;
+                  this.differentPoints = differentPoints;
+                }
+              } catch (e) {
+                console.error('恢复文本内容失败:', e);
+              }
+            }
+          } else {
+            // 还在5秒内，显示 loading
+            this.isBiasResultLoading = true;
+            // 设置定时器在5秒后显示文本
+            setTimeout(() => {
+              const module4ResStr = localStorage.getItem('module4Res');
+              if (module4ResStr) {
+                try {
+                  const module4Res = JSON.parse(module4ResStr);
+                  if (module4Res.summary) {
+                    const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Res.summary);
+                    this.behaviorInfo = behaviorInfo;
+                    this.samePoints = samePoints;
+                    this.differentPoints = differentPoints;
+                  }
+                } catch (e) {
+                  console.error('恢复文本内容失败:', e);
+                }
+              }
+              this.isBiasResultLoading = false;
+            }, textDelay - elapsed);
+          }
+
+          // 启动剩余时间的定时器（用于准确率）
+          this.startAccuracyTimer(remaining);
+        } else {
+          // 3. 时间已过但没标记完成（例如关机了很久再打开）
+          this.handleTimerComplete();
+        }
+      } else {
+        // 没有开始时间，确保状态正确
+        this.isBiasDetecting = false;
+        this.isBiasResultLoading = false;
+      }
+    },
+
+    // 新增：启动定时器
+    startAccuracyTimer(delay) {
+      if (this.accuracyTimeout) clearTimeout(this.accuracyTimeout);
+
+      this.accuracyTimeout = setTimeout(() => {
+        this.handleTimerComplete();
+      }, delay);
+    },
+
+    // 新增：计时结束处理逻辑
+    handleTimerComplete() {
+      this.isBiasDetecting = false;
+      this.isBiasResultLoading = false;
+      this.accuracyTimeout = null;
+
+      // 标记完成，移除开始时间
+      localStorage.setItem('decisionBiasCompleted', 'true');
+      localStorage.removeItem('decisionBiasStartTime');
+
+      // 从 localStorage 读取数据并显示准确率
+      const module4ResStr = localStorage.getItem('module4Res');
+      if (module4ResStr) {
+        try {
+          const data = JSON.parse(module4ResStr);
+          const accuracyValue = parseFloat(data.average_comprehensive_accuracy);
+          this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
+        } catch (e) {
+          this.deviationDetectionAccuracy = 'N/A';
+        }
+      }
+    },
+    // 修改：点击“决策认知偏差检测”按钮
     performDeviationDetection() {
       this.isBiasDetecting = true;
       this.isBiasResultLoading = true;
       this.deviationDetectionAccuracy = '计算中...';
+
+      // 清空旧的显示
       this.behaviorInfo = '';
       this.samePoints = '';
       this.differentPoints = '';
+
+      // 设置开始时间
+      localStorage.setItem('decisionBiasStartTime', Date.now().toString());
+      localStorage.removeItem('decisionBiasCompleted'); // 清除旧的完成标记
 
       try {
         const module4ResStr = localStorage.getItem('module4Res');
         if (module4ResStr) {
           const module4Res = JSON.parse(module4ResStr);
 
+          // 模拟文本生成延迟（比如5秒后显示文本，但准确率要等4分钟）
           setTimeout(() => {
             if (module4Res.summary) {
               const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Res.summary);
@@ -733,27 +901,23 @@ export default {
               this.samePoints = '暂无相同点信息';
               this.differentPoints = '暂无不同点信息';
             }
-            this.isBiasDetecting = false;
+            // 文本加载完了，loading 消失，但准确率还在计算中
             this.isBiasResultLoading = false;
           }, 5000);
 
-          setTimeout(() => {
-            const accuracyValue = parseFloat(module4Res.average_comprehensive_accuracy);
-            this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
-          }, 240000);
+          // 启动4分钟准确率计时
+          this.startAccuracyTimer(BIAS_DETECTION_DELAY);
         } else {
-          this.behaviorInfo = '请先点击 "决策认知" 获取数据，然后再点击 "偏差检测"。';
-          this.samePoints = '请先点击 "决策认知" 获取数据';
-          this.differentPoints = '请先点击 "决策认知" 获取数据';
-          this.deviationDetectionAccuracy = 'N/A';
+          // 如果没有数据
+          alert('请先点击 "开始决策认知" 获取数据');
           this.isBiasDetecting = false;
           this.isBiasResultLoading = false;
+          this.deviationDetectionAccuracy = 'N/A';
+          localStorage.removeItem('decisionBiasStartTime');
         }
       } catch (e) {
-        this.behaviorInfo = '加载偏差检测结果时出错，请检查LocalStorage数据。';
-        this.deviationDetectionAccuracy = 'N/A';
+        console.error(e);
         this.isBiasDetecting = false;
-        this.isBiasResultLoading = false;
       }
     },
     getLevelNum(backendLevel) {

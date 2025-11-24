@@ -54,7 +54,7 @@
           <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
             <video v-if="processedVideoURL && !isLoading" ref="processedVideo" :src="processedVideoURL" controls
               class="video-display" :key="processedVideoURL" playsinline muted loop @error="handleVideoError"></video>
-            <div v-if="isLoading" class="placeholder-text loading-text">计算中……</div>
+            <div v-if="isLoading" class="placeholder-text loading-text">检测中……</div>
             <div v-else-if="!processedVideoURL" class="placeholder-text">检测结果将在这里显示</div>
           </div>
         </div>
@@ -62,7 +62,7 @@
         <div class="summary-box-middle" :class="{ 'loading-overlay': isLoading }">
           <div class="summary-content overflow-auto"
             :class="{ 'text-highlight': summaryHighlight, 'loading-text': isLoading }">
-            {{ isLoading ? '计算中……' : (summaryTypingText || '检测结果将在这里显示') }}
+            {{ isLoading ? '检测中……' : (summaryTypingText || '检测结果将在这里显示') }}
           </div>
         </div>
       </b-col>
@@ -114,7 +114,7 @@
         <div class="panel-right-bottom" :class="{ 'loading-overlay': isBiasDetecting }">
           <div class="panel-content">
             <div class="accuracy-content">
-              <span class="accuracy-label">偏差检测准确率</span>
+              <span class="accuracy-label">偏差识别准确率</span>
               <span class="accuracy-value">
                 <template v-if="isBiasDetecting">
                   计算中...
@@ -151,6 +151,8 @@ const API_BASE_URL = 'http://10.109.253.71:5236';
 const FRONTEND_BASE_URL = 'http://10.109.253.71:8889';
 const BASE_DIR = "/home/wuzhixuan/Project/PCJC/1";
 const VIDEO_DIR = "/home/wuzhixuan/Project/PCJC/datasets/Vedio"
+// 定义偏差检测等待时长 (ms) - 5分钟
+const BIAS_DETECTION_DELAY = 300000; 
 
 function getFilenameFromPath(fullPath) {
   if (!fullPath || typeof fullPath !== 'string') return null;
@@ -229,6 +231,8 @@ export default {
         try {
           const module1Res = JSON.parse(module1ResStr);
           this.populateUIFromStorage(module1Res);
+          // 检查偏差检测计时器状态 (需求3)
+          this.checkBiasTimerState();
           await this.fetchVideoList();
         } catch (e) {
           console.error("解析 module1Res 失败:", e);
@@ -238,6 +242,47 @@ export default {
       } else {
         console.log("未检测到 module1Res，正常启动...");
         await this.fetchVideoList();
+      }
+    },
+    // 需求3：检查计时器状态
+    checkBiasTimerState() {
+      // --- 新增代码：优先检查是否已经完成 ---
+      if (localStorage.getItem('biasDetectionCompleted') === 'true') {
+        console.log("检测到偏差检测已完成，直接恢复结果");
+        this.showAccuracy = true;
+        this.showBiasDetails = true;
+        // 让文字直接显示，不需要打字机效果
+        this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+        return; 
+      }
+      // -------------------------------------
+      const biasStartTimeStr = localStorage.getItem('biasStartTime');
+      if (biasStartTimeStr && this.canStartBiasDetection) {
+        const biasStartTime = parseInt(biasStartTimeStr, 10);
+        const now = Date.now();
+        const elapsed = now - biasStartTime;
+
+        if (elapsed < BIAS_DETECTION_DELAY) {
+          const remaining = BIAS_DETECTION_DELAY - elapsed;
+          console.log(`恢复偏差检测计时，剩余时间: ${remaining}ms`);
+          this.isBiasDetecting = true;
+          this.showAccuracy = false; // 准确率未出
+          
+          // 如果之前的文字显示也应该恢复（这里假设如果刷新页面，文字直接显示）
+          this.showBiasDetails = true;
+          this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+          
+          // 启动剩余时间的定时器
+          this.startAccuracyTimer(remaining);
+        } else {
+          // 时间已过，直接显示结果
+          console.log('偏差检测计时已过期，直接显示结果');
+          this.isBiasDetecting = false;
+          this.showAccuracy = true;
+          this.showBiasDetails = true;
+          this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+          localStorage.removeItem('biasStartTime');
+        }
       }
     },
     fixLayoutIssues() {
@@ -278,9 +323,9 @@ export default {
 
       this.prepareDescriptionDisplay(data);
       this.summaryTypingText = this.summaryFullText;
-      this.showBiasDetails = true;
-      this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
-      this.showAccuracy = true;
+      // 默认先不显示，通过 checkBiasTimerState 决定是否显示
+      this.showBiasDetails = false; 
+      this.showAccuracy = false;
       this.resultMessage = "已从缓存加载数据。";
       this.progressMessage = "加载完成";
       this.isLoading = false;
@@ -299,87 +344,6 @@ export default {
     handleVideoError(e) {
       console.error("视频加载错误:", e);
       this.resultMessage = "处理后视频加载失败，请检查服务器日志和网络。";
-    },
-    formatDescription(description) {
-      if (!description) return '';
-      const rawAspects = this.fullResult && this.fullResult.low_similarity_aspects;
-      const aspects = this.parseLowSimilarityAspects(rawAspects);
-      
-      const validLabels = new Set(['场景', '目标', '行为']);
-      const labelsToHighlight = new Set();
-      (aspects || []).forEach(item => {
-        if (typeof item !== 'string') return;
-        const name = item.trim().replace(/^["'《【\s]+|["'》】\s]+$/g, '');
-        if (name === '目标') {
-          labelsToHighlight.add('目标');
-        }
-        if (validLabels.has(name)) {
-          labelsToHighlight.add(name);
-        }
-      });
-      const labelsArray = Array.from(labelsToHighlight);
-
-      const lines = description.split(/\r?\n/).filter(line => line.trim() !== '');
-      let html = '';
-
-      lines.forEach((line, index) => {
-        const trimmedLine = line.trim();
-        const shouldHighlight = labelsArray.some(label => {
-          return this.shouldHighlightLine(trimmedLine, label);
-        });
-
-        let lineContent = trimmedLine;
-        if (shouldHighlight) {
-          lineContent = `<span class="text-highlight" style="color: #ff4d4d; font-weight: bold;">${trimmedLine}</span>`;
-        }
-        html += `<div>${lineContent}</div>`;
-      });
-      return html;
-    },
-    shouldHighlightLine(text, label) {
-      if (!text || !label) return false;
-      const escapeRegExp = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const pattern = new RegExp(`^\\s*${escapeRegExp(label)}\\s*[：:]`);
-      return pattern.test(text);
-    },
-    parseLowSimilarityAspects(raw) {
-      try {
-        if (!raw) return [];
-        if (Array.isArray(raw)) return raw;
-        if (typeof raw === 'object') {
-          for (const key of ['low_similarity_aspects', 'data', 'items', 'list']) {
-            if (Array.isArray(raw[key])) return raw[key];
-          }
-          for (const k in raw) {
-            if (Array.isArray(raw[k])) return raw[k];
-          }
-          return [];
-        }
-        if (typeof raw === 'string') {
-          const s = raw.trim();
-          if (!s) return [];
-          if (s.startsWith('[') && s.endsWith(']')) {
-            try { return JSON.parse(s); } catch (_) { }
-          }
-          if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) {
-            const normalized = s.replace(/'/g, '"');
-            try {
-              const obj = JSON.parse(normalized);
-              return this.parseLowSimilarityAspects(obj);
-            } catch (_) { /* ignore */ }
-          }
-          const match = s.match(/\[([^\]]+)\]/);
-          if (match && match[0]) {
-            const arrText = match[0].replace(/'/g, '"');
-            try { return JSON.parse(arrText); } catch (_) {
-              return match[1].split(',').map(t => t.replace(/["'\s]/g, '')).filter(Boolean);
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('解析 low_similarity_aspects 失败：', e);
-      }
-      return [];
     },
     getMainObject() {
       if (!this.fullResult.key_frame_detection || !this.fullResult.key_frame_detection.detections || !this.fullResult.key_frame_detection.detections.length) {
@@ -424,7 +388,13 @@ export default {
       this.isBiasTyping = false;
       this.summaryFullText = '';
       this.summaryTypingText = '';
+      this.isBiasDetecting = false; // 确保状态重置
+      
+      // 需求2：强制清理计时器相关
       this.clearTypingIntervals();
+      localStorage.removeItem('biasStartTime'); // 清除计时缓存
+      // --- 新增代码：清除完成标记 ---
+      localStorage.removeItem('biasDetectionCompleted');
     },
     clearTypingIntervals() {
       if (this.summaryTypingInterval) {
@@ -489,7 +459,6 @@ export default {
       this.descriptionEntries = this.buildDescriptionEntries(fullData.video_description);
       const summaryEntry = this.descriptionEntries.find(entry => entry.label === '总结');
       if (summaryEntry) {
-        // 将"总结："改为"目标检测中："
         this.summaryFullText = summaryEntry.text.replace(/^总结[：:]/, '目标检测中：');
       } else {
         this.summaryFullText = '未找到目标检测信息。';
@@ -532,6 +501,46 @@ export default {
       });
       this.labelsToHighlight = Array.from(labels);
     },
+    parseLowSimilarityAspects(raw) {
+       // ... existing implementation same as before ...
+       try {
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === 'object') {
+          for (const key of ['low_similarity_aspects', 'data', 'items', 'list']) {
+            if (Array.isArray(raw[key])) return raw[key];
+          }
+          for (const k in raw) {
+            if (Array.isArray(raw[k])) return raw[k];
+          }
+          return [];
+        }
+        if (typeof raw === 'string') {
+          const s = raw.trim();
+          if (!s) return [];
+          if (s.startsWith('[') && s.endsWith(']')) {
+            try { return JSON.parse(s); } catch (_) { }
+          }
+          if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) {
+            const normalized = s.replace(/'/g, '"');
+            try {
+              const obj = JSON.parse(normalized);
+              return this.parseLowSimilarityAspects(obj);
+            } catch (_) { /* ignore */ }
+          }
+          const match = s.match(/\[([^\]]+)\]/);
+          if (match && match[0]) {
+            const arrText = match[0].replace(/'/g, '"');
+            try { return JSON.parse(arrText); } catch (_) {
+              return match[1].split(',').map(t => t.replace(/["'\s]/g, '')).filter(Boolean);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('解析 low_similarity_aspects 失败：', e);
+      }
+      return [];
+    },
     buildDescriptionEntries(description) {
       if (!description) return [];
       const lines = description.split(/\r?\n/).filter(line => line.trim() !== '');
@@ -565,6 +574,10 @@ export default {
       this.showAccuracy = false;
       this.resetBiasTyping();
 
+      // 需求3：设置开始时间并存入 localStorage
+      localStorage.setItem('biasStartTime', Date.now().toString());
+
+      // 开始文字打字效果倒计时 (3秒后开始)
       this.biasTypingTimeout = setTimeout(() => {
         this.showBiasDetails = true;
         this.isBiasTyping = true;
@@ -572,11 +585,20 @@ export default {
         this.biasTypingTimeout = null;
       }, 3000);
 
+      // 开始准确率结果倒计时 (5分钟)
+      this.startAccuracyTimer(BIAS_DETECTION_DELAY);
+    },
+    // 封装准确率定时器
+    startAccuracyTimer(delay) {
+      if (this.accuracyTimeout) clearTimeout(this.accuracyTimeout);
       this.accuracyTimeout = setTimeout(() => {
         this.showAccuracy = true;
         this.isBiasDetecting = false;
         this.accuracyTimeout = null;
-      }, 300000);
+        // --- 新增代码：移除计时开始时间，但写入完成标记 ---
+        localStorage.removeItem('biasStartTime'); 
+        localStorage.setItem('biasDetectionCompleted', 'true'); // 标记已完成
+      }, delay);
     },
     clearBiasTimeouts() {
       if (this.biasTypingTimeout) {
@@ -593,7 +615,6 @@ export default {
         clearInterval(this.biasTypingInterval);
         this.biasTypingInterval = null;
       }
-      this.clearBiasTimeouts();
       this.biasDisplayTexts = this.biasDetailEntries.map(() => '');
       this.isBiasTyping = false;
     },
@@ -601,18 +622,6 @@ export default {
       if (index >= this.biasDetailEntries.length) {
         this.isBiasTyping = false;
         this.biasTypingInterval = null;
-        // 所有文本显示完成后，应用高亮样式
-        this.$nextTick(() => {
-          this.biasDetailEntries.forEach((entry, idx) => {
-            if (entry.highlight) {
-              // 高亮样式已经在模板中通过 :class 绑定，这里只需要确保文本已完全显示
-              // 如果需要动态添加高亮，可以在这里处理
-            }
-          });
-        });
-        if (this.showAccuracy) {
-          this.isBiasDetecting = false;
-        }
         return;
       }
       const entry = this.biasDetailEntries[index];
@@ -645,9 +654,11 @@ export default {
     },
     selectVideo(video) {
       this.selectedVideo = video;
-      localStorage.clear();
-      console.log("选择新视频，LocalStorage 已清空。");
-      this.resetResultState();
+      localStorage.clear(); // 保持原有的清除逻辑
+      // 需求2：确保切换视频时，右侧计时器完全重置
+      this.resetResultState(); 
+      console.log("选择新视频，状态已重置。");
+      
       try {
         const baseUrl = API_BASE_URL.endsWith('/') ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
         this.originalVideoURL = `${baseUrl}/video/${encodeURIComponent(video.name)}`;
@@ -660,7 +671,12 @@ export default {
       console.log("已选择视频:", video.name);
     },
     async startDetection() {
-      localStorage.clear();
+      // 这里的逻辑与 selectVideo 类似，需要清理旧状态
+      // 但不要清除 selectVideo 选中的 selectedVideo 对象
+      const currentVideo = this.selectedVideo; 
+      localStorage.clear(); // 清理
+      this.selectedVideo = currentVideo; // 恢复选中状态
+
       console.log("LocalStorage 已清空。");
 
       if (!this.selectedVideo) {
@@ -760,16 +776,6 @@ export default {
           };
 
           localStorage.setItem('module1Res', JSON.stringify(module1Res));
-
-          console.groupCollapsed("%c✅ Module 1 结果已存储 (module1Res)", "color: #17a2b8; font-weight: bold;");
-          console.log("%c原始 JSON 字符串:", "font-weight: bold; color: #ffc107;", localStorage.getItem('module1Res'));
-          const tableData = Object.entries(module1Res).map(([key, value]) => ({
-            Key: key,
-            Value: (typeof value === 'object' && value !== null) ? JSON.stringify(value).substring(0, 50) + '...' : value
-          }));
-          console.log("%c对象内容 (表格展示):", "font-weight: bold; color: #28a745;");
-          console.table(tableData);
-          console.groupEnd();
         } catch (e) {
           console.error("保存 module1Res 到 localStorage 失败:", e);
         }
@@ -858,7 +864,7 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: url('~@/assets/images/step1/-s-图层 0.png');
+  background-image: url('~@/assets/images/step1/-s-图层 1.png');
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center center;
@@ -978,46 +984,31 @@ export default {
   overflow: hidden;
 }
 
-/* --- 修复 1：标题通用样式重置 (去光圈 + 强制居中) --- */
-
-/* 1. 基础重置 */
+/* 标题样式 */
 .panel-header {
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
   text-align: center !important;
   padding: 0 !important;
-  margin: 0 auto 10px auto !important; /* 保持原有的下边距 */
-  /* --- 新增/修改的代码开始 --- */
-  box-sizing: border-box !important; /* 关键：防止 padding 改变盒子总高度 */
-  
-  /* 调整方案 A：如果文字觉得【偏下】，加底部内边距把它顶上去 */
-  // padding-bottom: 8px !important;    /* 建议先尝试 5px-10px，数字越大文字越往上跑 */
-  
-  /* 调整方案 B：如果文字觉得【偏上】，改用 padding-top */
+  margin: 0 auto 10px auto !important; 
+  box-sizing: border-box !important; 
   padding-top: 5px !important;
-  /* --- 新增/修改的代码结束 --- */
   
-  /* 强制去除背景色、边框、阴影 */
   background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
   outline: none !important;
   
-  /* 确保字体样式 */
   font-family: 'DOUYUFont', sans-serif !important;
   color: #FFFFFF !important;
   font-weight: 400 !important;
   font-size: 18px !important;
 }
 
-/* 2. 针对“选择数据”标题框的特定修复 */
 .header-select-data {
-  /* 强制覆盖为 none */
   border: none !important; 
   border-image: none !important;
-  
-  /* 尺寸与背景图 */
   width: 400px !important;
   height: 40px !important;
   background-image: url('~@/assets/images/step1/-s-二级标题.png') !important;
@@ -1025,17 +1016,13 @@ export default {
   background-size: 100% 100% !important;
 }
 
-/* 3. 针对“偏差检测结果”标题框的特定修复 */
 .panel-header.header-results {
-  /* 去除原有的 box-shadow */
   box-shadow: none !important;
-  
   width: 400px !important;
-  height: 50px !important; /* 保持你原有的高度设置 */
+  height: 50px !important; 
   background-image: url('~@/assets/images/step1/-s-二级标题.png') !important;
 }
 
-/* 辅助类：确保没有残留样式 */
 .clean-header {
   background-color: transparent !important;
   border: none !important;
@@ -1105,8 +1092,6 @@ export default {
   background-color: #00e5ff;
 }
 
-/* --- 修复 2：按钮文字绝对定位系统 --- */
-
 .action-buttons {
   margin-top: auto;
   flex-shrink: 0;
@@ -1118,8 +1103,8 @@ export default {
 .btn-start-detect,
 .btn-start-bias,
 .btn-export-result {
-  position: relative !important; /* 关键 */
-  display: block !important;     /* 取消 inline-flex */
+  position: relative !important; 
+  display: block !important;    
   background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -1133,11 +1118,10 @@ export default {
   width: 250px;
   height: 100px;
   font-size: 20px; 
-  /* top/left 建议用 margin 控制，此处保留原有样式的大致位置感 */
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  display: inline-block; /* 或 block，配合 margin */
+  display: inline-block; 
   margin: 0 auto;
 }
 
@@ -1181,8 +1165,7 @@ export default {
   align-items: center;
   text-align: center;
   position: relative;
-  /* --- 新增/修改的代码开始 --- */
-  box-sizing: border-box;   /* 关键 */
+  box-sizing: border-box; 
   padding-top: 5px !important;
 
   &::before {
@@ -1352,8 +1335,19 @@ export default {
 }
 
 .typing-text {
-  white-space: pre-wrap;
-  margin-bottom: 6px;
+  /* 1. 解决缩进问题 */
+  white-space: pre-line;       /* 关键：保留换行符(\n)，但会自动合并代码里的缩进空格，从而消除首行缩进 */
+  text-indent: 0 !important;   /* 强制设置为0，防止被其他样式覆盖 */
+  padding-left: 0;             /* 确保左侧没有内边距 */
+  
+  /* 2. 增加行间距 */
+  line-height: 2.0;            /* 行高：数字越大间距越大（推荐 1.8 到 2.2） */
+  margin-bottom: 15px;         /* 段落之间的间距（每段文字之间的距离） */
+  
+  /* 其他保持不变 */
+  display: block;              /* 确保独占一行 */
+  text-align: left;            /* 左对齐 */
+  word-break: break-all;       /* 防止长英文单词撑破布局 */
 }
 
 .hint-text {
@@ -1382,7 +1376,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  flex-direction: column;
+  flex-direction: row;
   padding: 0;
   width: 100%;
   height: 100%;
@@ -1404,6 +1398,9 @@ export default {
   font-style: normal;
   text-decoration: none;
   margin-bottom: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: -1em;
 }
 
 .accuracy-value {
@@ -1413,6 +1410,8 @@ export default {
   text-shadow: 0 0 10px #00e5ff, 0 0 20px rgba(0, 229, 255, 0.5);
   letter-spacing: 0.05em;
   white-space: nowrap;
+  margin-top: 5px;
+  margin-left: 5px;
 }
 
 .action-buttons-right {
@@ -1443,24 +1442,18 @@ export default {
   cursor: not-allowed;
 }
 
-/* --- 调试核心：按钮文字定位 --- */
-
 .btn-text-pos {
   position: absolute;
-  /* 默认绝对居中 */
   top: 60%;
   left: 60%;
   transform: translate(-50%, -50%);
-  
   white-space: nowrap;
   font-family: 'DOUYUFont', sans-serif;
-  // font-size: 23px; 
   color: #FFFFFF;
   pointer-events: none;
   z-index: 2;
 }
 
-/* Loading Spinner 位置 */
 .btn-spinner-pos {
   position: absolute;
   left: 30px;
@@ -1539,13 +1532,10 @@ export default {
 </style>
 
 <style lang="scss">
-/* 全局样式 */
+/* 全局样式 - 需求1：去掉背景色，只保留红色字体 */
 .text-highlight {
   color: #ff4d4d !important;
   font-weight: bold;
-  background-color: rgba(255, 77, 77, 0.1);
-  padding: 1px 3px;
-  border-radius: 3px;
 }
 
 .loading-overlay {
