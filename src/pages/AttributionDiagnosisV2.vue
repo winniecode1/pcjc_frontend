@@ -26,7 +26,7 @@
     <div class="main-content">
       <!-- 模块1：多模态信息认知偏差检测模型 -->
       <div class="module-container" style="top: 17vh; left: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">多模态信息认知偏差根因诊断</div>
+        <div class="module-header">1.多模态信息认知偏差根因诊断</div>
         <div class="module-body">
           <div class="result-section">
             <div class="section-title">根因诊断与定位结果</div>
@@ -56,7 +56,7 @@
 
       <!-- 模块2：先验知识认知偏差检测模型 -->
       <div class="module-container" style="top: 17vh; right: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">先验知识认知偏差根因诊断</div>
+        <div class="module-header">2.先验知识认知偏差根因诊断</div>
         <div class="module-body">
            <div class="result-section">
               <div class="section-title">根因诊断与定位结果</div>
@@ -94,7 +94,7 @@
 
       <!-- 模块3：群体协商认知偏差检测模型 -->
       <div class="module-container" style="top: 52vh; left: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">群体协商认知偏差根因诊断</div>
+        <div class="module-header">3.群体协商认知偏差根因诊断</div>
          <div class="module-body">
           <div class="result-section">
             <div class="section-title">根因诊断与定位结果</div>
@@ -124,7 +124,7 @@
 
       <!-- 模块4：决策选择认知偏差检测模型 -->
       <div class="module-container" style="top: 52vh; right: 3.5vw; width: 45vw; height: 33vh;">
-        <div class="module-header">决策选择认知偏差检测根因诊断</div>
+        <div class="module-header">4.决策选择认知偏差检测根因诊断</div>
         <div class="module-body">
           <div class="result-section">
             <div class="section-title">根因诊断与定位结果</div>
@@ -151,12 +151,11 @@
 
     <!-- 底部内容区域 -->
     <div class="bottom-content">
-        <div class="diagnosis-card">根因诊断结果</div>
         <div class="metric-card accuracy-card">
             <div class="metric-title">多主体解析准确率</div>
             <div class="metric-value">
               <span v-if="accuracy !== null && accuracy !== undefined">{{ formatPercent(accuracy, 0) }}</span>
-              <span v-else class="calculating-text">计算中...</span>
+              <span v-else class="calculating-text">解析中...</span>
             </div>
         </div>
         <div class="metric-card recall-card">
