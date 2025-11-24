@@ -139,7 +139,7 @@
         <!-- 偏差检测准确率面板 -->
         <div class="panel-right-accuracy">
           <div class="accuracy-content">
-            <span class="accuracy-label">偏差检测准确率</span>
+            <span class="accuracy-label">偏差识别准确率</span>
             <span class="accuracy-value">
               <template v-if="accuracyRate !== '—'">
                 {{ accuracyRate }}
