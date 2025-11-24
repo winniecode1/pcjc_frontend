@@ -32,25 +32,26 @@
 
         <div class="design-module text-module-left fixed-left-text">
           <div class="panel-header">多模态认知传播信息</div>
-          <div class="design-module-content text-scrollable">
-            <!-- 首先显示原有的视频描述信息 -->
-            <p v-if="VIDEO_DESCRIPTION" class="text-content" style="white-space: pre-wrap; margin-bottom: 15px;">{{ VIDEO_DESCRIPTION }}</p>
-            <p v-else class="text-content text-muted" style="margin-bottom: 15px;">暂无视频描述信息</p>
-            
-            <!-- 然后在下面显示细粒度检测的结果：图片、颜色、形状、轮廓 -->
-            <div v-if="multimodalDetectionInfo">
-              <img v-if="multimodalDetectionInfo.image" :src="multimodalDetectionInfo.image" class="multimodal-image" />
-              <div v-if="multimodalDetectionInfo.color" class="multimodal-info-item">
-                <span class="info-label">颜色：</span>
-                <span>{{ multimodalDetectionInfo.color }}</span>
-              </div>
-              <div v-if="multimodalDetectionInfo.shape" class="multimodal-info-item">
-                <span class="info-label">形状：</span>
-                <span>{{ multimodalDetectionInfo.shape }}</span>
-              </div>
-              <div v-if="multimodalDetectionInfo.outline" class="multimodal-info-item">
-                <span class="info-label">轮廓：</span>
-                <span>{{ multimodalDetectionInfo.outline }}</span>
+          <div class="design-module-content">
+            <!-- 固定图片区域（不滚动） -->
+            <div v-if="multimodalDetectionInfo && multimodalDetectionInfo.image" class="multimodal-image-fixed">
+              <img :src="multimodalDetectionInfo.image" class="multimodal-image" />
+            </div>
+            <!-- 可滚动的信息区域（颜色、形状、轮廓） -->
+            <div class="text-scrollable">
+              <div v-if="multimodalDetectionInfo">
+                <div v-if="multimodalDetectionInfo.color" class="multimodal-info-item">
+                  <span class="info-label">颜色：</span>
+                  <span>{{ multimodalDetectionInfo.color }}</span>
+                </div>
+                <div v-if="multimodalDetectionInfo.shape" class="multimodal-info-item">
+                  <span class="info-label">形状：</span>
+                  <span>{{ multimodalDetectionInfo.shape }}</span>
+                </div>
+                <div v-if="multimodalDetectionInfo.outline" class="multimodal-info-item">
+                  <span class="info-label">轮廓：</span>
+                  <span>{{ multimodalDetectionInfo.outline }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1304,24 +1305,34 @@ text-decoration: none;
 .fixed-left-text .design-module-content {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.multimodal-image-fixed {
+  flex-shrink: 0;
+  padding: 15px;
+  padding-bottom: 0;
+  overflow: hidden;
 }
 
 .text-scrollable {
+  flex: 1;
   padding: 15px;
-  flex-grow: 1;
   overflow-y: auto;
-  max-height: 100%;
+  overflow-x: hidden;
+  min-height: 0;
   white-space: normal;
   word-wrap: break-word;
 }
 
 .multimodal-image {
-  max-width: 100%;
+  max-width: 85%;
   height: auto;
-  margin-bottom: 15px;
   border-radius: 4px;
+  display: block;
+  margin: 0 auto;
 }
 
 .multimodal-info-item {
