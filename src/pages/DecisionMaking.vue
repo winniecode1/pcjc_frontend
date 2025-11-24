@@ -203,7 +203,7 @@
         </div>
 
         <div class="panel-right-accuracy">
-          <template v-if="isBiasResultLoading">
+          <template v-if="isBiasResultLoading || deviationDetectionAccuracy === '计算中...'">
             <div class="loading-spinner">计算中...</div>
           </template>
           <template v-else>
@@ -535,11 +535,11 @@ export default {
             this.deviationDetectionAccuracy = 'N/A';
           }
         } else {
-          this.performanceData = '请点击 "决策认知"';
-          this.performanceDataLocal = '请点击 "决策认知"';
-          this.behaviorInfo = '请点击 "决策认知"';
-          this.samePoints = '请点击 "决策认知"';
-          this.differentPoints = '请点击 "决策认知"';
+          this.performanceData = '请点击 "开始决策认知"';
+          this.performanceDataLocal = '请点击 "开始决策认知"';
+          this.behaviorInfo = '请点击 "决策认知偏差检测"';
+          this.samePoints = '请点击 "决策认知偏差检测"';
+          this.differentPoints = '请点击 "决策认知偏差检测"';
           this.imageList = [null, null, null, null];
           this.deviationDetectionAccuracy = 'N/A';
           this.modelDangerLevel = 'N/A';
