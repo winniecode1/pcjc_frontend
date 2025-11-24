@@ -87,7 +87,7 @@
       <!-- 右侧标签和预测信息区域 -->
       <div class="col-md-3 right-column">
         <div class="panel-right-bias">
-          <button class="btn-bias-detect" @click="onBiasDetectClick" :disabled="false">
+          <button class="btn-bias-detect" @click="onBiasDetectClick" :disabled="isWaitingForAccuracy">
             先验知识偏差检测
           </button>
         </div>
@@ -240,6 +240,8 @@ export default {
     // 使用 $nextTick 确保 imageBase64 已经加载完成（如果从缓存加载）
     this.$nextTick(() => {
       this.loadModule2FromStorage();
+      // 检查准确率计时状态
+      this.checkAccuracyTimer();
       // 如果没有缓存，使用默认节点渲染图谱
       if (!localStorage.getItem('module2Res')) {
         this.$nextTick(() => {
@@ -251,10 +253,8 @@ export default {
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
-    if (this.accuracyTimer) {
-      clearTimeout(this.accuracyTimer);
-      this.accuracyTimer = null;
-    }
+    // 注意：不在这里清除定时器，让计时在页面切换后继续
+    // 只有在计时完成时才清除localStorage
   },
   methods: {
     // 导航到首页
@@ -651,16 +651,14 @@ export default {
             { label: '轮廓信息：', value: predictData.outline || '未知', color: this.propertyColors.outline || '#000' },
           ];
         }
-        // 准确率：初始加载时立即显示
+        // 准确率：缓存准确率值，但显示取决于计时状态
         if (data.accuracy !== undefined) {
           // this.accuracyRate = (data.accuracy * 100) + '%';
-          this.accuracyRate = String(data.accuracy * 100).padEnd(5, '0').slice(0, 5) + '%';
-          this.cachedAccuracy = this.accuracyRate;
+          this.cachedAccuracy = String(data.accuracy * 100).padEnd(5, '0').slice(0, 5) + '%';
         } else {
-          this.accuracyRate = '—';
           this.cachedAccuracy = '—';
         }
-        this.isWaitingForAccuracy = false; // 初始加载不需要等待
+        // 注意：准确率的显示由 checkAccuracyTimer 方法控制，这里不直接设置
         // 渲染图谱
         this.$nextTick(() => {
           this.renderGraph();
@@ -672,9 +670,6 @@ export default {
     // 偏差检测按钮：显示计算中，3min后显示准确率
     onBiasDetectClick() {
       this.isColorized = true;
-      // 显示计算中
-      this.accuracyRate = '—';
-      this.isWaitingForAccuracy = true;
       
       // 如果有缓存的数据，使用缓存的准确率
       if (this.listResultData && this.listResultData.accuracy !== undefined) {
@@ -683,17 +678,111 @@ export default {
         this.cachedAccuracy = (Math.round(this.listResultData.accuracy * 10000) / 100).toFixed(2) + '%';
       }
       
+      // 记录开始时间到localStorage，实现跨页面计时
+      const startTime = Date.now();
+      localStorage.setItem('module2AccuracyTimerStart', startTime.toString());
+      localStorage.setItem('module2CachedAccuracy', this.cachedAccuracy);
+      
+      // 显示计算中
+      this.accuracyRate = '—';
+      this.isWaitingForAccuracy = true;
+      
       // 清除之前的定时器
       if (this.accuracyTimer) {
         clearTimeout(this.accuracyTimer);
       }
+      
+      // 计算剩余时间
+      const remainingTime = 180000; // 3分钟 = 180000毫秒
       
       // 3分钟后显示准确率
       this.accuracyTimer = setTimeout(() => {
         this.accuracyRate = this.cachedAccuracy;
         this.isWaitingForAccuracy = false;
         this.accuracyTimer = null;
-      }, 180000); // 3分钟 = 180000毫秒
+        // 清除localStorage中的计时信息
+        localStorage.removeItem('module2AccuracyTimerStart');
+        localStorage.removeItem('module2CachedAccuracy');
+      }, remainingTime);
+    },
+    
+    // 检查准确率计时状态（用于页面加载时恢复计时）
+    checkAccuracyTimer() {
+      try {
+        const timerStartStr = localStorage.getItem('module2AccuracyTimerStart');
+        const cachedAccuracyStr = localStorage.getItem('module2CachedAccuracy');
+        
+        if (!timerStartStr || !cachedAccuracyStr) {
+          // 没有计时信息，检查是否有缓存的准确率
+          // 优先使用this.cachedAccuracy（从loadModule2FromStorage加载的）
+          // 如果没有，尝试从module2Res读取
+          if (!this.cachedAccuracy || this.cachedAccuracy === '—') {
+            try {
+              const module2ResStr = localStorage.getItem('module2Res');
+              if (module2ResStr) {
+                const module2Res = JSON.parse(module2ResStr);
+                if (module2Res.accuracy !== undefined) {
+                  this.cachedAccuracy = String(module2Res.accuracy * 100).padEnd(5, '0').slice(0, 5) + '%';
+                }
+              }
+            } catch (e) {
+              console.warn('从module2Res读取准确率失败:', e);
+            }
+          }
+          
+          if (this.cachedAccuracy && this.cachedAccuracy !== '—') {
+            // 如果有缓存的准确率且没有计时，直接显示
+            this.accuracyRate = this.cachedAccuracy;
+            this.isWaitingForAccuracy = false;
+          } else {
+            this.accuracyRate = '—';
+            this.isWaitingForAccuracy = false;
+          }
+          return;
+        }
+        
+        const timerStart = parseInt(timerStartStr, 10);
+        const elapsed = Date.now() - timerStart;
+        const remainingTime = 180000 - elapsed; // 3分钟 = 180000毫秒
+        
+        // 恢复缓存的准确率值
+        this.cachedAccuracy = cachedAccuracyStr;
+        
+        if (remainingTime > 0) {
+          // 计时未满3分钟，继续显示"计算中"并继续计时
+          this.accuracyRate = '—';
+          this.isWaitingForAccuracy = true;
+          
+          // 清除之前的定时器
+          if (this.accuracyTimer) {
+            clearTimeout(this.accuracyTimer);
+          }
+          
+          // 继续计时
+          this.accuracyTimer = setTimeout(() => {
+            this.accuracyRate = this.cachedAccuracy;
+            this.isWaitingForAccuracy = false;
+            this.accuracyTimer = null;
+            // 清除localStorage中的计时信息
+            localStorage.removeItem('module2AccuracyTimerStart');
+            localStorage.removeItem('module2CachedAccuracy');
+          }, remainingTime);
+        } else {
+          // 计时已满3分钟，直接显示准确率
+          this.accuracyRate = this.cachedAccuracy;
+          this.isWaitingForAccuracy = false;
+          // 清除localStorage中的计时信息
+          localStorage.removeItem('module2AccuracyTimerStart');
+          localStorage.removeItem('module2CachedAccuracy');
+        }
+      } catch (e) {
+        console.error('检查准确率计时状态失败:', e);
+        // 出错时，如果有缓存的准确率，直接显示
+        if (this.cachedAccuracy && this.cachedAccuracy !== '—') {
+          this.accuracyRate = this.cachedAccuracy;
+          this.isWaitingForAccuracy = false;
+        }
+      }
     },
     
     // 查询先验知识按钮
