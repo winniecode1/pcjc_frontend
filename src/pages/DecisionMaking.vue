@@ -742,7 +742,7 @@ export default {
           setTimeout(() => {
             const accuracyValue = parseFloat(module4Res.average_comprehensive_accuracy);
             this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
-          }, 120000);
+          }, 240000);
         } else {
           this.behaviorInfo = '请先点击 "决策认知" 获取数据，然后再点击 "偏差检测"。';
           this.samePoints = '请先点击 "决策认知" 获取数据';
