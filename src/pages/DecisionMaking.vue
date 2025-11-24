@@ -54,14 +54,13 @@
             </div>
             <div class="assessment-middle-section">
               <div class="assessment-right-section">
-                <div class="icon-placeholder-red" :style="expertIconStyle"></div>
+                <div class="icon-placeholder-red" :style="expertIconStyle" v-if="expertDangerLevel !== 'N/A' && expertDangerLevel"></div>
               </div>
               <div class="design-module-content text-scrollable">
                 <div v-if="isAssessing" class="loading-overlay">
-                  <b-spinner small></b-spinner>
-                  <span>计算中...</span>
+                  <span>决策中</span>
                 </div>
-                <div class="description-box assessment-content-box">
+                <div v-else class="description-box assessment-content-box">
                   <ul class="info-list"
                     v-if="formattedPerformanceDataLocalList && formattedPerformanceDataLocalList.length > 0">
                     <li v-for="(item, idx) in formattedPerformanceDataLocalList" :key="'local-' + idx"
@@ -83,16 +82,14 @@
             <div class="flanking-image-column">
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
-                  <b-spinner style="width: 2rem; height: 2rem;" label="Loading..."></b-spinner>
-                  <span style="margin-top: 8px;">计算中...</span>
+                  <span>分析中</span>
                 </div>
                 <img :src="imageList[0]" v-if="imageList[0] && !isImageLoading" alt="图像 1" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 1</div>
               </div>
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
-                  <b-spinner style="width: 2rem; height: 2rem;" label="Loading..."></b-spinner>
-                  <span style="margin-top: 8px;">计算中...</span>
+                  <span>分析中</span>
                 </div>
                 <img :src="imageList[2]" v-if="imageList[2] && !isImageLoading" alt="图像 3" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 3</div>
@@ -113,16 +110,14 @@
             <div class="flanking-image-column">
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
-                  <b-spinner style="width: 2rem; height: 2rem;" label="Loading..."></b-spinner>
-                  <span style="margin-top: 8px;">计算中...</span>
+                  <span>分析中</span>
                 </div>
                 <img :src="imageList[1]" v-if="imageList[1] && !isImageLoading" alt="图像 2" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 2</div>
               </div>
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
-                  <b-spinner style="width: 2rem; height: 2rem;" label="Loading..."></b-spinner>
-                  <span style="margin-top: 8px;">计算中...</span>
+                  <span>分析中</span>
                 </div>
                 <img :src="imageList[3]" v-if="imageList[3] && !isImageLoading" alt="图像 4" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 4</div>
@@ -141,14 +136,13 @@
             </div>
             <div class="assessment-middle-section">
               <div class="assessment-right-section">
-                <div class="icon-placeholder-red" :style="modelIconStyle"></div>
+                <div class="icon-placeholder-red" :style="modelIconStyle" v-if="modelDangerLevel !== 'N/A' && modelDangerLevel"></div>
               </div>
               <div class="design-module-content text-scrollable">
                 <div v-if="isAssessing" class="loading-overlay">
-                  <b-spinner small></b-spinner>
-                  <span>计算中...</span>
+                  <span>决策中</span>
                 </div>
-                <div class="description-box assessment-content-box">
+                <div v-else class="description-box assessment-content-box">
                   <ul class="info-list" v-if="formattedPerformanceDataList && formattedPerformanceDataList.length > 0">
                     <li v-for="(item, idx) in formattedPerformanceDataList" :key="'machine-' + idx"
                       :class="{ 'first-item': idx === 0 }">
@@ -173,7 +167,7 @@
           <div class="panel-content">
             <div class="panel-header header-results clean-header">决策选择认知偏差检测结果</div>
             <div class="results-scroll-container">
-              <div v-if="isBiasResultLoading" class="panel-overlay">计算中...</div>
+              <div v-if="isBiasResultLoading" class="panel-overlay">分析中</div>
               <template v-else>
                 <div class="result-section small-section">
                   <div class="section-header">行为信息：</div>
@@ -403,11 +397,26 @@ export default {
     formatAssessmentTextToList(text) {
       if (!text) return [];
       const ratingMap = {
-        '顶级': '(★★★★★)',
-        '卓越': '(★★★★)',
-        '优秀': '(★★★)',
-        '良好': '(★★)',
-        '一般': '(★)'
+        '顶级': 5,
+        '卓越': 4,
+        '优秀': 3,
+        '良好': 2,
+        '一般': 1
+      };
+      // 根据星星数量返回带颜色的HTML
+      const getStarsWithColor = (count) => {
+        const stars = '★'.repeat(count);
+        let colorClass = '';
+        if (count === 1 || count === 2) {
+          colorClass = 'star-green';
+        } else if (count === 3) {
+          colorClass = 'star-blue';
+        } else if (count === 4) {
+          colorClass = 'star-yellow';
+        } else if (count === 5) {
+          colorClass = 'star-red';
+        }
+        return `<span class="${colorClass}">(${stars})</span>`;
       };
       // 定义需要加粗的属性标题
       const attributeTitles = [
@@ -430,7 +439,15 @@ export default {
 
         if (fullMatch) {
           const [, attrName, content, rating, extraContent] = fullMatch;
-          const stars = ratingMap[rating] || rating;
+          // 检查rating中是否已经包含星星符号
+          const starMatch = rating.match(/★+/);
+          let starCount = 0;
+          if (starMatch) {
+            starCount = starMatch[0].length;
+          } else {
+            starCount = ratingMap[rating] || 0;
+          }
+          const stars = starCount > 0 ? getStarsWithColor(starCount) : `(${rating})`;
           // 检查属性标题是否需要加粗
           const boldAttrName = attributeTitles.includes(attrName) ? `<strong>${attrName}</strong>` : attrName;
           let formattedItem = `${boldAttrName}：${content.trim()}。${stars}`;
@@ -442,7 +459,15 @@ export default {
           const simpleMatch = trimmed.match(/^(.+?)[。.]?[（(]([^：:)]+)(?:[：:]([^）)]+))?[）)]/);
           if (simpleMatch) {
             const [, content, rating, extraContent] = simpleMatch;
-            const stars = ratingMap[rating] || rating;
+            // 检查rating中是否已经包含星星符号
+            const starMatch = rating.match(/★+/);
+            let starCount = 0;
+            if (starMatch) {
+              starCount = starMatch[0].length;
+            } else {
+              starCount = ratingMap[rating] || 0;
+            }
+            const stars = starCount > 0 ? getStarsWithColor(starCount) : `(${rating})`;
             // 检查内容中是否包含属性标题
             let formattedContent = content.trim();
             attributeTitles.forEach(title => {
@@ -464,7 +489,17 @@ export default {
               }
             });
             formattedItem = formattedItem.replace(/[（(]([^：:)]+)(?:[：:]([^）)]+))?[）)]/g, (match, rating, extraContent) => {
-              const stars = ratingMap[rating] || rating;
+              // 检查rating中是否已经包含星星符号
+              const starMatch = rating.match(/★+/);
+              let starCount = 0;
+              if (starMatch) {
+                // 如果已经有星星，计算星星数量
+                starCount = starMatch[0].length;
+              } else {
+                // 否则从ratingMap中获取
+                starCount = ratingMap[rating] || 0;
+              }
+              const stars = starCount > 0 ? getStarsWithColor(starCount) : `(${rating})`;
               if (extraContent) {
                 return `${stars}：${extraContent}`;
               }
@@ -522,24 +557,27 @@ export default {
           this.imageList = module4Data.imageList || [null, null, null, null];
 
           // --- 修改开始：关于 summary 的显示逻辑 ---
-          // 只有当计时完成或从未开始时，才根据存储的数据显示。
-          // 如果正在计时中，这些会在 checkBiasTimerState 里被覆盖为 "计算中..."
-          if (module4Data.summary) {
+          // 只有当计时完成时，才直接显示结果。
+          // 如果正在计时，checkBiasTimerState 会处理。
+          // 如果未开始，显示默认提示。
+          const isCompleted = localStorage.getItem('decisionBiasCompleted') === 'true';
+
+          if (isCompleted && module4Data.summary) {
             const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Data.summary);
             this.behaviorInfo = behaviorInfo;
             this.samePoints = samePoints;
             this.differentPoints = differentPoints;
           } else {
-            // 默认文案
-            this.behaviorInfo = '请点击 "偏差检测"';
-            this.samePoints = '请点击 "偏差检测"';
-            this.differentPoints = '请点击 "偏差检测"';
+            // 默认文案（未开始 或 正在计时中交由 checkBiasTimerState 处理）
+            this.behaviorInfo = '请点击 "决策认知偏差检测"';
+            this.samePoints = '请点击 "决策认知偏差检测"';
+            this.differentPoints = '请点击 "决策认知偏差检测"';
           }
 
           // --- 修改重点：准确率的加载逻辑 ---
           // 只有在 localStorage 标记为"已完成"时，才直接显示准确率
           // 如果正在计时，由 checkBiasTimerState 来处理，这里不设置
-          const isCompleted = localStorage.getItem('decisionBiasCompleted') === 'true';
+          // (isCompleted 变量已在上方定义)
           const isTiming = localStorage.getItem('decisionBiasStartTime'); // 检查是否正在计时
 
           if (isCompleted && module4Data.average_comprehensive_accuracy !== undefined && module4Data.average_comprehensive_accuracy !== null) {
@@ -654,6 +692,11 @@ export default {
       this.isLoading = true;
       this.isAssessing = true;
       this.isImageLoading = true;
+      // 重置决策选择认知偏差检测结果文本为默认提示
+      this.behaviorInfo = '请点击 "决策认知偏差检测"';
+      this.samePoints = '请点击 "决策认知偏差检测"';
+      this.differentPoints = '请点击 "决策认知偏差检测"';
+      this.isBiasResultLoading = false;
       const model = this.apiConfig.weaponModel;
 
       try {
@@ -715,17 +758,10 @@ export default {
           this.isBiasResultLoading = false;
 
           // 更新文本内容（如果有 summary）
-          if (mainData.data.summary) {
-            const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(mainData.data.summary);
-            this.behaviorInfo = behaviorInfo;
-            this.samePoints = samePoints;
-            this.differentPoints = differentPoints;
-          } else {
-            // 没有 summary，重置为默认提示
-            this.behaviorInfo = '请点击 "决策认知偏差检测"';
-            this.samePoints = '请点击 "决策认知偏差检测"';
-            this.differentPoints = '请点击 "决策认知偏差检测"';
-          }
+          // 修改：即使有 summary，也不直接显示，而是等待用户点击“决策认知偏差检测”
+          this.behaviorInfo = '请点击 "决策认知偏差检测"';
+          this.samePoints = '请点击 "决策认知偏差检测"';
+          this.differentPoints = '请点击 "决策认知偏差检测"';
 
           this.parseBackendData(mainData.data);
         } else {
@@ -782,10 +818,10 @@ export default {
           this.isBiasDetecting = true; // 禁用按钮
           this.deviationDetectionAccuracy = '计算中...';
 
-          // 检查文本是否应该已经显示（5秒后）
-          const textDelay = 5000; // 文本延迟5秒
+          // 检查文本是否应该已经显示（3秒后）
+          const textDelay = 3000; // 文本延迟3秒
           if (elapsed >= textDelay) {
-            // 已经超过5秒，文本应该显示，不需要 loading overlay
+            // 已经超过3秒，文本应该显示，不需要 loading overlay
             this.isBiasResultLoading = false;
             // 恢复文本内容
             const module4ResStr = localStorage.getItem('module4Res');
@@ -869,13 +905,13 @@ export default {
         }
       }
     },
-    // 修改：点击“决策认知偏差检测”按钮
+    // 修改：点击"决策认知偏差检测"按钮
     performDeviationDetection() {
       this.isBiasDetecting = true;
       this.isBiasResultLoading = true;
       this.deviationDetectionAccuracy = '计算中...';
 
-      // 清空旧的显示
+      // 清空旧的显示，显示"分析中"（由isBiasResultLoading控制的遮罩层显示）
       this.behaviorInfo = '';
       this.samePoints = '';
       this.differentPoints = '';
@@ -889,7 +925,7 @@ export default {
         if (module4ResStr) {
           const module4Res = JSON.parse(module4ResStr);
 
-          // 模拟文本生成延迟（比如5秒后显示文本，但准确率要等4分钟）
+          // 模拟文本生成延迟（比如3秒后显示文本，但准确率要等4分钟）
           setTimeout(() => {
             if (module4Res.summary) {
               const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Res.summary);
@@ -903,7 +939,7 @@ export default {
             }
             // 文本加载完了，loading 消失，但准确率还在计算中
             this.isBiasResultLoading = false;
-          }, 5000);
+          }, 3000);
 
           // 启动4分钟准确率计时
           this.startAccuracyTimer(BIAS_DETECTION_DELAY);
@@ -959,22 +995,35 @@ export default {
       this.testVideoMessage = "视频加载失败，请检查 LocalStorage 中的 URL 是否正确。";
       this.testVideoUrl = null;
     },
-    exportData() {
+    async exportData() {
       try {
-        const exportData = {
-          "performance_data": this.performanceData,
-          "performance_data_local": this.performanceDataLocal,
-          "behavior_info": this.behaviorInfo,
-          "same_points": this.samePoints,
-          "different_points": this.differentPoints,
-          "deviation_detection_accuracy": this.deviationDetectionAccuracy
-        };
+        // 调用后端接口下载zip文件
+        const response = await axios.get(`${API_BASE_URL}/export/output`, {
+          responseType: 'blob', // 重要：指定响应类型为blob
+          timeout: 60000 // 设置超时时间为60秒
+        });
 
-        const jsonStr = JSON.stringify(exportData, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json' });
+        // 创建blob对象
+        const blob = new Blob([response.data], { type: 'application/zip' });
+
+        // 从响应头中获取文件名，如果没有则使用默认名称
+        const contentDisposition = response.headers['content-disposition'];
+        let filename = `output_files_${new Date().toISOString().slice(0, 19).replace(/:/g, '')}.zip`;
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1].replace(/['"]/g, '');
+            // 处理可能的UTF-8编码文件名
+            if (filename.startsWith('UTF-8\'\'')) {
+              filename = decodeURIComponent(filename.replace(/^UTF-8''/, ''));
+            }
+          }
+        }
+
+        // 创建下载链接
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `decision_making_data_${new Date().toISOString().slice(0, 10)}.json`;
+        link.download = filename;
 
         document.body.appendChild(link);
         link.click();
@@ -982,7 +1031,8 @@ export default {
 
         URL.revokeObjectURL(link.href);
       } catch (error) {
-        alert('导出失败，请重试');
+        console.error('导出失败:', error);
+        alert('导出失败，请重试。错误信息：' + (error.message || '未知错误'));
       }
     }
   }
@@ -2033,5 +2083,28 @@ export default {
   background: url('~@/assets/images/step4/底部.png') no-repeat center/contain;
   pointer-events: none;
   opacity: .95;
+}
+</style>
+
+<style lang="scss">
+/* 全局样式，用于处理 v-html 插入的内容 */
+.star-green {
+  color: #7EFF00 !important;
+  text-shadow: 0 0 5px #7EFF00;
+}
+
+.star-blue {
+  color: #2BC3FF !important;
+  text-shadow: 0 0 5px #2BC3FF;
+}
+
+.star-yellow {
+  color: #FFC118 !important;
+  text-shadow: 0 0 5px #FFC118;
+}
+
+.star-red {
+  color: #FF0000 !important;
+  text-shadow: 0 0 5px #FF0000;
 }
 </style>
