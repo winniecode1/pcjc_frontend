@@ -32,7 +32,7 @@
             <div class="section-title">根因诊断与定位结果</div>
             <div class="content-box scrollable" v-html="highlightBrackets(module1BiasTestResult)"></div>
             <!-- 诊断中遮罩层 -->
-            <div v-if="module1InternalBias === null || module1InternalBias === undefined" class="diagnosis-overlay">
+            <div v-if="module1ShowDiagnosisOverlay" class="diagnosis-overlay">
               <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
               <div class="diagnosis-text">正在诊断中，请等待</div>
             </div>
@@ -130,7 +130,7 @@
             <div class="section-title">根因诊断与定位结果</div>
             <div class="content-box scrollable" v-html="highlightBrackets(module4BiasTestResult)"></div>
             <!-- 诊断中遮罩层 -->
-            <div v-if="module4InternalBias === null || module4InternalBias === undefined" class="diagnosis-overlay">
+            <div v-if="module4ShowDiagnosisOverlay" class="diagnosis-overlay">
               <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
               <div class="diagnosis-text">正在诊断中，请等待</div>
             </div>
@@ -206,9 +206,12 @@ export default {
       
       // 模块1数据
       module1BiasTestResult: '',
+      module1BiasTestResultPending: '', // 临时存储，等待10秒后显示
+      module1ShowDiagnosisOverlay: true, // 控制是否显示诊断遮罩层
       module1InternalBias: null,
       module1PropagationBias: null,
       module1IsBiasModule: null,
+      module1DelayTimer: null, // 延迟显示的定时器
       
       // 模块2数据
       module2Category: '',
@@ -225,8 +228,11 @@ export default {
       
       // 模块4数据
       module4BiasTestResult: '',
+      module4BiasTestResultPending: '', // 临时存储，等待10秒后显示
+      module4ShowDiagnosisOverlay: true, // 控制是否显示诊断遮罩层
       module4InternalBias: null,
       module4IsBiasModule: null,
+      module4DelayTimer: null, // 延迟显示的定时器
       
       // 根因诊断结果
       accuracy: null,
@@ -294,6 +300,12 @@ export default {
     if (this.accuracyRecallTimer) {
       clearInterval(this.accuracyRecallTimer);
     }
+    if (this.module1DelayTimer) {
+      clearTimeout(this.module1DelayTimer);
+    }
+    if (this.module4DelayTimer) {
+      clearTimeout(this.module4DelayTimer);
+    }
   },
   methods: {
     handleResize() {
@@ -308,9 +320,9 @@ export default {
       const module5Result = this.loadModule5FromStorage();
       
       if (module5Result.success) {
-        // 存在缓存数据，直接使用
+        // 存在缓存数据，直接使用（传递fromCache=true）
         console.log('✅ 从 localStorage 加载 module5Res 成功，直接显示');
-        this.parseStatusData(module5Result.data);
+        this.parseStatusData(module5Result.data, true);
         this.showAlertMessage('success', '诊断结果已加载');
         return; // 不再执行后续的请求和轮询
       }
@@ -624,14 +636,16 @@ export default {
     
     /**
      * 解析状态数据并更新页面
+     * @param {Object} data - 状态数据
+     * @param {Boolean} fromCache - 是否来自localStorage缓存（默认false，表示来自API）
      */
-    parseStatusData(data) {
+    parseStatusData(data, fromCache = false) {
       if (!data || !data.modules) return;
       
       const modules = data.modules;
       
-      // 解析模块1
-      this.parseModule1(modules.module1);
+      // 解析模块1（传递 fromCache 参数）
+      this.parseModule1(modules.module1, fromCache);
       
       // 解析模块2
       this.parseModule2(modules.module2);
@@ -639,21 +653,53 @@ export default {
       // 解析模块3
       this.parseModule3(modules.module3);
       
-      // 解析模块4
-      this.parseModule4(modules.module4);
+      // 解析模块4（传递 fromCache 参数）
+      this.parseModule4(modules.module4, fromCache);
       
       // 注意：accuracy 和 recall 不再从这个接口获取，改为独立的延迟轮询
     },
     
     /**
      * 解析模块1数据
+     * @param {Object} module1 - 模块1数据
+     * @param {Boolean} fromCache - 是否来自localStorage缓存（默认false）
      */
-    parseModule1(module1) {
+    parseModule1(module1, fromCache = false) {
       if (!module1) return;
       
       const singleTask = module1.single_task_stage;
       if (singleTask) {
-        this.module1BiasTestResult = this.safeGet(singleTask, 'prediction.caption', '');
+        const biasTestResult = this.safeGet(singleTask, 'prediction.caption', '');
+        
+        if (biasTestResult) {
+          if (fromCache) {
+            // 来自localStorage，直接显示，不延迟
+            this.module1BiasTestResult = biasTestResult;
+            this.module1ShowDiagnosisOverlay = false;
+            console.log('✅ 模块1根因诊断结果（来自缓存，直接显示）');
+          } else {
+            // 来自API，需要延迟10秒
+            this.module1BiasTestResultPending = biasTestResult;
+            this.module1ShowDiagnosisOverlay = true; // 显示遮罩层
+            
+            // 清除之前的定时器（如果有）
+            if (this.module1DelayTimer) {
+              clearTimeout(this.module1DelayTimer);
+            }
+            
+            // 10秒后显示并隐藏遮罩层
+            this.module1DelayTimer = setTimeout(() => {
+              this.module1BiasTestResult = this.module1BiasTestResultPending;
+              this.module1ShowDiagnosisOverlay = false; // 隐藏遮罩层
+              console.log('✅ 模块1根因诊断结果延迟10秒后显示');
+            }, 10000);
+            
+            console.log('⏰ 模块1根因诊断结果已获取，将在10秒后显示');
+          }
+        } else {
+          this.module1BiasTestResult = '';
+          this.module1ShowDiagnosisOverlay = false; // 没有数据则不显示遮罩层
+        }
       }
       
       const moduleTestStage = module1.module_test_stage;
@@ -731,13 +777,45 @@ export default {
     
     /**
      * 解析模块4数据
+     * @param {Object} module4 - 模块4数据
+     * @param {Boolean} fromCache - 是否来自localStorage缓存（默认false）
      */
-    parseModule4(module4) {
+    parseModule4(module4, fromCache = false) {
       if (!module4) return;
       
       const singleTask = module4.single_task_stage;
       if (singleTask) {
-        this.module4BiasTestResult = this.safeGet(singleTask, 'prediction.summary', '');
+        const biasTestResult = this.safeGet(singleTask, 'prediction.summary', '');
+        
+        if (biasTestResult) {
+          if (fromCache) {
+            // 来自localStorage，直接显示，不延迟
+            this.module4BiasTestResult = biasTestResult;
+            this.module4ShowDiagnosisOverlay = false;
+            console.log('✅ 模块4根因诊断结果（来自缓存，直接显示）');
+          } else {
+            // 来自API，需要延迟10秒
+            this.module4BiasTestResultPending = biasTestResult;
+            this.module4ShowDiagnosisOverlay = true; // 显示遮罩层
+            
+            // 清除之前的定时器（如果有）
+            if (this.module4DelayTimer) {
+              clearTimeout(this.module4DelayTimer);
+            }
+            
+            // 10秒后显示并隐藏遮罩层
+            this.module4DelayTimer = setTimeout(() => {
+              this.module4BiasTestResult = this.module4BiasTestResultPending;
+              this.module4ShowDiagnosisOverlay = false; // 隐藏遮罩层
+              console.log('✅ 模块4根因诊断结果延迟10秒后显示');
+            }, 10000);
+            
+            console.log('⏰ 模块4根因诊断结果已获取，将在10秒后显示');
+          }
+        } else {
+          this.module4BiasTestResult = '';
+          this.module4ShowDiagnosisOverlay = false; // 没有数据则不显示遮罩层
+        }
       }
       
       const moduleTestStage = module4.module_test_stage;
