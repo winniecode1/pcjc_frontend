@@ -38,8 +38,7 @@
         <div class="button-container">
           <b-button @click="fetchBackendData" variant="primary" :disabled="isLoading" class="inference-btn"
             :style="buttonBgStyle">
-            <b-spinner small v-if="isLoading" class="btn-spinner-pos"></b-spinner>
-            <span class="btn-text-pos">{{ isLoading ? '计算中...' : '开始决策认知' }}</span>
+            <span class="btn-text-pos">开始决策认知</span>
           </b-button>
         </div>
       </div>
@@ -167,8 +166,7 @@
       <div class="design-right-column">
         <div class="panel-right-bias-button">
           <button class="btn-bias-detect" @click="performDeviationDetection" :disabled="isBiasDetecting">
-            <b-spinner small v-if="isBiasDetecting" class="btn-spinner-pos"></b-spinner>
-            <span class="btn-text-pos">{{ isBiasDetecting ? '计算中...' : '决策认知偏差检测' }}</span>
+            <span class="btn-text-pos">决策认知偏差检测</span>
           </button>
         </div>
         <div class="panel-right-top">
@@ -1325,6 +1323,11 @@ export default {
     background-color: transparent;
     box-shadow: none;
   }
+
+  .inference-btn:disabled {
+    filter: grayscale(80%);
+    cursor: not-allowed;
+  }
 }
 
 .assessment-module {
@@ -1689,7 +1692,7 @@ export default {
   align-items: center;
   justify-content: center;
   min-height: 100px;
-  margin-top: -20px;
+  margin-top: -15px;
 }
 
 .accuracy-content {

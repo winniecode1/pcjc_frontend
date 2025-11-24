@@ -34,8 +34,7 @@
 
         <div class="action-buttons">
           <button @click="startDetection" :disabled="isLoading" class="btn-start-detect">
-            <b-spinner small v-if="isLoading" class="btn-spinner-pos"></b-spinner>
-            <span class="btn-text-pos">{{ isLoading ? (progressMessage || '计算中...') : '开始目标检测' }}</span>
+            <span class="btn-text-pos">开始目标检测</span>
           </button>
         </div>
       </b-col>
@@ -63,7 +62,7 @@
         <div class="summary-box-middle" :class="{ 'loading-overlay': isLoading }">
           <div class="summary-content overflow-auto"
             :class="{ 'text-highlight': summaryHighlight, 'loading-text': isLoading }">
-            {{ isLoading ? '计算中……' : (summaryTypingText || '计算中……') }}
+            {{ isLoading ? '计算中……' : (summaryTypingText || '检测结果将在这里显示') }}
           </div>
         </div>
       </b-col>
@@ -73,8 +72,7 @@
         <div class="bias-button-container">
           <button class="btn-start-bias" @click="handleStartBiasDetection"
             :disabled="!canStartBiasDetection || isBiasTyping || isLoading || isBiasDetecting">
-            <b-spinner small v-if="isBiasDetecting" class="btn-spinner-pos"></b-spinner>
-            <span class="btn-text-pos">{{ isBiasDetecting ? '计算中...' : '多模态信息偏差检测' }}</span>
+            <span class="btn-text-pos">多模态信息偏差检测</span>
           </button>
         </div>
 
@@ -97,7 +95,7 @@
 
               <div v-if="showBiasDetails">
                 <div v-for="(entry, index) in biasDetailEntries" :key="entry.label"
-                  class="typing-text text-left small-text" :class="{ 'text-highlight': entry.highlight }">
+                  class="typing-text text-left small-text" :class="{ 'text-highlight': entry.highlight && !isBiasTyping }">
                   {{ biasDisplayTexts[index] }}
                 </div>
               </div>
@@ -115,17 +113,19 @@
 
         <div class="panel-right-bottom" :class="{ 'loading-overlay': isBiasDetecting }">
           <div class="panel-content">
-            <div class="accuracy-label">偏差检测准确率：</div>
-            <div class="metric-box" :class="{ 'loading-text': isBiasDetecting }">
-              <template v-if="isBiasDetecting">
-                计算中
-              </template>
-              <template v-else-if="showAccuracy && fullResult.overall_accuracy !== undefined">
-                {{ (fullResult.overall_accuracy * 100).toFixed(2) + '%' }}
-              </template>
-              <template v-else>
-                --
-              </template>
+            <div class="accuracy-content">
+              <span class="accuracy-label">偏差检测准确率</span>
+              <span class="accuracy-value">
+                <template v-if="isBiasDetecting">
+                  计算中...
+                </template>
+                <template v-else-if="showAccuracy && fullResult.overall_accuracy !== undefined">
+                  {{ (fullResult.overall_accuracy * 100).toFixed(2) + '%' }}
+                </template>
+                <template v-else>
+                  N/A
+                </template>
+              </span>
             </div>
           </div>
         </div>
@@ -200,6 +200,7 @@ export default {
       isBiasTyping: false,
       labelsToHighlight: [],
       typingSpeed: 60,
+      summaryTypingSpeed: 200,
       isBiasDetecting: false,
       isExporting: false
     };
@@ -487,7 +488,12 @@ export default {
       this.updateLabelsToHighlight(fullData.low_similarity_aspects);
       this.descriptionEntries = this.buildDescriptionEntries(fullData.video_description);
       const summaryEntry = this.descriptionEntries.find(entry => entry.label === '总结');
-      this.summaryFullText = summaryEntry ? summaryEntry.text : '未找到总结信息。';
+      if (summaryEntry) {
+        // 将"总结："改为"目标检测中："
+        this.summaryFullText = summaryEntry.text.replace(/^总结[：:]/, '目标检测中：');
+      } else {
+        this.summaryFullText = '未找到目标检测信息。';
+      }
       this.summaryTextOnly = '';
       this.summaryTypingText = '';
       this.biasDetailEntries = this.descriptionEntries.filter(entry => entry.label !== '总结');
@@ -508,7 +514,7 @@ export default {
           clearInterval(this.summaryTypingInterval);
           this.summaryTypingInterval = null;
         }
-      }, this.typingSpeed);
+      }, this.summaryTypingSpeed);
     },
     updateLabelsToHighlight(rawAspects) {
       const aspects = this.parseLowSimilarityAspects(rawAspects);
@@ -564,7 +570,7 @@ export default {
         this.isBiasTyping = true;
         this.startBiasTypingSequence(0);
         this.biasTypingTimeout = null;
-      }, 30000);
+      }, 3000);
 
       this.accuracyTimeout = setTimeout(() => {
         this.showAccuracy = true;
@@ -595,6 +601,15 @@ export default {
       if (index >= this.biasDetailEntries.length) {
         this.isBiasTyping = false;
         this.biasTypingInterval = null;
+        // 所有文本显示完成后，应用高亮样式
+        this.$nextTick(() => {
+          this.biasDetailEntries.forEach((entry, idx) => {
+            if (entry.highlight) {
+              // 高亮样式已经在模板中通过 :class 绑定，这里只需要确保文本已完全显示
+              // 如果需要动态添加高亮，可以在这里处理
+            }
+          });
+        });
         if (this.showAccuracy) {
           this.isBiasDetecting = false;
         }
@@ -1150,7 +1165,7 @@ export default {
 }
 
 .video-label {
-  width: 260px;
+  width: 320px;
   height: 40px;
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
   background-repeat: no-repeat;
@@ -1254,12 +1269,15 @@ export default {
   width: 100%;
   height: 100%;
   font-size: 1.2rem;
-  line-height: 1.6;
+  line-height: 1.4;
   color: #eee;
   white-space: pre-wrap;
-  overflow-y: auto;
+  overflow: hidden;
   text-align: center;
-  padding: 5px;
+  padding: 8px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &::-webkit-scrollbar {
     width: 6px;
@@ -1362,39 +1380,39 @@ export default {
 
 .panel-right-bottom .panel-content {
   display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.accuracy-content {
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-direction: row;
-  padding: 10px 20px;
+  width: 100%;
+  padding: 0 15px;
 }
 
 .accuracy-label {
-  font-family: 'DOUYUFont', sans-serif;
-  color: #FFFFFF;
+  color: #fff;
+  font-family: 'DOUYUFont';
   font-weight: 400;
-  font-size: 17px;
+  font-size: 16px;
   font-style: normal;
-  text-align: left;
-  flex-shrink: 0;
+  text-decoration: none;
+  margin-bottom: 0;
 }
 
-.metric-box {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  font-family: 'DINAlternate-Bold', sans-serif;
-  font-size: 28px;
+.accuracy-value {
+  font-size: 34px;
   font-weight: 700;
-  font-style: normal;
-  color: #FFFFFF;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(191, 245, 255, 1) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-align: right;
-  padding: 0;
-  line-height: 1.2;
-  flex-shrink: 0;
+  color: #00e5ff;
+  text-shadow: 0 0 10px #00e5ff, 0 0 20px rgba(0, 229, 255, 0.5);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .action-buttons-right {
