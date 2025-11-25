@@ -33,12 +33,13 @@
         <div class="design-module text-module-left fixed-left-text">
           <div class="panel-header">多模态认知传播信息</div>
           <div class="design-module-content">
-            <!-- 固定图片区域（不滚动） -->
+            <!-- 细粒度检测后的信息：固定图片区域（不滚动） -->
             <div v-if="multimodalDetectionInfo && multimodalDetectionInfo.image" class="multimodal-image-fixed">
               <img :src="multimodalDetectionInfo.image" class="multimodal-image" />
             </div>
-            <!-- 可滚动的信息区域（颜色、形状、轮廓） -->
+            <!-- 可滚动的信息区域 -->
             <div class="text-scrollable">
+              <!-- 细粒度检测后的信息（颜色、形状、轮廓） -->
               <div v-if="multimodalDetectionInfo">
                 <div v-if="multimodalDetectionInfo.color" class="multimodal-info-item">
                   <span class="info-label">颜色：</span>
@@ -51,6 +52,25 @@
                 <div v-if="multimodalDetectionInfo.outline" class="multimodal-info-item">
                   <span class="info-label">轮廓：</span>
                   <span>{{ multimodalDetectionInfo.outline }}</span>
+                </div>
+              </div>
+              <!-- 初始信息（场景、目标、行为、总结） -->
+              <div v-else-if="initialDescriptionInfo">
+                <div v-if="initialDescriptionInfo.scene" class="multimodal-info-item">
+                  <span class="info-label">场景：</span>
+                  <span>{{ initialDescriptionInfo.scene }}</span>
+                </div>
+                <div v-if="initialDescriptionInfo.target" class="multimodal-info-item">
+                  <span class="info-label">目标：</span>
+                  <span>{{ initialDescriptionInfo.target }}</span>
+                </div>
+                <div v-if="initialDescriptionInfo.behavior" class="multimodal-info-item">
+                  <span class="info-label">行为：</span>
+                  <span>{{ initialDescriptionInfo.behavior }}</span>
+                </div>
+                <div v-if="initialDescriptionInfo.summary" class="multimodal-info-item">
+                  <span class="info-label">总结：</span>
+                  <span>{{ initialDescriptionInfo.summary }}</span>
                 </div>
               </div>
             </div>
@@ -227,13 +247,17 @@ export default {
           // 存储细粒度检测的结果数据
           listResultData: null,
           // 细粒度检测的多模态信息（图片、颜色、形状、轮廓），显示在原有信息下面
-          multimodalDetectionInfo: null
+          multimodalDetectionInfo: null,
+          // 初始描述信息（场景、目标、行为、总结）
+          initialDescriptionInfo: null
         };
       },
   mounted() {
     window.addEventListener('resize', this.handleResize);
     // 页面加载时加载视频
     this.loadVideoFromStorage();
+    // 页面加载时加载初始描述信息（场景、目标、行为、总结）
+    this.loadInitialDescriptionInfo();
     // 页面加载时调用get_image_base64接口获取图片信息（先加载，确保后续恢复多模态信息时图片可用）
     this.loadImageBase64();
     // 页面加载时尝试读取模块二缓存（如果存在会调用 renderGraph）
@@ -533,6 +557,7 @@ export default {
       // 禁用按钮，直到检测完成并显示信息
       this.isDetecting = true;
       
+      // 清空初始描述信息，准备显示细粒度检测结果
       // 不清空中间和右侧的数据，保持默认设置不变
       // 只清空细粒度检测的结果信息
       this.multimodalDetectionInfo = null;
@@ -572,6 +597,11 @@ export default {
         
         // 更新细粒度检测的信息（不替换原有的VIDEO_DESCRIPTION）
         this.multimodalDetectionInfo = Object.keys(multimodalContent).length > 0 ? multimodalContent : null;
+        
+        // 如果细粒度检测成功，清空初始描述信息
+        if (this.multimodalDetectionInfo) {
+          this.initialDescriptionInfo = null;
+        }
         
         // 保存多模态检测信息到 localStorage，以便页面刷新后恢复
         if (this.multimodalDetectionInfo) {
@@ -906,7 +936,18 @@ export default {
             info.image = `data:image/png;base64,${this.imageBase64}`;
           }
           this.multimodalDetectionInfo = info;
+          // 如果加载了细粒度检测信息，则清空初始描述信息
+          if (this.multimodalDetectionInfo) {
+            this.initialDescriptionInfo = null;
+            console.log('从缓存加载多模态检测信息，已清空初始描述信息');
+          }
           console.log('从缓存加载多模态检测信息:', this.multimodalDetectionInfo);
+        } else {
+          // 如果没有细粒度检测信息缓存，确保显示初始描述信息
+          // 如果初始描述信息还没有加载，尝试加载
+          if (!this.initialDescriptionInfo) {
+            this.loadInitialDescriptionInfo();
+          }
         }
       } catch (e) {
         console.error('加载多模态检测信息失败:', e);
@@ -948,6 +989,85 @@ export default {
         console.error('加载视频失败:', e);
         this.videoMessage = '加载视频时出错: ' + e.message;
       }
+    },
+    
+    // 加载初始描述信息（场景、目标、行为、总结）
+    loadInitialDescriptionInfo() {
+      try {
+        // 先检查是否有细粒度检测信息的缓存
+        const cachedMultimodalInfo = localStorage.getItem('multimodalDetectionInfo');
+        if (cachedMultimodalInfo) {
+          // 如果有缓存，说明已经进行过细粒度检测，不加载初始描述信息
+          console.log('检测到细粒度检测信息缓存，跳过加载初始描述信息');
+          return;
+        }
+        
+        const module1ResStr = localStorage.getItem('module1Res');
+        if (!module1ResStr) {
+          console.warn('未找到 module1Res，无法加载初始描述信息');
+          return;
+        }
+        
+        const module1Res = JSON.parse(module1ResStr);
+        if (!module1Res.video_description) {
+          console.warn('module1Res 中没有 video_description');
+          return;
+        }
+        
+        // 解析video_description，提取场景、目标、行为、总结信息
+        const description = module1Res.video_description.replace(/^"|"$/g, '').trim();
+        const descriptionInfo = this.parseDescriptionInfo(description);
+        
+        // 只有在没有细粒度检测信息时才显示初始信息
+        if (!this.multimodalDetectionInfo && descriptionInfo) {
+          this.initialDescriptionInfo = descriptionInfo;
+          console.log('成功加载初始描述信息:', this.initialDescriptionInfo);
+        }
+      } catch (e) {
+        console.error('加载初始描述信息失败:', e);
+      }
+    },
+    
+    // 解析描述信息，提取场景、目标、行为、总结
+    parseDescriptionInfo(description) {
+      if (!description || typeof description !== 'string') {
+        return null;
+      }
+      
+      const lines = description.split(/\r?\n/).filter(line => line.trim() !== '');
+      const info = {
+        scene: null,
+        target: null,
+        behavior: null,
+        summary: null
+      };
+      
+      lines.forEach(line => {
+        const trimmedLine = line.trim();
+        // 匹配格式：标签：内容
+        const match = trimmedLine.match(/^([^：:]+)[：:]\s*(.*)$/);
+        if (match) {
+          const label = match[1].trim();
+          const value = match[2].trim();
+          
+          if (label === '场景') {
+            info.scene = value;
+          } else if (label === '目标') {
+            info.target = value;
+          } else if (label === '行为') {
+            info.behavior = value;
+          } else if (label === '总结') {
+            info.summary = value;
+          }
+        }
+      });
+      
+      // 如果至少有一个字段有值，则返回info对象
+      if (info.scene || info.target || info.behavior || info.summary) {
+        return info;
+      }
+      
+      return null;
     },
 
     // 处理视频加载错误
