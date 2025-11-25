@@ -867,7 +867,7 @@ export default {
   background-image: url('~@/assets/images/step1/-s-图层 0.png');
   background-size: cover;
   background-repeat: no-repeat;
-  background-position: center center;
+  background-position: center top;
   opacity: 1;
   z-index: -1;
 }
