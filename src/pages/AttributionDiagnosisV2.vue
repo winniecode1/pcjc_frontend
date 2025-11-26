@@ -209,8 +209,11 @@ export default {
       module1BiasTestResultPending: '', // 临时存储，等待10秒后显示
       module1ShowDiagnosisOverlay: true, // 控制是否显示诊断遮罩层
       module1InternalBias: null,
+      module1InternalBiasPending: null, // 临时存储
       module1PropagationBias: null,
+      module1PropagationBiasPending: null, // 临时存储
       module1IsBiasModule: null,
+      module1IsBiasModulePending: null, // 临时存储
       module1DelayTimer: null, // 延迟显示的定时器
       
       // 模块2数据
@@ -231,7 +234,9 @@ export default {
       module4BiasTestResultPending: '', // 临时存储，等待10秒后显示
       module4ShowDiagnosisOverlay: true, // 控制是否显示诊断遮罩层
       module4InternalBias: null,
+      module4InternalBiasPending: null, // 临时存储
       module4IsBiasModule: null,
+      module4IsBiasModulePending: null, // 临时存储
       module4DelayTimer: null, // 延迟显示的定时器
       
       // 根因诊断结果
@@ -667,52 +672,57 @@ export default {
     parseModule1(module1, fromCache = false) {
       if (!module1) return;
       
+      // 提取所有数据
       const singleTask = module1.single_task_stage;
-      if (singleTask) {
-        const biasTestResult = this.safeGet(singleTask, 'prediction.caption', '');
-        
-        if (biasTestResult) {
-          if (fromCache) {
-            // 来自localStorage，直接显示，不延迟
-            this.module1BiasTestResult = biasTestResult;
-            this.module1ShowDiagnosisOverlay = false;
-            console.log('✅ 模块1根因诊断结果（来自缓存，直接显示）');
-          } else {
-            // 来自API，需要延迟10秒
-            this.module1BiasTestResultPending = biasTestResult;
-            this.module1ShowDiagnosisOverlay = true; // 显示遮罩层
-            
-            // 清除之前的定时器（如果有）
-            if (this.module1DelayTimer) {
-              clearTimeout(this.module1DelayTimer);
-            }
-            
-            // 10秒后显示并隐藏遮罩层
-            this.module1DelayTimer = setTimeout(() => {
-              this.module1BiasTestResult = this.module1BiasTestResultPending;
-              this.module1ShowDiagnosisOverlay = false; // 隐藏遮罩层
-              console.log('✅ 模块1根因诊断结果延迟10秒后显示');
-            }, 10000);
-            
-            console.log('⏰ 模块1根因诊断结果已获取，将在10秒后显示');
+      const biasTestResult = singleTask ? this.safeGet(singleTask, 'prediction.caption', '') : '';
+      
+      const moduleTestStage = module1.module_test_stage;
+      const internalBias = moduleTestStage ? this.safeGet(moduleTestStage, 'prediction.cognitive_bias', null) : null;
+      
+      const analysisTask = module1.analysis_task;
+      const propagationBias = analysisTask ? this.safeGet(analysisTask, 'calculated_value', null) : null;
+      
+      const isBiasModule = this.safeGet(module1, 'is_bias_module', null);
+      
+      if (fromCache) {
+        // 来自localStorage，直接显示，不延迟
+        this.module1BiasTestResult = biasTestResult || '';
+        this.module1InternalBias = internalBias;
+        this.module1PropagationBias = propagationBias;
+        this.module1IsBiasModule = isBiasModule;
+        this.module1ShowDiagnosisOverlay = false;
+        console.log('✅ 模块1所有数据（来自缓存，直接显示）');
+      } else {
+        // 来自API，需要延迟10秒
+        if (biasTestResult || internalBias !== null || propagationBias !== null || isBiasModule !== null) {
+          // 暂存数据
+          this.module1BiasTestResultPending = biasTestResult;
+          this.module1InternalBiasPending = internalBias;
+          this.module1PropagationBiasPending = propagationBias;
+          this.module1IsBiasModulePending = isBiasModule;
+          this.module1ShowDiagnosisOverlay = true; // 显示遮罩层
+          
+          // 清除之前的定时器（如果有）
+          if (this.module1DelayTimer) {
+            clearTimeout(this.module1DelayTimer);
           }
+          
+          // 10秒后显示并隐藏遮罩层
+          this.module1DelayTimer = setTimeout(() => {
+            this.module1BiasTestResult = this.module1BiasTestResultPending || '';
+            this.module1InternalBias = this.module1InternalBiasPending;
+            this.module1PropagationBias = this.module1PropagationBiasPending;
+            this.module1IsBiasModule = this.module1IsBiasModulePending;
+            this.module1ShowDiagnosisOverlay = false; // 隐藏遮罩层
+            console.log('✅ 模块1所有数据延迟10秒后显示');
+          }, 10000);
+          
+          console.log('⏰ 模块1数据已获取，将在10秒后显示');
         } else {
           this.module1BiasTestResult = '';
           this.module1ShowDiagnosisOverlay = false; // 没有数据则不显示遮罩层
         }
       }
-      
-      const moduleTestStage = module1.module_test_stage;
-      if (moduleTestStage) {
-        this.module1InternalBias = this.safeGet(moduleTestStage, 'prediction.cognitive_bias', null);
-      }
-      
-      const analysisTask = module1.analysis_task;
-      if (analysisTask) {
-        this.module1PropagationBias = this.safeGet(analysisTask, 'calculated_value', null);
-      }
-      
-      this.module1IsBiasModule = this.safeGet(module1, 'is_bias_module', null);
     },
     
     /**
@@ -783,47 +793,51 @@ export default {
     parseModule4(module4, fromCache = false) {
       if (!module4) return;
       
+      // 提取所有数据
       const singleTask = module4.single_task_stage;
-      if (singleTask) {
-        const biasTestResult = this.safeGet(singleTask, 'prediction.summary', '');
-        
-        if (biasTestResult) {
-          if (fromCache) {
-            // 来自localStorage，直接显示，不延迟
-            this.module4BiasTestResult = biasTestResult;
-            this.module4ShowDiagnosisOverlay = false;
-            console.log('✅ 模块4根因诊断结果（来自缓存，直接显示）');
-          } else {
-            // 来自API，需要延迟10秒
-            this.module4BiasTestResultPending = biasTestResult;
-            this.module4ShowDiagnosisOverlay = true; // 显示遮罩层
-            
-            // 清除之前的定时器（如果有）
-            if (this.module4DelayTimer) {
-              clearTimeout(this.module4DelayTimer);
-            }
-            
-            // 10秒后显示并隐藏遮罩层
-            this.module4DelayTimer = setTimeout(() => {
-              this.module4BiasTestResult = this.module4BiasTestResultPending;
-              this.module4ShowDiagnosisOverlay = false; // 隐藏遮罩层
-              console.log('✅ 模块4根因诊断结果延迟10秒后显示');
-            }, 10000);
-            
-            console.log('⏰ 模块4根因诊断结果已获取，将在10秒后显示');
+      const biasTestResult = singleTask ? this.safeGet(singleTask, 'prediction.summary', '') : '';
+      
+      const moduleTestStage = module4.module_test_stage;
+      const internalBias = moduleTestStage ? this.safeGet(moduleTestStage, 'prediction.cognitive_bias', null) : null;
+      
+      const isBiasModule = this.safeGet(module4, 'is_bias_module', null);
+      
+      if (fromCache) {
+        // 来自localStorage，直接显示，不延迟
+        this.module4BiasTestResult = biasTestResult || '';
+        this.module4InternalBias = internalBias;
+        this.module4IsBiasModule = isBiasModule;
+        this.module4ShowDiagnosisOverlay = false;
+        console.log('✅ 模块4所有数据（来自缓存，直接显示）');
+      } else {
+        // 来自API，需要延迟10秒
+        if (biasTestResult || internalBias !== null || isBiasModule !== null) {
+          // 暂存数据
+          this.module4BiasTestResultPending = biasTestResult;
+          this.module4InternalBiasPending = internalBias;
+          this.module4IsBiasModulePending = isBiasModule;
+          this.module4ShowDiagnosisOverlay = true; // 显示遮罩层
+          
+          // 清除之前的定时器（如果有）
+          if (this.module4DelayTimer) {
+            clearTimeout(this.module4DelayTimer);
           }
+          
+          // 10秒后显示并隐藏遮罩层
+          this.module4DelayTimer = setTimeout(() => {
+            this.module4BiasTestResult = this.module4BiasTestResultPending || '';
+            this.module4InternalBias = this.module4InternalBiasPending;
+            this.module4IsBiasModule = this.module4IsBiasModulePending;
+            this.module4ShowDiagnosisOverlay = false; // 隐藏遮罩层
+            console.log('✅ 模块4所有数据延迟10秒后显示');
+          }, 10000);
+          
+          console.log('⏰ 模块4数据已获取，将在10秒后显示');
         } else {
           this.module4BiasTestResult = '';
           this.module4ShowDiagnosisOverlay = false; // 没有数据则不显示遮罩层
         }
       }
-      
-      const moduleTestStage = module4.module_test_stage;
-      if (moduleTestStage) {
-        this.module4InternalBias = this.safeGet(moduleTestStage, 'prediction.cognitive_bias', null);
-      }
-      
-      this.module4IsBiasModule = this.safeGet(module4, 'is_bias_module', null);
     },
     
     /**
