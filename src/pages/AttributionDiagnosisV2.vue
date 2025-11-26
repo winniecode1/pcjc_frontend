@@ -4,7 +4,7 @@
     <b-row class="header-bar align-items-center no-gutters">
       <b-col cols="3" class="text-left">
         <button class="header-btn btn-home" @click="$router.push('/')">首页</button>
-        <button class="header-btn btn-back" @click="$router.back()">上个界面</button>
+        <button class="header-btn btn-back" @click="$router.back()">上个页面</button>
       </b-col>
     </b-row>
 
