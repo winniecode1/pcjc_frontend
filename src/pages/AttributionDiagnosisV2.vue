@@ -695,29 +695,39 @@ export default {
       } else {
         // 来自API，需要延迟10秒
         if (biasTestResult || internalBias !== null || propagationBias !== null || isBiasModule !== null) {
-          // 暂存数据
+          // 更新暂存数据（每次轮询都更新最新值）
           this.module1BiasTestResultPending = biasTestResult;
           this.module1InternalBiasPending = internalBias;
           this.module1PropagationBiasPending = propagationBias;
           this.module1IsBiasModulePending = isBiasModule;
-          this.module1ShowDiagnosisOverlay = true; // 显示遮罩层
           
-          // 清除之前的定时器（如果有）
-          if (this.module1DelayTimer) {
-            clearTimeout(this.module1DelayTimer);
+          // 只在第一次获取到数据时设置定时器，避免轮询重复重置
+          if (!this.module1DelayTimer) {
+            this.module1ShowDiagnosisOverlay = true; // 只在首次设置时显示遮罩层
+            console.log('⏰ 模块1数据首次获取，将在10秒后显示');
+            
+            // 10秒后显示并隐藏遮罩层
+            this.module1DelayTimer = setTimeout(() => {
+              console.log('🔄 模块1定时器触发，准备赋值...');
+              
+              this.module1BiasTestResult = this.module1BiasTestResultPending || '';
+              this.module1InternalBias = this.module1InternalBiasPending;
+              this.module1PropagationBias = this.module1PropagationBiasPending;
+              this.module1IsBiasModule = this.module1IsBiasModulePending;
+              this.module1ShowDiagnosisOverlay = false; // 隐藏遮罩层
+              this.module1DelayTimer = 'done'; // 标记为已完成，防止后续轮询重新设置
+              
+              console.log('✅ 模块1所有数据延迟10秒后显示');
+            }, 10000);
           }
-          
-          // 10秒后显示并隐藏遮罩层
-          this.module1DelayTimer = setTimeout(() => {
-            this.module1BiasTestResult = this.module1BiasTestResultPending || '';
-            this.module1InternalBias = this.module1InternalBiasPending;
-            this.module1PropagationBias = this.module1PropagationBiasPending;
-            this.module1IsBiasModule = this.module1IsBiasModulePending;
-            this.module1ShowDiagnosisOverlay = false; // 隐藏遮罩层
-            console.log('✅ 模块1所有数据延迟10秒后显示');
-          }, 10000);
-          
-          console.log('⏰ 模块1数据已获取，将在10秒后显示');
+          // 如果定时器已完成（值为'done'），直接更新数据，不显示遮罩层
+          else if (this.module1DelayTimer === 'done') {
+            this.module1BiasTestResult = biasTestResult || '';
+            this.module1InternalBias = internalBias;
+            this.module1PropagationBias = propagationBias;
+            this.module1IsBiasModule = isBiasModule;
+            // 不改变 module1ShowDiagnosisOverlay，保持为 false
+          }
         } else {
           this.module1BiasTestResult = '';
           this.module1ShowDiagnosisOverlay = false; // 没有数据则不显示遮罩层
@@ -812,27 +822,36 @@ export default {
       } else {
         // 来自API，需要延迟10秒
         if (biasTestResult || internalBias !== null || isBiasModule !== null) {
-          // 暂存数据
+          // 更新暂存数据（每次轮询都更新最新值）
           this.module4BiasTestResultPending = biasTestResult;
           this.module4InternalBiasPending = internalBias;
           this.module4IsBiasModulePending = isBiasModule;
-          this.module4ShowDiagnosisOverlay = true; // 显示遮罩层
           
-          // 清除之前的定时器（如果有）
-          if (this.module4DelayTimer) {
-            clearTimeout(this.module4DelayTimer);
+          // 只在第一次获取到数据时设置定时器，避免轮询重复重置
+          if (!this.module4DelayTimer) {
+            this.module4ShowDiagnosisOverlay = true; // 只在首次设置时显示遮罩层
+            console.log('⏰ 模块4数据首次获取，将在10秒后显示');
+            
+            // 10秒后显示并隐藏遮罩层
+            this.module4DelayTimer = setTimeout(() => {
+              console.log('🔄 模块4定时器触发，准备赋值...');
+              
+              this.module4BiasTestResult = this.module4BiasTestResultPending || '';
+              this.module4InternalBias = this.module4InternalBiasPending;
+              this.module4IsBiasModule = this.module4IsBiasModulePending;
+              this.module4ShowDiagnosisOverlay = false; // 隐藏遮罩层
+              this.module4DelayTimer = 'done'; // 标记为已完成，防止后续轮询重新设置
+              
+              console.log('✅ 模块4所有数据延迟10秒后显示');
+            }, 10000);
           }
-          
-          // 10秒后显示并隐藏遮罩层
-          this.module4DelayTimer = setTimeout(() => {
-            this.module4BiasTestResult = this.module4BiasTestResultPending || '';
-            this.module4InternalBias = this.module4InternalBiasPending;
-            this.module4IsBiasModule = this.module4IsBiasModulePending;
-            this.module4ShowDiagnosisOverlay = false; // 隐藏遮罩层
-            console.log('✅ 模块4所有数据延迟10秒后显示');
-          }, 10000);
-          
-          console.log('⏰ 模块4数据已获取，将在10秒后显示');
+          // 如果定时器已完成（值为'done'），直接更新数据，不显示遮罩层
+          else if (this.module4DelayTimer === 'done') {
+            this.module4BiasTestResult = biasTestResult || '';
+            this.module4InternalBias = internalBias;
+            this.module4IsBiasModule = isBiasModule;
+            // 不改变 module4ShowDiagnosisOverlay，保持为 false
+          }
         } else {
           this.module4BiasTestResult = '';
           this.module4ShowDiagnosisOverlay = false; // 没有数据则不显示遮罩层
@@ -996,10 +1015,10 @@ export default {
      */
     async checkAndFetchAccuracyRecall(timestampData) {
       const currentTime = Date.now();
-      const targetTime = timestampData.startTime + 5 * 60 * 1000;  // startTime + 5分钟
+      const targetTime = timestampData.startTime + 4 * 60 * 1000;  // startTime + 5分钟
       
       if (currentTime >= targetTime) {
-        console.log('✅ 已达到5分钟，开始请求 accuracy/recall');
+        console.log('✅ 已达到4分钟，开始请求 accuracy/recall');
         await this.fetchAccuracyRecall();
       } else {
         const remainingSeconds = Math.ceil((targetTime - currentTime) / 1000);
