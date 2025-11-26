@@ -152,7 +152,7 @@
     <!-- 底部内容区域 -->
     <div class="bottom-content">
         <div class="metric-card accuracy-card">
-            <div class="metric-title">多主体解析准确率</div>
+            <div class="metric-title">多主体传播解析准确率</div>
             <div class="metric-value">
               <span v-if="accuracy !== null && accuracy !== undefined">{{ formatPercent(accuracy, 0) }}</span>
               <span v-else class="calculating-text">解析中...</span>
