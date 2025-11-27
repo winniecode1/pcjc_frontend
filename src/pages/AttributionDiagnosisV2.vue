@@ -254,6 +254,7 @@ export default {
         'color': '颜色信息',
         'firepower': '火力信息',
         'model': '型号信息',
+        'outline': '轮廓信息',
         'power': '动力信息',
         'scene': '场景信息',
         'shape': '形状信息',
