@@ -1149,7 +1149,7 @@ export default {
 }
 
 .video-label {
-  width: 320px;
+  width: 400px;
   height: 40px;
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
   background-repeat: no-repeat;
