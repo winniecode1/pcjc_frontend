@@ -18,7 +18,7 @@
     <b-row class="justify-content-center content-row no-gutters">
 
       <b-col cols="3" class="left-column px-2">
-        <div class="panel-header header-select-data clean-header">选择数据</div>
+        <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
 
         <div class="panel-left">
           <div class="panel-content">
@@ -41,7 +41,7 @@
 
       <b-col cols="5" class="middle-column mx-2 px-1">
         <div class="video-section">
-          <div class="video-label label-original">无人机侦察数据</div>
+          <div class="video-label label-original">认知传播数据源</div>
           <div class="video-frame">
             <video v-if="originalVideoURL" ref="originalVideo" :src="originalVideoURL" controls class="video-display"
               playsinline muted loop @error="handleVideoError"></video>
@@ -50,7 +50,7 @@
         </div>
 
         <div class="video-section">
-          <div class="video-label label-processed">多模态检测结果 </div>
+          <div class="video-label label-processed">多模态目标检测结果</div>
           <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
             <video v-if="processedVideoURL && !isLoading" ref="processedVideo" :src="processedVideoURL" controls
               class="video-display" :key="processedVideoURL" playsinline muted loop @error="handleVideoError"></video>
