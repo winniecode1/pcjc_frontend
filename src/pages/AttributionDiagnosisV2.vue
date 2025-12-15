@@ -1163,7 +1163,8 @@ export default {
   width: 120px;
   height: 40px;
   color: #fff;
-  font-size: 0.9rem;
+  font-family: 'DOUYUFont';
+  font-size: 14px;
   font-weight: bold;
   background-repeat: no-repeat;
   background-size: 100% 100%;
