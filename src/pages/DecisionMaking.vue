@@ -18,7 +18,7 @@
     <div class="core-layout-design">
       <div class="design-left-column">
         <div class="design-module video-module" :style="videoPanelBgStyle">
-          <div class="panel-header clean-header">无人机侦察数据</div>
+          <div class="panel-header clean-header">认知传播数据源</div>
           <div class="design-module-content video-content-wrapper">
             <video v-if="testVideoUrl" :src="testVideoUrl" controls class="test-video-player" @error="handleVideoError"
               autoplay loop muted></video>
@@ -38,7 +38,7 @@
         <div class="button-container">
           <b-button @click="fetchBackendData" variant="primary" :disabled="isLoading" class="inference-btn"
             :style="buttonBgStyle">
-            <span class="btn-text-pos">开始决策认知</span>
+            <span class="btn-text-pos">开始人机决策</span>
           </b-button>
         </div>
       </div>
@@ -47,10 +47,10 @@
         <div class="design-module assessment-module commander-assessment" :style="commanderPanelBgStyle">
           <div class="assessment-content">
             <div class="assessment-left-section">
-              <img v-if="designAssetsEnabled" :src="fileUrl(assetNames.commanderIcon)" alt="指挥员评估"
+              <img v-if="designAssetsEnabled" :src="fileUrl(assetNames.commanderIcon)" alt="指挥员决策"
                 class="assessment-module-icon" />
               <div v-else class="icon-placeholder-commander"></div>
-              <div class="assessment-title">指挥员评估</div>
+              <div class="assessment-title">指挥员决策</div>
             </div>
             <div class="assessment-middle-section">
               <div class="assessment-right-section">
@@ -129,10 +129,10 @@
         <div class="design-module assessment-module machine-assessment" :style="systemPanelBgStyle">
           <div class="assessment-content">
             <div class="assessment-left-section">
-              <img v-if="designAssetsEnabled" :src="fileUrl(assetNames.machineIcon)" alt="机器评估"
+              <img v-if="designAssetsEnabled" :src="fileUrl(assetNames.machineIcon)" alt="机器决策"
                 class="assessment-module-icon" />
               <div v-else class="icon-placeholder-machine"></div>
-              <div class="assessment-title">机器评估</div>
+              <div class="assessment-title">机器决策</div>
             </div>
             <div class="assessment-middle-section">
               <div class="assessment-right-section">
@@ -595,8 +595,8 @@ export default {
           }
           // --- 修改结束 ---
         } else {
-          this.performanceData = '请点击 "开始决策认知"';
-          this.performanceDataLocal = '请点击 "开始决策认知"';
+          this.performanceData = '请点击 "开始人机决策"';
+          this.performanceDataLocal = '请点击 "开始人机决策"';
           this.behaviorInfo = '请点击 "决策认知偏差检测"';
           this.samePoints = '请点击 "决策认知偏差检测"';
           this.differentPoints = '请点击 "决策认知偏差检测"';
@@ -945,7 +945,7 @@ export default {
           this.startAccuracyTimer(BIAS_DETECTION_DELAY);
         } else {
           // 如果没有数据
-          alert('请先点击 "开始决策认知" 获取数据');
+          alert('请先点击 "开始人机决策" 获取数据');
           this.isBiasDetecting = false;
           this.isBiasResultLoading = false;
           this.deviationDetectionAccuracy = 'N/A';
