@@ -91,11 +91,19 @@ exports.createNotifierCallback = () => {
     const error = errors[0]
     const filename = error.file && error.file.split('!').pop()
 
-    notifier.notify({
-      title: packageConfig.name,
-      message: severity + ': ' + error.name,
-      subtitle: filename || '',
-      icon: path.join(__dirname, 'logo.png')
-    })
+    // Use console as fallback to avoid 'spawn Unknown system error -86' on some macOS setups
+    console.error(`\n${severity.toUpperCase()}: ${error.name} @ ${filename || 'unknown'}`);
+    console.error(error.message);
+    
+    try {
+      notifier.notify({
+        title: packageConfig.name,
+        message: severity + ': ' + error.name,
+        subtitle: filename || '',
+        icon: path.join(__dirname, 'logo.png')
+      })
+    } catch (e) {
+      // Ignore notifier errors
+    }
   }
 }

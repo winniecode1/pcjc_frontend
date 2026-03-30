@@ -11,6 +11,8 @@ import PriorKnowledge from '../pages/PriorKnowledge.vue'
 import DecisionMaking from '../pages/DecisionMaking.vue'
 import AttributionDiagnosis from '../pages/AttributionDiagnosis.vue'
 import AttributionDiagnosisV2 from '../pages/AttributionDiagnosisV2.vue'
+import CombinedDiagnosis from '../pages/CombinedDiagnosis.vue'
+import AnalysisDashboard from '../pages/AnalysisDashboard.vue'
 import HomePage from '../pages/home_page/index.vue'
 
 Vue.use(Router)
@@ -51,6 +53,16 @@ export default new Router({
       path: '/attributiondiagnosis', // 根因诊断
       name: 'AttributionDiagnosis',
       component: AttributionDiagnosisV2
+    },
+    {
+      path: '/combined-diagnosis',
+      name: 'CombinedDiagnosis',
+      component: CombinedDiagnosis
+    },
+    {
+      path: '/analysis-dashboard',
+      name: 'AnalysisDashboard',
+      component: AnalysisDashboard
     },
     {
       path: '/projects',
