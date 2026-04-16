@@ -38,16 +38,37 @@
 
         <div class="preview-container">
           <div class="panel-header header-select-data clean-header">数据内容预览</div>
-          <div class="preview-frame">
-            <div v-if="!selectedVideo" class="preview-placeholder">请选择数据源查看预览</div>
-            <video v-else-if="isVideo(selectedVideo.name)" :src="videoUrl(selectedVideo.path)" class="preview-media" autoplay muted loop></video>
-            <img v-else :src="imageUrl(selectedVideo.path)" class="preview-media" alt="预览内容">
+          <div class="preview-frame" style="position: relative;">
+            <div v-if="carouselItems.length === 0" class="preview-placeholder">请选择数据源查看预览</div>
+            <b-carousel
+              v-else
+              id="analysis-preview-carousel"
+              v-model="carouselSlide"
+              :interval="4000"
+              controls
+              indicators
+              background="transparent"
+              class="w-100 h-100 custom-carousel"
+            >
+              <b-carousel-slide v-for="(item, index) in carouselItems" :key="index">
+                <template #img>
+                  <div class="carousel-slide-content">
+                    <img v-if="item.type === 'image'" :src="item.src" class="slide-media slide-media-image">
+                    <video v-else-if="item.type === 'video'" :src="item.src" autoplay muted loop class="slide-media slide-media-video"></video>
+                    <div v-else-if="item.type === 'text'" class="text-slide-content">
+                      <div class="text-slide-title">{{ item.title }}</div>
+                      <div class="text-slide-desc">{{ item.content }}</div>
+                    </div>
+                  </div>
+                </template>
+              </b-carousel-slide>
+            </b-carousel>
           </div>
         </div>
 
         <div class="action-buttons">
-          <button @click="startAnalysis" :disabled="isLoading" class="btn-start-detect">
-            <span class="btn-text-pos">{{ isLoading ? '分析中...' : '开始主体解析' }}</span>
+          <button @click="startAnalysis" :disabled="isLoading || isSelectingFile" class="btn-start-detect">
+            <span class="btn-text-pos">{{ isSelectingFile ? '数据加载中...' : (isLoading ? '分析中...' : '开始主体解析') }}</span>
           </button>
         </div>
       </b-col>
@@ -57,10 +78,10 @@
         <div class="analysis-top-section">
           <!-- 有向图区域 -->
           <div class="graph-card">
-            <div class="small-panel-header">认知偏差传播有向图</div>
+            <div class="small-panel-header">多主体认知传播有向图</div>
             <div id="myDiagramDiv" class="diagram-div"></div>
           </div>
-          
+
           <!-- 详细信息展示 -->
           <div class="details-card">
             <div class="small-panel-header">节点详细信息</div>
@@ -129,8 +150,15 @@ export default {
         { id: 5, name: "综合态势感知回放.mp4", type: 'live', path: '/videos/演示_03.mp4' }
       ],
       selectedVideo: null,
+      isSelectingFile: false,
+      selectedFileContext: null,
+      carouselSlide: 0,
+      carouselItems: [],
       isLoading: false,
+      analysisHighlightRunId: 0,
       myChart: null,
+      graphBaseData: [],
+      graphBaseLinks: [],
       selectedNode: null
     };
   },
@@ -164,7 +192,7 @@ export default {
     initChart() {
       const chartDom = document.getElementById('myDiagramDiv');
       this.myChart = echarts.init(chartDom);
-      
+
       const option = {
         tooltip: { show: false },
         series: [
@@ -173,35 +201,35 @@ export default {
             layout: 'none',
             symbolSize: 50,
             roam: true,
-            label: { 
-              show: true, 
-              position: 'inside', 
-              color: '#fff', 
-              fontSize: 12, 
+            label: {
+              show: true,
+              position: 'inside',
+              color: '#fff',
+              fontSize: 12,
               fontFamily: 'DingTalk-JinBuTi',
-              formatter: '{c}' 
+              formatter: '{c}'
             },
             edgeSymbol: ['none', 'arrow'],
             edgeSymbolSize: [4, 10],
             data: [
-              { name: 'M1', value: '多模态认知偏差检测', x: 200, y: 300, symbol: 'roundRect', symbolSize: [160, 50], itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2 }, label: { fontSize: 13, fontWeight: 'bold' }, desc: "该模块负责处理视频、指令等多模态输入，识别初步的认知偏差迹象。", status: "检测中" },
-              { name: 'M2', value: '先验知识认知偏差检测', x: 800, y: 200, symbol: 'roundRect', symbolSize: [160, 50], itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2 }, label: { fontSize: 13, fontWeight: 'bold' }, desc: "结合专家知识库，对初步检测结果进行先验逻辑验证。", status: "待启动" },
-              { name: 'M3', value: '智能体协商认知偏差检测', x: 300, y: 550, symbol: 'roundRect', symbolSize: [160, 50], itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2 }, label: { fontSize: 13, fontWeight: 'bold' }, desc: "通过多个智能体的博弈与协商，进一步精细化偏差定位。", status: "待启动" },
-              { name: 'M4', value: '决策选择认知偏差检测', x: 850, y: 550, symbol: 'roundRect', symbolSize: [160, 50], itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2 }, label: { fontSize: 13, fontWeight: 'bold' }, desc: "在决策层面上分析认知偏差对最终行动方案的影响。", status: "待启动" },
-              { name: 'V1', value: 'V_video', x: 150, y: 100, symbolSize: [85, 35], itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c' }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11 }, desc: "输入视频流数据。" },
-              { name: 'V2', value: 'V_instr', x: 300, y: 100, symbolSize: [85, 35], itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c' }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11 }, desc: "指挥官下达的初始指令文本。" },
-              { name: 'V3', value: 'V_det', x: 550, y: 200, symbolSize: [85, 35], itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c' }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11 }, desc: "目标检测识别结果。" },
-              { name: 'V4', value: 'V_desc', x: 500, y: 350, symbolSize: [85, 35], itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c' }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11 }, desc: "场景语义描述特征向量。" },
-              { name: 'V5', value: 'V_know', x: 1000, y: 350, symbolSize: [85, 35], itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c' }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11 }, desc: "外部先验知识库条目。" },
-              { name: 'V6', value: 'V_cand', x: 650, y: 500, symbolSize: [85, 35], itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c' }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11 }, desc: "候选偏差原因集合。" },
-              { name: 'V7', value: 'V_class', x: 550, y: 650, symbolSize: [85, 35], itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c' }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11 }, desc: "偏差所属的分类等级。" },
-              { name: 'V8', value: 'V_hazard', x: 800, y: 750, symbolSize: [95, 35], itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c' }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11 }, desc: "最终评估的冲突危害等级。" }
+              { name: 'M1', value: '多模态认知偏差检测', x: 200, y: 300, symbol: 'circle', symbolSize: 95, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2, shadowColor: '#4ED8FF', shadowBlur: 10 }, label: { fontSize: 12, fontWeight: 'bold', formatter: '多模态\n认知偏差\n检测' }, desc: "该模块负责处理视频、指令等多模态输入，识别初步的认知偏差迹象。", status: "检测中" },
+              { name: 'M2', value: '先验知识认知偏差检测', x: 800, y: 200, symbol: 'circle', symbolSize: 95, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2, shadowColor: '#4ED8FF', shadowBlur: 10 }, label: { fontSize: 12, fontWeight: 'bold', formatter: '先验知识\n认知偏差\n检测' }, desc: "结合专家知识库，对初步检测结果进行先验逻辑验证。", status: "待启动" },
+              { name: 'M3', value: '智能体协商认知偏差检测', x: 300, y: 550, symbol: 'circle', symbolSize: 95, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2, shadowColor: '#4ED8FF', shadowBlur: 10 }, label: { fontSize: 12, fontWeight: 'bold', formatter: '智能体协商\n认知偏差\n检测' }, desc: "通过多个智能体的博弈与协商，进一步精细化偏差定位。", status: "待启动" },
+              { name: 'M4', value: '决策选择认知偏差检测', x: 850, y: 550, symbol: 'circle', symbolSize: 95, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2, shadowColor: '#4ED8FF', shadowBlur: 10 }, label: { fontSize: 12, fontWeight: 'bold', formatter: '决策选择\n认知偏差\n检测' }, desc: "在决策层面上分析认知偏差对最终行动方案的影响。", status: "待启动" },
+              { name: 'V1', value: 'V_video', x: 150, y: 100, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "输入视频流数据。" },
+              { name: 'V2', value: 'V_instr', x: 300, y: 100, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "指挥官下达的初始指令文本。" },
+              { name: 'V3', value: 'V_det', x: 550, y: 200, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "目标检测识别结果。" },
+              { name: 'V4', value: 'V_desc', x: 500, y: 350, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "场景语义描述特征向量。" },
+              { name: 'V5', value: 'V_know', x: 1000, y: 350, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "外部先验知识库条目。" },
+              { name: 'V6', value: 'V_cand', x: 650, y: 500, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "候选偏差原因集合。" },
+              { name: 'V7', value: 'V_class', x: 550, y: 650, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "偏差所属的分类等级。" },
+              { name: 'V8', value: 'V_hazard', x: 800, y: 750, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "最终评估的冲突危害等级。" }
             ],
             links: [
               { source: 'V1', target: 'M1' }, { source: 'V2', target: 'M1' },
               { source: 'M1', target: 'V3' }, { source: 'M1', target: 'V4' },
               { source: 'V3', target: 'M2' }, { source: 'V4', target: 'M2' },
-              { source: 'V5', target: 'M2' }, { source: 'M3', target: 'V6' },
+              { source: 'V5', target: 'M2' }, { source: 'V6', target: 'M3' },
               { source: 'V6', target: 'M2' }, { source: 'M3', target: 'V7' },
               { source: 'V7', target: 'M4' }, { source: 'M4', target: 'V8' }
             ],
@@ -210,6 +238,7 @@ export default {
         ]
       };
       this.myChart.setOption(option);
+      this.cacheGraphBaseStyles();
       this.myChart.on('click', (params) => {
         if (params.dataType === 'node') {
           this.selectedNode = {
@@ -222,6 +251,24 @@ export default {
       });
       window.addEventListener('resize', () => { this.myChart && this.myChart.resize(); });
     },
+    cacheGraphBaseStyles() {
+      if (!this.myChart) return;
+      const option = this.myChart.getOption();
+      if (!option || !option.series || !option.series[0]) return;
+      const series = option.series[0];
+      const data = Array.isArray(series.data) ? series.data : [];
+      const links = Array.isArray(series.links) ? series.links : [];
+
+      this.graphBaseData = data.map((node) => ({
+        ...node,
+        itemStyle: { ...(node.itemStyle || {}) },
+        label: { ...(node.label || {}) }
+      }));
+      this.graphBaseLinks = links.map((link) => ({
+        ...link,
+        lineStyle: { ...(link.lineStyle || {}) }
+      }));
+    },
     async fetchVideoList() {
       try {
         const response = await this.$ajax.get('http://10.109.253.71:5236/videos');
@@ -231,11 +278,274 @@ export default {
         }
       } catch (error) { console.warn("获取数据失败", error); }
     },
-    selectVideo(video) { this.selectedVideo = video; },
-    startAnalysis() {
+    async selectVideo(video) {
+      this.selectedVideo = video;
+      await this.handleFileSelection(video);
+    },
+    async handleFileSelection(video) {
+      this.isSelectingFile = true;
+      this.carouselSlide = 0;
+      this.carouselItems = [];
+      this.selectedFileContext = null;
+      try {
+        const response = await this.requestFileSelection(video);
+        this.applyFileSelectionResult(response, video);
+      } catch (error) {
+        console.error("文件选择接口调用失败", error);
+        this.carouselItems = [
+          { type: this.isVideo(video.name) ? 'video' : 'image', src: this.isVideo(video.name) ? this.videoUrl(video.path) : this.imageUrl(video.path) }
+        ];
+      } finally {
+        this.isSelectingFile = false;
+      }
+    },
+    async requestFileSelection(video) {
+      // TODO: 前后端联调时替换为真实接口
+      // return this.$ajaxJ.post('/module5/api/file-selection', { path: video.path, name: video.name });
+      return this.mockFileSelectionResponse(video);
+    },
+    mockFileSelectionResponse(video) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({
+            success: true,
+            stage1: {
+              path: video.path,
+              source_name: video.name
+            },
+            carouselItems: this.buildMockMultimodalItems(video)
+          });
+        }, 350);
+      });
+    },
+    buildMockMultimodalItems(video) {
+      const selectedItem = {
+        type: this.isVideo(video.name) ? 'video' : 'image',
+        src: this.isVideo(video.name) ? this.videoUrl(video.path) : this.imageUrl(video.path)
+      };
+      const mockImages = [
+        require('@/assets/images/MockData/firc_junshi_1.jpg'),
+        require('@/assets/images/MockData/firc_junshi_2.jpg'),
+        require('@/assets/images/MockData/firc_junshi_3.jpg'),
+        require('@/assets/images/MockData/firc_junshi_4.jpg')
+      ];
+      const liveCandidate = this.videoList.find(v => v.id !== video.id && this.isVideo(v.name));
+
+      const items = [selectedItem];
+      if (liveCandidate) {
+        items.push({ type: 'video', src: this.videoUrl(liveCandidate.path) });
+      }
+      mockImages.forEach((img) => {
+        items.push({ type: 'image', src: img });
+      });
+      items.push({
+        type: 'text',
+        title: '多模态预览已就绪',
+        content: `已为 ${video.name} 装载视频片段与图片帧。`
+      });
+      return items;
+    },
+    applyFileSelectionResult(response, video) {
+      const fallbackItem = {
+        type: this.isVideo(video.name) ? 'video' : 'image',
+        src: this.isVideo(video.name) ? this.videoUrl(video.path) : this.imageUrl(video.path)
+      };
+      const res = response || {};
+      this.selectedFileContext = res.stage1 || { path: video.path, source_name: video.name };
+      this.carouselItems = Array.isArray(res.carouselItems) && res.carouselItems.length > 0
+        ? res.carouselItems
+        : [fallbackItem];
+      this.carouselSlide = 0;
+    },
+    async startAnalysis() {
       if (!this.selectedVideo) return;
+      this.analysisHighlightRunId += 1;
+      const runId = this.analysisHighlightRunId;
       this.isLoading = true;
-      setTimeout(() => { this.isLoading = false; }, 2000);
+
+      this.highlightPresetDetAllExceptVideoInstrDesc();
+      await this.waitMs(5000);
+      if (runId !== this.analysisHighlightRunId) return;
+
+      this.highlightPresetDescAllExceptVideoInstrDet();
+      await this.waitMs(5000);
+      if (runId !== this.analysisHighlightRunId) return;
+
+      this.highlightPresetCandToHazard();
+      await this.waitMs(5000);
+      if (runId !== this.analysisHighlightRunId) return;
+
+      this.highlightPresetClassToHazard();
+      await this.waitMs(5000);
+      if (runId !== this.analysisHighlightRunId) return;
+
+      this.resetGraphHighlight();
+      this.isLoading = false;
+    },
+    waitMs(ms) {
+      return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+      });
+    },
+    // 固定高亮方式 1：亮 V_det，然后除了 Video、instr、desc，其他节点全亮
+    highlightPresetDetAllExceptVideoInstrDesc() {
+      const exclude = this.resolveNodeNames(['video', 'instr', 'desc', '多模态']);
+      const nodes = this.getAllNodeNames().filter(name => !exclude.includes(name));
+      this.highlightGraphByNodeSet(nodes);
+    },
+    // 固定高亮方式 2：亮 V_desc，然后除了 Video、instr、det，其他节点全亮
+    highlightPresetDescAllExceptVideoInstrDet() {
+      const exclude = this.resolveNodeNames(['video', 'instr', 'det', '多模态']);
+      const nodes = this.getAllNodeNames().filter(name => !exclude.includes(name));
+      this.highlightGraphByNodeSet(nodes);
+    },
+    // 固定高亮方式 3：亮 V_cand、智能体协商、class、决策选择、hazard
+    highlightPresetCandToHazard() {
+      const nodes = this.resolveNodeNames(['V_cand', '智能体协商', 'class', '决策选择', 'hazard']);
+      this.highlightGraphByNodeSet(nodes);
+    },
+    // 固定高亮方式 4：亮 class、决策选择、hazard
+    highlightPresetClassToHazard() {
+      const nodes = this.resolveNodeNames(['class', '决策选择', 'harzand']);
+      this.highlightGraphByNodeSet(nodes);
+    },
+    // 可选：统一入口，便于外部直接按模式名调用
+    applyFixedHighlightMode(mode) {
+      const handlerMap = {
+        det_all_except_video_instr_desc: this.highlightPresetDetAllExceptVideoInstrDesc,
+        desc_all_except_video_instr_det: this.highlightPresetDescAllExceptVideoInstrDet,
+        cand_to_hazard: this.highlightPresetCandToHazard,
+        class_to_hazard: this.highlightPresetClassToHazard
+      };
+      const handler = handlerMap[mode];
+      if (handler) handler.call(this);
+    },
+    highlightGraphByNodeSet(nodeNames) {
+      const nodes = this.resolveNodeNames(nodeNames);
+      const edges = this.buildEdgesForNodes(nodes);
+      this.highlightGraphByConfig({ nodes, edges });
+    },
+    buildEdgesForNodes(nodeNames) {
+      if (!this.graphBaseLinks.length) {
+        this.cacheGraphBaseStyles();
+      }
+      const nodeSet = new Set(nodeNames || []);
+      return this.graphBaseLinks
+        .filter(link => nodeSet.has(link.source) && nodeSet.has(link.target))
+        .map(link => `${link.source}->${link.target}`);
+    },
+    getAllNodeNames() {
+      if (!this.graphBaseData.length) {
+        this.cacheGraphBaseStyles();
+      }
+      return this.graphBaseData.map(node => node.name);
+    },
+    resolveNodeNames(nodeAliases) {
+      const aliasMap = {
+        // 模块
+        m1: 'M1',
+        m2: 'M2',
+        m3: 'M3',
+        m4: 'M4',
+        '智能体协商': 'M3',
+        '决策选择': 'M4',
+        "多模态":"M1",
+        // 变量
+        video: 'V1',
+        v_video: 'V1',
+        instr: 'V2',
+        v_instr: 'V2',
+        det: 'V3',
+        v_det: 'V3',
+        desc: 'V4',
+        v_desc: 'V4',
+        know: 'V5',
+        v_know: 'V5',
+        cand: 'V6',
+        v_cand: 'V6',
+        class: 'V7',
+        v_class: 'V7',
+        hazard: 'V8',
+        harzand: 'V8',
+        v_hazard: 'V8'
+      };
+      const allNames = this.getAllNodeNames();
+      const resolved = (nodeAliases || []).map((alias) => {
+        if (!alias) return '';
+        const key = String(alias).trim().toLowerCase();
+        return aliasMap[key] || String(alias).trim();
+      });
+      return Array.from(new Set(resolved.filter(name => allNames.includes(name))));
+    },
+    // 通用高亮函数：传入要高亮的节点和边即可
+    // edges 支持两种格式：['A->B'] 或 [{ source: 'A', target: 'B' }]
+    highlightGraphByConfig(config = {}) {
+      if (!this.myChart) return;
+      if (!this.graphBaseData.length || !this.graphBaseLinks.length) {
+        this.cacheGraphBaseStyles();
+      }
+
+      const nodes = Array.isArray(config.nodes) ? config.nodes : [];
+      const edges = Array.isArray(config.edges) ? config.edges : [];
+      const nodeSet = new Set(nodes);
+      const edgeSet = new Set(edges.map((edge) => this.normalizeEdgeKey(edge)));
+
+      const highlightedData = this.graphBaseData.map((node) => {
+        const isActive = nodeSet.has(node.name);
+        const defaultLabelColor = node.label && node.label.color ? node.label.color : '#fff';
+        return {
+          ...node,
+          itemStyle: {
+            ...(node.itemStyle || {}),
+            opacity: isActive ? 1 : 0.35,
+            borderWidth: isActive ? 4 : 2,
+            borderColor: isActive ? '#ffe66d' : ((node.itemStyle && node.itemStyle.borderColor) || '#4ED8FF'),
+            shadowColor: isActive ? '#ffe66d' : ((node.itemStyle && node.itemStyle.shadowColor) || '#4ED8FF'),
+            shadowBlur: isActive ? 28 : ((node.itemStyle && node.itemStyle.shadowBlur) || 10)
+          },
+          label: {
+            ...(node.label || {}),
+            color: isActive ? '#fffde8' : defaultLabelColor
+          }
+        };
+      });
+
+      const highlightedLinks = this.graphBaseLinks.map((link) => {
+        const key = this.normalizeEdgeKey(link);
+        const isActive = edgeSet.has(key);
+        return {
+          ...link,
+          lineStyle: {
+            ...(link.lineStyle || {}),
+            opacity: isActive ? 1 : 0.2,
+            width: isActive ? 4 : 1.5,
+            color: isActive ? '#ffe66d' : '#4ED8FF'
+          }
+        };
+      });
+
+      this.myChart.setOption({
+        series: [{ data: highlightedData, links: highlightedLinks }]
+      });
+    },
+    // 刷新函数：清除高亮，恢复初始样式
+    resetGraphHighlight() {
+      if (!this.myChart) return;
+      if (!this.graphBaseData.length || !this.graphBaseLinks.length) {
+        this.cacheGraphBaseStyles();
+      }
+      this.myChart.setOption({
+        series: [{ data: this.graphBaseData, links: this.graphBaseLinks }]
+      });
+    },
+    normalizeEdgeKey(edge) {
+      if (typeof edge === 'string') {
+        return edge;
+      }
+      if (edge && edge.source !== undefined && edge.target !== undefined) {
+        return `${edge.source}->${edge.target}`;
+      }
+      return '';
     },
     isVideo(name) { return name && (name.endsWith('.mp4') || name.endsWith('.avi')); },
     videoUrl(path) { return path ? `http://10.109.253.71:5236${path}` : ''; },
@@ -270,7 +580,7 @@ export default {
   display: flex; justify-content: center; align-items: center; margin-bottom: 5px;
 }
 
-.sidebar-scroll-area { 
+.sidebar-scroll-area {
   height: 35vh !important; padding: 10px;
   background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
   background-size: 100% 100%; margin-bottom: 10px;
@@ -302,9 +612,34 @@ export default {
 .preview-frame {
   flex: 1; background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-size: 100% 100%; padding: 12px; display: flex; align-items: center; justify-content: center;
-  min-height: 0; overflow: hidden;
+  min-height: 0; overflow: hidden; position: relative;
 }
-.preview-media { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+.preview-placeholder { color: #8bd3f9; font-size: 14px; opacity: 0.7; }
+.carousel-slide-content { height: 26vh; display: flex; align-items: center; justify-content: center; width: 100%; padding: 4px; overflow: hidden; }
+.slide-media {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 6px;
+  background: rgba(4, 18, 36, 0.55);
+}
+.slide-media-image {
+  object-fit: contain;
+  object-position: center;
+  padding: 4px;
+}
+.slide-media-video {
+  object-fit: cover;
+  object-position: center;
+}
+.text-slide-content {
+  width: 90%; height: 90%; background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 8px; padding: 16px; display: flex; flex-direction: column; justify-content: center; text-align: left; margin: 0 auto;
+}
+.text-slide-title { font-size: 15px; font-weight: bold; color: #00e5ff; margin-bottom: 8px; border-bottom: 1px solid rgba(0, 229, 255, 0.3); padding-bottom: 5px; }
+.text-slide-desc { font-size: 13px; color: #c6f4ff; line-height: 1.7; white-space: pre-wrap; flex: 1; overflow-y: auto; }
+.custom-carousel .carousel-indicators li { background-color: #4ED8FF; }
+.custom-carousel .carousel-control-prev-icon, .custom-carousel .carousel-control-next-icon { filter: drop-shadow(0 0 4px #00e5ff); }
 
 /* 分析按钮 */
 .action-buttons { height: 10vh; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
