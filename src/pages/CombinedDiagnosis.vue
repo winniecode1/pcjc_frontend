@@ -4,22 +4,13 @@
     <b-row class="header-bar align-items-center no-gutters">
       <b-col cols="4" class="text-left">
         <button class="header-btn btn-home" @click="$router.push('/')">首页</button>
-        <button class="header-btn btn-back" @click="$router.back()">上个页面</button>
+        <button class="header-btn btn-back" @click="$router.push('/decisionmaking')">上个页面</button>
       </b-col>
       <b-col cols="4"></b-col>
       <b-col cols="4" class="text-right d-flex justify-content-end">
         <button class="header-btn btn-next" @click="$router.push('/analysis-dashboard')">下个页面</button>
       </b-col>
     </b-row>
-
-    <!-- 加载/错误提示 -->
-    <div v-if="showAlert" class="alert-container">
-      <div :class="['custom-alert', `alert-${alertVariant}`]">
-        <div class="alert-icon"><span>{{ alertVariant === 'success' ? '✓' : 'ℹ' }}</span></div>
-        <div class="alert-content">{{ alertMessage }}</div>
-        <button class="alert-close" @click="showAlert = false">✕</button>
-      </div>
-    </div>
 
     <!-- 主要内容网格 -->
     <b-row class="content-row no-gutters">
@@ -62,17 +53,38 @@
         </div>
 
         <div class="preview-container">
-          <div class="panel-header header-select-data clean-header">数据内容预览</div>
-          <div class="preview-frame">
-            <div v-if="!selectedVideo" class="preview-placeholder">请选择数据源查看预览</div>
-            <video v-else-if="isVideo(selectedVideo.name)" :src="videoUrl(selectedVideo.path)" class="preview-media" autoplay muted loop></video>
-            <img v-else :src="imageUrl(selectedVideo.path)" class="preview-media" alt="预览内容">
+          <div class="panel-header header-select-data clean-header">多模态结果展示</div>
+          <div class="preview-frame" style="position: relative;">
+            <div v-if="carouselItems.length === 0" class="preview-placeholder">请选择数据源查看结果</div>
+            <b-carousel
+              v-else
+              id="result-carousel"
+              v-model="carouselSlide"
+              :interval="4000"
+              controls
+              indicators
+              background="transparent"
+              class="w-100 h-100 custom-carousel"
+            >
+              <b-carousel-slide v-for="(item, index) in carouselItems" :key="index">
+                <template #img>
+                   <div class="carousel-slide-content">
+                     <img v-if="item.type === 'image'" :src="item.src" class="slide-media slide-media-image">
+                     <video v-else-if="item.type === 'video'" :src="item.src" autoplay muted loop class="slide-media slide-media-video"></video>
+                     <div v-else-if="item.type === 'text'" class="text-slide-content">
+                       <div class="text-slide-title">{{ item.title }}</div>
+                       <div class="text-slide-desc">{{ item.content }}</div>
+                     </div>
+                   </div>
+                </template>
+              </b-carousel-slide>
+            </b-carousel>
           </div>
         </div>
 
         <div class="action-buttons">
-          <button @click="startAnalysis" :disabled="isLoading" class="btn-start-detect">
-            <span class="btn-text-pos">{{ isLoading ? '诊断中...' : '开始认知诊断' }}</span>
+          <button @click="startAnalysis" :disabled="isLoading || isSelectingFile" class="btn-start-detect">
+            <span class="btn-text-pos">{{ isSelectingFile ? '数据加载中...' : (isLoading ? '诊断中...' : '开始认知诊断') }}</span>
           </button>
         </div>
       </b-col>
@@ -87,15 +99,30 @@
               <div class="result-section">
                 <div class="section-title">诊断与定位结果</div>
                 <div class="content-box scrollable" v-html="highlightBrackets(module1Result)"></div>
-                <div v-if="isLoading && !module1Result" class="diagnosis-overlay">
-                  <div class="loading-spinner-large"></div>
-                  <div class="diagnosis-text">正在诊断中...</div>
+                <div v-if="isLoading && module1ShowDiagnosisOverlay" class="diagnosis-overlay">
+                  <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
+                  <div class="diagnosis-text">正在诊断中，请等待</div>
                 </div>
               </div>
               <div class="metric-group">
-                <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module1InternalBias, 0) }}</span></div>
-                <div class="metric-item">认知传播偏差结果: <span>{{ formatPercent(module1PropagationBias, 0) }}</span></div>
-                <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module1IsBiasModule) }}</span></div>
+                <div class="metric-item">
+                  模型内部偏差结果:
+                  <span v-if="module1InternalBias !== null && module1InternalBias !== undefined">{{ formatPercent(module1InternalBias, 0) }}</span>
+                  <span v-else-if="isLoading" class="loading-spinner"></span>
+                  <span v-else>-</span>
+                </div>
+                <div class="metric-item">
+                  认知传播偏差结果:
+                  <span v-if="module1PropagationBias !== null && module1PropagationBias !== undefined">{{ formatPercent(module1PropagationBias, 0) }}</span>
+                  <span v-else-if="isLoading" class="loading-spinner"></span>
+                  <span v-else>-</span>
+                </div>
+                <div class="metric-item">
+                  是否是偏差模块:
+                  <span v-if="module1IsBiasModule !== null && module1IsBiasModule !== undefined">{{ formatYesNo(module1IsBiasModule) }}</span>
+                  <span v-else-if="isLoading" class="loading-spinner"></span>
+                  <span v-else>-</span>
+                </div>
               </div>
             </div>
           </div>
@@ -107,14 +134,30 @@
               <div class="result-section">
                 <div class="section-title">诊断与定位结果</div>
                 <div class="content-box scrollable" v-html="highlightBrackets(module2Result)"></div>
-                <div v-if="isLoading && !module2Result" class="diagnosis-overlay">
-                  <div class="loading-spinner-large"></div>
+                <div v-if="isLoading && (module2InternalBias === null || module2InternalBias === undefined)" class="diagnosis-overlay">
+                  <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
+                  <div class="diagnosis-text">正在诊断中，请等待</div>
                 </div>
               </div>
               <div class="metric-group">
-                <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module2InternalBias, 0) }}</span></div>
-                <div class="metric-item">认知传播偏差结果: <span>{{ formatPercent(module2PropagationBias, 0) }}</span></div>
-                <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module2IsBiasModule) }}</span></div>
+                <div class="metric-item">
+                  模型内部偏差结果:
+                  <span v-if="module2InternalBias !== null && module2InternalBias !== undefined">{{ formatPercent(module2InternalBias, 0) }}</span>
+                  <span v-else-if="isLoading" class="loading-spinner"></span>
+                  <span v-else>-</span>
+                </div>
+                <div class="metric-item">
+                  认知传播偏差结果:
+                  <span v-if="module2PropagationBias !== null && module2PropagationBias !== undefined">{{ formatPercent(module2PropagationBias, 0) }}</span>
+                  <span v-else-if="isLoading" class="loading-spinner"></span>
+                  <span v-else>-</span>
+                </div>
+                <div class="metric-item">
+                  是否是偏差模块:
+                  <span v-if="module2IsBiasModule !== null && module2IsBiasModule !== undefined">{{ formatYesNo(module2IsBiasModule) }}</span>
+                  <span v-else-if="isLoading" class="loading-spinner"></span>
+                  <span v-else>-</span>
+                </div>
               </div>
             </div>
           </div>
@@ -126,14 +169,30 @@
               <div class="result-section">
                 <div class="section-title">诊断与定位结果</div>
                 <div class="content-box scrollable" v-html="highlightBrackets(module3Result)"></div>
-                <div v-if="isLoading && !module3Result" class="diagnosis-overlay">
-                  <div class="loading-spinner-large"></div>
+                <div v-if="isLoading && (module3InternalBias === null || module3InternalBias === undefined)" class="diagnosis-overlay">
+                  <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
+                  <div class="diagnosis-text">正在诊断中，请等待</div>
                 </div>
               </div>
               <div class="metric-group">
-                <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module3InternalBias, 0) }}</span></div>
-                <div class="metric-item">认知传播偏差结果: <span>{{ formatPercent(module3PropagationBias, 0) }}</span></div>
-                <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module3IsBiasModule) }}</span></div>
+                <div class="metric-item">
+                  模型内部偏差结果:
+                  <span v-if="module3InternalBias !== null && module3InternalBias !== undefined">{{ formatPercent(module3InternalBias, 0) }}</span>
+                  <span v-else-if="isLoading" class="loading-spinner"></span>
+                  <span v-else>-</span>
+                </div>
+                <div class="metric-item">
+                  认知传播偏差结果:
+                  <span v-if="module3PropagationBias !== null && module3PropagationBias !== undefined">{{ formatPercent(module3PropagationBias, 0) }}</span>
+                  <span v-else-if="isLoading" class="loading-spinner"></span>
+                  <span v-else>-</span>
+                </div>
+                <div class="metric-item">
+                  是否是偏差模块:
+                  <span v-if="module3IsBiasModule !== null && module3IsBiasModule !== undefined">{{ formatYesNo(module3IsBiasModule) }}</span>
+                  <span v-else-if="isLoading" class="loading-spinner"></span>
+                  <span v-else>-</span>
+                </div>
               </div>
             </div>
           </div>
@@ -145,13 +204,24 @@
               <div class="result-section">
                 <div class="section-title">诊断与定位结果</div>
                 <div class="content-box scrollable" v-html="highlightBrackets(module4Result)"></div>
-                <div v-if="isLoading && !module4Result" class="diagnosis-overlay">
-                  <div class="loading-spinner-large"></div>
+                <div v-if="isLoading && module4ShowDiagnosisOverlay" class="diagnosis-overlay">
+                  <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
+                  <div class="diagnosis-text">正在诊断中，请等待</div>
                 </div>
               </div>
               <div class="metric-group">
-                <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module4InternalBias, 0) }}</span></div>
-                <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module4IsBiasModule) }}</span></div>
+                <div class="metric-item">
+                  模型内部偏差结果:
+                  <span v-if="module4InternalBias !== null && module4InternalBias !== undefined">{{ formatPercent(module4InternalBias, 0) }}</span>
+                  <span v-else-if="isLoading" class="loading-spinner"></span>
+                  <span v-else>-</span>
+                </div>
+                <div class="metric-item">
+                  是否是偏差模块:
+                  <span v-if="module4IsBiasModule !== null && module4IsBiasModule !== undefined">{{ formatYesNo(module4IsBiasModule) }}</span>
+                  <span v-else-if="isLoading" class="loading-spinner"></span>
+                  <span v-else>-</span>
+                </div>
               </div>
             </div>
           </div>
@@ -178,7 +248,8 @@ export default {
   name: 'CombinedDiagnosis',
   data() {
     return {
-      isLiveOpen: true, isDemoOpen: false,
+      isLiveOpen: true,
+      isDemoOpen: false,
       videoList: [
         { id: 1, name: "20240325监控_01.mp4", type: 'live', path: '/videos/监控_01.mp4' },
         { id: 2, name: "20240325实时_02.mp4", type: 'live', path: '/videos/实时_02.mp4' },
@@ -188,15 +259,41 @@ export default {
       ],
       selectedVideo: null,
       isLoading: false,
-      showAlert: false, alertVariant: 'info', alertMessage: '',
       taskId: 'comb_' + Date.now(),
       pollTimer: null,
+      isSelectingFile: false,
+      selectedFileContext: null,
+      carouselSlide: 0,
+      carouselItems: [],
       // 诊断结果
-      module1Result: '', module1InternalBias: null, module1PropagationBias: null, module1IsBiasModule: null,
-      module2Result: '', module2InternalBias: null, module2PropagationBias: null, module2IsBiasModule: null,
-      module3Result: '', module3InternalBias: null, module3PropagationBias: null, module3IsBiasModule: null,
-      module4Result: '', module4InternalBias: null, module4IsBiasModule: null,
-      accuracy: null, recall: null,
+      module1ShowDiagnosisOverlay: false,
+      module1BiasTestResultPending: '',
+      module1InternalBiasPending: null,
+      module1PropagationBiasPending: null,
+      module1IsBiasModulePending: null,
+      module1DelayTimer: null,
+      module1Result: '',
+      module1InternalBias: null,
+      module1PropagationBias: null,
+      module1IsBiasModule: null,
+      module2Result: '',
+      module2InternalBias: null,
+      module2PropagationBias: null,
+      module2IsBiasModule: null,
+      module3Result: '',
+      module3InternalBias: null,
+      module3PropagationBias: null,
+      module3IsBiasModule: null,
+      module4ShowDiagnosisOverlay: false,
+      module4BiasTestResultPending: '',
+      module4InternalBiasPending: null,
+      module4IsBiasModulePending: null,
+      module4DelayTimer: null,
+      module4Result: '',
+      module4InternalBias: null,
+      module4IsBiasModule: null,
+      accuracy: null,
+      recall: null,
     };
   },
   computed: {
@@ -206,8 +303,21 @@ export default {
   mounted() {
     this.fetchVideoList();
     this.renderFormula();
+
+    // 初始化默认全量数据展示
+    this.selectedVideo = null;
+
+    // 初始化四个诊断模块的默认文字与指标
+    this.clearResults();
+
+    // 初始化左下角轮播图的多模态混排数据
+    this.carouselItems = [];
   },
-  beforeDestroy() { if (this.pollTimer) clearInterval(this.pollTimer); },
+  beforeDestroy() {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    if (this.module1DelayTimer && this.module1DelayTimer !== 'done') clearTimeout(this.module1DelayTimer);
+    if (this.module4DelayTimer && this.module4DelayTimer !== 'done') clearTimeout(this.module4DelayTimer);
+  },
   methods: {
     renderFormula() {
       // 动态加载 KaTeX 以确保公式渲染
@@ -244,100 +354,422 @@ export default {
         }
       } catch (error) { console.warn("获取数据失败", error); }
     },
-    selectVideo(video) { this.selectedVideo = video; },
-    async startAnalysis() {
-      if (!this.selectedVideo) { this.showMsg('warning', '请先选择数据源！'); return; }
-      
-      this.clearResults();
-      this.isLoading = true;
-      this.showMsg('info', '正在启动自动化认知诊断Pipeline...');
+    async selectVideo(video) {
+      this.selectedVideo = video;
+      await this.handleFileSelection(video);
+    },
+    async handleFileSelection(video) {
+      this.isSelectingFile = true;
+      this.carouselSlide = 0;
+      this.carouselItems = [];
+      this.selectedFileContext = null;
 
       try {
-        // 模拟/调用后端Pipeline (根据AttributionDiagnosisV2逻辑)
-        // 实际应用中这里应调用 /module5/api/bias-analysis
-        const cascadeData = {
-          stage1: { path: this.selectedVideo.path },
-          stage2: { category: 'A330-MRTT' }, // 模拟
-          stage3: { agents: [] },
-          stage4: { decision: 'attack' }
-        };
-
-        const response = await this.$ajaxJ.post('/module5/api/bias-analysis', cascadeData, {
-          params: { id: this.taskId, async: true }
-        });
-
-        if (response.status === 200 || response.status === 409) {
-          this.startPolling();
-        }
+        const response = await this.requestFileSelection(video);
+        this.applyFileSelectionResult(response, video);
       } catch (error) {
-        console.error("启动失败", error);
-        // 如果环境不通，使用模拟流程展示效果
-        this.simulateProcess();
+        console.error("文件选择接口调用失败", error);
+        this.carouselItems = [
+          { type: this.isVideo(video.name) ? 'video' : 'image', src: this.isVideo(video.name) ? this.videoUrl(video.path) : this.imageUrl(video.path) }
+        ];
+        this.showMsg('warning', '文件数据加载失败，已使用基础预览。');
+      } finally {
+        this.isSelectingFile = false;
       }
+    },
+    async requestFileSelection(video) {
+      // TODO: 前后端联调时替换为真实接口
+      // return this.$ajaxJ.post('/module5/api/file-selection', { path: video.path, name: video.name });
+      return this.mockFileSelectionResponse(video);
+    },
+    mockFileSelectionResponse(video) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({
+            success: true,
+            stage1: {
+              path: video.path,
+              source_name: video.name
+            },
+            carouselItems: this.buildMockMultimodalItems(video)
+          });
+        }, 350);
+      });
+    },
+    buildMockMultimodalItems(video) {
+      const selectedItem = {
+        type: this.isVideo(video.name) ? 'video' : 'image',
+        src: this.isVideo(video.name) ? this.videoUrl(video.path) : this.imageUrl(video.path)
+      };
+      const mockImages = [
+        require('@/assets/images/MockData/firc_junshi_1.jpg'),
+        require('@/assets/images/MockData/firc_junshi_2.jpg'),
+        require('@/assets/images/MockData/firc_junshi_3.jpg'),
+        require('@/assets/images/MockData/firc_junshi_4.jpg')
+      ];
+
+      const liveCandidate = this.liveVideos.find(v => v.id !== video.id && this.isVideo(v.name));
+      const demoCandidate = this.demoVideos.find(v => v.id !== video.id && this.isVideo(v.name));
+
+      const items = [selectedItem];
+      if (liveCandidate) {
+        items.push({ type: 'video', src: this.videoUrl(liveCandidate.path) });
+      }
+      if (demoCandidate) {
+        items.push({ type: 'video', src: this.videoUrl(demoCandidate.path) });
+      }
+
+      mockImages.forEach((img) => {
+        items.push({ type: 'image', src: img });
+      });
+
+      items.push(
+        {
+          type: 'text',
+          title: '多模态样本准备完成',
+          content: `已为 ${video.name} 装载视频片段与 MockData 的4张图片，可直接开始认知诊断。`
+        }
+      );
+
+      return items;
+    },
+    applyFileSelectionResult(response, video) {
+      const previewItem = {
+        type: this.isVideo(video.name) ? 'video' : 'image',
+        src: this.isVideo(video.name) ? this.videoUrl(video.path) : this.imageUrl(video.path)
+      };
+      const res = response || {};
+      const carouselItems = Array.isArray(res.carouselItems) && res.carouselItems.length > 0
+        ? res.carouselItems
+        : [previewItem];
+
+      this.selectedFileContext = res.stage1 || { path: video.path, source_name: video.name };
+      this.carouselItems = carouselItems;
+      this.carouselSlide = 0;
+      this.showMsg('success', '文件已加载，可开始认知诊断。');
+    },
+    async startAnalysis() {
+      if (!this.selectedVideo) { this.showMsg('warning', '请先选择数据源！'); return; }
+
+      this.clearResults();
+      this.isLoading = true;
+      this.taskId = 'comb_' + Date.now();
+
+      try {
+        const payload = this.buildDiagnosisPayload();
+        const responseData = await this.requestDiagnosisResult(payload);
+        const shouldShowImmediately = responseData && (responseData.running === false || responseData.status === 'completed');
+        this.parseData(responseData, shouldShowImmediately);
+
+        if (responseData && (responseData.running || responseData.status === 'running')) {
+          this.startPolling();
+          return;
+        }
+        this.isLoading = false;
+        this.showMsg('success', '诊断完成！');
+      } catch (error) {
+        console.error("诊断接口调用失败", error);
+        this.isLoading = false;
+        this.showMsg('danger', '诊断启动失败，请稍后重试。');
+      }
+    },
+    buildDiagnosisPayload() {
+      return {
+        stage1: this.selectedFileContext || { path: this.selectedVideo.path },
+        stage2: { category: 'A330-MRTT' },
+        stage3: { agents: ['commander', 'analyst'] },
+        stage4: { decision: 'attack' }
+      };
+    },
+    async requestDiagnosisResult(payload) {
+      // TODO: 前后端联调时替换为真实接口
+      // const res = await this.$ajaxJ.post('/module5/api/bias-analysis', payload, { params: { id: this.taskId, async: true } });
+      // return res.data;
+      return this.mockDiagnosisResult(payload);
+    },
+    mockDiagnosisResult(payload) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const sourcePath = this.safeGet(payload, 'stage1.path', this.selectedVideo ? this.selectedVideo.path : '');
+          resolve({
+            running: false,
+            status: 'completed',
+            accuracy: 0.91,
+            recall: 0.87,
+            modules: {
+              module1: {
+                single_task_stage: {
+                  prediction: {
+                    caption: `数据源 ${sourcePath} 解析显示 {{注意力权重偏移}}，目标特征置信度出现波动。`
+                  }
+                },
+                module_test_stage: {
+                  prediction: {
+                    cognitive_bias: 0.74
+                  }
+                },
+                analysis_task: {
+                  calculated_value: 0.12
+                },
+                is_bias_module: true
+              },
+              module2: {
+                single_task_stage: {
+                  prediction: {
+                    kind: 'A330-MRTT',
+                    color: '灰色涂装',
+                    outline: '机身轮廓受烟雾干扰',
+                    scene: '近海高压侦察',
+                    model: '易与同类机型混淆'
+                  }
+                },
+                module_test_stage: {
+                  prediction: {
+                    cognitive_bias: 0.65
+                  }
+                },
+                analysis_task: {
+                  calculated_value: 0.08
+                },
+                is_bias_module: true
+              },
+              module3: {
+                single_task_stage: {
+                  prediction: {
+                    final_review: '群体协商一致性较高，暂未发现明显的协商冲突偏差。'
+                  }
+                },
+                module_test_stage: {
+                  prediction: {
+                    cognitive_bias: 0.05
+                  }
+                },
+                analysis_task: {
+                  calculated_value: 0.02
+                },
+                is_bias_module: false
+              },
+              module4: {
+                single_task_stage: {
+                  prediction: {
+                    summary: '决策链路总体稳定，但在目标威胁评估阶段存在 {{风险等级上调}} 倾向。'
+                  }
+                },
+                module_test_stage: {
+                  prediction: {
+                    cognitive_bias: 0.15
+                  }
+                },
+                is_bias_module: false
+              }
+            }
+          });
+        }, 900);
+      });
     },
     startPolling() {
-      this.pollTimer = setInterval(async () => {
-        try {
-          const res = await this.$ajax.get('/module5/api/bias-analysis/status', { params: { id: this.taskId } });
-          const data = res.data;
-          if (data && data.modules) {
-            this.parseData(data);
-            if (data.status === 'completed') {
-              clearInterval(this.pollTimer);
-              this.isLoading = false;
-              this.showMsg('success', '诊断完成！');
-            }
-          }
-        } catch (e) { console.warn("轮询失败", e); }
-      }, 2000);
+      if (this.pollTimer) clearInterval(this.pollTimer);
+      this.pollStatus();
+      this.pollTimer = setInterval(() => {
+        this.pollStatus();
+      }, 1000);
     },
-    simulateProcess() {
-      // 模拟前端展示流程
-      setTimeout(() => {
-        this.module1Result = '诊断发现异常：在多模态特征融合阶段存在 ((注意力权值分配不均))，导致目标置信度波动。';
-        this.module1InternalBias = 0.74; this.module1PropagationBias = 0.12; this.module1IsBiasModule = true;
-      }, 2000);
-      setTimeout(() => {
-        this.module2Result = '先验知识库校验显示 ((背景噪声干扰)) 超过阈值，系统误判了目标型号。';
-        this.module2InternalBias = 0.65; this.module2PropagationBias = 0.08; this.module2IsBiasModule = true;
-      }, 4000);
-      setTimeout(() => {
-        this.module3Result = '群体协商一致性良好，未发现明显的认知偏差冲突。';
-        this.module3InternalBias = 0.05; this.module3PropagationBias = 0.02; this.module3IsBiasModule = false;
-      }, 6000);
-      setTimeout(() => {
-        this.module4Result = '决策树生成正常，最终判定逻辑 ((符合战术规程))。';
-        this.module4InternalBias = 0.15; this.module4IsBiasModule = false;
-        this.accuracy = 0.94; this.recall = 0.89;
+    async pollStatus() {
+      try {
+        const data = await this.requestDiagnosisStatus();
+        if (!data || !data.modules) return;
+        const shouldShowImmediately = data && (data.running === false || data.status === 'completed');
+        this.parseData(data, shouldShowImmediately);
+        if (data.running === false || data.status === 'completed') {
+          if (this.pollTimer) clearInterval(this.pollTimer);
+          this.pollTimer = null;
+          this.isLoading = false;
+          this.showMsg('success', '诊断完成！');
+        }
+      } catch (e) {
+        if (this.pollTimer) clearInterval(this.pollTimer);
+        this.pollTimer = null;
         this.isLoading = false;
-        this.showMsg('success', '诊断流程全部结束');
-      }, 8000);
+        console.warn("轮询失败", e);
+      }
     },
-    parseData(data) {
-      const m1 = data.modules.module1;
-      if (m1) {
-        this.module1Result = (m1.prediction && m1.prediction.summary) || '';
-        this.module1InternalBias = (m1.prediction && m1.prediction.cognitive_bias) || null;
-        this.module1IsBiasModule = m1.is_bias_module;
+    async requestDiagnosisStatus() {
+      // TODO: 前后端联调时替换为真实轮询接口
+      // const res = await this.$ajax.get('/module5/api/bias-analysis/status', { params: { id: this.taskId } });
+      // return res.data;
+      return this.mockDiagnosisResult(this.buildDiagnosisPayload());
+    },
+    parseData(data, fromCache = false) {
+      const modules = data.modules || {};
+      this.parseModule1(modules.module1, fromCache);
+      this.parseModule2(modules.module2);
+      this.parseModule3(modules.module3);
+      this.parseModule4(modules.module4, fromCache);
+      if (data.recall !== undefined && data.recall !== null) this.recall = data.recall;
+      if (data.accuracy !== undefined && data.accuracy !== null) this.accuracy = data.accuracy;
+    },
+    parseModule1(module1, fromCache = false) {
+      if (!module1) return;
+
+      const singleTask = module1.single_task_stage;
+      const biasTestResult = singleTask ? this.safeGet(singleTask, 'prediction.caption', '') : '';
+
+      const moduleTestStage = module1.module_test_stage;
+      const internalBias = moduleTestStage ? this.safeGet(moduleTestStage, 'prediction.cognitive_bias', null) : null;
+
+      const analysisTask = module1.analysis_task;
+      const propagationBias = analysisTask ? this.safeGet(analysisTask, 'calculated_value', null) : null;
+
+      const isBiasModule = this.safeGet(module1, 'is_bias_module', null);
+
+      if (fromCache) {
+        this.module1Result = biasTestResult || '';
+        this.module1InternalBias = internalBias;
+        this.module1PropagationBias = propagationBias;
+        this.module1IsBiasModule = isBiasModule;
+        this.module1ShowDiagnosisOverlay = false;
+        return;
       }
-      // 模块4示例
-      const m4 = data.modules.module4;
-      if (m4) {
-        this.module4Result = (m4.prediction && m4.prediction.summary) || '';
-        this.module4InternalBias = (m4.prediction && m4.prediction.cognitive_bias) || null;
+
+      if (biasTestResult || internalBias !== null || propagationBias !== null || isBiasModule !== null) {
+        this.module1BiasTestResultPending = biasTestResult;
+        this.module1InternalBiasPending = internalBias;
+        this.module1PropagationBiasPending = propagationBias;
+        this.module1IsBiasModulePending = isBiasModule;
+
+        if (!this.module1DelayTimer) {
+          this.module1ShowDiagnosisOverlay = true;
+          this.module1DelayTimer = setTimeout(() => {
+            this.module1Result = this.module1BiasTestResultPending || '';
+            this.module1InternalBias = this.module1InternalBiasPending;
+            this.module1PropagationBias = this.module1PropagationBiasPending;
+            this.module1IsBiasModule = this.module1IsBiasModulePending;
+            this.module1ShowDiagnosisOverlay = false;
+            this.module1DelayTimer = 'done';
+          }, 10000);
+        } else if (this.module1DelayTimer === 'done') {
+          this.module1Result = biasTestResult || '';
+          this.module1InternalBias = internalBias;
+          this.module1PropagationBias = propagationBias;
+          this.module1IsBiasModule = isBiasModule;
+        }
       }
+    },
+    parseModule2(module2) {
+      if (!module2) return;
+
+      const prediction = this.safeGet(module2, 'single_task_stage.prediction', null);
+      if (prediction && typeof prediction === 'object') {
+        const lines = [];
+        if (prediction.kind) {
+          lines.push(`目标类型：${prediction.kind}`);
+        }
+        Object.keys(prediction).forEach((key) => {
+          if (key !== 'kind' && key !== 'cognitive_bias') {
+            lines.push(`${key}：${prediction[key]}`);
+          }
+        });
+        this.module2Result = lines.join('\n');
+      } else {
+        this.module2Result = '';
+      }
+
+      this.module2InternalBias = this.safeGet(module2, 'module_test_stage.prediction.cognitive_bias', null);
+      this.module2PropagationBias = this.safeGet(module2, 'analysis_task.calculated_value', null);
+      this.module2IsBiasModule = this.safeGet(module2, 'is_bias_module', null);
+    },
+    parseModule3(module3) {
+      if (!module3) return;
+
+      this.module3Result = this.safeGet(module3, 'single_task_stage.prediction.final_review', '');
+      this.module3InternalBias = this.safeGet(module3, 'module_test_stage.prediction.cognitive_bias', null);
+      this.module3PropagationBias = this.safeGet(module3, 'analysis_task.calculated_value', null);
+      this.module3IsBiasModule = this.safeGet(module3, 'is_bias_module', null);
+    },
+    parseModule4(module4, fromCache = false) {
+      if (!module4) return;
+
+      const biasTestResult = this.safeGet(module4, 'single_task_stage.prediction.summary', '');
+      const internalBias = this.safeGet(module4, 'module_test_stage.prediction.cognitive_bias', null);
+      const isBiasModule = this.safeGet(module4, 'is_bias_module', null);
+
+      if (fromCache) {
+        this.module4Result = biasTestResult || '';
+        this.module4InternalBias = internalBias;
+        this.module4IsBiasModule = isBiasModule;
+        this.module4ShowDiagnosisOverlay = false;
+        return;
+      }
+
+      if (biasTestResult || internalBias !== null || isBiasModule !== null) {
+        this.module4BiasTestResultPending = biasTestResult;
+        this.module4InternalBiasPending = internalBias;
+        this.module4IsBiasModulePending = isBiasModule;
+
+        if (!this.module4DelayTimer) {
+          this.module4ShowDiagnosisOverlay = true;
+          this.module4DelayTimer = setTimeout(() => {
+            this.module4Result = this.module4BiasTestResultPending || '';
+            this.module4InternalBias = this.module4InternalBiasPending;
+            this.module4IsBiasModule = this.module4IsBiasModulePending;
+            this.module4ShowDiagnosisOverlay = false;
+            this.module4DelayTimer = 'done';
+          }, 10000);
+        } else if (this.module4DelayTimer === 'done') {
+          this.module4Result = biasTestResult || '';
+          this.module4InternalBias = internalBias;
+          this.module4IsBiasModule = isBiasModule;
+        }
+      }
+    },
+    safeGet(obj, path, defaultValue = '') {
+      if (!obj) return defaultValue;
+      const keys = path.split('.');
+      let result = obj;
+      for (const key of keys) {
+        if (result === null || result === undefined || typeof result !== 'object') {
+          return defaultValue;
+        }
+        result = result[key];
+      }
+      return result !== null && result !== undefined ? result : defaultValue;
     },
     clearResults() {
+      if (this.pollTimer) clearInterval(this.pollTimer);
+      this.pollTimer = null;
+      if (this.module1DelayTimer && this.module1DelayTimer !== 'done') clearTimeout(this.module1DelayTimer);
+      if (this.module4DelayTimer && this.module4DelayTimer !== 'done') clearTimeout(this.module4DelayTimer);
+
+      this.module1DelayTimer = null;
+      this.module4DelayTimer = null;
+      this.module1ShowDiagnosisOverlay = true;
+      this.module4ShowDiagnosisOverlay = true;
+      this.module1BiasTestResultPending = '';
+      this.module1InternalBiasPending = null;
+      this.module1PropagationBiasPending = null;
+      this.module1IsBiasModulePending = null;
+      this.module4BiasTestResultPending = '';
+      this.module4InternalBiasPending = null;
+      this.module4IsBiasModulePending = null;
+
       this.module1Result = ''; this.module2Result = ''; this.module3Result = ''; this.module4Result = '';
+      this.module1InternalBias = null; this.module1PropagationBias = null; this.module1IsBiasModule = null;
+      this.module2InternalBias = null; this.module2PropagationBias = null; this.module2IsBiasModule = null;
+      this.module3InternalBias = null; this.module3PropagationBias = null; this.module3IsBiasModule = null;
+      this.module4InternalBias = null; this.module4IsBiasModule = null;
       this.accuracy = null; this.recall = null;
     },
     showMsg(variant, msg) {
-      this.alertVariant = variant; this.alertMessage = msg; this.showAlert = true;
-      setTimeout(() => { this.showAlert = false; }, 3000);
+      // intentionally silent: top message box has been removed
+      void variant;
+      void msg;
     },
     highlightBrackets(text) {
-      if (!text) return '等待中...';
-      return text.replace(/\(\((.*?)\)\)/g, '<span class="highlight-text">$1</span>').replace(/\n/g, '<br>');
+      if (text === null || text === undefined) return '等待中...';
+      return String(text)
+        .replace(/\{\{([\s\S]*?)\}\}/g, '<span class="highlight-text">$1</span>')
+        .replace(/\(\((.*?)\)\)/g, '<span class="highlight-text">$1</span>')
+        .replace(/\n/g, '<br>');
     },
     formatPercent(v, d = 0) { return (v !== null && v !== undefined) ? (v * 100).toFixed(d) + '%' : '-'; },
     formatYesNo(v) { return v === null ? '-' : (v ? '是' : '否'); },
@@ -345,9 +777,9 @@ export default {
     // 助手函数
     isVideo(name) { return name && (name.endsWith('.mp4') || name.endsWith('.avi')); },
     videoUrl(path) { return path ? `http://10.109.253.71:5236${path}` : ''; },
-    imageUrl(path) { 
+    imageUrl(path) {
       // 如果没有真实路径，返回占位资产
-      return path ? `http://10.109.253.71:5236${path}` : require('@/assets/images/step1/-s-弹框-选择数据.png'); 
+      return path ? `http://10.109.253.71:5236${path}` : require('@/assets/images/step1/-s-弹框-选择数据.png');
     }
   }
 };
@@ -368,19 +800,6 @@ export default {
 .btn-back { background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png'); }
 .btn-next { background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png'); }
 
-/* 提示信息 */
-.alert-container { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); z-index: 100; width: 40%; }
-.custom-alert { 
-  display: flex; align-items: center; padding: 12px 20px; border-radius: 4px; 
-  background: rgba(10, 30, 60, 0.9); border: 2px solid #1a65a8; backdrop-filter: blur(5px);
-}
-.alert-success { border-color: #00e5ff; color: #00e5ff; }
-.alert-warning { border-color: #ffb74d; color: #ffb74d; }
-.alert-info { border-color: #8bd3f9; color: #8bd3f9; }
-.alert-icon { margin-right: 15px; font-weight: bold; }
-.alert-content { flex: 1; font-size: 14px; }
-.alert-close { background: none; border: none; color: #fff; cursor: pointer; font-size: 16px; }
-
 .content-row { height: calc(100vh - 100px); margin-top: 80px; padding: 0 20px 20px 20px; }
 
 /* ================= 左侧栏 ================= */
@@ -391,7 +810,7 @@ export default {
   display: flex; justify-content: center; align-items: center; margin-bottom: 5px;
 }
 
-.sidebar-scroll-area { 
+.sidebar-scroll-area {
   height: 35vh !important; padding: 10px;
   background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
   background-size: 100% 100%; margin-bottom: 10px;
@@ -423,9 +842,34 @@ export default {
 .preview-frame {
   flex: 1; background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-size: 100% 100%; padding: 12px; display: flex; align-items: center; justify-content: center;
-  min-height: 0; overflow: hidden;
+  min-height: 0; overflow: hidden; position: relative;
 }
-.preview-media { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+.preview-placeholder { color: #8bd3f9; font-size: 14px; opacity: 0.7; }
+.carousel-slide-content { height: 26vh; display: flex; align-items: center; justify-content: center; width: 100%; padding: 4px; overflow: hidden; }
+.slide-media {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 6px;
+  background: rgba(4, 18, 36, 0.55);
+}
+.slide-media-image {
+  object-fit: contain;
+  object-position: center;
+  padding: 4px;
+}
+.slide-media-video {
+  object-fit: cover;
+  object-position: center;
+}
+.text-slide-content {
+  width: 90%; height: 90%; background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 8px; padding: 20px; display: flex; flex-direction: column; justify-content: center; text-align: left; margin: 0 auto;
+}
+.text-slide-title { font-size: 16px; font-weight: bold; color: #00e5ff; margin-bottom: 10px; font-family: 'DingTalk-JinBuTi', sans-serif !important; border-bottom: 1px solid rgba(0, 229, 255, 0.3); padding-bottom: 5px; }
+.text-slide-desc { font-size: 13px; color: #c6f4ff; line-height: 1.8; white-space: pre-wrap; flex: 1; overflow-y: auto; }
+.custom-carousel .carousel-indicators li { background-color: #4ED8FF; }
+.custom-carousel .carousel-control-prev-icon, .custom-carousel .carousel-control-next-icon { filter: drop-shadow(0 0 4px #00e5ff); }
 
 /* 开始按钮 */
 .action-buttons { height: 10vh; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
@@ -459,11 +903,26 @@ export default {
 .metric-group { margin-top: 1.2vh; padding-top: 1vh; border-top: 1px solid rgba(46, 216, 255, 0.2); display: flex; justify-content: space-between; align-items: center; }
 .metric-item { font-size: 14px; color: #8bd3f9; }
 .metric-item span { font-weight: bold; color: #c6f4ff; font-size: 16px; margin-left: 0.5em; font-family: 'DingTalk-JinBuTi', sans-serif !important; }
+.loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(198, 244, 255, 0.3);
+  border-top-color: #c6f4ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
 
 /* 遮罩层逻辑 */
 .diagnosis-overlay {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(10, 30, 60, 0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5;
+}
+.diagnosis-icon {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  animation: pulse 1.5s ease-in-out infinite;
 }
 .loading-spinner-large {
   width: 40px; height: 40px; border: 4px solid rgba(0, 229, 255, 0.2); border-left-color: #00e5ff;
@@ -472,6 +931,11 @@ export default {
 .diagnosis-text { margin-top: 10px; color: #00e5ff; font-size: 12px; }
 
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
 
 .bottom-content { height: 10vh; display: flex; align-items: center; justify-content: center; margin-top: 10px; position: relative; }
 .metric-card {

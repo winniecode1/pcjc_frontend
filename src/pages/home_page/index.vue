@@ -64,8 +64,8 @@ export default {
 
   methods: {
     diagnosis() {
-      this.$router.push('/attributiondiagnosis')
-      console.log('attributiondiagnosis, 按钮被点击了！')
+      this.$router.push('/combined-diagnosis')
+      console.log('combined-diagnosis, 按钮被点击了！')
     },
     selection() {
       this.$router.push('/decisionmaking')

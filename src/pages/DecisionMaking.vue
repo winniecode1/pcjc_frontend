@@ -8,7 +8,7 @@
       <router-link to="/group-negotiation" class="nav-btn nav-back">上个页面</router-link>
     </div>
     <div class="top-nav-right">
-      <router-link to="/attributiondiagnosis" class="nav-btn nav-next">下个页面</router-link>
+      <router-link to="/combined-diagnosis" class="nav-btn nav-next">下个页面</router-link>
     </div>
 
     <div class="title-container" :style="bgImageStyle(assetNames.titleBg)">
