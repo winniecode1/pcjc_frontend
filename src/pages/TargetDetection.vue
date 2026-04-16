@@ -18,26 +18,38 @@
     <b-row class="justify-content-center content-row no-gutters">
 
       <b-col cols="3" class="left-column px-2">
-        <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
+  <div class="left-panels-container">
+    <div class="panel-header header-select-data clean-header">作战指令</div>
 
-        <div class="panel-left">
-          <div class="panel-content">
-            <div class="server-video-list overflow-auto">
-              <div v-for="video in videoList" :key="video.id" class="video-item" @click="selectVideo(video)"
-                :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }">
-                <span>{{ video.name }}</span>
-                <span class="selector-circle"></span>
-              </div>
-            </div>
+    <div class="panel-orders">
+      <div class="panel-content">
+        <div class="orders-text-box overflow-auto">
+          {{ ordersText || '暂无作战指令' }}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
+
+    <div class="panel-left">
+      <div class="panel-content">
+        <div class="server-video-list overflow-auto">
+          <div v-for="video in videoList" :key="video.id" class="video-item" @click="selectVideo(video)"
+            :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }">
+            <span>{{ video.name }}</span>
+            <span class="selector-circle"></span>
           </div>
         </div>
+      </div>
+    </div>
 
-        <div class="action-buttons">
-          <button @click="startDetection" :disabled="isLoading" class="btn-start-detect">
-            <span class="btn-text-pos">开始目标检测</span>
-          </button>
-        </div>
-      </b-col>
+    <div class="action-buttons">
+      <button @click="startDetection" :disabled="isLoading" class="btn-start-detect">
+        <span class="btn-text-pos">开始目标检测</span>
+      </button>
+    </div>
+  </div>
+</b-col>
 
       <b-col cols="5" class="middle-column mx-2 px-1">
         <div class="video-section">
@@ -113,7 +125,7 @@
 
         <div class="panel-right-bottom" :class="{ 'loading-overlay': isBiasDetecting }">
           <div class="panel-content">
-            <div class="accuracy-content">
+            <div class="accuracy-content" v-b-tooltip.hover.top="'公式'">
               <span class="accuracy-label">偏差识别准确率</span>
               <span class="accuracy-value">
                 <template v-if="isBiasDetecting">
@@ -172,6 +184,7 @@ export default {
     return {
       fullWidth: window.innerWidth,
       fullHeight: window.innerHeight,
+      ordersText: '',
       videoList: [],
       selectedVideo: null,
       originalVideoURL: null,
@@ -224,6 +237,16 @@ export default {
     this.clearTypingIntervals();
   },
   methods: {
+    async fetchOrders() {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/orders`);
+        this.ordersText = response.data.text || response.data.orders || response.data.content || '';
+        console.log("作战指令获取成功", this.ordersText);
+      } catch (error) {
+        console.error("获取作战指令失败", error);
+        this.ordersText = '';
+      }
+    },
     async loadInitialData() {
       const module1ResStr = localStorage.getItem('module1Res');
       if (module1ResStr) {
@@ -243,6 +266,7 @@ export default {
         console.log("未检测到 module1Res，正常启动...");
         await this.fetchVideoList();
       }
+      await this.fetchOrders();
     },
     // 需求3：检查计时器状态
     checkBiasTimerState() {
@@ -1029,19 +1053,66 @@ export default {
   box-shadow: none !important;
 }
 
+/* 左侧面板容器 */
+.left-panels-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 8px;
+}
+
+/* 作战指令面板 */
+.panel-orders {
+  background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  width: 100%;
+  min-height: 300px;
+  padding: 15px;
+}
+
+.orders-text-box {
+  width: 100%;
+  height: 100%;
+  min-height: 225px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 4px;
+  color: #eee;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  padding: 12px 15px;
+  white-space: pre-wrap;
+  word-break: break-all;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #00e5ff;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
 /* 选择数据面板 */
 .panel-left {
   background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
-  position: absolute;
-  width: 400px;
-  height: 630px;
-  top: 45px;
-  left: 10px;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  width: 100%;
+  min-height: 300px;
+  padding: 15px;
 }
 
 .server-video-list {
   flex-grow: 1;
-  max-height: calc(100% - 10px);
+  min-height: 150px;
+  overflow-y: auto;
   padding-right: 10px;
 
   &::-webkit-scrollbar {
