@@ -20,13 +20,38 @@
     <div class="row content-row">
       <!-- 左侧视频和按钮区域 -->
       <div class="design-left-column">
-        <div class="design-module video-module">
-          <div class="panel-header">无人机侦查数据</div>
-          <div class="design-module-content video-content-wrapper">
-            <video v-if="videoUrl" :src="videoUrl" controls autoplay loop muted class="video-display" @error="handleVideoError"></video>
-            <div v-else class="placeholder-text">
-              {{ videoMessage }}
+        <!-- 作战指令面板 -->
+        <div class="design-module orders-module">
+          <div class="panel-header">作战指令</div>
+          <div class="design-module-content">
+            <div class="orders-text-box overflow-auto">
+              {{ ordersText || '暂无作战指令' }}
             </div>
+          </div>
+        </div>
+
+        <div class="design-module video-module">
+          <div class="panel-header">无人机侦察数据</div>
+          <div class="design-module-content video-content-wrapper">
+            <!-- 数据选择列表状态 -->
+            <div v-if="!isVideoSelected" class="video-select-list">
+              <div class="video-list-header">请选择数据源</div>
+              <div class="video-list-container">
+                <div v-for="video in videoList" :key="video.id" class="video-select-item"
+                  @click="selectVideo(video)">
+                  <span class="video-name">{{ video.name }}</span>
+                  <span class="selector-circle"></span>
+                </div>
+              </div>
+            </div>
+            <!-- 数据展示状态 -->
+            <div v-else class="video-display-container">
+              <video v-if="videoUrl" :src="videoUrl" controls autoplay loop muted class="video-display" @error="handleVideoError"></video>
+              <div v-else class="placeholder-text">
+                {{ videoMessage }}
+              </div>
+            </div>
+            <button v-if="isVideoSelected" class="btn-back-list" @click="backToList">返回选择列表</button>
           </div>
         </div>
 
@@ -220,6 +245,7 @@ export default {
         return {
           fullWidth: window.innerWidth,
           fullHeight: window.innerHeight,
+          ordersText: '',
           originalImageURL: null,
           tagInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息"],
           predictInfoList: ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息", "轮廓信息"],
@@ -249,11 +275,19 @@ export default {
           // 细粒度检测的多模态信息（图片、颜色、形状、轮廓），显示在原有信息下面
           multimodalDetectionInfo: null,
           // 初始描述信息（场景、目标、行为、总结）
-          initialDescriptionInfo: null
+          initialDescriptionInfo: null,
+          // 数据选择相关
+          videoList: [],
+          selectedVideo: null,
+          isVideoSelected: false
         };
       },
   mounted() {
     window.addEventListener('resize', this.handleResize);
+    // 获取作战指令
+    this.fetchOrders();
+    // 获取视频列表
+    this.fetchVideoList();
     // 页面加载时加载视频
     this.loadVideoFromStorage();
     // 页面加载时加载初始描述信息（场景、目标、行为、总结）
@@ -281,6 +315,42 @@ export default {
     // 只有在计时完成时才清除localStorage
   },
   methods: {
+    // 获取作战指令
+    async fetchOrders() {
+      try {
+        const response = await axios.get('http://10.109.253.71:5236/orders');
+        this.ordersText = response.data.text || response.data.orders || response.data.content || '';
+      } catch (error) {
+        console.warn("获取作战指令失败", error);
+      }
+    },
+    // 获取视频列表
+    async fetchVideoList() {
+      try {
+        const response = await axios.get('http://10.109.253.71:5236/videos');
+        if (response.data.videos) {
+          this.videoList = response.data.videos;
+        }
+      } catch (error) {
+        console.warn("获取视频列表失败", error);
+        this.videoList = [];
+      }
+    },
+    // 选择视频
+    selectVideo(video) {
+      this.selectedVideo = video;
+      this.isVideoSelected = true;
+      const baseUrl = 'http://10.109.253.71:5236';
+      this.videoUrl = `${baseUrl}/video/${encodeURIComponent(video.name)}`;
+      this.videoMessage = '视频加载中...';
+    },
+    // 返回选择列表
+    backToList() {
+      this.isVideoSelected = false;
+      this.videoUrl = null;
+      this.selectedVideo = null;
+      this.videoMessage = '请选择数据源';
+    },
     // 导航到首页
     navigateHome() {
       this.$router.push('/');
@@ -1454,13 +1524,47 @@ text-decoration: none;
 }
 
 /* 视频模块样式 */
+.orders-module {
+  flex-basis: 20%;
+}
+
+.orders-module .design-module-content {
+  padding: 15px;
+  height: 100%;
+}
+
+.orders-text-box {
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 4px;
+  color: #eee;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  padding: 12px 15px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.orders-text-box::-webkit-scrollbar { width: 6px; }
+.orders-text-box::-webkit-scrollbar-thumb { background: #00e5ff; border-radius: 3px; }
+.orders-text-box::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
+
 .video-module {
-  flex-basis: 40%;
+  flex-basis: unset;
+  height: 400px;
+  min-height: 400px;
+  max-height: 400px;
 }
 
 .video-content-wrapper {
-  padding: 0;
+  padding: 15px;
   height: 100%;
+  background-image: url('~@/assets/images/step1/-s-框-小视频.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -1472,6 +1576,101 @@ text-decoration: none;
   height: 100%;
   object-fit: contain;
   border-radius: 4px;
+}
+
+/* 视频选择列表样式 */
+.video-select-list {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+}
+
+.video-list-header {
+  color: #00e5ff;
+  font-size: 14px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.video-list-container {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.video-select-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 5px;
+  background-color: rgba(0, 100, 150, 0.2);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.video-select-item:hover {
+  background-color: rgba(0, 229, 255, 0.2);
+  border-color: #00e5ff;
+}
+
+.video-select-item .video-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.video-select-item .selector-circle {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #00e5ff;
+  border-radius: 50%;
+  background-color: transparent;
+  flex-shrink: 0;
+  margin-left: 10px;
+}
+
+.video-select-item:hover .selector-circle {
+  background-color: rgba(0, 229, 255, 0.3);
+}
+
+/* 视频展示容器 */
+.video-display-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.video-display-container .video-display {
+  flex: 1;
+}
+
+.btn-back-list {
+  position: static;
+  margin-top: 10px;
+  margin-left: 10px;
+  background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  width: 100px;
+  height: 30px;
+  color: #fff;
+  font-family: 'DOUYUFont', sans-serif;
+  font-size: 11px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* 文本框框架 */
