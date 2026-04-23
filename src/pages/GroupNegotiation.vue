@@ -23,26 +23,62 @@
         <div class="design-module video-module">
           <div class="panel-header">先验知识传播结果</div>
           <div class="design-module-content video-content-wrapper">
-            <video
-              v-if="videoUrl"
-              ref="resultVideo"
-              :src="videoUrl"
-              controls
-              autoplay
-              loop
-              muted
-              playsinline
-              class="video-display"
-              @error="handleVideoError"
-            ></video>
-            <div v-else class="placeholder-text">
-              {{ videoMessage }}
+            <!-- compare 文件列表 -> 图片详情（左上角返回） -->
+            <button
+              v-if="compareView === 'detail'"
+              class="compare-back-btn"
+              @click="backToCompareList"
+            >
+              返回
+            </button>
+
+            <!-- 列表视图 -->
+            <div v-if="compareView === 'list'" class="compare-list-wrapper">
+              <!-- 采用 TargetDetection 中 server-video-list/video-item 的列表样式 -->
+              <div
+                class="server-video-list overflow-auto"
+                v-if="sourceItems && sourceItems.length > 0"
+              >
+                <div
+                  v-for="(item, idx) in sourceItems"
+                  :key="item.key || idx"
+                  class="video-item"
+                  @click="openSourceItem(item)"
+                  :class="{ selected: selectedSourceKey === item.key }"
+                >
+                  <span>{{ item.name }}</span>
+                  <span class="selector-circle"></span>
+                </div>
+              </div>
+              <p class="text-content text-muted" v-else>{{ sourceListMessage }}</p>
+            </div>
+
+            <!-- 图片详情视图 -->
+            <div v-else class="compare-detail-wrapper">
+              <img
+                v-if="selectedDetailType === 'compare' && selectedCompareFile"
+                :src="`/static/compare/${selectedCompareFile}`"
+                :alt="selectedCompareFile"
+                class="compare-image"
+                @error="handleCompareImageError"
+              />
+              <video
+                v-else-if="selectedDetailType === 'video' && selectedVideoUrl"
+                :src="selectedVideoUrl"
+                class="compare-image video-display"
+                controls
+                playsinline
+                muted
+                loop
+                @error="handleVideoError"
+              />
+              <p v-else class="text-content text-muted">{{ sourceListMessage }}</p>
             </div>
           </div>
         </div>
 
         <div class="design-module text-module-left fixed-left-text">
-          <div class="panel-header">先验知识认知传播信息</div>
+          <div class="panel-header title-one-line">先验知识认知传播信息</div>
           <div class="design-module-content text-scrollable">
             <div class="description-box attribute-content">
               <ul class="info-list" v-if="attributeInfoList && attributeInfoList.length > 0">
@@ -71,7 +107,7 @@
         <div class="panel-left h-100">
           <div class="panel-content">
             <!-- 一轮推理 -->
-            <div class="panel-header mb-3">一轮群体协商</div>
+            <div class="panel-header mb-3 title-one-line">一轮群体协商</div>
             
             <div class="reasoning-section">
               <!-- 智能体A推理结果 -->
@@ -124,7 +160,7 @@
             </div>
 
             <!-- 二轮推理 -->
-            <div class="panel-header my-3">二轮群体协商</div>
+            <div class="panel-header my-3 title-one-line">二轮群体协商</div>
             
             <div class="reasoning-section">
               <!-- 智能体A-B协商 -->
@@ -198,7 +234,7 @@
         </div>
         <div class="panel-right-top">
           <div class="panel-content">
-            <div class="panel-header header-results">
+            <div class="panel-header header-results title-one-line">
               <span>群体协商认知偏差检测结果</span>
             </div>
             <div v-if="isRightLoadingResults" class="panel-overlay">计算中...</div>
@@ -225,7 +261,7 @@
             <div v-if="isRightLoadingResults" class="panel-overlay">计算中...</div>
             <template v-else>
               <div class="final-result-section">
-                <div class="final-result-title">协商后详细型号</div>
+                <div class="final-result-title">协商结果</div>
                 <div class="final-model-display">
                   <p class="final-model-text">{{ finalResult || 'MiG-25Foxbat' }}</p>
                 </div>
@@ -266,6 +302,7 @@
   </div>
 </template><script>
 import axios from 'axios';
+const TARGET_DETECTION_API_BASE_URL = 'http://10.109.253.71:5236';
 // img_path地址（模块一传参）
 // const IMG_PATH_URL = localStorage.getItem('imagePath') || '/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png';
 // const DEVICE_TYPE = localStorage.getItem('deviceType') || '飞机';
@@ -314,7 +351,18 @@ export default {
       consensusSummary: "",
       disagreementPoints: "",
       differentModelAndReason: "",
-      // 视频相关数据
+      // compare 图片列表/详情相关数据
+      compareFiles: [],
+      compareView: 'list', // 'list' | 'detail'
+      selectedCompareFile: null,
+      targetDetectionVideos: [],
+      selectedVideoName: null,
+      selectedVideoUrl: null,
+      selectedDetailType: null, // 'compare' | 'video'
+      selectedSourceKey: null,
+      compareMessage: '暂无compare图片文件',
+
+      // 视频相关数据（此页面已不展示，但保留兼容）
       videoUrl: null,
       videoMessage: '正在从 LocalStorage 加载视频...',
       // 中间区域加载与显示控制
@@ -335,6 +383,29 @@ export default {
     // 只有在计时完成时才清除localStorage
   },
   computed: {
+    sourceItems() {
+      const compareItems = (this.compareFiles || []).map((name, idx) => ({
+        key: `compare:${name || idx}`,
+        type: 'compare',
+        name
+      }));
+      const videoItems = (this.targetDetectionVideos || []).map((video, idx) => {
+        const name = typeof video === 'string' ? video : video && video.name;
+        return {
+          key: `video:${name || idx}`,
+          type: 'video',
+          name
+        };
+      }).filter(item => !!item.name);
+      return [...compareItems, ...videoItems];
+    },
+    sourceListMessage() {
+      if (this.sourceItems.length > 0) return '';
+      if (this.compareMessage && this.videoMessage) {
+        return `${this.compareMessage}；${this.videoMessage}`;
+      }
+      return this.compareMessage || this.videoMessage || '暂无可展示数据';
+    },
     // 格式化共识摘要，将需要标红的文字加上红色样式
     formattedConsensusSummary() {
       let summary = this.consensusSummary;
@@ -392,14 +463,9 @@ export default {
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);
-    // 页面加载时加载视频
-    this.loadVideoFromStorage();
-    // 若视频可播放，尝试自动播放
-    this.$nextTick(() => {
-      if (this.$refs.resultVideo && typeof this.$refs.resultVideo.play === 'function') {
-        try { this.$refs.resultVideo.play(); } catch (e) {}
-      }
-    });
+    // 页面加载时加载 compare 文件列表（不再展示视频）
+    this.loadCompareFiles();
+    this.loadTargetDetectionVideos();
     
     // 从localStorage读取预测信息
     this.loadPredictInfoFromStorage();
@@ -532,6 +598,128 @@ export default {
       }).catch(err => {
         console.error(err.response && err.response.data || err);
       });
+    },
+
+    // 加载 compare 静态资源清单（静态文件里提供 files.json）
+    loadCompareFiles() {
+      axios
+        .get('/static/compare/files.json')
+        .then(res => {
+          const list = res.data;
+          this.compareFiles = Array.isArray(list) ? list : [];
+          this.compareMessage =
+            this.compareFiles.length > 0 ? '' : '暂无compare图片文件';
+        })
+        .catch(err => {
+          console.error('加载 compare files.json 失败:', err);
+          this.compareFiles = [];
+          this.compareMessage = '加载compare文件清单失败';
+        });
+    },
+    loadTargetDetectionVideos() {
+      axios
+        .get(`${TARGET_DETECTION_API_BASE_URL}/videos`)
+        .then(res => {
+          const videos = res && res.data && Array.isArray(res.data.videos) ? res.data.videos : [];
+          this.targetDetectionVideos = videos;
+          if (!videos.length) {
+            this.videoMessage = '暂无target-detection视频文件';
+          } else {
+            this.videoMessage = '';
+          }
+        })
+        .catch(err => {
+          console.error('加载 target-detection 视频列表失败:', err);
+          this.targetDetectionVideos = [];
+          this.videoMessage = '加载target-detection视频列表失败';
+        });
+    },
+    buildTargetVideoUrl(videoName) {
+      const baseUrl = TARGET_DETECTION_API_BASE_URL.endsWith('/')
+        ? TARGET_DETECTION_API_BASE_URL.slice(0, -1)
+        : TARGET_DETECTION_API_BASE_URL;
+      return `${baseUrl}/video/${encodeURIComponent(videoName)}`;
+    },
+    openSourceItem(item) {
+      if (!item || !item.type || !item.name) return;
+      this.selectedSourceKey = item.key;
+      this.compareView = 'detail';
+
+      if (item.type === 'compare') {
+        this.selectedDetailType = 'compare';
+        this.selectedVideoName = null;
+        this.selectedVideoUrl = null;
+        this.openCompareImage(item.name);
+        return;
+      }
+
+      this.selectedDetailType = 'video';
+      this.selectedCompareFile = null;
+      this.selectedVideoName = item.name;
+      this.selectedVideoUrl = this.buildTargetVideoUrl(item.name);
+      this.attributeInfoList = [];
+      this.attributeInfo = '';
+    },
+    // 切换到图片详情
+    async openCompareImage(name) {
+      this.selectedCompareFile = name;
+      this.compareView = 'detail';
+      this.selectedDetailType = 'compare';
+      this.selectedVideoName = null;
+      this.selectedVideoUrl = null;
+      await this.loadDescriptionByImageName(name);
+    },
+    // 根据 compare 图片名加载对应 json 里的 detailed_description
+    loadDescriptionByImageName(imageName) {
+      if (!imageName || typeof imageName !== 'string') {
+        this.attributeInfoList = ['未找到有效图片名称，无法加载描述'];
+        this.attributeInfo = this.attributeInfoList.join('\n');
+        return Promise.resolve();
+      }
+
+      const jsonName = imageName.replace(/\.[^/.]+$/, '.json');
+      const jsonUrl = `/static/mllm_descriptions_gt/${jsonName}`;
+
+      return axios
+        .get(jsonUrl)
+        .then(res => {
+          const data = res && res.data ? res.data : {};
+          const detailedDescription =
+            data.analysis_result && data.analysis_result.detailed_description
+              ? String(data.analysis_result.detailed_description).trim()
+              : '';
+
+          this.attributeInfoList = [
+            detailedDescription || '该图片对应 JSON 未提供 detailed_description'
+          ];
+          this.attributeInfo = this.attributeInfoList.join('\n');
+        })
+        .catch(err => {
+          console.error(`加载描述失败: ${jsonUrl}`, err);
+          this.attributeInfoList = [`未找到对应描述文件：${jsonName}`];
+          this.attributeInfo = this.attributeInfoList.join('\n');
+        });
+    },
+    // 返回列表
+    backToCompareList() {
+      this.compareView = 'list';
+      this.selectedCompareFile = null;
+      this.selectedVideoName = null;
+      this.selectedVideoUrl = null;
+      this.selectedDetailType = null;
+      this.selectedSourceKey = null;
+      this.compareMessage = this.compareFiles && this.compareFiles.length > 0 ? '' : '暂无compare图片文件';
+      // 返回列表时，清空下方描述区域，回到“暂无属性信息”
+      this.attributeInfoList = [];
+      this.attributeInfo = '';
+    },
+    // 图片加载失败兜底
+    handleCompareImageError(e) {
+      console.error('compare图片加载失败:', e);
+      this.compareMessage = '图片加载失败';
+      this.selectedCompareFile = null;
+      this.selectedSourceKey = null;
+      this.compareView = 'list';
     },
     // 从 LocalStorage 加载视频
     loadVideoFromStorage() {
@@ -1123,6 +1311,35 @@ export default {
   box-sizing: border-box;
 }
 
+/* 一行显示（防止中文标题换行） */
+.title-one-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  /* 不要覆盖 panel-header 的 width，避免背景框被拉长 */
+}
+
+/* 右侧“群体协商认知偏差检测结果”更长：适当放大 + 缩小字号 */
+.panel-header.header-results.title-one-line {
+  width: 240px !important;
+  font-size: 12px !important;
+}
+
+/* 左侧“先验知识传播结果”区域标题更长：保留你之前设置的宽度 */
+.video-module .panel-header.title-one-line {
+  width: 200px !important;
+}
+
+/* 左侧“先验知识认知传播信息”标题：单独加宽，避免截断 */
+.text-module-left .panel-header.title-one-line {
+  width: 220px !important;
+}
+
+/* 中间“一轮/二轮群体协商”标题：单独加宽，避免截断 */
+.middle-column .panel-left .panel-header.title-one-line {
+  width: 160px !important;
+}
+
 .panel-header span {
   transform: translateY(0);
 }
@@ -1208,16 +1425,33 @@ export default {
 
 /* 视频模块样式 */
 .video-module {
-  flex-basis: 40%;
+  flex: 0 1 40%;
+  min-height: 0; /* 关键：允许在 flex 列布局里收缩，否则滚动容器无法生效 */
+}
+
+.video-module .design-module-content {
+  min-height: 0;
+}
+
+/* 左侧视频(现为compare)区域标题：强制单行显示 */
+.video-module .panel-header {
+  width: 200px; /* 原本全局是 94px，中文标题容易换行 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  line-height: 24px;
 }
 
 .video-content-wrapper {
   padding: 0;
   height: 100%;
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
+  /* 列表需要铺满高度并可滚动；图片详情由 compare-detail-wrapper 自己居中 */
+  justify-content: stretch;
+  align-items: stretch;
   overflow: hidden;
+  min-height: 0; /* 允许内部滚动容器在 flex 场景下正确收缩 */
 }
 
 .video-display {
@@ -1225,6 +1459,103 @@ export default {
   height: 100%;
   object-fit: contain;
   border-radius: 4px;
+}
+
+/* compare 文件列表/图片详情样式 */
+.compare-back-btn {
+  position: absolute;
+  /* 标题 margin-top(10) + 标题高度(24) + 标题 margin-bottom(10) */
+  top: 44px;
+  left: 30px;
+  z-index: 10;
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-family: "DOUYUFont";
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.compare-list-wrapper {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0; /* 关键：否则在 flex 布局下可能不触发滚动条 */
+  padding: 10px 20px 20px 20px;
+  box-sizing: border-box;
+}
+
+.compare-detail-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.compare-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* 大图填充但不裁切 */
+  border-radius: 4px;
+}
+
+/* 对齐 TargetDetection 中“选择认知传播数据源”列表的样式 */
+.server-video-list {
+  flex-grow: 1;
+  max-height: calc(100% - 10px);
+  padding-right: 10px;
+}
+
+.server-video-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.server-video-list::-webkit-scrollbar-thumb {
+  background: #00e5ff;
+  border-radius: 3px;
+}
+
+.server-video-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.video-item {
+  padding: 8px 10px;
+  margin-bottom: 5px;
+  background-color: rgba(0, 100, 150, 0.2);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.video-item.selected {
+  background-color: rgba(0, 229, 255, 0.4);
+  border-color: #00e5ff;
+}
+
+.selector-circle {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #00e5ff;
+  border-radius: 50%;
+  background-color: transparent;
+  flex-shrink: 0;
+  margin-left: 10px;
+}
+
+.video-item.selected .selector-circle {
+  background-color: #00e5ff;
 }
 
 /* 文本模块样式 */

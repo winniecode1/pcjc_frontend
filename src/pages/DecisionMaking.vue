@@ -8,7 +8,7 @@
       <router-link to="/group-negotiation" class="nav-btn nav-back">上个页面</router-link>
     </div>
     <div class="top-nav-right">
-      <router-link to="/combined-diagnosis" class="nav-btn nav-next">下个页面</router-link>
+      <router-link to="/attributiondiagnosis" class="nav-btn nav-next">下个页面</router-link>
     </div>
 
     <div class="title-container" :style="bgImageStyle(assetNames.titleBg)">
@@ -20,11 +20,19 @@
         <div class="design-module video-module" :style="videoPanelBgStyle">
           <div class="panel-header clean-header">认知传播数据源</div>
           <div class="design-module-content video-content-wrapper">
-            <video v-if="testVideoUrl" :src="testVideoUrl" controls class="test-video-player" @error="handleVideoError"
-              autoplay loop muted></video>
-            <div v-else class="video-placeholder-text">
-              {{ testVideoMessage }}
+            <div class="server-video-list overflow-auto" v-if="sourceImageList && sourceImageList.length > 0">
+              <div
+                v-for="item in sourceImageList"
+                :key="item.path"
+                class="video-item"
+                :class="{ selected: selectedSourceImagePath === item.path }"
+                @click="selectSourceImage(item)"
+              >
+                <span>{{ item.name }}</span>
+                <span class="selector-circle"></span>
+              </div>
             </div>
+            <div v-else class="video-placeholder-text">{{ sourceImageMessage }}</div>
           </div>
         </div>
 
@@ -230,6 +238,7 @@ import { BButton, BSpinner } from 'bootstrap-vue';
 
 const API_BASE_URL = 'http://10.109.253.71:12358';
 const IMAGE_API_BASE_URL = 'http://10.109.253.71:12358';
+const TARGET_DETECTION_API_BASE_URL = 'http://10.109.253.71:5236';
 // 偏差检测准确率延迟时间：4分钟（毫秒）
 const BIAS_DETECTION_DELAY = 4 * 60 * 1000; // 240000 毫秒
 
@@ -293,6 +302,9 @@ export default {
       currentLevel: 4,
       testVideoUrl: null,
       testVideoMessage: '正在从 LocalStorage 加载视频...',
+      sourceImageList: [],
+      selectedSourceImagePath: null,
+      sourceImageMessage: '正在加载 static/Image 图片列表...',
       tempModule4Res: null,
       // 新增：用于存储定时器ID
       accuracyTimeout: null,
@@ -377,6 +389,7 @@ export default {
     window.addEventListener('resize', this.handleResize);
     this.initializeDataFromStorage();
     this.loadVideoFromStorage();
+    this.loadSourceImageList();
     this.loadDataFromModule4Res();
     // 新增：检查倒计时状态
     this.checkBiasTimerState();
@@ -973,6 +986,55 @@ export default {
       const match = levelString.toString().match(/(\d+)/);
       return match ? parseInt(match[1], 10) : 4;
     },
+    async loadSourceImageList() {
+      try {
+        const ctx = require.context('../../static/Image', true, /\.(png|jpe?g|webp|gif)$/i);
+        const imageFiles = ctx.keys().map((key) => {
+          const normalized = key.replace(/^\.\//, '');
+          return {
+            name: normalized.split('/').pop(),
+            path: `image:${normalized}`,
+            url: `/static/Image/${normalized}`,
+            type: 'image'
+          };
+        });
+
+        let videoFiles = [];
+        try {
+          const response = await axios.get(`${TARGET_DETECTION_API_BASE_URL}/videos`);
+          const videos = response && response.data && Array.isArray(response.data.videos)
+            ? response.data.videos
+            : [];
+          videoFiles = videos
+            .map((video) => {
+              const videoName = video && video.name ? String(video.name).trim() : '';
+              if (!videoName) return null;
+              return {
+                name: videoName,
+                path: `video:${videoName}`,
+                url: `${TARGET_DETECTION_API_BASE_URL}/video/${encodeURIComponent(videoName)}`,
+                type: 'video'
+              };
+            })
+            .filter(Boolean);
+        } catch (videoError) {
+          console.error('加载 TargetDetection 视频列表失败:', videoError);
+        }
+
+        this.sourceImageList = [...imageFiles, ...videoFiles];
+        this.sourceImageMessage = this.sourceImageList.length
+          ? ''
+          : 'static/Image 与 TargetDetection 均无可用数据';
+      } catch (error) {
+        console.error('加载 static/Image 图片列表失败:', error);
+        this.sourceImageList = [];
+        this.sourceImageMessage = '加载左侧列表数据失败';
+      }
+    },
+    selectSourceImage(item) {
+      if (!item || !item.path) return;
+      this.selectedSourceImagePath = item.path;
+    },
     loadVideoFromStorage() {
       try {
         const module1ResStr = localStorage.getItem('module1Res');
@@ -1446,18 +1508,74 @@ export default {
   padding-top: 0 !important;
 
   .video-content-wrapper {
-    padding: 15px;
-    height: 100%;
+    padding: 0;
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: stretch;
     overflow: hidden;
   }
 
-  .test-video-player {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
+  .server-video-list {
+    width: 92%;
+    max-width: 340px;
+    margin: 10px auto 20px auto;
+    flex-grow: 1;
+    max-height: calc(100% - 30px);
+    padding-right: 10px;
+    min-height: 0;
+    box-sizing: border-box;
+  }
+
+  .server-video-list::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .server-video-list::-webkit-scrollbar-thumb {
+    background: #00e5ff;
+    border-radius: 3px;
+  }
+
+  .server-video-list::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .video-item {
+    padding: 8px 10px;
+    margin-bottom: 5px;
+    background-color: rgba(0, 100, 150, 0.2);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #fff;
+    user-select: none;
+  }
+
+  .video-item.selected {
+    background-color: rgba(0, 229, 255, 0.4);
+    border-color: #00e5ff;
+  }
+
+  .selector-circle {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #00e5ff;
+    border-radius: 50%;
+    background-color: transparent;
+    flex-shrink: 0;
+    margin-left: 10px;
+  }
+
+  .video-item.selected .selector-circle {
+    background-color: #00e5ff;
   }
 
   .video-placeholder-text {
@@ -1739,7 +1857,7 @@ export default {
   width: 350px !important;
   height: 50px !important;
   margin-top: 5px !important;
-  margin-bottom: 0 !important;
+  margin-bottom: 6px !important;
   background-image: url('~@/assets/images/step1/-s-二级标题.png') !important;
   background-repeat: no-repeat !important;
   background-size: 100% 100% !important;
