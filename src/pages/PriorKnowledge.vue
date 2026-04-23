@@ -39,14 +39,21 @@
               <div class="video-list-container">
                 <div v-for="video in videoList" :key="video.id" class="video-select-item"
                   @click="selectVideo(video)">
-                  <span class="video-name">{{ video.name }}</span>
+                  <div class="video-info">
+                    <span class="video-name">{{ video.name }}</span>
+                    <span class="video-type">{{ video.type || '未知' }}</span>
+                  </div>
                   <span class="selector-circle"></span>
                 </div>
               </div>
             </div>
             <!-- 数据展示状态 -->
             <div v-else class="video-display-container">
-              <video v-if="videoUrl" :src="videoUrl" controls autoplay loop muted class="video-display" @error="handleVideoError"></video>
+              <!-- 图片展示 -->
+              <img v-if="selectedVideo && isImageFile(selectedVideo.name || selectedVideo.image_path)"
+                   :src="videoUrl" class="video-display" @error="handleImageError" />
+              <!-- 视频展示 -->
+              <video v-else-if="videoUrl" :src="videoUrl" controls autoplay loop muted class="video-display" @error="handleVideoError"></video>
               <div v-else class="placeholder-text">
                 {{ videoMessage }}
               </div>
@@ -58,6 +65,11 @@
         <div class="design-module text-module-left fixed-left-text">
           <div class="panel-header">多模态认知传播信息</div>
           <div class="design-module-content">
+            <!-- 原始图片展示（认知传播信息源） -->
+            <div v-if="cognitiveImageUrl" class="cognitive-image-container">
+              <div class="cognitive-image-label">认知传播信息源</div>
+              <img :src="cognitiveImageUrl" class="cognitive-source-image" @error="handleImageError" />
+            </div>
             <!-- 细粒度检测后的信息：固定图片区域（不滚动） -->
             <div v-if="multimodalDetectionInfo && multimodalDetectionInfo.image" class="multimodal-image-fixed">
               <img :src="multimodalDetectionInfo.image" class="multimodal-image" />
@@ -279,7 +291,9 @@ export default {
           // 数据选择相关
           videoList: [],
           selectedVideo: null,
-          isVideoSelected: false
+          isVideoSelected: false,
+          // 认知传播信息源模块的原始图片URL
+          cognitiveImageUrl: null
         };
       },
   mounted() {
@@ -315,39 +329,110 @@ export default {
     // 只有在计时完成时才清除localStorage
   },
   methods: {
+    // 判断是否是图片文件
+    isImageFile(filename) {
+      if (!filename) return false;
+      return /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(filename);
+    },
+    
+    // 处理图片加载错误
+    handleImageError(e) {
+      console.error("图片加载失败:", e);
+      this.videoMessage = "图片加载失败，请检查图片路径是否正确";
+      this.videoUrl = null;
+    },
+    
     // 获取作战指令
-    async fetchOrders() {
+    async fetchOrders(sampleId) {
+      if (!sampleId) {
+        this.ordersText = '';
+        return;
+      }
       try {
-        const response = await axios.get('http://10.109.253.71:5236/orders');
-        this.ordersText = response.data.text || response.data.orders || response.data.content || '';
+        const baseUrl = 'http://10.109.253.71:5237';
+        const response = await axios.get(`${baseUrl}/api/dataset/sample/${sampleId}`);
+        this.ordersText = response.data.instruction || '';
       } catch (error) {
         console.warn("获取作战指令失败", error);
+        this.ordersText = '';
       }
     },
-    // 获取视频列表
+    // 获取图片列表（无人机侦察数据）
     async fetchVideoList() {
       try {
-        const response = await axios.get('http://10.109.253.71:5236/videos');
-        if (response.data.videos) {
-          this.videoList = response.data.videos;
+        const response = await axios.get('http://10.109.253.71:8001/image_list');
+        console.log('接口原始返回数据:', response.data);
+        
+        let rawData = response.data;
+        // 如果有 data 字段，从 data 中取
+        if (rawData && rawData.data) {
+          rawData = rawData.data;
+        }
+        
+        // 从原始数据中提取 images 数组
+        const imagesArray = (rawData && rawData.images) || (rawData && rawData.data) || [];
+        
+        if (Array.isArray(imagesArray)) {
+          // 接口返回的是 images 数组
+          this.videoList = imagesArray.map((item, index) => ({
+            id: item.id || index + 1,
+            name: item.name || `图片${index + 1}`,
+            path: item.path || '',
+            type: item.type || 'image'
+          }));
+          console.log('图片列表处理后:', this.videoList);
         }
       } catch (error) {
-        console.warn("获取视频列表失败", error);
+        console.warn("获取图片列表失败", error);
         this.videoList = [];
       }
     },
-    // 选择视频
+    // 选择数据
     selectVideo(video) {
       this.selectedVideo = video;
       this.isVideoSelected = true;
-      const baseUrl = 'http://10.109.253.71:5236';
-      this.videoUrl = `${baseUrl}/video/${encodeURIComponent(video.name)}`;
-      this.videoMessage = '视频加载中...';
+
+      // 使用 path 字段
+      const imagePath = video.path || video.name || '';
+      const fileName = video.name || '';
+      const sampleId = video.id;
+
+      // 判断是否是图片：类型为 image/图片，或者文件名后缀是图片格式
+      const isImage = video.type === 'image' ||
+                      video.type === '图片' ||
+                      /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileName);
+
+      if (isImage) {
+        // 调用后端接口获取图片
+        const imageBaseUrl = 'http://10.109.253.71:8001/module2/get_image';
+        this.videoUrl = `${imageBaseUrl}?img_path=${encodeURIComponent(imagePath)}`;
+        // 设置认知传播信息源的原始图片
+        this.cognitiveImageUrl = this.videoUrl;
+        this.videoMessage = '图片加载中...';
+      } else {
+        // 如果是视频类型，使用视频接口
+        const baseUrl = 'http://10.109.253.71:5236';
+        this.videoUrl = `${baseUrl}/video/${encodeURIComponent(video.name)}`;
+        this.videoMessage = '视频加载中...';
+      }
+
+      // 获取作战指令
+      this.fetchOrders(sampleId);
+
+      console.log('选中数据:', JSON.parse(JSON.stringify(video)), 'isImage:', isImage, 'videoUrl:', this.videoUrl);
+
+      // 保存选中的图片路径和类型到 localStorage
+      localStorage.setItem('selectedImageData', JSON.stringify({
+        path: imagePath,
+        type: video.type,
+        name: video.name
+      }));
     },
     // 返回选择列表
     backToList() {
       this.isVideoSelected = false;
       this.videoUrl = null;
+      this.cognitiveImageUrl = null;
       this.selectedVideo = null;
       this.videoMessage = '请选择数据源';
     },
@@ -632,10 +717,30 @@ export default {
       // 只清空细粒度检测的结果信息
       this.multimodalDetectionInfo = null;
 
-      axios.get('http://10.109.253.71:8001/module2/list', {
+      // 从 localStorage 获取选中的图片数据
+      let imgPath = IMG_PATH_URL;
+      let imgType = IMG_PATH_URL.split('.').pop();
+      try {
+        const selectedImageDataStr = localStorage.getItem('selectedImageData');
+        if (selectedImageDataStr) {
+          const selectedImageData = JSON.parse(selectedImageDataStr);
+          if (selectedImageData.path) {
+            imgPath = selectedImageData.path;
+          }
+          if (selectedImageData.type && selectedImageData.type !== 'image' && selectedImageData.type !== '图片') {
+            imgType = selectedImageData.type;
+          } else {
+            imgType = imgPath.split('.').pop();
+          }
+        }
+      } catch (e) {
+        console.error('解析selectedImageData出错:', e);
+      }
+
+      axios.get('http://10.109.253.71:8001/module2/Inference', {
         params: {
-          img_path: `${IMG_PATH_URL}`,
-          device_type: `${DEVICE_TYPE}`
+          img_path: imgPath,
+          img_type: imgType
         }
       }).then(res => {
         console.log('Backend response:', res.data);
@@ -1554,8 +1659,8 @@ text-decoration: none;
 
 .video-module {
   flex-basis: unset;
-  height: 400px;
-  min-height: 400px;
+  height: 250px;
+  min-height: 250px;
   max-height: 400px;
 }
 
@@ -1576,6 +1681,13 @@ text-decoration: none;
   height: 100%;
   object-fit: contain;
   border-radius: 4px;
+}
+
+/* 图片展示样式 */
+.video-display-container img.video-display {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 /* 视频选择列表样式 */
@@ -1619,11 +1731,23 @@ text-decoration: none;
   border-color: #00e5ff;
 }
 
-.video-select-item .video-name {
+.video-select-item .video-info {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.video-select-item .video-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.video-select-item .video-type {
+  font-size: 12px;
+  color: #88aabb;
+  margin-top: 2px;
 }
 
 .video-select-item .selector-circle {
@@ -1723,6 +1847,30 @@ text-decoration: none;
   padding: 15px;
   padding-bottom: 0;
   overflow: hidden;
+}
+
+/* 认知传播信息源图片样式 */
+.cognitive-image-container {
+  flex-shrink: 0;
+  padding: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(198, 244, 255, 0.2);
+  margin-bottom: 10px;
+}
+
+.cognitive-image-label {
+  color: #c6f4ff;
+  font-size: 12px;
+  margin-bottom: 8px;
+  font-family: 'DOUYUFont';
+}
+
+.cognitive-source-image {
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.3);
 }
 
 .text-scrollable {

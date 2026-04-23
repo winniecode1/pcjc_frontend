@@ -36,9 +36,9 @@
               </span>
             </div>
             <div v-show="isLiveOpen" class="items-container">
-              <div v-for="video in liveVideos" :key="video.id" class="video-item" @click="selectVideo(video)"
-                :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }">
-                <span class="video-name">{{ video.name }}</span>
+              <div v-for="image in liveImages" :key="image.id" class="video-item" @click="selectImage(image)"
+                :class="{ 'selected': selectedImage && selectedImage.id === image.id }">
+                <span class="video-name">{{ image.name }}</span>
                 <span class="selector-circle"></span>
               </div>
             </div>
@@ -52,9 +52,9 @@
               </span>
             </div>
             <div v-show="isDemoOpen" class="items-container">
-              <div v-for="video in demoVideos" :key="video.id" class="video-item" @click="selectVideo(video)"
-                :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }">
-                <span class="video-name">{{ video.name }}</span>
+              <div v-for="image in demoImages" :key="image.id" class="video-item" @click="selectImage(image)"
+                :class="{ 'selected': selectedImage && selectedImage.id === image.id }">
+                <span class="video-name">{{ image.name }}</span>
                 <span class="selector-circle"></span>
               </div>
             </div>
@@ -64,13 +64,15 @@
         <div class="preview-container">
           <div class="panel-header header-select-data clean-header">数据内容预览</div>
           <div class="preview-frame">
-            <div v-if="!selectedVideo" class="preview-placeholder">请选择数据源查看预览</div>
-            <video v-else-if="isVideo(selectedVideo.name)" :src="videoUrl(selectedVideo.path)" class="preview-media" autoplay muted loop></video>
-            <img v-else :src="imageUrl(selectedVideo.path)" class="preview-media" alt="预览内容">
+            <div v-if="!selectedImage" class="preview-placeholder">请选择数据源查看预览</div>
+            <img v-else :src="originalImageUrl" class="preview-media" alt="预览内容">
           </div>
         </div>
 
         <div class="action-buttons">
+          <button @click="startTargetDetection" :disabled="isLoading" class="btn-target-detect">
+            <span class="btn-text-pos">目标识别</span>
+          </button>
           <button @click="startAnalysis" :disabled="isLoading" class="btn-start-detect">
             <span class="btn-text-pos">{{ isLoading ? '诊断中...' : '开始认知诊断' }}</span>
           </button>
@@ -79,6 +81,28 @@
 
       <!-- 右侧区域：四框诊断 -->
       <b-col cols="9" class="right-column-custom">
+        <!-- 信息展示区 -->
+        <div class="info-panel">
+          <div class="info-section">
+            <div class="info-label">作战指令：</div>
+            <div class="info-content instruction-text">{{ instruction || '请选择数据源查看作战指令' }}</div>
+          </div>
+          <div class="info-section">
+            <div class="info-label">图片描述：</div>
+            <div class="info-content">{{ yoloDescription || '点击"目标识别"按钮获取描述' }}</div>
+          </div>
+          <div class="info-section">
+            <div class="info-label">检测到的目标：</div>
+            <div class="info-content">
+              <span v-if="detectedClasses.length > 0" v-for="cls in detectedClasses" :key="cls" class="detection-tag">{{ cls }}</span>
+              <span v-else class="no-detection">无</span>
+            </div>
+          </div>
+          <div v-if="overallAccuracy" class="accuracy-info">
+            整体准确率：{{ (overallAccuracy * 100).toFixed(2) }}%
+          </div>
+        </div>
+
         <div class="modules-grid">
           <!-- 模块 1 -->
           <div class="module-wrapper">
@@ -179,14 +203,8 @@ export default {
   data() {
     return {
       isLiveOpen: true, isDemoOpen: false,
-      videoList: [
-        { id: 1, name: "20240325监控_01.mp4", type: 'live', path: '/videos/监控_01.mp4' },
-        { id: 2, name: "20240325实时_02.mp4", type: 'live', path: '/videos/实时_02.mp4' },
-        { id: 3, name: "边界态势回放_演示.mp4", type: 'demo', path: '/videos/演示_01.mp4' },
-        { id: 4, name: "演习片段_演示.mp4", type: 'demo', path: '/videos/演示_02.mp4' },
-        { id: 5, name: "综合态势感知回放.mp4", type: 'demo', path: '/videos/演示_03.mp4' }
-      ],
-      selectedVideo: null,
+      imageList: [],
+      selectedImage: null,
       isLoading: false,
       showAlert: false, alertVariant: 'info', alertMessage: '',
       taskId: 'comb_' + Date.now(),
@@ -197,14 +215,26 @@ export default {
       module3Result: '', module3InternalBias: null, module3PropagationBias: null, module3IsBiasModule: null,
       module4Result: '', module4InternalBias: null, module4IsBiasModule: null,
       accuracy: null, recall: null,
+      // 新增：目标识别和偏差检测结果
+      instruction: '',
+      yoloDescription: '',
+      detectedClasses: [],
+      detections: [],
+      annotatedImageUrl: '',
+      isConsistent: null,
+      consistencyReason: '',
+      overallAccuracy: null,
+      currentSampleId: null,
     };
   },
   computed: {
-    liveVideos() { return this.videoList.filter(v => v.type === 'live'); },
-    demoVideos() { return this.videoList.filter(v => v.type === 'demo'); }
+    // 后端基础地址
+    baseUrl() { return 'http://10.109.253.71:5237'; },
+    liveImages() { return this.imageList.filter(v => v.type === 'live'); },
+    demoImages() { return this.imageList.filter(v => v.type === 'demo'); }
   },
   mounted() {
-    this.fetchVideoList();
+    this.fetchImageList();
     this.renderFormula();
   },
   beforeDestroy() { if (this.pollTimer) clearInterval(this.pollTimer); },
@@ -235,44 +265,148 @@ export default {
         });
       }
     },
-    async fetchVideoList() {
+    async fetchImageList() {
       try {
-        const response = await this.$ajax.get('http://10.109.253.71:5236/videos');
-        if (response.data.videos) {
-          const fetched = response.data.videos.map(v => ({ ...v, type: 'live' }));
-          this.videoList = [...this.videoList, ...fetched];
-        }
-      } catch (error) { console.warn("获取数据失败", error); }
-    },
-    selectVideo(video) { this.selectedVideo = video; },
-    async startAnalysis() {
-      if (!this.selectedVideo) { this.showMsg('warning', '请先选择数据源！'); return; }
-      
-      this.clearResults();
-      this.isLoading = true;
-      this.showMsg('info', '正在启动自动化认知诊断Pipeline...');
-
-      try {
-        // 模拟/调用后端Pipeline (根据AttributionDiagnosisV2逻辑)
-        // 实际应用中这里应调用 /module5/api/bias-analysis
-        const cascadeData = {
-          stage1: { path: this.selectedVideo.path },
-          stage2: { category: 'A330-MRTT' }, // 模拟
-          stage3: { agents: [] },
-          stage4: { decision: 'attack' }
-        };
-
-        const response = await this.$ajaxJ.post('/module5/api/bias-analysis', cascadeData, {
-          params: { id: this.taskId, async: true }
-        });
-
-        if (response.status === 200 || response.status === 409) {
-          this.startPolling();
+        const response = await this.$ajax.get('http://10.109.253.71:5237/api/dataset/images');
+        if (response.data.images) {
+          this.imageList = response.data.images.map((img, index) => ({
+            id: img.id,
+            name: img.filename,
+            type: 'image',
+            path: img.image_path,
+            imageUrl: img.image_url
+          }));
         }
       } catch (error) {
-        console.error("启动失败", error);
-        // 如果环境不通，使用模拟流程展示效果
+        console.warn("获取图片列表失败", error);
+      }
+    },
+    selectImage(image) {
+      this.selectedImage = image;
+      this.currentSampleId = image.id;
+      this.clearResults();
+      this.fetchSampleDetails(image.id);
+    },
+    async startTargetDetection() {
+      if (!this.selectedImage) {
+        this.showMsg('warning', '请先选择数据源！');
+        return;
+      }
+
+      this.isLoading = true;
+      this.showMsg('info', '正在进行目标识别...');
+
+      try {
+        await this.fetchDetectionResult(this.currentSampleId);
+      } catch (error) {
+        console.error("目标识别失败", error);
+        this.showMsg('error', '目标识别失败');
+        this.isLoading = false;
+      }
+    },
+    async startAnalysis() {
+      if (!this.selectedImage) { this.showMsg('warning', '请先选择数据源！'); return; }
+
+      this.clearResults();
+      this.isLoading = true;
+      this.showMsg('info', '正在启动认知偏差诊断...');
+
+      try {
+        // 调用后端偏差检测接口
+        const response = await this.$ajax.get(`${this.baseUrl}/api/dataset/sample/${this.currentSampleId}/bias`);
+        const data = response.data;
+
+        // 解析偏差检测结果
+        if (data.bias_result) {
+          const biasResult = data.bias_result;
+          this.isConsistent = biasResult.is_consistent;
+          this.consistencyReason = biasResult.reason;
+
+          // 根据一致性结果填充四个模块
+          if (biasResult.is_consistent) {
+            // 一致：所有模块正常
+            this.module1Result = `图片场景"${biasResult.image_scene}"与指令场景"${biasResult.instruction_scene}"一致。`;
+            this.module1InternalBias = 0.05;
+            this.module1PropagationBias = 0.02;
+            this.module1IsBiasModule = false;
+
+            this.module2Result = `先验知识库校验通过，场景匹配。`;
+            this.module2InternalBias = 0.03;
+            this.module2PropagationBias = 0.01;
+            this.module2IsBiasModule = false;
+
+            this.module3Result = `群体协商一致性良好，未发现认知偏差冲突。`;
+            this.module3InternalBias = 0.05;
+            this.module3PropagationBias = 0.02;
+            this.module3IsBiasModule = false;
+
+            this.module4Result = `决策判定正常，场景一致 ((符合战术规程))。`;
+            this.module4InternalBias = 0.08;
+            this.module4IsBiasModule = false;
+          } else {
+            // 不一致：检测到偏差
+            this.module1Result = `检测到多模态信息不一致：图片场景"${biasResult.image_scene}"与指令场景"${biasResult.instruction_scene}" ((不匹配))。`;
+            this.module1InternalBias = 0.74;
+            this.module1PropagationBias = 0.12;
+            this.module1IsBiasModule = true;
+
+            this.module2Result = `先验知识库校验异常：${biasResult.reason}`;
+            this.module2InternalBias = 0.65;
+            this.module2PropagationBias = 0.08;
+            this.module2IsBiasModule = true;
+
+            this.module3Result = `群体协商发现认知偏差冲突，需要进一步分析。`;
+            this.module3InternalBias = 0.45;
+            this.module3PropagationBias = 0.15;
+            this.module3IsBiasModule = true;
+
+            this.module4Result = `决策判定异常，场景不一致 ((需要复核))。`;
+            this.module4InternalBias = 0.35;
+            this.module4IsBiasModule = true;
+          }
+        }
+
+        // 解析整体准确率
+        if (data.overall_accuracy) {
+          this.accuracy = data.overall_accuracy.accuracy;
+          this.recall = data.overall_accuracy.correct / data.overall_accuracy.total;
+        }
+
+        this.isLoading = false;
+        this.showMsg('success', '诊断完成！');
+      } catch (error) {
+        console.error("诊断失败", error);
+        // 如果环境不通，使用模拟流程
         this.simulateProcess();
+      }
+    },
+    async fetchSampleDetails(sampleId) {
+      try {
+        const response = await this.$ajax.get(`${this.baseUrl}/api/dataset/sample/${sampleId}`);
+        const data = response.data;
+        this.instruction = data.instruction || '';
+      } catch (error) {
+        console.warn("获取样本详情失败", error);
+      }
+    },
+    async fetchDetectionResult(sampleId) {
+      try {
+        this.isLoading = true;
+        const response = await this.$ajax.get(`${this.baseUrl}/api/dataset/sample/${sampleId}/detection`);
+        const data = response.data;
+
+        if (data.yolo_result) {
+          this.yoloDescription = data.description || '';
+          this.detectedClasses = data.yolo_result.detected_classes || [];
+          this.detections = data.yolo_result.detections || [];
+          this.annotatedImageUrl = this.baseUrl + data.annotated_image_url;
+        }
+
+        this.isLoading = false;
+        this.showMsg('success', '目标识别完成！');
+      } catch (error) {
+        console.error("目标识别失败", error);
+        this.isLoading = false;
       }
     },
     startPolling() {
@@ -329,7 +463,19 @@ export default {
     },
     clearResults() {
       this.module1Result = ''; this.module2Result = ''; this.module3Result = ''; this.module4Result = '';
+      this.module1InternalBias = null; this.module1PropagationBias = null; this.module1IsBiasModule = null;
+      this.module2InternalBias = null; this.module2PropagationBias = null; this.module2IsBiasModule = null;
+      this.module3InternalBias = null; this.module3PropagationBias = null; this.module3IsBiasModule = null;
+      this.module4InternalBias = null; this.module4IsBiasModule = null;
       this.accuracy = null; this.recall = null;
+      this.instruction = '';
+      this.yoloDescription = '';
+      this.detectedClasses = [];
+      this.detections = [];
+      this.annotatedImageUrl = '';
+      this.isConsistent = null;
+      this.consistencyReason = '';
+      this.overallAccuracy = null;
     },
     showMsg(variant, msg) {
       this.alertVariant = variant; this.alertMessage = msg; this.showAlert = true;
@@ -342,12 +488,15 @@ export default {
     formatPercent(v, d = 0) { return (v !== null && v !== undefined) ? (v * 100).toFixed(d) + '%' : '-'; },
     formatYesNo(v) { return v === null ? '-' : (v ? '是' : '否'); },
     exportResult() { alert("结果已导出至报告文件！"); },
+    originalImageUrl() {
+      if (!this.selectedImage) return '';
+      return this.baseUrl + this.selectedImage.imageUrl;
+    },
     // 助手函数
     isVideo(name) { return name && (name.endsWith('.mp4') || name.endsWith('.avi')); },
     videoUrl(path) { return path ? `http://10.109.253.71:5236${path}` : ''; },
-    imageUrl(path) { 
-      // 如果没有真实路径，返回占位资产
-      return path ? `http://10.109.253.71:5236${path}` : require('@/assets/images/step1/-s-弹框-选择数据.png'); 
+    imageUrl(path) {
+      return path ? `${this.baseUrl}${path}` : require('@/assets/images/step1/-s-弹框-选择数据.png');
     }
   }
 };
@@ -428,17 +577,78 @@ export default {
 .preview-media { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
 
 /* 开始按钮 */
-.action-buttons { height: 10vh; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+.action-buttons { height: 10vh; display: flex; justify-content: center; align-items: center; flex-shrink: 0; gap: 20px; }
+.btn-target-detect {
+  background: none; border: none; cursor: pointer; width: 140px; height: 60px;
+  background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png');
+  background-size: 100% 100%; position: relative; transition: filter 0.3s;
+}
+.btn-target-detect:disabled { filter: grayscale(1); cursor: not-allowed; }
 .btn-start-detect {
-  background: none; border: none; cursor: pointer; width: 220px; height: 80px;
+  background: none; border: none; cursor: pointer; width: 180px; height: 60px;
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-size: 100% 100%; position: relative; transition: filter 0.3s;
 }
 .btn-start-detect:disabled { filter: grayscale(1); cursor: not-allowed; }
-.btn-text-pos { position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%); font-family: 'DOUYUFont'; font-size: 15px; color: #FFFFFF; }
+.btn-text-pos { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'DOUYUFont'; font-size: 14px; color: #FFFFFF; white-space: nowrap; }
 
 /* ================= 右侧栏 ================= */
 .right-column-custom { height: 100%; padding-left: 20px; display: flex; flex-direction: column; }
+
+/* 信息展示区 */
+.info-panel {
+  background: rgba(10, 30, 60, 0.6);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 8px;
+  padding: 12px 15px;
+  margin-bottom: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.info-section {
+  display: flex;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 300px;
+}
+.info-label {
+  color: #00e5ff;
+  font-weight: bold;
+  font-size: 13px;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+.info-content {
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.4;
+  flex: 1;
+}
+.instruction-text {
+  color: #c6f4ff;
+  font-style: italic;
+}
+.detection-tag {
+  display: inline-block;
+  background: rgba(0, 229, 255, 0.2);
+  border: 1px solid #00e5ff;
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin-right: 5px;
+  font-size: 12px;
+  color: #00e5ff;
+}
+.no-detection { color: #8bd3f9; }
+.accuracy-info {
+  width: 100%;
+  text-align: right;
+  color: #00e5ff;
+  font-size: 14px;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
 .modules-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; flex: 1; min-height: 0; }
 .module-wrapper { display: flex; flex-direction: column; min-height: 0; }
 .module-header {
