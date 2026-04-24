@@ -4,13 +4,22 @@
     <b-row class="header-bar align-items-center no-gutters">
       <b-col cols="4" class="text-left">
         <button class="header-btn btn-home" @click="$router.push('/')">首页</button>
-        <button class="header-btn btn-back" @click="$router.push('/decisionmaking')">上个页面</button>
+        <button class="header-btn btn-back" @click="$router.back()">上个页面</button>
       </b-col>
       <b-col cols="4"></b-col>
       <b-col cols="4" class="text-right d-flex justify-content-end">
         <button class="header-btn btn-next" @click="goToAnalysisDashboard">下个页面</button>
       </b-col>
     </b-row>
+
+    <!-- 加载/错误提示 -->
+    <div v-if="showAlert" class="alert-container">
+      <div :class="['custom-alert', `alert-${alertVariant}`]">
+        <div class="alert-icon"><span>{{ alertVariant === 'success' ? '✓' : 'ℹ' }}</span></div>
+        <div class="alert-content">{{ alertMessage }}</div>
+        <button class="alert-close" @click="showAlert = false">✕</button>
+      </div>
+    </div>
 
     <!-- 主要内容网格 -->
     <b-row class="content-row no-gutters">
@@ -27,9 +36,9 @@
               </span>
             </div>
             <div v-show="isLiveOpen" class="items-container">
-              <div v-for="video in liveVideos" :key="video.id" class="video-item" @click="selectVideo(video)"
-                :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }">
-                <span class="video-name">{{ video.name }}</span>
+              <div v-for="image in liveImages" :key="image.id" class="video-item" @click="selectImage(image)"
+                :class="{ 'selected': selectedImage && selectedImage.id === image.id }">
+                <span class="video-name">{{ image.name }}</span>
                 <span class="selector-circle"></span>
               </div>
             </div>
@@ -43,9 +52,9 @@
               </span>
             </div>
             <div v-show="isDemoOpen" class="items-container">
-              <div v-for="video in demoVideos" :key="video.id" class="video-item" @click="selectVideo(video)"
-                :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }">
-                <span class="video-name">{{ video.name }}</span>
+              <div v-for="image in demoImages" :key="image.id" class="video-item" @click="selectImage(image)"
+                :class="{ 'selected': selectedImage && selectedImage.id === image.id }">
+                <span class="video-name">{{ image.name }}</span>
                 <span class="selector-circle"></span>
               </div>
             </div>
@@ -84,14 +93,39 @@
         </div>
 
         <div class="action-buttons">
-          <button @click="startAnalysis" :disabled="isLoading || isSelectingFile" class="btn-start-detect">
-            <span class="btn-text-pos">{{ isSelectingFile ? '数据加载中...' : (isLoading ? '诊断中...' : '开始认知诊断') }}</span>
+          <button @click="startTargetDetection" :disabled="isLoading" class="btn-target-detect">
+            <span class="btn-text-pos">目标识别</span>
+          </button>
+          <button @click="startAnalysis" :disabled="isLoading" class="btn-start-detect">
+            <span class="btn-text-pos">{{ isLoading ? '诊断中...' : '开始认知诊断' }}</span>
           </button>
         </div>
       </b-col>
 
       <!-- 右侧区域：四框诊断 -->
       <b-col cols="9" class="right-column-custom">
+        <!-- 信息展示区 -->
+        <div class="info-panel">
+          <div class="info-section">
+            <div class="info-label">作战指令：</div>
+            <div class="info-content instruction-text">{{ instruction || '请选择数据源查看作战指令' }}</div>
+          </div>
+          <div class="info-section">
+            <div class="info-label">图片描述：</div>
+            <div class="info-content">{{ yoloDescription || '点击"目标识别"按钮获取描述' }}</div>
+          </div>
+          <div class="info-section">
+            <div class="info-label">检测到的目标：</div>
+            <div class="info-content">
+              <span v-if="detectedClasses.length > 0" v-for="cls in detectedClasses" :key="cls" class="detection-tag">{{ cls }}</span>
+              <span v-else class="no-detection">无</span>
+            </div>
+          </div>
+          <div v-if="overallAccuracy" class="accuracy-info">
+            整体准确率：{{ (overallAccuracy * 100).toFixed(2) }}%
+          </div>
+        </div>
+
         <div class="modules-grid">
           <!-- 模块 1 -->
           <div class="module-wrapper">
@@ -100,30 +134,15 @@
               <div class="result-section">
                 <div class="section-title">诊断与定位结果</div>
                 <div class="content-box scrollable" v-html="highlightBrackets(module1Result)"></div>
-                <div v-if="isLoading && module1ShowDiagnosisOverlay" class="diagnosis-overlay">
-                  <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
-                  <div class="diagnosis-text">正在诊断中，请等待</div>
+                <div v-if="isLoading && !module1Result" class="diagnosis-overlay">
+                  <div class="loading-spinner-large"></div>
+                  <div class="diagnosis-text">正在诊断中...</div>
                 </div>
               </div>
               <div class="metric-group">
-                <div class="metric-item">
-                  模型内部偏差结果:
-                  <span v-if="module1InternalBias !== null && module1InternalBias !== undefined">{{ formatPercent(module1InternalBias, 0) }}</span>
-                  <span v-else-if="isLoading" class="loading-spinner"></span>
-                  <span v-else>-</span>
-                </div>
-                <div class="metric-item">
-                  认知传播偏差结果:
-                  <span v-if="module1PropagationBias !== null && module1PropagationBias !== undefined">{{ formatPercent(module1PropagationBias, 0) }}</span>
-                  <span v-else-if="isLoading" class="loading-spinner"></span>
-                  <span v-else>-</span>
-                </div>
-                <div class="metric-item">
-                  是否是偏差模块:
-                  <span v-if="module1IsBiasModule !== null && module1IsBiasModule !== undefined">{{ formatYesNo(module1IsBiasModule) }}</span>
-                  <span v-else-if="isLoading" class="loading-spinner"></span>
-                  <span v-else>-</span>
-                </div>
+                <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module1InternalBias, 0) }}</span></div>
+                <div class="metric-item">认知传播偏差结果: <span>{{ formatPercent(module1PropagationBias, 0) }}</span></div>
+                <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module1IsBiasModule) }}</span></div>
               </div>
             </div>
           </div>
@@ -135,30 +154,14 @@
               <div class="result-section">
                 <div class="section-title">诊断与定位结果</div>
                 <div class="content-box scrollable" v-html="highlightBrackets(module2Result)"></div>
-                <div v-if="isLoading && (module2InternalBias === null || module2InternalBias === undefined)" class="diagnosis-overlay">
-                  <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
-                  <div class="diagnosis-text">正在诊断中，请等待</div>
+                <div v-if="isLoading && !module2Result" class="diagnosis-overlay">
+                  <div class="loading-spinner-large"></div>
                 </div>
               </div>
               <div class="metric-group">
-                <div class="metric-item">
-                  模型内部偏差结果:
-                  <span v-if="module2InternalBias !== null && module2InternalBias !== undefined">{{ formatPercent(module2InternalBias, 0) }}</span>
-                  <span v-else-if="isLoading" class="loading-spinner"></span>
-                  <span v-else>-</span>
-                </div>
-                <div class="metric-item">
-                  认知传播偏差结果:
-                  <span v-if="module2PropagationBias !== null && module2PropagationBias !== undefined">{{ formatPercent(module2PropagationBias, 0) }}</span>
-                  <span v-else-if="isLoading" class="loading-spinner"></span>
-                  <span v-else>-</span>
-                </div>
-                <div class="metric-item">
-                  是否是偏差模块:
-                  <span v-if="module2IsBiasModule !== null && module2IsBiasModule !== undefined">{{ formatYesNo(module2IsBiasModule) }}</span>
-                  <span v-else-if="isLoading" class="loading-spinner"></span>
-                  <span v-else>-</span>
-                </div>
+                <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module2InternalBias, 0) }}</span></div>
+                <div class="metric-item">认知传播偏差结果: <span>{{ formatPercent(module2PropagationBias, 0) }}</span></div>
+                <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module2IsBiasModule) }}</span></div>
               </div>
             </div>
           </div>
@@ -170,30 +173,14 @@
               <div class="result-section">
                 <div class="section-title">诊断与定位结果</div>
                 <div class="content-box scrollable" v-html="highlightBrackets(module3Result)"></div>
-                <div v-if="isLoading && (module3InternalBias === null || module3InternalBias === undefined)" class="diagnosis-overlay">
-                  <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
-                  <div class="diagnosis-text">正在诊断中，请等待</div>
+                <div v-if="isLoading && !module3Result" class="diagnosis-overlay">
+                  <div class="loading-spinner-large"></div>
                 </div>
               </div>
               <div class="metric-group">
-                <div class="metric-item">
-                  模型内部偏差结果:
-                  <span v-if="module3InternalBias !== null && module3InternalBias !== undefined">{{ formatPercent(module3InternalBias, 0) }}</span>
-                  <span v-else-if="isLoading" class="loading-spinner"></span>
-                  <span v-else>-</span>
-                </div>
-                <div class="metric-item">
-                  认知传播偏差结果:
-                  <span v-if="module3PropagationBias !== null && module3PropagationBias !== undefined">{{ formatPercent(module3PropagationBias, 0) }}</span>
-                  <span v-else-if="isLoading" class="loading-spinner"></span>
-                  <span v-else>-</span>
-                </div>
-                <div class="metric-item">
-                  是否是偏差模块:
-                  <span v-if="module3IsBiasModule !== null && module3IsBiasModule !== undefined">{{ formatYesNo(module3IsBiasModule) }}</span>
-                  <span v-else-if="isLoading" class="loading-spinner"></span>
-                  <span v-else>-</span>
-                </div>
+                <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module3InternalBias, 0) }}</span></div>
+                <div class="metric-item">认知传播偏差结果: <span>{{ formatPercent(module3PropagationBias, 0) }}</span></div>
+                <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module3IsBiasModule) }}</span></div>
               </div>
             </div>
           </div>
@@ -205,24 +192,13 @@
               <div class="result-section">
                 <div class="section-title">诊断与定位结果</div>
                 <div class="content-box scrollable" v-html="highlightBrackets(module4Result)"></div>
-                <div v-if="isLoading && module4ShowDiagnosisOverlay" class="diagnosis-overlay">
-                  <img src="~@/assets/images/step5/放大镜.png" class="diagnosis-icon" alt="诊断中">
-                  <div class="diagnosis-text">正在诊断中，请等待</div>
+                <div v-if="isLoading && !module4Result" class="diagnosis-overlay">
+                  <div class="loading-spinner-large"></div>
                 </div>
               </div>
               <div class="metric-group">
-                <div class="metric-item">
-                  模型内部偏差结果:
-                  <span v-if="module4InternalBias !== null && module4InternalBias !== undefined">{{ formatPercent(module4InternalBias, 0) }}</span>
-                  <span v-else-if="isLoading" class="loading-spinner"></span>
-                  <span v-else>-</span>
-                </div>
-                <div class="metric-item">
-                  是否是偏差模块:
-                  <span v-if="module4IsBiasModule !== null && module4IsBiasModule !== undefined">{{ formatYesNo(module4IsBiasModule) }}</span>
-                  <span v-else-if="isLoading" class="loading-spinner"></span>
-                  <span v-else>-</span>
-                </div>
+                <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module4InternalBias, 0) }}</span></div>
+                <div class="metric-item">是否是偏差模块: <span>{{ formatYesNo(module4IsBiasModule) }}</span></div>
               </div>
             </div>
           </div>
@@ -265,6 +241,7 @@ export default {
       videoList: [],
       selectedVideo: null,
       isLoading: false,
+      showAlert: false, alertVariant: 'info', alertMessage: '',
       taskId: 'comb_' + Date.now(),
       pollTimer: null,
       isSelectingFile: false,
@@ -308,11 +285,13 @@ export default {
     };
   },
   computed: {
-    liveVideos() { return this.videoList.filter(v => v.type === 'live'); },
-    demoVideos() { return this.videoList.filter(v => v.type === 'demo'); }
+    // 后端基础地址
+    baseUrl() { return 'http://10.109.253.71:5237'; },
+    liveImages() { return this.imageList.filter(v => v.type === 'live'); },
+    demoImages() { return this.imageList.filter(v => v.type === 'demo'); }
   },
   mounted() {
-    this.fetchVideoList();
+    this.fetchImageList();
     this.renderFormula();
 
     // 初始化默认全量数据展示
@@ -332,6 +311,7 @@ export default {
     if (this.revealContentTimer) clearTimeout(this.revealContentTimer);
     if (this.recallDisplayTimer) clearTimeout(this.recallDisplayTimer);
   },
+  beforeDestroy() { if (this.pollTimer) clearInterval(this.pollTimer); },
   methods: {
     renderFormula() {
       // 动态加载 KaTeX 以确保公式渲染
@@ -359,7 +339,7 @@ export default {
         });
       }
     },
-    async fetchVideoList() {
+    async fetchImageList() {
       try {
         const response = await this.$ajax.get(`${API_BASE_URL}/module5/api/data-sources`);
         const sources = this.safeGet(response, 'data.data_sources', []);
@@ -614,7 +594,7 @@ export default {
       }, recallWaitMs);
     },
     async startAnalysis() {
-      if (!this.selectedVideo) { this.showMsg('warning', '请先选择数据源！'); return; }
+      if (!this.selectedImage) { this.showMsg('warning', '请先选择数据源！'); return; }
 
       this.clearResults({ resetPersistentMetric: true });
       this.isLoading = true;
@@ -874,15 +854,8 @@ export default {
           if (key !== 'kind' && key !== 'cognitive_bias') {
             lines.push(`${key}：${this.formatPredictionValue(prediction[key])}`);
           }
-        });
-        this.module2Result = lines.join('\n');
-      } else {
-        this.module2Result = '';
-      }
-
-      this.module2InternalBias = this.safeGet(module2, 'module_test_stage.prediction.cognitive_bias', null);
-      this.module2PropagationBias = this.safeGet(module2, 'analysis_task.calculated_value', null);
-      this.module2IsBiasModule = this.safeGet(module2, 'is_bias_module', null);
+        } catch (e) { console.warn("轮询失败", e); }
+      }, 2000);
     },
     formatPredictionValue(value) {
       if (value === null || value === undefined) return '';
@@ -902,40 +875,18 @@ export default {
       this.module3PropagationBias = this.safeGet(module3, 'analysis_task.calculated_value', null);
       this.module3IsBiasModule = this.safeGet(module3, 'is_bias_module', null);
     },
-    parseModule4(module4, fromCache = false) {
-      if (!module4) return;
-
-      const biasTestResult = this.safeGet(module4, 'single_task_stage.prediction.summary', '');
-      const internalBias = this.safeGet(module4, 'module_test_stage.prediction.cognitive_bias', null);
-      const isBiasModule = this.safeGet(module4, 'is_bias_module', null);
-
-      if (fromCache) {
-        this.module4Result = biasTestResult || '';
-        this.module4InternalBias = internalBias;
-        this.module4IsBiasModule = isBiasModule;
-        this.module4ShowDiagnosisOverlay = false;
-        return;
+    parseData(data) {
+      const m1 = data.modules.module1;
+      if (m1) {
+        this.module1Result = (m1.prediction && m1.prediction.summary) || '';
+        this.module1InternalBias = (m1.prediction && m1.prediction.cognitive_bias) || null;
+        this.module1IsBiasModule = m1.is_bias_module;
       }
-
-      if (biasTestResult || internalBias !== null || isBiasModule !== null) {
-        this.module4BiasTestResultPending = biasTestResult;
-        this.module4InternalBiasPending = internalBias;
-        this.module4IsBiasModulePending = isBiasModule;
-
-        if (!this.module4DelayTimer) {
-          this.module4ShowDiagnosisOverlay = true;
-          this.module4DelayTimer = setTimeout(() => {
-            this.module4Result = this.module4BiasTestResultPending || '';
-            this.module4InternalBias = this.module4InternalBiasPending;
-            this.module4IsBiasModule = this.module4IsBiasModulePending;
-            this.module4ShowDiagnosisOverlay = false;
-            this.module4DelayTimer = 'done';
-          }, 10000);
-        } else if (this.module4DelayTimer === 'done') {
-          this.module4Result = biasTestResult || '';
-          this.module4InternalBias = internalBias;
-          this.module4IsBiasModule = isBiasModule;
-        }
+      // 模块4示例
+      const m4 = data.modules.module4;
+      if (m4) {
+        this.module4Result = (m4.prediction && m4.prediction.summary) || '';
+        this.module4InternalBias = (m4.prediction && m4.prediction.cognitive_bias) || null;
       }
     },
     safeGet(obj, path, defaultValue = '') {
@@ -982,26 +933,25 @@ export default {
       }
     },
     showMsg(variant, msg) {
-      // intentionally silent: top message box has been removed
-      void variant;
-      void msg;
+      this.alertVariant = variant; this.alertMessage = msg; this.showAlert = true;
+      setTimeout(() => { this.showAlert = false; }, 3000);
     },
     highlightBrackets(text) {
-      if (text === null || text === undefined) return '等待中...';
-      return String(text)
-        .replace(/\{\{([\s\S]*?)\}\}/g, '<span class="highlight-text">$1</span>')
-        .replace(/\(\((.*?)\)\)/g, '<span class="highlight-text">$1</span>')
-        .replace(/\n/g, '<br>');
+      if (!text) return '等待中...';
+      return text.replace(/\(\((.*?)\)\)/g, '<span class="highlight-text">$1</span>').replace(/\n/g, '<br>');
     },
     formatPercent(v, d = 0) { return (v !== null && v !== undefined) ? (v * 100).toFixed(d) + '%' : '-'; },
     formatYesNo(v) { return v === null ? '-' : (v ? '是' : '否'); },
     exportResult() { alert("结果已导出至报告文件！"); },
+    originalImageUrl() {
+      if (!this.selectedImage) return '';
+      return this.baseUrl + this.selectedImage.imageUrl;
+    },
     // 助手函数
     isVideo(name) { return name && (name.endsWith('.mp4') || name.endsWith('.avi')); },
     videoUrl(path) { return path ? `http://10.109.253.71:5236${path}` : ''; },
     imageUrl(path) {
-      // 如果没有真实路径，返回占位资产
-      return path ? `http://10.109.253.71:5236${path}` : require('@/assets/images/step1/-s-弹框-选择数据.png');
+      return path ? `${this.baseUrl}${path}` : require('@/assets/images/step1/-s-弹框-选择数据.png');
     }
   }
 };
@@ -1022,6 +972,19 @@ export default {
 .btn-back { background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png'); }
 .btn-next { background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png'); }
 
+/* 提示信息 */
+.alert-container { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); z-index: 100; width: 40%; }
+.custom-alert { 
+  display: flex; align-items: center; padding: 12px 20px; border-radius: 4px; 
+  background: rgba(10, 30, 60, 0.9); border: 2px solid #1a65a8; backdrop-filter: blur(5px);
+}
+.alert-success { border-color: #00e5ff; color: #00e5ff; }
+.alert-warning { border-color: #ffb74d; color: #ffb74d; }
+.alert-info { border-color: #8bd3f9; color: #8bd3f9; }
+.alert-icon { margin-right: 15px; font-weight: bold; }
+.alert-content { flex: 1; font-size: 14px; }
+.alert-close { background: none; border: none; color: #fff; cursor: pointer; font-size: 16px; }
+
 .content-row { height: calc(100vh - 100px); margin-top: 80px; padding: 0 20px 20px 20px; }
 
 /* ================= 左侧栏 ================= */
@@ -1032,7 +995,7 @@ export default {
   display: flex; justify-content: center; align-items: center; margin-bottom: 5px;
 }
 
-.sidebar-scroll-area {
+.sidebar-scroll-area { 
   height: 35vh !important; padding: 10px;
   background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
   background-size: 100% 100%; margin-bottom: 10px;
@@ -1079,7 +1042,7 @@ export default {
 .preview-frame {
   flex: 1; background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-size: 100% 100%; padding: 12px; display: flex; align-items: center; justify-content: center;
-  min-height: 0; overflow: hidden; position: relative;
+  min-height: 0; overflow: hidden;
 }
 .preview-placeholder { color: #8bd3f9; font-size: 14px; opacity: 0.7; }
 .carousel-slide-content { height: 26vh; display: flex; align-items: center; justify-content: center; width: 100%; padding: 4px; overflow: hidden; position: relative; }
@@ -1143,14 +1106,20 @@ export default {
 .custom-carousel .carousel-control-prev-icon, .custom-carousel .carousel-control-next-icon { filter: drop-shadow(0 0 4px #00e5ff); }
 
 /* 开始按钮 */
-.action-buttons { height: 10vh; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+.action-buttons { height: 10vh; display: flex; justify-content: center; align-items: center; flex-shrink: 0; gap: 20px; }
+.btn-target-detect {
+  background: none; border: none; cursor: pointer; width: 140px; height: 60px;
+  background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png');
+  background-size: 100% 100%; position: relative; transition: filter 0.3s;
+}
+.btn-target-detect:disabled { filter: grayscale(1); cursor: not-allowed; }
 .btn-start-detect {
-  background: none; border: none; cursor: pointer; width: 220px; height: 80px;
+  background: none; border: none; cursor: pointer; width: 180px; height: 60px;
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-size: 100% 100%; position: relative; transition: filter 0.3s;
 }
 .btn-start-detect:disabled { filter: grayscale(1); cursor: not-allowed; }
-.btn-text-pos { position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%); font-family: 'DOUYUFont'; font-size: 15px; color: #FFFFFF; }
+.btn-text-pos { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'DOUYUFont'; font-size: 14px; color: #FFFFFF; white-space: nowrap; }
 
 /* ================= 右侧栏 ================= */
 .right-column-custom { height: 100%; padding-left: 20px; display: flex; flex-direction: column; }
@@ -1219,26 +1188,11 @@ export default {
 }
 .metric-item { font-size: 14px; color: #8bd3f9; }
 .metric-item span { font-weight: bold; color: #c6f4ff; font-size: 16px; margin-left: 0.5em; font-family: 'DingTalk-JinBuTi', sans-serif !important; }
-.loading-spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(198, 244, 255, 0.3);
-  border-top-color: #c6f4ff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
 
 /* 遮罩层逻辑 */
 .diagnosis-overlay {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(10, 30, 60, 0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5;
-}
-.diagnosis-icon {
-  width: 56px;
-  height: 56px;
-  object-fit: contain;
-  animation: pulse 1.5s ease-in-out infinite;
 }
 .loading-spinner-large {
   width: 40px; height: 40px; border: 4px solid rgba(0, 229, 255, 0.2); border-left-color: #00e5ff;
@@ -1247,11 +1201,6 @@ export default {
 .diagnosis-text { margin-top: 10px; color: #00e5ff; font-size: 12px; }
 
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.08); }
-  100% { transform: scale(1); }
-}
 
 .bottom-content {
   height: 10vh;
