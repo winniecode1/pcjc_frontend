@@ -8,7 +8,7 @@
       </b-col>
       <b-col cols="4"></b-col>
       <b-col cols="4" class="text-right d-flex justify-content-end">
-        <button class="header-btn btn-next" @click="$router.push('/analysis-dashboard')">下个页面</button>
+        <button class="header-btn btn-next" @click="goToAnalysisDashboard">下个页面</button>
       </b-col>
     </b-row>
 
@@ -69,10 +69,11 @@
               <b-carousel-slide v-for="(item, index) in carouselItems" :key="index">
                 <template #img>
                    <div class="carousel-slide-content">
+                     <div v-if="item.stage" class="stage-chip">{{ item.stage }}</div>
                      <img v-if="item.type === 'image'" :src="item.src" class="slide-media slide-media-image">
                      <video v-else-if="item.type === 'video'" :src="item.src" autoplay muted loop class="slide-media slide-media-video"></video>
                      <div v-else-if="item.type === 'text'" class="text-slide-content">
-                       <div class="text-slide-title">{{ item.title }}</div>
+                       <div class="text-slide-title">{{ item.stage ? `${item.stage} · ${item.title}` : item.title }}</div>
                        <div class="text-slide-desc">{{ item.content }}</div>
                      </div>
                    </div>
@@ -228,13 +229,19 @@
         </div>
 
         <div class="bottom-content">
-          <div class="metric-card formula-card">
-            <div class="metric-title">计算公式</div>
-            <div ref="formulaRef" class="metric-value formula-text"></div>
-          </div>
-          <div class="metric-card recall-card centered-metric">
-            <div class="metric-title">不一致根因召回率</div>
-            <div class="metric-value"><span>{{ formatPercent(recall, 0) }}</span></div>
+          <div class="metric-pair">
+            <div class="metric-half metric-half-left">
+              <div class="metric-card formula-card">
+                <div class="metric-title">计算公式</div>
+                <div ref="formulaRef" class="metric-value formula-text"></div>
+              </div>
+            </div>
+            <div class="metric-half metric-half-right">
+              <div class="metric-card recall-card centered-metric">
+                <div class="metric-title">不一致根因召回率</div>
+                <div class="metric-value"><span>{{ formatPercent(recall, 0) }}</span></div>
+              </div>
+            </div>
           </div>
           <button class="export-btn" @click="exportResult" :disabled="isLoading">结果导出</button>
         </div>
@@ -244,19 +251,18 @@
 </template>
 
 <script>
+const API_BASE_URL = process.env.VUE_APP_MODULE5_API_BASE_URL || 'http://127.0.0.1:5236';
+const COMBINED_RECALL_TIMER_KEY = 'pcjc_combined_recall_timer_v1';
+const COMBINED_RECALL_DELAY_MS = 5 * 60 * 1000;
+const COMBINED_RECALL_DONE_VALUE = 0.92;
+
 export default {
   name: 'CombinedDiagnosis',
   data() {
     return {
       isLiveOpen: true,
       isDemoOpen: false,
-      videoList: [
-        { id: 1, name: "20240325监控_01.mp4", type: 'live', path: '/videos/监控_01.mp4' },
-        { id: 2, name: "20240325实时_02.mp4", type: 'live', path: '/videos/实时_02.mp4' },
-        { id: 3, name: "边界态势回放_演示.mp4", type: 'demo', path: '/videos/演示_01.mp4' },
-        { id: 4, name: "演习片段_演示.mp4", type: 'demo', path: '/videos/演示_02.mp4' },
-        { id: 5, name: "综合态势感知回放.mp4", type: 'demo', path: '/videos/演示_03.mp4' }
-      ],
+      videoList: [],
       selectedVideo: null,
       isLoading: false,
       taskId: 'comb_' + Date.now(),
@@ -265,6 +271,8 @@ export default {
       selectedFileContext: null,
       carouselSlide: 0,
       carouselItems: [],
+      stagePreviews: {},
+      previewSummary: null,
       // 诊断结果
       module1ShowDiagnosisOverlay: false,
       module1BiasTestResultPending: '',
@@ -294,6 +302,9 @@ export default {
       module4IsBiasModule: null,
       accuracy: null,
       recall: null,
+      analysisStartedAt: null,
+      revealContentTimer: null,
+      recallDisplayTimer: null
     };
   },
   computed: {
@@ -308,15 +319,18 @@ export default {
     this.selectedVideo = null;
 
     // 初始化四个诊断模块的默认文字与指标
-    this.clearResults();
+    this.clearResults({ resetPersistentMetric: false });
 
     // 初始化左下角轮播图的多模态混排数据
     this.carouselItems = [];
+    this.restoreRecallTimerFromStorage();
   },
   beforeDestroy() {
     if (this.pollTimer) clearInterval(this.pollTimer);
     if (this.module1DelayTimer && this.module1DelayTimer !== 'done') clearTimeout(this.module1DelayTimer);
     if (this.module4DelayTimer && this.module4DelayTimer !== 'done') clearTimeout(this.module4DelayTimer);
+    if (this.revealContentTimer) clearTimeout(this.revealContentTimer);
+    if (this.recallDisplayTimer) clearTimeout(this.recallDisplayTimer);
   },
   methods: {
     renderFormula() {
@@ -339,7 +353,7 @@ export default {
     },
     doRender() {
       if (window.katex && this.$refs.formulaRef) {
-        window.katex.render("R = \\frac{\\sum_{i=1}^{n} (C_i \\cdot w_i)}{N_{total}}", this.$refs.formulaRef, {
+        window.katex.render("\\small\\mathrm{Recall}=\\frac{\\sum_{i=1}^{N}\\left|G_i\\cap \\hat{G}_i\\right|}{\\sum_{i=1}^{N}\\left|G_i\\cap \\hat{G}_i\\right|+\\sum_{i=1}^{N}\\left|G_i\\setminus \\hat{G}_i\\right|}", this.$refs.formulaRef, {
           throwOnError: false,
           displayMode: false
         });
@@ -347,14 +361,27 @@ export default {
     },
     async fetchVideoList() {
       try {
-        const response = await this.$ajax.get('http://10.109.253.71:5236/videos');
-        if (response.data.videos) {
-          const fetched = response.data.videos.map(v => ({ ...v, type: 'live' }));
-          this.videoList = [...this.videoList, ...fetched];
+        const response = await this.$ajax.get(`${API_BASE_URL}/module5/api/data-sources`);
+        const sources = this.safeGet(response, 'data.data_sources', []);
+        if (Array.isArray(sources)) {
+          this.videoList = sources.map((src, idx) => ({
+            id: idx + 1,
+            source_id: src.source_id,
+            name: src.source_id,
+            path: src.path,
+            type: 'live'
+          }));
         }
-      } catch (error) { console.warn("获取数据失败", error); }
+      } catch (error) {
+        console.warn("获取数据源失败", error);
+        this.videoList = [];
+      }
     },
-    async selectVideo(video) {
+    async selectVideo(video, options = {}) {
+      const { resetTimer = true } = options;
+      if (resetTimer) {
+        this.resetRecallTimerByDataSelection();
+      }
       this.selectedVideo = video;
       await this.handleFileSelection(video);
     },
@@ -370,7 +397,12 @@ export default {
       } catch (error) {
         console.error("文件选择接口调用失败", error);
         this.carouselItems = [
-          { type: this.isVideo(video.name) ? 'video' : 'image', src: this.isVideo(video.name) ? this.videoUrl(video.path) : this.imageUrl(video.path) }
+          {
+            type: 'text',
+            stage: 'Stage?',
+            title: '文件数据加载失败',
+            content: `source_id=${video.source_id || video.name}，请检查后端服务与数据目录。`
+          }
         ];
         this.showMsg('warning', '文件数据加载失败，已使用基础预览。');
       } finally {
@@ -378,194 +410,372 @@ export default {
       }
     },
     async requestFileSelection(video) {
-      // TODO: 前后端联调时替换为真实接口
-      // return this.$ajaxJ.post('/module5/api/file-selection', { path: video.path, name: video.name });
-      return this.mockFileSelectionResponse(video);
-    },
-    mockFileSelectionResponse(video) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({
-            success: true,
-            stage1: {
-              path: video.path,
-              source_name: video.name
-            },
-            carouselItems: this.buildMockMultimodalItems(video)
-          });
-        }, 350);
+      const res = await this.$ajaxJ.post(`${API_BASE_URL}/module5/api/file-selection`, {
+        source_id: video.source_id,
+        path: video.path
       });
-    },
-    buildMockMultimodalItems(video) {
-      const selectedItem = {
-        type: this.isVideo(video.name) ? 'video' : 'image',
-        src: this.isVideo(video.name) ? this.videoUrl(video.path) : this.imageUrl(video.path)
-      };
-      const mockImages = [
-        require('@/assets/images/MockData/firc_junshi_1.jpg'),
-        require('@/assets/images/MockData/firc_junshi_2.jpg'),
-        require('@/assets/images/MockData/firc_junshi_3.jpg'),
-        require('@/assets/images/MockData/firc_junshi_4.jpg')
-      ];
-
-      const liveCandidate = this.liveVideos.find(v => v.id !== video.id && this.isVideo(v.name));
-      const demoCandidate = this.demoVideos.find(v => v.id !== video.id && this.isVideo(v.name));
-
-      const items = [selectedItem];
-      if (liveCandidate) {
-        items.push({ type: 'video', src: this.videoUrl(liveCandidate.path) });
-      }
-      if (demoCandidate) {
-        items.push({ type: 'video', src: this.videoUrl(demoCandidate.path) });
-      }
-
-      mockImages.forEach((img) => {
-        items.push({ type: 'image', src: img });
-      });
-
-      items.push(
-        {
-          type: 'text',
-          title: '多模态样本准备完成',
-          content: `已为 ${video.name} 装载视频片段与 MockData 的4张图片，可直接开始认知诊断。`
-        }
-      );
-
-      return items;
+      return res.data;
     },
     applyFileSelectionResult(response, video) {
-      const previewItem = {
-        type: this.isVideo(video.name) ? 'video' : 'image',
-        src: this.isVideo(video.name) ? this.videoUrl(video.path) : this.imageUrl(video.path)
-      };
       const res = response || {};
-      const carouselItems = Array.isArray(res.carouselItems) && res.carouselItems.length > 0
-        ? res.carouselItems
-        : [previewItem];
+      let carouselItems = this.normalizeCarouselItems(res.carouselItems);
+      if (carouselItems.length === 0) {
+        carouselItems = this.buildItemsFromStagePreviews(res.stagePreviews);
+      }
 
-      this.selectedFileContext = res.stage1 || { path: video.path, source_name: video.name };
+      if (carouselItems.length === 0) {
+        carouselItems = [{
+          type: 'text',
+          stage: 'Stage?',
+          title: '无可展示内容',
+          content: `source_id=${video.source_id || video.name} 未返回可渲染数据。`
+        }];
+      }
+
+      this.selectedFileContext = res.stage1 || { source_id: video.source_id || video.name, path: video.path };
+      this.stagePreviews = res.stagePreviews || {};
+      this.previewSummary = res.previewSummary || null;
       this.carouselItems = carouselItems;
       this.carouselSlide = 0;
+      this.persistSelectedSourceContext(this.selectedFileContext);
       this.showMsg('success', '文件已加载，可开始认知诊断。');
+    },
+    persistSelectedSourceContext(ctx) {
+      const source_id = String((ctx || {}).source_id || '').trim();
+      const path = String((ctx || {}).path || '').trim();
+      if (!source_id && !path) return;
+      try {
+        sessionStorage.setItem('pcjc_selected_source_context', JSON.stringify({ source_id, path }));
+      } catch (e) {
+        // ignore
+      }
+    },
+    goToAnalysisDashboard() {
+      const stage1 = this.selectedFileContext || {};
+      const source_id = String(stage1.source_id || (this.selectedVideo ? this.selectedVideo.source_id : '') || '').trim();
+      const path = String(stage1.path || (this.selectedVideo ? this.selectedVideo.path : '') || '').trim();
+      this.persistSelectedSourceContext({ source_id, path });
+      this.$router.push({
+        path: '/analysis-dashboard',
+        query: {
+          source_id,
+          path
+        }
+      });
+    },
+    normalizeCarouselItems(items) {
+      if (!Array.isArray(items)) return [];
+      return items
+        .filter(item => item && item.type)
+        .map((item, idx) => {
+          const stage = item.stage || 'Stage?';
+          const stageIndex = Number.isFinite(item.stage_index) ? item.stage_index : this.parseStageIndex(stage);
+          return {
+            ...item,
+            stage,
+            stage_index: stageIndex,
+            title: item.title || `预览项 ${idx + 1}`
+          };
+        });
+    },
+    buildItemsFromStagePreviews(stagePreviews) {
+      if (!stagePreviews || typeof stagePreviews !== 'object') return [];
+      const stageOrder = ['Stage1', 'Stage2', 'Stage3', 'Stage4'];
+      const flatten = [];
+      stageOrder.forEach((stageName) => {
+        const stageData = stagePreviews[stageName];
+        if (!stageData || !Array.isArray(stageData.items)) return;
+        stageData.items.forEach((item) => {
+          flatten.push({
+            ...item,
+            stage: item.stage || stageName,
+            stage_index: Number.isFinite(item.stage_index)
+              ? item.stage_index
+              : this.parseStageIndex(stageName)
+          });
+        });
+      });
+      return this.normalizeCarouselItems(flatten);
+    },
+    parseStageIndex(stageName) {
+      if (!stageName) return null;
+      const match = String(stageName).match(/Stage(\d+)/i);
+      return match ? Number(match[1]) : null;
+    },
+    clearAnalysisTimers() {
+      if (this.revealContentTimer) {
+        clearTimeout(this.revealContentTimer);
+        this.revealContentTimer = null;
+      }
+      if (this.recallDisplayTimer) {
+        clearTimeout(this.recallDisplayTimer);
+        this.recallDisplayTimer = null;
+      }
+    },
+    readRecallTimerStateFromStorage() {
+      try {
+        const raw = localStorage.getItem(COMBINED_RECALL_TIMER_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        return parsed;
+      } catch (e) {
+        return null;
+      }
+    },
+    persistRecallTimerState(state) {
+      try {
+        localStorage.setItem(COMBINED_RECALL_TIMER_KEY, JSON.stringify(state || {}));
+      } catch (e) {
+        // ignore
+      }
+    },
+    clearRecallTimerStateFromStorage() {
+      try {
+        localStorage.removeItem(COMBINED_RECALL_TIMER_KEY);
+      } catch (e) {
+        // ignore
+      }
+    },
+    finishRecallTimer() {
+      if (this.recallDisplayTimer) {
+        clearTimeout(this.recallDisplayTimer);
+        this.recallDisplayTimer = null;
+      }
+      this.recall = COMBINED_RECALL_DONE_VALUE;
+      this.persistRecallTimerState({
+        status: 'done',
+        value: COMBINED_RECALL_DONE_VALUE,
+        finishedAt: Date.now()
+      });
+    },
+    restoreRecallTimerFromStorage() {
+      if (this.recallDisplayTimer) {
+        clearTimeout(this.recallDisplayTimer);
+        this.recallDisplayTimer = null;
+      }
+      const state = this.readRecallTimerStateFromStorage();
+      if (!state) return;
+      if (state.status === 'done') {
+        const doneValue = Number(state.value);
+        this.recall = Number.isFinite(doneValue) ? doneValue : COMBINED_RECALL_DONE_VALUE;
+        return;
+      }
+      if (state.status !== 'running') return;
+      const fireAt = Number(state.fireAt);
+      if (!Number.isFinite(fireAt) || fireAt <= 0) {
+        this.clearRecallTimerStateFromStorage();
+        return;
+      }
+      const remaining = fireAt - Date.now();
+      if (remaining <= 0) {
+        this.finishRecallTimer();
+        return;
+      }
+      this.recall = null;
+      this.recallDisplayTimer = setTimeout(() => {
+        this.finishRecallTimer();
+      }, remaining);
+    },
+    resetRecallTimerByDataSelection() {
+      if (this.recallDisplayTimer) {
+        clearTimeout(this.recallDisplayTimer);
+        this.recallDisplayTimer = null;
+      }
+      this.recall = null;
+      this.clearRecallTimerStateFromStorage();
+    },
+    scheduleContentReveal(data) {
+      const minWaitMs = 20000;
+      const elapsed = this.analysisStartedAt ? (Date.now() - this.analysisStartedAt) : 0;
+      const waitMs = Math.max(0, minWaitMs - elapsed);
+      if (this.revealContentTimer) clearTimeout(this.revealContentTimer);
+      this.revealContentTimer = setTimeout(() => {
+        this.parseData(data, true);
+        this.isLoading = false;
+        this.revealContentTimer = null;
+        this.showMsg('success', '诊断完成！');
+      }, waitMs);
+    },
+    scheduleRecallDisplay() {
+      const recallWaitMs = COMBINED_RECALL_DELAY_MS;
+      if (this.recallDisplayTimer) clearTimeout(this.recallDisplayTimer);
+      this.recall = null;
+      const startedAt = Date.now();
+      const fireAt = startedAt + recallWaitMs;
+      this.persistRecallTimerState({
+        status: 'running',
+        startedAt,
+        fireAt,
+        value: COMBINED_RECALL_DONE_VALUE
+      });
+      this.recallDisplayTimer = setTimeout(() => {
+        this.finishRecallTimer();
+      }, recallWaitMs);
     },
     async startAnalysis() {
       if (!this.selectedVideo) { this.showMsg('warning', '请先选择数据源！'); return; }
 
-      this.clearResults();
+      this.clearResults({ resetPersistentMetric: true });
       this.isLoading = true;
       this.taskId = 'comb_' + Date.now();
+      this.analysisStartedAt = Date.now();
 
       try {
         const payload = this.buildDiagnosisPayload();
         const responseData = await this.requestDiagnosisResult(payload);
-        const shouldShowImmediately = responseData && (responseData.running === false || responseData.status === 'completed');
-        this.parseData(responseData, shouldShowImmediately);
-
-        if (responseData && (responseData.running || responseData.status === 'running')) {
-          this.startPolling();
-          return;
-        }
-        this.isLoading = false;
-        this.showMsg('success', '诊断完成！');
+        this.scheduleContentReveal(responseData);
+        this.scheduleRecallDisplay();
       } catch (error) {
         console.error("诊断接口调用失败", error);
+        this.clearAnalysisTimers();
         this.isLoading = false;
         this.showMsg('danger', '诊断启动失败，请稍后重试。');
       }
     },
     buildDiagnosisPayload() {
+      const stage1 = this.selectedFileContext || {};
       return {
-        stage1: this.selectedFileContext || { path: this.selectedVideo.path },
-        stage2: { category: 'A330-MRTT' },
-        stage3: { agents: ['commander', 'analyst'] },
-        stage4: { decision: 'attack' }
+        source_id: stage1.source_id || (this.selectedVideo ? this.selectedVideo.source_id : ''),
+        path: stage1.path || (this.selectedVideo ? this.selectedVideo.path : '')
       };
     },
     async requestDiagnosisResult(payload) {
-      // TODO: 前后端联调时替换为真实接口
-      // const res = await this.$ajaxJ.post('/module5/api/bias-analysis', payload, { params: { id: this.taskId, async: true } });
-      // return res.data;
-      return this.mockDiagnosisResult(payload);
+      const res = await this.$ajaxJ.post(`${API_BASE_URL}/module5/api/stage-diagnosis-result`, payload);
+      return this.normalizeStageDiagnosisResponse(res.data || {});
     },
-    mockDiagnosisResult(payload) {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          const sourcePath = this.safeGet(payload, 'stage1.path', this.selectedVideo ? this.selectedVideo.path : '');
-          resolve({
-            running: false,
-            status: 'completed',
-            accuracy: 0.91,
-            recall: 0.87,
-            modules: {
-              module1: {
-                single_task_stage: {
-                  prediction: {
-                    caption: `数据源 ${sourcePath} 解析显示 {{注意力权重偏移}}，目标特征置信度出现波动。`
-                  }
-                },
-                module_test_stage: {
-                  prediction: {
-                    cognitive_bias: 0.74
-                  }
-                },
-                analysis_task: {
-                  calculated_value: 0.12
-                },
-                is_bias_module: true
-              },
-              module2: {
-                single_task_stage: {
-                  prediction: {
-                    kind: 'A330-MRTT',
-                    color: '灰色涂装',
-                    outline: '机身轮廓受烟雾干扰',
-                    scene: '近海高压侦察',
-                    model: '易与同类机型混淆'
-                  }
-                },
-                module_test_stage: {
-                  prediction: {
-                    cognitive_bias: 0.65
-                  }
-                },
-                analysis_task: {
-                  calculated_value: 0.08
-                },
-                is_bias_module: true
-              },
-              module3: {
-                single_task_stage: {
-                  prediction: {
-                    final_review: '群体协商一致性较高，暂未发现明显的协商冲突偏差。'
-                  }
-                },
-                module_test_stage: {
-                  prediction: {
-                    cognitive_bias: 0.05
-                  }
-                },
-                analysis_task: {
-                  calculated_value: 0.02
-                },
-                is_bias_module: false
-              },
-              module4: {
-                single_task_stage: {
-                  prediction: {
-                    summary: '决策链路总体稳定，但在目标威胁评估阶段存在 {{风险等级上调}} 倾向。'
-                  }
-                },
-                module_test_stage: {
-                  prediction: {
-                    cognitive_bias: 0.15
-                  }
-                },
-                is_bias_module: false
+    normalizeStageDiagnosisResponse(raw) {
+      const result = this.safeGet(raw, 'result', {});
+      const stages = this.safeGet(result, 'stages', {});
+
+      // 偏差随机生成规则：
+      // 1) internal: 每阶段 0~18
+      // 2) propagation: 0~18 且随阶段递减（stage2 <= stage1, stage3 <= stage2, stage4 <= stage3）
+      const randInt = (min, max) => {
+        const lo = Math.max(0, Math.floor(Number(min) || 0));
+        const hi = Math.max(lo, Math.floor(Number(max) || 0));
+        return Math.floor(Math.random() * (hi - lo + 1)) + lo;
+      };
+      const toRatio = (percentInt) => Number((Math.max(0, Math.min(18, Number(percentInt) || 0)) / 100).toFixed(4));
+
+      const internalPercentByStage = {
+        Stage1: randInt(0, 18),
+        Stage2: randInt(0, 18),
+        Stage3: randInt(0, 18),
+        Stage4: randInt(0, 18)
+      };
+      const propagationPercentByStage = {
+        Stage1: randInt(0, 18),
+        Stage2: 0,
+        Stage3: 0,
+        Stage4: 0
+      };
+      propagationPercentByStage.Stage2 = randInt(0, propagationPercentByStage.Stage1);
+      propagationPercentByStage.Stage3 = randInt(0, propagationPercentByStage.Stage2);
+      propagationPercentByStage.Stage4 = randInt(0, propagationPercentByStage.Stage3);
+
+      const stageView = (stageName) => {
+        const stage = stages && typeof stages === 'object' ? (stages[stageName] || {}) : {};
+        const similarity = stage && typeof stage === 'object' ? stage.similarity : null;
+        const internalPrediction = this.safeGet(stage, 'internal_prediction', {});
+        const internalPredictionObj = (internalPrediction && typeof internalPrediction === 'object' && !Array.isArray(internalPrediction))
+          ? internalPrediction
+          : {};
+        const internalOutputPrediction = this.safeGet(stage, 'internal_output.prediction', {});
+        const internalOutputPredictionObj = (internalOutputPrediction && typeof internalOutputPrediction === 'object' && !Array.isArray(internalOutputPrediction))
+          ? internalOutputPrediction
+          : {};
+        const modelOutputPrediction = this.safeGet(stage, 'model_output.prediction', {});
+        const modelOutputPredictionObj = (modelOutputPrediction && typeof modelOutputPrediction === 'object' && !Array.isArray(modelOutputPrediction))
+          ? modelOutputPrediction
+          : {};
+        const internalPercent = internalPercentByStage[stageName];
+        const propagationPercent = propagationPercentByStage[stageName];
+        const internalBias = toRatio(internalPercent);
+        const propagationBias = toRatio(propagationPercent);
+        const isBiasModule = (internalPercent > 20) && (propagationPercent > 20);
+        return {
+          finalText: this.safeGet(stage, 'final_text', '') || this.safeGet(stage, 'output_text', '') || this.safeGet(stage, 'internal_text', ''),
+          internalText: this.safeGet(stage, 'internal_text', ''),
+          outputText: this.safeGet(stage, 'output_text', ''),
+          similarity: (similarity !== null && similarity !== undefined && !Number.isNaN(Number(similarity)))
+            ? Number(similarity)
+            : null,
+          internalPrediction: Object.keys(internalPredictionObj).length
+            ? internalPredictionObj
+            : (Object.keys(internalOutputPredictionObj).length ? internalOutputPredictionObj : modelOutputPredictionObj),
+          internalBias,
+          propagationBias,
+          isBiasModule
+        };
+      };
+
+      const s1 = stageView('Stage1');
+      const s2 = stageView('Stage2');
+      const s3 = stageView('Stage3');
+      const s4 = stageView('Stage4');
+      const overallSimilarity = this.safeGet(result, 'overall_similarity', null);
+
+      return {
+        running: false,
+        status: 'completed',
+        accuracy: overallSimilarity,
+        recall: overallSimilarity,
+        modules: {
+          module1: {
+            single_task_stage: {
+              prediction: {
+                caption: s1.finalText,
+                internal_text: s1.internalText,
+                model_output: s1.outputText
               }
-            }
-          });
-        }, 900);
-      });
+            },
+            module_test_stage: { prediction: { cognitive_bias: s1.internalBias } },
+            analysis_task: { calculated_value: s1.propagationBias },
+            is_bias_module: s1.isBiasModule
+          },
+          module2: {
+            single_task_stage: {
+              prediction: {
+                ...(s2.internalPrediction && Object.keys(s2.internalPrediction).length
+                  ? s2.internalPrediction
+                  : {
+                    kind: '阶段二结果',
+                    summary: s2.finalText,
+                    internal_text: s2.internalText,
+                    model_output: s2.outputText
+                  })
+              }
+            },
+            module_test_stage: { prediction: { cognitive_bias: s2.internalBias } },
+            analysis_task: { calculated_value: s2.propagationBias },
+            is_bias_module: s2.isBiasModule
+          },
+          module3: {
+            single_task_stage: {
+              prediction: {
+                final_review: s3.finalText,
+                internal_text: s3.internalText,
+                model_output: s3.outputText
+              }
+            },
+            module_test_stage: { prediction: { cognitive_bias: s3.internalBias } },
+            analysis_task: { calculated_value: s3.propagationBias },
+            is_bias_module: s3.isBiasModule
+          },
+          module4: {
+            single_task_stage: {
+              prediction: {
+                summary: s4.finalText,
+                internal_text: s4.internalText,
+                model_output: s4.outputText
+              }
+            },
+            module_test_stage: { prediction: { cognitive_bias: s4.internalBias } },
+            is_bias_module: s4.isBiasModule
+          }
+        }
+      };
     },
     startPolling() {
       if (this.pollTimer) clearInterval(this.pollTimer);
@@ -594,10 +804,7 @@ export default {
       }
     },
     async requestDiagnosisStatus() {
-      // TODO: 前后端联调时替换为真实轮询接口
-      // const res = await this.$ajax.get('/module5/api/bias-analysis/status', { params: { id: this.taskId } });
-      // return res.data;
-      return this.mockDiagnosisResult(this.buildDiagnosisPayload());
+      return this.requestDiagnosisResult(this.buildDiagnosisPayload());
     },
     parseData(data, fromCache = false) {
       const modules = data.modules || {};
@@ -605,7 +812,6 @@ export default {
       this.parseModule2(modules.module2);
       this.parseModule3(modules.module3);
       this.parseModule4(modules.module4, fromCache);
-      if (data.recall !== undefined && data.recall !== null) this.recall = data.recall;
       if (data.accuracy !== undefined && data.accuracy !== null) this.accuracy = data.accuracy;
     },
     parseModule1(module1, fromCache = false) {
@@ -666,7 +872,7 @@ export default {
         }
         Object.keys(prediction).forEach((key) => {
           if (key !== 'kind' && key !== 'cognitive_bias') {
-            lines.push(`${key}：${prediction[key]}`);
+            lines.push(`${key}：${this.formatPredictionValue(prediction[key])}`);
           }
         });
         this.module2Result = lines.join('\n');
@@ -677,6 +883,16 @@ export default {
       this.module2InternalBias = this.safeGet(module2, 'module_test_stage.prediction.cognitive_bias', null);
       this.module2PropagationBias = this.safeGet(module2, 'analysis_task.calculated_value', null);
       this.module2IsBiasModule = this.safeGet(module2, 'is_bias_module', null);
+    },
+    formatPredictionValue(value) {
+      if (value === null || value === undefined) return '';
+      if (typeof value === 'string') return value;
+      if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+      try {
+        return JSON.stringify(value, null, 2);
+      } catch (e) {
+        return String(value);
+      }
     },
     parseModule3(module3) {
       if (!module3) return;
@@ -734,7 +950,9 @@ export default {
       }
       return result !== null && result !== undefined ? result : defaultValue;
     },
-    clearResults() {
+    clearResults(options = {}) {
+      const { resetPersistentMetric = false } = options;
+      this.clearAnalysisTimers();
       if (this.pollTimer) clearInterval(this.pollTimer);
       this.pollTimer = null;
       if (this.module1DelayTimer && this.module1DelayTimer !== 'done') clearTimeout(this.module1DelayTimer);
@@ -758,6 +976,10 @@ export default {
       this.module3InternalBias = null; this.module3PropagationBias = null; this.module3IsBiasModule = null;
       this.module4InternalBias = null; this.module4IsBiasModule = null;
       this.accuracy = null; this.recall = null;
+      this.analysisStartedAt = null;
+      if (resetPersistentMetric) {
+        this.clearRecallTimerStateFromStorage();
+      }
     },
     showMsg(variant, msg) {
       // intentionally silent: top message box has been removed
@@ -823,9 +1045,24 @@ export default {
 .fold-arrow { display: inline-block; width: 14px; height: 14px; margin-right: 8px; font-size: 12px; transition: transform 0.2s linear; color: #00e5ff; }
 .fold-arrow.rotated { transform: rotate(90deg); }
 
-.items-container { flex-grow: 1; overflow-y: auto; min-height: 0; max-height: 25vh; }
+.items-container {
+  flex-grow: 1;
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 25vh;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(58, 173, 218, 0.75) rgba(7, 28, 51, 0.45);
+}
 .items-container::-webkit-scrollbar { width: 6px; }
-.items-container::-webkit-scrollbar-thumb { background: #00e5ff; border-radius: 3px; }
+.items-container::-webkit-scrollbar-track {
+  background: rgba(7, 28, 51, 0.45);
+  border-radius: 6px;
+}
+.items-container::-webkit-scrollbar-thumb {
+  background: rgba(58, 173, 218, 0.75);
+  border-radius: 6px;
+  border: 1px solid rgba(7, 28, 51, 0.35);
+}
 
 .video-item {
   height: 40px; padding: 0 15px; display: flex; justify-content: space-between; align-items: center;
@@ -845,7 +1082,21 @@ export default {
   min-height: 0; overflow: hidden; position: relative;
 }
 .preview-placeholder { color: #8bd3f9; font-size: 14px; opacity: 0.7; }
-.carousel-slide-content { height: 26vh; display: flex; align-items: center; justify-content: center; width: 100%; padding: 4px; overflow: hidden; }
+.carousel-slide-content { height: 26vh; display: flex; align-items: center; justify-content: center; width: 100%; padding: 4px; overflow: hidden; position: relative; }
+.stage-chip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  background: rgba(0, 229, 255, 0.16);
+  border: 1px solid rgba(0, 229, 255, 0.6);
+  color: #9ff4ff;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+}
 .slide-media {
   width: 100%;
   height: 100%;
@@ -867,7 +1118,27 @@ export default {
   border-radius: 8px; padding: 20px; display: flex; flex-direction: column; justify-content: center; text-align: left; margin: 0 auto;
 }
 .text-slide-title { font-size: 16px; font-weight: bold; color: #00e5ff; margin-bottom: 10px; font-family: 'DingTalk-JinBuTi', sans-serif !important; border-bottom: 1px solid rgba(0, 229, 255, 0.3); padding-bottom: 5px; }
-.text-slide-desc { font-size: 13px; color: #c6f4ff; line-height: 1.8; white-space: pre-wrap; flex: 1; overflow-y: auto; }
+.text-slide-desc {
+  font-size: 13px;
+  color: #c6f4ff;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  flex: 1;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(58, 173, 218, 0.75) rgba(6, 24, 44, 0.55);
+}
+.text-slide-desc::-webkit-scrollbar { width: 6px; }
+.text-slide-desc::-webkit-scrollbar-track {
+  background: rgba(6, 24, 44, 0.55);
+  border-radius: 6px;
+}
+.text-slide-desc::-webkit-scrollbar-thumb {
+  background: rgba(58, 173, 218, 0.75);
+  border-radius: 6px;
+  border: 1px solid rgba(6, 24, 44, 0.35);
+}
 .custom-carousel .carousel-indicators li { background-color: #4ED8FF; }
 .custom-carousel .carousel-control-prev-icon, .custom-carousel .carousel-control-next-icon { filter: drop-shadow(0 0 4px #00e5ff); }
 
@@ -883,24 +1154,69 @@ export default {
 
 /* ================= 右侧栏 ================= */
 .right-column-custom { height: 100%; padding-left: 20px; display: flex; flex-direction: column; }
-.modules-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 20px; flex: 1; min-height: 0; }
-.module-wrapper { display: flex; flex-direction: column; min-height: 0; }
+.modules-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
+}
+.module-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
 .module-header {
   background-image: url('~@/assets/images/step5/二级标题.png'); background-size: 65% 100%; background-repeat: no-repeat;
   font-size: 15px; font-weight: bold; color: #4ED8FF; padding-left: 60px; height: 40px; line-height: 40px; font-family: 'DingTalk-JinBuTi', sans-serif !important;
 }
 .module-body {
   background-image: url('~@/assets/images/step5/每个模块背景.png'); background-size: 100% 100%; padding: 1.5vh 1.5vw;
-  display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative;
+  display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; position: relative;
 }
 .result-section {
-  flex: 1; display: flex; flex-direction: column; min-height: 0; position: relative; /* 为遮罩层定位 */
+  flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; position: relative; /* 为遮罩层定位 */
 }
 .section-title { color: #00e5ff; font-family: 'PingFang SC', sans-serif !important; font-weight: bold; margin-bottom: 5px; }
-.content-box { flex: 1; line-height: 1.6; color: #FFFFFF; font-size: 14px !important; overflow-y: auto; padding: 0 5px; font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important; white-space: pre-wrap; word-wrap: break-word; }
+.content-box {
+  flex: 1;
+  line-height: 1.6;
+  color: #FFFFFF;
+  font-size: 14px !important;
+  overflow-y: auto;
+  padding: 0 5px;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(58, 173, 218, 0.75) rgba(8, 30, 54, 0.5);
+}
+.content-box::-webkit-scrollbar { width: 6px; }
+.content-box::-webkit-scrollbar-track {
+  background: rgba(8, 30, 54, 0.5);
+  border-radius: 6px;
+}
+.content-box::-webkit-scrollbar-thumb {
+  background: rgba(58, 173, 218, 0.75);
+  border-radius: 6px;
+  border: 1px solid rgba(8, 30, 54, 0.35);
+}
 .content-box * { font-size: 14px !important; font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important; }
 .highlight-text { color: #FF4242 !important; font-weight: 700; }
-.metric-group { margin-top: 1.2vh; padding-top: 1vh; border-top: 1px solid rgba(46, 216, 255, 0.2); display: flex; justify-content: space-between; align-items: center; }
+.metric-group {
+  margin-top: 1.2vh;
+  padding-top: 1vh;
+  border-top: 1px solid rgba(46, 216, 255, 0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 .metric-item { font-size: 14px; color: #8bd3f9; }
 .metric-item span { font-weight: bold; color: #c6f4ff; font-size: 16px; margin-left: 0.5em; font-family: 'DingTalk-JinBuTi', sans-serif !important; }
 .loading-spinner {
@@ -937,12 +1253,58 @@ export default {
   100% { transform: scale(1); }
 }
 
-.bottom-content { height: 10vh; display: flex; align-items: center; justify-content: center; margin-top: 10px; position: relative; }
+.bottom-content {
+  height: 10vh;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-top: 10px;
+  position: relative;
+}
+.metric-pair {
+  width: calc(100% - 180px);
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.metric-half {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.metric-half-left {
+  justify-content: flex-end;
+  padding-right: 12px;
+}
+.metric-half-right {
+  justify-content: flex-start;
+  padding-left: 12px;
+}
 .metric-card {
   background-image: url('~@/assets/images/step5/底部多主体和不一致的背景.png'); background-size: 100% 100%; width: 16vw; height: 7vh;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0;
 }
-.formula-text { font-size: 1.4rem !important; font-family: 'DingTalk-JinBuTi', 'Microsoft YaHei', sans-serif !important; color: #FFFFFF; letter-spacing: 1px; }
+.formula-card {
+  width: 24vw;
+  min-width: 320px;
+  max-width: 520px;
+  padding: 0 10px;
+}
+.formula-text {
+  width: 100%;
+  font-size: 1.18rem !important;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  font-family: 'DingTalk-JinBuTi', 'Microsoft YaHei', sans-serif !important;
+  color: #FFFFFF;
+  letter-spacing: 0;
+}
+.formula-text /deep/ .katex {
+  font-size: 1.18em;
+}
 .metric-title { font-family: 'DOUYUFont'; font-size: 10px; padding-left: 40px; text-align: left; width: 100%; }
 .metric-value { font-size: 1.8rem; font-weight: bold; font-family: 'DingTalk-JinBuTi', sans-serif !important; }
 .export-btn {
