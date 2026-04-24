@@ -96,7 +96,7 @@
         </div>
 
         <div class="button-container">
-          <button @click="startNegotiation" class="btn-start-detect" :disabled="!isApiLoaded || isLoading">
+          <button @click="startNegotiation" class="btn-start-detect" :disabled="!canStartNegotiation || isLoading">
             <span>{{ isLoading ? '协商中...' : '开始群体协商' }}</span>
           </button>
         </div>
@@ -119,7 +119,7 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound1" class="panel-overlay">协商中...</div>
                   <p v-if="typeof agentARound1Result === 'object' && agentARound1Result !== null" class="agent-result">
-                    <span class="result-line">推理型号：{{ agentARound1Result.model_name || '***' }}</span>
+                    <span class="result-line">推理结果：{{ agentARound1Result.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentARound1Result.reason || '***' }}</span>
                   </p>
                   <p v-else class="agent-result">{{ agentARound1Result || '推理型号：***\n推理依据：***' }}</p>
@@ -135,7 +135,7 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound1" class="panel-overlay">协商中...</div>
                   <p v-if="typeof agentBRound1Result === 'object' && agentBRound1Result !== null" class="agent-result">
-                    <span class="result-line">推理型号：{{ agentBRound1Result.model_name || '***' }}</span>
+                    <span class="result-line">推理结果：{{ agentBRound1Result.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentBRound1Result.reason || '***' }}</span>
                   </p>
                   <p v-else class="agent-result">{{ agentBRound1Result || '推理型号：***\n推理依据：***' }}</p>
@@ -151,7 +151,7 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound1" class="panel-overlay">协商中...</div>
                   <p v-if="typeof agentCRound1Result === 'object' && agentCRound1Result !== null" class="agent-result">
-                    <span class="result-line">推理型号：{{ agentCRound1Result.model_name || '***' }}</span>
+                    <span class="result-line">推理结果：{{ agentCRound1Result.model_name || '***' }}</span>
                     <span class="result-line">推理依据：{{ agentCRound1Result.reason || '***' }}</span>
                   </p>
                   <p v-else class="agent-result">{{ agentCRound1Result || '推理型号：***\n推理依据：***' }}</p>
@@ -169,15 +169,16 @@
                   <img class="agent-avatar" :src="require('@/assets/images/step3/AB.svg')" alt="Agents" />
                   <!-- <div class="negotiation-sign">⇄</div>
                   <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" /> -->
-                  <div class="agent-label">智能体A&智能体B</div>
+                  <div class="agent-label">智能体A</div>
                 </div>
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentABNegotiation === 'object' && agentABNegotiation !== null" class="agent-result">
-                    <span class="result-line">推理型号：{{ agentABNegotiation.model_name || '***' }}</span>
-                    <span class="result-line">推理依据：{{ agentABNegotiation.reason || '***' }}</span>
+                    <span class="result-line">推理分析：{{ agentABNegotiation.battlefield_analysis || '***' }}</span>
+                    <span class="result-line">推理共识：{{ agentABNegotiation.negotiation_basis || '***' }}</span>
+                    <span class="result-line">推理分歧：{{ agentABNegotiation.deviation || '***' }}</span>
                   </p>
-                  <p v-else class="agent-result">{{ agentABNegotiation || '推理型号：***\n协商过程：***' }}</p>
+                  <p v-else class="agent-result">{{ agentABNegotiation || '推理分析：***\n推理共识：***\n推理分歧：***' }}</p>
                 </div>
               </div>
 
@@ -187,15 +188,16 @@
                   <img class="agent-avatar" :src="require('@/assets/images/step3/BC.svg')" alt="Agents" />
                   <!-- <div class="negotiation-sign">⇄</div>
                   <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" /> -->
-                  <div class="agent-label">智能体B&智能体C</div>
+                  <div class="agent-label">智能体B</div>
                 </div>
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentBCNegotiation === 'object' && agentBCNegotiation !== null" class="agent-result">
-                    <span class="result-line">推理型号：{{ agentBCNegotiation.model_name || '***' }}</span>
-                    <span class="result-line">推理依据：{{ agentBCNegotiation.reason || '***' }}</span>
+                    <span class="result-line">推理分析：{{ agentBCNegotiation.battlefield_analysis || '***' }}</span>
+                    <span class="result-line">推理共识：{{ agentBCNegotiation.negotiation_basis || '***' }}</span>
+                    <span class="result-line">推理分歧：{{ agentBCNegotiation.deviation || '***' }}</span>
                   </p>
-                  <p v-else class="agent-result">{{ agentBCNegotiation || '推理型号：***\n协商过程：***' }}</p>
+                  <p v-else class="agent-result">{{ agentBCNegotiation || '推理分析：***\n推理共识：***\n推理分歧：***' }}</p>
                 </div>
               </div>
 
@@ -205,15 +207,16 @@
                   <img class="agent-avatar" :src="require('@/assets/images/step3/CA.svg')" alt="Agents" />
                   <!-- <div class="negotiation-sign">⇄</div>
                   <img class="agent-avatar" :src="require('@/assets/images/step3/agents.png')" alt="Agents" /> -->
-                  <div class="agent-label">智能体C&智能体A</div>
+                  <div class="agent-label">智能体C</div>
                 </div>
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentCANegotiation === 'object' && agentCANegotiation !== null" class="agent-result">
-                    <span class="result-line">推理型号：{{ agentCANegotiation.model_name || '***' }}</span>
-                    <span class="result-line">推理依据：{{ agentCANegotiation.reason || '***' }}</span>
+                    <span class="result-line">推理分析：{{ agentCANegotiation.battlefield_analysis || '***' }}</span>
+                    <span class="result-line">推理共识：{{ agentCANegotiation.negotiation_basis || '***' }}</span>
+                    <span class="result-line">推理分歧：{{ agentCANegotiation.deviation || '***' }}</span>
                   </p>
-                  <p v-else class="agent-result">{{ agentCANegotiation || '推理型号：***\n协商过程：***' }}</p>
+                  <p v-else class="agent-result">{{ agentCANegotiation || '推理分析：***\n推理共识：***\n推理分歧：***' }}</p>
                 </div>
               </div>
             </div>
@@ -227,7 +230,7 @@
           <button
             class="btn-bias-detect"
             @click="handleBiasDetect"
-            :disabled="isRightLoadingAccuracy || isLoadingRound1 || isLoadingRound2"
+            :disabled="!pendingNegotiationResult || isRightLoadingAccuracy || isLoadingRound1 || isLoadingRound2"
           >
             群体协商偏差检测
           </button>
@@ -249,7 +252,17 @@
               <div class="result-section">
                 <div class="section-header">分歧点：</div>
                 <div class="section-content">
-                  <p class="result-text" v-html="formattedDisagreementPoints || '***'"></p>
+                  <template v-if="deviationAnalysisText || deviationReportText">
+                    <div v-if="deviationAnalysisText">
+                      <div class="section-sub">分歧分析</div>
+                      <p class="result-text" style="white-space: pre-wrap;">{{ deviationAnalysisText }}</p>
+                    </div>
+                    <div v-if="deviationReportText" :style="deviationAnalysisText ? { marginTop: '10px' } : {}">
+                      <div class="section-sub">偏差报告</div>
+                      <p class="result-text" style="white-space: pre-wrap;">{{ deviationReportText }}</p>
+                    </div>
+                  </template>
+                  <p v-else class="result-text">***</p>
                 </div>
               </div>
             </template>
@@ -263,7 +276,7 @@
               <div class="final-result-section">
                 <div class="final-result-title">协商结果</div>
                 <div class="final-model-display">
-                  <p class="final-model-text">{{ finalResult || 'MiG-25Foxbat' }}</p>
+                  <p class="final-model-text" style="white-space: pre-wrap;">{{ finalResult || '请完成「开始群体协商」并点击「群体协商偏差检测」后查看' }}</p>
                 </div>
               </div>
             </template>
@@ -302,7 +315,15 @@
   </div>
 </template><script>
 import axios from 'axios';
-const TARGET_DETECTION_API_BASE_URL = 'http://10.109.253.71:5236';
+// 开发环境走 webpack devServer 代理，避免 CORS（config/index.js proxyTable）
+const TARGET_DETECTION_API_BASE_URL = '/td5236';
+const MODULE3_BASE = (process.env.VUE_APP_MODULE3_BASE || '').replace(/\/$/, '');
+const MODULE3_REFINE_URL = MODULE3_BASE
+  ? `${MODULE3_BASE}/refine`
+  : '/module3/refine';
+const MODULE3_EXPORT_URL = MODULE3_BASE
+  ? `${MODULE3_BASE}/export`
+  : '/module3/export';
 // img_path地址（模块一传参）
 // const IMG_PATH_URL = localStorage.getItem('imagePath') || '/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png';
 // const DEVICE_TYPE = localStorage.getItem('deviceType') || '飞机';
@@ -340,7 +361,7 @@ export default {
       agentBCNegotiation: "",
       agentCANegotiation: "",
       deviationProcess: "",
-      finalResult: "群体协商之后的结果",
+      finalResult: '',
       isLoading: false,
       accuracyRate: '—',
       color: '',
@@ -349,8 +370,12 @@ export default {
       ground_truth: '',
       isApiLoaded: false, // 新增：接口加载状态，控制按钮禁用
       consensusSummary: "",
-      disagreementPoints: "",
-      differentModelAndReason: "",
+      /** final_review，分项展示，避免与对象类型 .replace 冲突 */
+      deviationAnalysis: '',
+      deviationReport: '',
+      disagreementPoints: '',
+      differentModelAndReason: '',
+      disagreementPointsHighlight: '',
       // compare 图片列表/详情相关数据
       compareFiles: [],
       compareView: 'list', // 'list' | 'detail'
@@ -364,7 +389,7 @@ export default {
 
       // 视频相关数据（此页面已不展示，但保留兼容）
       videoUrl: null,
-      videoMessage: '正在从 LocalStorage 加载视频...',
+      videoMessage: '',
       // 中间区域加载与显示控制
       isLoadingRound1: false,
       isLoadingRound2: false,
@@ -408,57 +433,70 @@ export default {
     },
     // 格式化共识摘要，将需要标红的文字加上红色样式
     formattedConsensusSummary() {
-      let summary = this.consensusSummary;
-      
-      // 如果分歧点不是'无'，则标红显示
-      if (this.disagreementPoints && this.disagreementPoints !== '无') {
-        summary = summary.replace(
-          new RegExp(this.disagreementPoints, 'g'),
-          `<span style="color: red; font-weight: bold;">${this.disagreementPoints}</span>`
-        );
+      let summary = this.toDisplayString(this.consensusSummary);
+      const dp = this.toDisplayString(this.deviationAnalysis);
+      const dmr = this.toDisplayString(this.differentModelAndReason);
+
+      if (dp && dp !== '无') {
+        try {
+          summary = summary.replace(
+            new RegExp(dp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+            `<span style="color: red; font-weight: bold;">${dp}</span>`
+          );
+        } catch (e) {
+          /* ignore bad regex */
+        }
       }
-      
-      // 如果不同型号及原因不是'无'，则标红显示
-      if (this.differentModelAndReason && this.differentModelAndReason !== '无') {
-        summary = summary.replace(
-          new RegExp(this.differentModelAndReason, 'g'),
-          `<span style="color: red; font-weight: bold;">${this.differentModelAndReason}</span>`
-        );
+      if (dmr && dmr !== '无') {
+        try {
+          summary = summary.replace(
+            new RegExp(dmr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+            `<span style="color: red; font-weight: bold;">${dmr}</span>`
+          );
+        } catch (e) {
+          /* ignore */
+        }
       }
-      
       return summary;
     },
-    // 格式化分歧点，高亮显示特定部分
-    formattedDisagreementPoints() {
-      let points = this.disagreementPoints;
-      
-      // 如果有需要高亮的部分，则用红色样式包裹
-      if (this.disagreementPointsHighlight && this.disagreementPointsHighlight !== '无' && points) {
-        points = points.replace(
-          new RegExp(this.disagreementPointsHighlight, 'g'),
-          `<span style="color: red; font-weight: bold;">${this.disagreementPointsHighlight}</span>`
-        );
-      }
-      
-      return points;
-    },
-    // 格式化准确率显示
+    // 格式化准确率显示（兼容 0.927、92.7、"92.7%" 等）
     formattedAccuracyRate() {
       if (this.accuracyRate === '—' || this.accuracyRate === null || this.accuracyRate === undefined || this.accuracyRate === '') {
         return 'N/A';
       }
-      // 如果是数字，转换为百分比
-      const numValue = typeof this.accuracyRate === 'number' ? this.accuracyRate : parseFloat(this.accuracyRate);
+      const raw = typeof this.accuracyRate === 'number' ? this.accuracyRate : String(this.accuracyRate).trim();
+      const numValue = parseFloat(String(raw).replace(/%$/, ''));
       if (!isNaN(numValue)) {
-        // 如果值在 0-1 之间，转换为百分比
         if (numValue <= 1 && numValue >= 0) {
           return (numValue * 100).toFixed(2);
         }
-        // 如果已经是百分比形式，直接返回（保留两位小数）
         return numValue.toFixed(2);
       }
-      // 如果不是数字，直接返回原值
       return String(this.accuracyRate);
+    },
+    // 仅当点击了上方列表中的图片（非视频）时允许开始群体协商
+    canStartNegotiation() {
+      return this.selectedDetailType === 'compare' && !!this.selectedCompareFile;
+    },
+    deviationAnalysisText() {
+      const v = this.deviationAnalysis;
+      // 分歧分析区仅展示 deviation_analysis 里的两个关键字段
+      if (v && typeof v === 'object') {
+        const points = this.toDisplayString(v.disagreement_points);
+        const reason = this.toDisplayString(
+          v.different_analysis_and_reason != null
+            ? v.different_analysis_and_reason
+            : v.differentModelAndReason
+        );
+        const lines = [];
+        if (points) lines.push(`分歧点: ${points}`);
+        if (reason) lines.push(`分歧分析及原因: ${reason}`);
+        return lines.join('\n');
+      }
+      return this.toDisplayString(v);
+    },
+    deviationReportText() {
+      return this.toDisplayString(this.deviationReport);
     }
   },
   mounted() {
@@ -469,12 +507,129 @@ export default {
     
     // 从localStorage读取预测信息
     this.loadPredictInfoFromStorage();
-    // 从localStorage读取模块三结果
-    this.loadModule3ResultsFromStorage();
-    // 检查准确率计时状态
+    // 模块三结果不在此页首屏从 localStorage 回显，须「选图 → 开始群体协商 → 接口成功」后再展示
     this.checkAccuracyTimer();
   },
   methods: {
+    toDisplayString(val) {
+      if (val == null) return '';
+      if (typeof val === 'string') return val;
+      if (typeof val === 'object') {
+        try {
+          return JSON.stringify(val);
+        } catch (e) {
+          return String(val);
+        }
+      }
+      return String(val);
+    },
+    /** 清空中间/右侧协商展示（不清理 localStorage；切换图片或发起新请求前调用） */
+    clearNegotiationDisplay() {
+      this.agentARound1Result = '';
+      this.agentBRound1Result = '';
+      this.agentCRound1Result = '';
+      this.agentABNegotiation = '';
+      this.agentBCNegotiation = '';
+      this.agentCANegotiation = '';
+      this.consensusSummary = '';
+      this.deviationAnalysis = '';
+      this.deviationReport = '';
+      this.disagreementPoints = '';
+      this.disagreementPointsHighlight = '';
+      this.finalResult = '';
+      this.pendingNegotiationResult = null;
+      this.isRound1Displayed = false;
+      this.isRound2Displayed = false;
+      this.isRightLoadingResults = false;
+      this.accuracyRate = '—';
+    },
+    /** 模块三返回的 accuracy_metrics.accuracy */
+    getAccuracyFromModule3Data(data) {
+      if (!data || typeof data !== 'object') return null;
+      const m = data.accuracy_metrics;
+      if (!m || typeof m !== 'object') return null;
+      const a = m.accuracy;
+      if (a === undefined || a === null || a === '') return null;
+      return a;
+    },
+    getInitialAnalysesPayload(data) {
+      if (!data || typeof data !== 'object') return null;
+      return data.initial_analyses || (data.negotiation_details && data.negotiation_details.initial_analyses) || null;
+    },
+    getNegotiationResultsPayload(data) {
+      if (!data || typeof data !== 'object') return null;
+      return data.negotiation_results || (data.negotiation_details && data.negotiation_details.negotiation_results) || null;
+    },
+    pickFromAgentMap(map) {
+      if (!map || typeof map !== 'object') {
+        return { a: '', b: '', c: '' };
+      }
+      const pick = (keys) => {
+        for (let i = 0; i < keys.length; i++) {
+          const v = map[keys[i]];
+          if (v !== undefined && v !== null && v !== '') return v;
+        }
+        return '';
+      };
+      return {
+        a: pick(['Agent_A', 'agent_a', 'A']),
+        b: pick(['Agent_B', 'agent_b', 'B']),
+        c: pick(['Agent_C', 'agent_c', 'C'])
+      };
+    },
+    /**
+     * 从 module3 根对象填充界面（与 localStorage module3Res 结构一致）
+     * @param {object} data
+     * @param {object} [opts]
+     * @param {boolean} [opts.round1] 一轮智能体
+     * @param {boolean} [opts.round2] 二轮智能体
+     * @param {boolean} [opts.review] final_review + 分歧子段
+     * @param {boolean} [opts.finalBlock] 协商结果（final_battlefield_analysis 优先）
+     * @param {boolean} [opts.accuracy] 是否写入 accuracy_metrics.accuracy → 偏差识别准确率
+     */
+    applyModule3Fields(data, opts) {
+      const o = Object.assign(
+        { round1: true, round2: true, review: true, finalBlock: true, accuracy: true },
+        opts || {}
+      );
+      if (!data || typeof data !== 'object') return;
+
+      if (o.round1) {
+        const init = this.getInitialAnalysesPayload(data);
+        const r1 = this.pickFromAgentMap(init);
+        this.agentARound1Result = r1.a || '';
+        this.agentBRound1Result = r1.b || '';
+        this.agentCRound1Result = r1.c || '';
+      }
+      if (o.round2) {
+        const res = this.getNegotiationResultsPayload(data);
+        const r2 = this.pickFromAgentMap(res);
+        this.agentABNegotiation = r2.a || '';
+        this.agentBCNegotiation = r2.b || '';
+        this.agentCANegotiation = r2.c || '';
+      }
+      if (o.review) {
+        const fr = data.final_review;
+        this.consensusSummary = fr && fr.consensus_summary != null ? fr.consensus_summary : '';
+        this.deviationAnalysis = fr && fr.deviation_analysis != null ? fr.deviation_analysis : '';
+        this.deviationReport = fr && fr.deviation_analysis_report != null ? fr.deviation_analysis_report : '';
+        this.disagreementPoints = this.toDisplayString(this.deviationAnalysis);
+        this.disagreementPointsHighlight = '';
+      }
+      if (o.finalBlock) {
+        if (data.final_battlefield_analysis != null && data.final_battlefield_analysis !== '') {
+          this.finalResult = this.toDisplayString(data.final_battlefield_analysis);
+        } else if (data.final_model_name != null && data.final_model_name !== '') {
+          this.finalResult = this.toDisplayString(data.final_model_name);
+        }
+      }
+      if (o.accuracy) {
+        const acc = this.getAccuracyFromModule3Data(data);
+        if (acc !== null) {
+          this.accuracyRate = acc;
+        }
+      }
+    },
     // 导航到首页
     navigateHome() {
       this.$router.push('/');
@@ -567,7 +722,7 @@ export default {
     },
     // 原有的API请求方法作为备用
     fetchPredictInfoFromApi() {
-      axios.get('http://10.109.253.71:8001/module2/list', {
+      axios.get('/module2/list', {
         params: {
           img_path: `${IMG_PATH_URL}`,
           device_type: `${DEVICE_TYPE}`
@@ -600,15 +755,44 @@ export default {
       });
     },
 
+    /** 从 files.json 解析出文件名数组（兼容对象包裹、JSON 字符串；避免误把 HTML 当数组） */
+    parseCompareFileList(raw) {
+      if (raw == null) return [];
+      let v = raw;
+      if (typeof v === 'string') {
+        const t = v.trim();
+        if (t.startsWith('<') || t.startsWith('<!')) {
+          console.warn('[GroupNegotiation] files.json 返回了 HTML 页面而非 JSON，请检查 /static/compare/files.json 是否被路由吞掉');
+          return [];
+        }
+        try {
+          v = JSON.parse(t);
+        } catch (e) {
+          return [];
+        }
+      }
+      if (Array.isArray(v)) return v;
+      if (v && Array.isArray(v.data)) return v.data;
+      if (v && Array.isArray(v.files)) return v.files;
+      if (v && Array.isArray(v.list)) return v.list;
+      return [];
+    },
     // 加载 compare 静态资源清单（静态文件里提供 files.json）
     loadCompareFiles() {
       axios
         .get('/static/compare/files.json')
         .then(res => {
-          const list = res.data;
-          this.compareFiles = Array.isArray(list) ? list : [];
-          this.compareMessage =
-            this.compareFiles.length > 0 ? '' : '暂无compare图片文件';
+          const raw = res && res.data;
+          const list = this.parseCompareFileList(raw);
+          this.compareFiles = list;
+          if (list.length > 0) {
+            this.compareMessage = '';
+            console.log('[GroupNegotiation] compare 列表已加载，条数:', list.length);
+          } else {
+            this.compareMessage = '暂无compare图片文件';
+            const tip = typeof raw === 'string' && raw.length > 200 ? raw.slice(0, 120) + '…' : raw;
+            console.warn('[GroupNegotiation] compare 列表为空。response.data 预览:', tip);
+          }
         })
         .catch(err => {
           console.error('加载 compare files.json 失败:', err);
@@ -617,21 +801,18 @@ export default {
         });
     },
     loadTargetDetectionVideos() {
+      this.videoMessage = '正在加载视频列表...';
       axios
         .get(`${TARGET_DETECTION_API_BASE_URL}/videos`)
         .then(res => {
           const videos = res && res.data && Array.isArray(res.data.videos) ? res.data.videos : [];
           this.targetDetectionVideos = videos;
-          if (!videos.length) {
-            this.videoMessage = '暂无target-detection视频文件';
-          } else {
-            this.videoMessage = '';
-          }
+          this.videoMessage = videos.length > 0 ? '' : '暂无远程视频';
         })
         .catch(err => {
           console.error('加载 target-detection 视频列表失败:', err);
           this.targetDetectionVideos = [];
-          this.videoMessage = '加载target-detection视频列表失败';
+          this.videoMessage = '无法加载视频列表（检查网络或代理 /td5236）';
         });
     },
     buildTargetVideoUrl(videoName) {
@@ -642,8 +823,10 @@ export default {
     },
     openSourceItem(item) {
       if (!item || !item.type || !item.name) return;
+      this.clearNegotiationDisplay();
       this.selectedSourceKey = item.key;
       this.compareView = 'detail';
+      console.log('[GroupNegotiation] 点击列表项:', item);
 
       if (item.type === 'compare') {
         this.selectedDetailType = 'compare';
@@ -662,6 +845,7 @@ export default {
     },
     // 切换到图片详情
     async openCompareImage(name) {
+      console.log('[GroupNegotiation] 选中协商图片:', name);
       this.selectedCompareFile = name;
       this.compareView = 'detail';
       this.selectedDetailType = 'compare';
@@ -764,7 +948,12 @@ export default {
       this.fullHeight = window.innerHeight;
     },
     startNegotiation() {
-      console.log("开始群体协商");
+      if (!this.canStartNegotiation) {
+        console.warn('[GroupNegotiation] 未选择图片，禁止发起群体协商');
+        alert('请先点击上方列表中的图片，再开始群体协商。');
+        return;
+      }
+      console.log('[GroupNegotiation] 开始群体协商，当前图片:', this.selectedCompareFile);
       this.startInfer();
     },
     exportResults() {
@@ -773,7 +962,7 @@ export default {
       try {
         // 创建隐藏的下载链接
         const link = document.createElement('a');
-        link.href = 'http://10.109.253.71:8877/export';
+        link.href = '/module3/export';
         link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
@@ -786,32 +975,26 @@ export default {
       }
     },
     
-    // 读取本地已存在的模块三结果并直接回显
+    /**
+     * 从 localStorage 恢复 module3Res（本页不自动调用；若需可手动触发）
+     */
     loadModule3ResultsFromStorage() {
       try {
         const stored = localStorage.getItem('module3Res');
         if (!stored) return;
         const data = JSON.parse(stored);
         if (!data) return;
-        // 回显所有结果（直接显示两轮与右侧结果）
-        this.finalResult = data.final_model_name;
-        this.consensusSummary = (data.final_review && data.final_review.consensus_summary) || '';
-        this.disagreementPoints = (data.final_review && data.final_review.deviation_analysis) || '';
-        this.disagreementPointsHighlight = (data.final_review && data.final_review.deviation_analysis_report) || '';
-        this.agentARound1Result = (data.negotiation_details && data.negotiation_details.initial_analyses && data.negotiation_details.initial_analyses.Agent_A) || '';
-        this.agentBRound1Result = (data.negotiation_details && data.negotiation_details.initial_analyses && data.negotiation_details.initial_analyses.Agent_B) || '';
-        this.agentCRound1Result = (data.negotiation_details && data.negotiation_details.initial_analyses && data.negotiation_details.initial_analyses.Agent_C) || '';
-        this.agentABNegotiation = (data.negotiation_details && data.negotiation_details.negotiation_results && data.negotiation_details.negotiation_results.Agent_A) || '';
-        this.agentBCNegotiation = (data.negotiation_details && data.negotiation_details.negotiation_results && data.negotiation_details.negotiation_results.Agent_B) || '';
-        this.agentCANegotiation = (data.negotiation_details && data.negotiation_details.negotiation_results && data.negotiation_details.negotiation_results.Agent_C) || '';
-        // 注意：准确率的显示由 checkAccuracyTimer 方法控制，这里不直接设置
-        // this.accuracyRate = '92.70%'; // 固定准确率，但显示取决于计时状态
+        this.applyModule3Fields(data, {
+          round1: true,
+          round2: true,
+          review: true,
+          finalBlock: true
+        });
         this.isRound1Displayed = true;
         this.isRound2Displayed = true;
         this.isLoadingRound1 = false;
         this.isLoadingRound2 = false;
         this.isRightLoadingResults = false;
-        // isRightLoadingAccuracy 由 checkAccuracyTimer 控制
         console.log('已从 localStorage 回显 module3Res');
       } catch (e) {
         console.warn('读取 module3Res 失败：', e);
@@ -819,59 +1002,60 @@ export default {
     },
 
     async startInfer() {
-      // 改为仅中间区域显示加载
       this.isLoading = false;
+      this.clearNegotiationDisplay();
       this.isLoadingRound1 = true;
       this.isLoadingRound2 = true;
       this.isRound1Displayed = false;
       this.isRound2Displayed = false;
-      const module1ResStr = localStorage.getItem('module1Res');
-      // 安全解析 module1Res，避免 localStorage 缺失或格式错误导致抛出异常
-      let imgPath = '';
-      if (module1ResStr) {
-        try {
-          const module1Res = JSON.parse(module1ResStr);
-          imgPath = (module1Res.key_frame_path || '').trim().replace(/^[`'"\s]+|[`'"\s]+$/g, '');
-        } catch (e) {
-          console.warn('解析 module1Res 失败:', e);
-          imgPath = '';
-        }
+      this.isRightLoadingResults = false;
+      const selectedImageName = this.selectedCompareFile || '';
+      if (!selectedImageName) {
+        console.warn('[GroupNegotiation] startInfer 中未检测到选中图片，取消请求');
+        this.isLoadingRound1 = false;
+        this.isLoadingRound2 = false;
+        return;
       }
-      console.log("从 LocalStorage 读取 'imagePath':", imgPath);
+
       const resdata = {
-        color: this.color,
-        kind: this.kind,
-        shape: this.shape,
-        image_path: imgPath,
-        ground_truth: this.ground_truth
+        color: '灰色',
+        kind: '战斗机',
+        shape: '三角翼',
+        image_path: selectedImageName,
+        ground_truth: 'F-22'
       };
-      console.log("发送的推理数据:", resdata);
+      console.log('[GroupNegotiation] 模块三请求地址:', MODULE3_REFINE_URL);
+      console.log('[GroupNegotiation] 发送的推理数据:', resdata);
       try {
-        // 模拟API调用，实际使用时替换为真实API
-        const response = await axios.post('/module3/refine', resdata, {
+        const response = await axios.post(MODULE3_REFINE_URL, resdata, {
           headers: {
             'Content-Type': 'application/json'
           }
         });
         const data = response.data;
         
-        // 模拟数据 - 实际使用时从API响应获取
-        console.log("推理请求成功，结果:", data);
-          // 只暂存结果，不直接显示
-          this.pendingNegotiationResult = data;
+        console.log('[GroupNegotiation] 推理请求成功，结果:', data);
+        this.pendingNegotiationResult = data;
 
-        // 立刻显示一轮推理
-        this.agentARound1Result = (data.negotiation_details && data.negotiation_details.initial_analyses && data.negotiation_details.initial_analyses.Agent_A) || '';
-        this.agentBRound1Result = (data.negotiation_details && data.negotiation_details.initial_analyses && data.negotiation_details.initial_analyses.Agent_B) || '';
-        this.agentCRound1Result = (data.negotiation_details && data.negotiation_details.initial_analyses && data.negotiation_details.initial_analyses.Agent_C) || '';
+        // 只展示一轮/二轮；右侧结果需用户点击“群体协商偏差检测”后再展示
+        this.applyModule3Fields(data, {
+          round1: true,
+          round2: false,
+          review: false,
+          finalBlock: false,
+          accuracy: false
+        });
         this.isLoadingRound1 = false;
         this.isRound1Displayed = true;
 
-        // 3秒后显示二轮协商结果
         setTimeout(() => {
-          this.agentABNegotiation = (data.negotiation_details && data.negotiation_details.negotiation_results && data.negotiation_details.negotiation_results.Agent_A) || '';
-          this.agentBCNegotiation = (data.negotiation_details && data.negotiation_details.negotiation_results && data.negotiation_details.negotiation_results.Agent_B) || '';
-          this.agentCANegotiation = (data.negotiation_details && data.negotiation_details.negotiation_results && data.negotiation_details.negotiation_results.Agent_C) || '';
+          this.applyModule3Fields(data, {
+            round1: false,
+            round2: true,
+            review: false,
+            finalBlock: false,
+            accuracy: false
+          });
           this.isLoadingRound2 = false;
           this.isRound2Displayed = true;
         }, 3000);
@@ -884,7 +1068,10 @@ export default {
           console.log("---------------------------------");
       } catch (error) {
         console.error("推理请求失败:", error);
-        this.finalResult = "推理失败: " + (error.response && error.response.data && error.response.data.error) || error.message;
+        this.isLoadingRound1 = false;
+        this.isLoadingRound2 = false;
+        const errMsg = (error.response && error.response.data && error.response.data.error) || error.message;
+        this.finalResult = '推理失败: ' + errMsg;
       } finally {
         // 全局不显示遮罩，这里不再处理 isLoading
       }
@@ -892,14 +1079,12 @@ export default {
 
     // 右侧偏差检测按钮：不再请求后端，分步显示
     handleBiasDetect() {
-      // 从 localStorage 解析
-      let data = null;
+      // 优先使用本次“开始群体协商”返回数据，其次回退 localStorage
+      let data = this.pendingNegotiationResult;
       if (!data) {
         try {
           const stored = localStorage.getItem('module3Res');
-          if (stored) {
-            data = JSON.parse(stored);
-          }
+          data = stored ? JSON.parse(stored) : null;
         } catch (e) {
           console.warn('解析 module3Res 失败:', e);
           data = null;
@@ -911,103 +1096,41 @@ export default {
         return;
       }
 
-      // 赋值到显示变量
-      this.finalResult = data.final_model_name;
-      this.consensusSummary = (data.final_review && data.final_review.consensus_summary) || '';
-      this.disagreementPoints = (data.final_review && data.final_review.deviation_analysis) || '';
-      this.disagreementPointsHighlight = (data.final_review && data.final_review.deviation_analysis_report) || '';
-      
-      // 固定准确率为92.70%
-      const fixedAccuracy = '92.70%';
-      
-      // 记录开始时间到localStorage，实现跨页面计时
-      const startTime = Date.now();
-      localStorage.setItem('module3AccuracyTimerStart', startTime.toString());
-      localStorage.setItem('module3CachedAccuracy', fixedAccuracy);
-      
-      // 触发右侧加载流程
+      this.applyModule3Fields(data, {
+        round1: true,
+        round2: true,
+        review: true,
+        finalBlock: true,
+        accuracy: true
+      });
+      // 与开始群体协商后一致：数据来自当次 module3Res，不依赖历史计时
       this.isRightLoadingResults = true;
       this.isRightLoadingAccuracy = true;
-      // 2秒后显示结果与型号
-      setTimeout(() => {
-        this.isRightLoadingResults = false;
-      }, 2000);
-      
-      // 清除之前的定时器
       if (this.accuracyTimer) {
         clearTimeout(this.accuracyTimer);
-      }
-      
-      // 3分钟后显示准确率
-      this.accuracyTimer = setTimeout(() => {
-        this.accuracyRate = fixedAccuracy;
-        this.isRightLoadingAccuracy = false;
         this.accuracyTimer = null;
-        // 清除localStorage中的计时信息
-        localStorage.removeItem('module3AccuracyTimerStart');
-        localStorage.removeItem('module3CachedAccuracy');
-      }, 3 * 60 * 1000);
+      }
+      localStorage.removeItem('module3AccuracyTimerStart');
+      localStorage.removeItem('module3CachedAccuracy');
+      setTimeout(() => {
+        this.isRightLoadingResults = false;
+        this.isRightLoadingAccuracy = false;
+      }, 2000);
     },
     
-    // 检查准确率计时状态（用于页面加载时恢复计时）
+    // 进页不根据旧 module3Res 预填准确率；须「选图 → 开始群体协商」接口成功（或点偏差检测用当前 module3Res）后才有数
     checkAccuracyTimer() {
       try {
-        const timerStartStr = localStorage.getItem('module3AccuracyTimerStart');
-        const cachedAccuracyStr = localStorage.getItem('module3CachedAccuracy');
-        
-        if (!timerStartStr || !cachedAccuracyStr) {
-          // 没有计时信息，检查是否有module3Res
-          const stored = localStorage.getItem('module3Res');
-          if (stored) {
-            // 如果有module3Res但没有计时，说明已经完成过计时，直接显示准确率
-            this.accuracyRate = '92.70%';
-            this.isRightLoadingAccuracy = false;
-          } else {
-            this.accuracyRate = '—';
-            this.isRightLoadingAccuracy = false;
-          }
-          return;
-        }
-        
-        const timerStart = parseInt(timerStartStr, 10);
-        const elapsed = Date.now() - timerStart;
-        const remainingTime = 180000 - elapsed; // 3分钟 = 180000毫秒
-        
-        if (remainingTime > 0) {
-          // 计时未满3分钟，继续显示"计算中"并继续计时
-          this.accuracyRate = '—';
-          this.isRightLoadingAccuracy = true;
-          
-          // 清除之前的定时器
-          if (this.accuracyTimer) {
-            clearTimeout(this.accuracyTimer);
-          }
-          
-          // 继续计时
-          this.accuracyTimer = setTimeout(() => {
-            this.accuracyRate = cachedAccuracyStr;
-            this.isRightLoadingAccuracy = false;
-            this.accuracyTimer = null;
-            // 清除localStorage中的计时信息
-            localStorage.removeItem('module3AccuracyTimerStart');
-            localStorage.removeItem('module3CachedAccuracy');
-          }, remainingTime);
-        } else {
-          // 计时已满3分钟，直接显示准确率
-          this.accuracyRate = cachedAccuracyStr;
-          this.isRightLoadingAccuracy = false;
-          // 清除localStorage中的计时信息
-          localStorage.removeItem('module3AccuracyTimerStart');
-          localStorage.removeItem('module3CachedAccuracy');
+        this.accuracyRate = '—';
+        this.isRightLoadingAccuracy = false;
+        if (this.accuracyTimer) {
+          clearTimeout(this.accuracyTimer);
+          this.accuracyTimer = null;
         }
       } catch (e) {
-        console.error('检查准确率计时状态失败:', e);
-        // 出错时，如果有module3Res，直接显示准确率
-        const stored = localStorage.getItem('module3Res');
-        if (stored) {
-          this.accuracyRate = '92.70%';
-          this.isRightLoadingAccuracy = false;
-        }
+        console.error('检查准确率状态失败:', e);
+        this.accuracyRate = '—';
+        this.isRightLoadingAccuracy = false;
       }
     }
   }
@@ -1141,6 +1264,37 @@ export default {
   flex-shrink: 0;
 }
 
+/* 左侧两栏：与中间/右侧一致的弹框底图 */
+.design-left-column .design-module {
+  background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  min-height: 0;
+}
+
+/* 左侧内容区内框（对齐右侧「共识摘要/分歧点」的暗色圆角框） */
+.design-left-column .video-module .video-content-wrapper {
+  margin: 0 10px 12px 10px;
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 229, 255, 0.08);
+  box-sizing: border-box;
+}
+
+.design-left-column .text-module-left .text-scrollable {
+  margin: 0 10px 12px 10px;
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 229, 255, 0.08);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
 .middle-column {
   width: 45% !important;
   gap: 20px;
@@ -1175,10 +1329,8 @@ export default {
   width: 100%;
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  // padding: 20px 30px 30px 30px;
   display: flex;
   flex-direction: column;
-//  background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
 }
 
 
@@ -1247,34 +1399,36 @@ export default {
   min-height: 0;
   max-height: none;
   overflow-y: auto;
+  overflow-x: hidden;
   /* 确保两个内容框高度完全一致 */
   display: flex;
   flex-direction: column;
-  /* 确保内容不超出 */
-  overflow: hidden;
 }
 
 .panel-right-top .section-content .result-text {
-  overflow-y: auto;
-  max-height: 100%;
+  overflow: visible;
+  max-height: none;
 }
 
 .panel-right-bottom {
   flex-grow: 0;
   flex-shrink: 0;
   height: auto;
-  min-height: 100px;
-  max-height: 140px;
+  min-height: 180px;
+  max-height: 340px;
   width: 100%;
+  /* 与上方「群体协商认知偏差检测结果」同系列弹框底图 */
+  background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  padding: 15px 25px 25px 25px;
+  padding: 12px 18px 18px 18px;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1;
-  gap: 12px;
+  gap: 8px;
   margin-bottom: 15px;
+  box-sizing: border-box;
 }
 
 .panel-content {
@@ -1692,7 +1846,7 @@ export default {
   font-style: italic;
 }
 
-/* 属性信息内容框样式 - 与先验知识界面预测信息一致 */
+/* 属性信息内容框（外层 text-scrollable 已有圆角框，内层仅留白） */
 .attribute-content {
   flex: 1;
   width: 100%;
@@ -1918,7 +2072,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  flex-grow: 0;
+  flex-grow: 1;
   min-height: 0;
 }
 
@@ -1936,20 +2090,33 @@ export default {
 }
 
 .final-model-display {
-  // background-color: rgba(0, 0, 0, 0.5);
-  // border: 2px solid #00e5ff;
-  // border-radius: 8px;
-  padding: 0px;
-  text-align: center;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 229, 255, 0.08);
+  padding: 10px 12px;
+  text-align: left;
   margin: 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .final-model-text {
   color: #fff;
   font-family: "DingTalk-JinBuTi";
-  font-size: 20px;
+  font-size: 14px;
   font-weight: 400;
   margin: 0;
+  width: 100%;
+  line-height: 1.6;
+  word-break: break-word;
+  white-space: pre-wrap;
   // text-shadow: 0 0 5px #00e5ff;
 }
 

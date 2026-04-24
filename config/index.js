@@ -35,6 +35,11 @@ module.exports = {
         target: 'http://10.109.253.71:4399/',
         changeOrigin: true,
         pathRewrite: {'^/module5': ''}
+      },
+      '/td5236': {
+        target: 'http://10.109.253.71:5236/',
+        changeOrigin: true,
+        pathRewrite: {'^/td5236': ''}
       }
 
     },
