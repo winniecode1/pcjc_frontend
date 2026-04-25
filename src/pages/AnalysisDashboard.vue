@@ -462,43 +462,60 @@ export default {
         };
       }
 
-      const sampleId = resolveSampleId(
-        {
-          source_id: this.firstNonEmpty(this.selectedFileContext.source_id, video.source_id, video.name),
-          path: this.firstNonEmpty(this.selectedFileContext.path, video.path)
-        },
-        {},
-        {},
-        ''
-      );
-      if (sampleId) {
-        let imageSrc = String(res.image_set_image_url || '').trim();
-        if (!imageSrc) {
-          imageSrc = `${API_BASE_URL}/module5/api/image-set/${encodeURIComponent(sampleId)}`;
-        }
-        const firstImageItem = this.normalizeCarouselItems([
+      const hasVideoItem = carouselItems.some(item => item && item.type === 'video');
+      if (!hasVideoItem) {
+        const sampleId = resolveSampleId(
           {
-            type: 'image',
-            src: imageSrc,
-            title: '原始样本图片',
-            stage: 'Stage1',
-            stage_index: 1,
-            file_name: `${sampleId}.jpg`
+            source_id: this.firstNonEmpty(this.selectedFileContext.source_id, video.source_id, video.name),
+            path: this.firstNonEmpty(this.selectedFileContext.path, video.path)
+          },
+          {},
+          {},
+          ''
+        );
+        if (sampleId) {
+          let imageSrc = String(res.image_set_image_url || '').trim();
+          if (!imageSrc) {
+            imageSrc = `${API_BASE_URL}/module5/api/image-set/${encodeURIComponent(sampleId)}`;
           }
-        ])[0];
-        const dedupItems = carouselItems.filter(item => !(item && item.src === imageSrc));
-        const instructionItem = instructionText
-          ? this.normalizeCarouselItems([{
+          const firstImageItem = this.normalizeCarouselItems([
+            {
+              type: 'image',
+              src: imageSrc,
+              title: '原始样本图片',
+              stage: 'Stage1',
+              stage_index: 1,
+              file_name: `${sampleId}.jpg`
+            }
+          ])[0];
+          const dedupItems = carouselItems.filter(item => !(item && item.src === imageSrc));
+          const instructionItem = instructionText
+            ? this.normalizeCarouselItems([{
+              type: 'text',
+              stage: 'Stage1',
+              stage_index: 1,
+              title: '作战指令',
+              content: instructionText
+            }])[0]
+            : null;
+          carouselItems = instructionItem
+            ? [instructionItem, firstImageItem, ...dedupItems]
+            : [firstImageItem, ...dedupItems];
+        } else if (instructionText) {
+          const instructionItem = this.normalizeCarouselItems([{
             type: 'text',
             stage: 'Stage1',
             stage_index: 1,
             title: '作战指令',
             content: instructionText
-          }])[0]
-          : null;
-        carouselItems = instructionItem
-          ? [instructionItem, firstImageItem, ...dedupItems]
-          : [firstImageItem, ...dedupItems];
+          }])[0];
+          const dedupItems = carouselItems.filter((item) => !(
+            item &&
+            item.type === 'text' &&
+            String(item.content || '').trim() === instructionText
+          ));
+          carouselItems = [instructionItem, ...dedupItems];
+        }
       } else if (instructionText) {
         const instructionItem = this.normalizeCarouselItems([{
           type: 'text',

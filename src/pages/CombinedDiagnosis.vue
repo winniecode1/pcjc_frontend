@@ -494,24 +494,27 @@ export default {
           type: this.normalizeContextType(video.type)
         };
       }
-      const sampleId = this.resolveSampleIdFromContext(this.selectedFileContext, video);
-      let imageSrc = String(res.image_set_image_url || '').trim();
-      if (!imageSrc && sampleId) {
-        imageSrc = `${API_BASE_URL}/module5/api/image-set/${encodeURIComponent(sampleId)}`;
-      }
-      if (imageSrc) {
-        const firstImageItem = this.normalizeCarouselItems([
-          {
-            type: 'image',
-            src: imageSrc,
-            title: '原始样本图片',
-            stage: 'Stage1',
-            stage_index: 1,
-            file_name: sampleId ? `${sampleId}.jpg` : ''
-          }
-        ])[0];
-        const dedupItems = carouselItems.filter(item => !(item && item.src === imageSrc));
-        carouselItems = [firstImageItem, ...dedupItems];
+      const hasVideoItem = carouselItems.some(item => item && item.type === 'video');
+      if (!hasVideoItem) {
+        const sampleId = this.resolveSampleIdFromContext(this.selectedFileContext, video);
+        let imageSrc = String(res.image_set_image_url || '').trim();
+        if (!imageSrc && sampleId) {
+          imageSrc = `${API_BASE_URL}/module5/api/image-set/${encodeURIComponent(sampleId)}`;
+        }
+        if (imageSrc) {
+          const firstImageItem = this.normalizeCarouselItems([
+            {
+              type: 'image',
+              src: imageSrc,
+              title: '原始样本图片',
+              stage: 'Stage1',
+              stage_index: 1,
+              file_name: sampleId ? `${sampleId}.jpg` : ''
+            }
+          ])[0];
+          const dedupItems = carouselItems.filter(item => !(item && item.src === imageSrc));
+          carouselItems = [firstImageItem, ...dedupItems];
+        }
       }
       this.stagePreviews = res.stagePreviews || {};
       this.previewSummary = res.previewSummary || null;
@@ -731,48 +734,10 @@ export default {
         this.safeGet(result, 'consistency_type', '') || this.safeGet(raw, 'stage1.type_key', '')
       ).trim().toLowerCase();
       const useIsBias = consistencyType === 'inconsistent';
-      const randomInRange = (min, max, precision = 4) => {
-        const lo = Number(min);
-        const hi = Number(max);
-        if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi <= lo) return lo;
-        return Number((lo + Math.random() * (hi - lo)).toFixed(precision));
-      };
       const toNumberOrNull = (value) => {
         if (value === null || value === undefined) return null;
         const n = Number(value);
         return Number.isFinite(n) ? n : null;
-      };
-
-      const DEFAULT_INTERNAL_MAX = 0.18;
-      const DEFAULT_PROPAGATION_CAPS = {
-        Stage1: 0.18,
-        Stage2: 0.14,
-        Stage3: 0.1,
-        Stage4: 0.06
-      };
-      const BIAS_MIN = 0.2;
-      const BIAS_MAX = 0.6;
-      let previousPropagation = null;
-
-      const randomBiasForStage = (stageName, isBiasModule) => {
-        const isForcedHigh = consistencyType === 'inconsistent' && isBiasModule === true;
-        if (isForcedHigh) {
-          const internal = randomInRange(BIAS_MIN, BIAS_MAX);
-          const propagation = randomInRange(BIAS_MIN, BIAS_MAX);
-          previousPropagation = propagation;
-          return { internalBias: internal, propagationBias: propagation };
-        }
-        const internal = randomInRange(0, DEFAULT_INTERNAL_MAX);
-        let propagationUpper = Math.min(
-          internal,
-          DEFAULT_PROPAGATION_CAPS[stageName] !== undefined ? DEFAULT_PROPAGATION_CAPS[stageName] : DEFAULT_INTERNAL_MAX
-        );
-        if (previousPropagation !== null) {
-          propagationUpper = Math.min(propagationUpper, previousPropagation);
-        }
-        const propagation = propagationUpper <= 0 ? 0 : randomInRange(0, propagationUpper);
-        previousPropagation = propagation;
-        return { internalBias: internal, propagationBias: propagation };
       };
 
       const stageView = (stageName) => {
@@ -799,7 +764,19 @@ export default {
           if (!useIsBias && consistencyType === 'consistent') return false;
           return null;
         })();
-        const randomBias = randomBiasForStage(stageName, isBiasModule);
+        let internalBiasRaw = this.safeGet(stage, 'internal_bias_score', null);
+        if (internalBiasRaw === null || internalBiasRaw === undefined) {
+          internalBiasRaw = this.safeGet(stage, 'internal_output.bias_score', null);
+        }
+        let propagationBiasRaw = this.safeGet(stage, 'propagation_bias_score', null);
+        if (propagationBiasRaw === null || propagationBiasRaw === undefined) {
+          propagationBiasRaw = this.safeGet(stage, 'propagation_output.bias_score', null);
+        }
+        if (propagationBiasRaw === null || propagationBiasRaw === undefined) {
+          propagationBiasRaw = this.safeGet(stage, 'propogation_output.bias_score', null);
+        }
+        const internalBias = toNumberOrNull(internalBiasRaw);
+        const propagationBias = toNumberOrNull(propagationBiasRaw);
 
         return {
           finalText: this.safeGet(stage, 'final_text', '') || this.safeGet(stage, 'output_text', '') || this.safeGet(stage, 'internal_text', ''),
@@ -809,8 +786,8 @@ export default {
           internalPrediction: Object.keys(internalPredictionObj).length
             ? internalPredictionObj
             : (Object.keys(internalOutputPredictionObj).length ? internalOutputPredictionObj : modelOutputPredictionObj),
-          internalBias: randomBias.internalBias,
-          propagationBias: randomBias.propagationBias,
+          internalBias,
+          propagationBias,
           isBiasModule
         };
       };
