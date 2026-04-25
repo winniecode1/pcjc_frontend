@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "波音747-8F",
+      "kind": "运输机",
+      "color": "联邦快递或卢森堡Cargolux等商用货运公司标准白蓝涂装、含高可视注册号及航空标识",
+      "size": "机长76.3m、翼展68.4m、机高19.4m、最大起飞重量447700kg",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "双层前段驼峰驾驶舱、低展弦比后掠机翼、四发布局、翼尖小翼、T型尾翼、主起落架四轴八轮",
+      "power": "4台通用电气GEnx-2B67高涵道比涡扇发动机、单台推力296kN",
+      "country": "美国",
+      "outline": "双层前段、大机翼、四发布局、驼峰轮廓布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "波音747-8F",
+      "kind": "运输机",
+      "color": "白色与蓝色航空涂装",
+      "size": "长度76.3m、翼展68.4m、高度19.4m",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "超大型双层前段、低展弦比大机翼、四发布局、驼峰客舱轮廓",
+      "power": "4具通用电气GEnx-2B67涡扇发动机",
+      "country": "美国",
+      "outline": "双层前段、大机翼、四发布局、驼峰轮廓"
+    }
+  ],
+  "accuracy_list": "0.9505",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/Boeing-747-8F.png"
+}

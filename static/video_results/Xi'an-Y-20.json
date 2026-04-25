@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "运-20",
+      "kind": "运输机",
+      "color": "深灰色涂装涂装",
+      "size": "长度约47m、翼展约45m、高度约15m",
+      "firepower": "无",
+      "scene": "地面",
+      "shape": "高翼布局、宽体机身、T型尾翼、四发动机安装于机翼下方主起落架12轮",
+      "power": "早期型4台索洛维耶夫D-30KP-2涡扇、后期型4台国产涡扇-18、最新型4台涡扇-20高涵道比涡扇",
+      "country": "中国",
+      "outline": "高单翼、宽体机身、T型尾翼、四发布局布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "运-20",
+      "kind": "运输机",
+      "color": "深灰色涂装",
+      "size": "长度47m、翼展45m、高度15m",
+      "firepower": "无",
+      "scene": "地面",
+      "shape": "高翼布局、宽体机身、T型尾翼、四发动机安装于机翼下方",
+      "power": "4具国产涡扇-20发动机",
+      "outline": "高单翼、宽体机身、T型尾翼、四发布局"
+    }
+  ],
+  "accuracy_list": "0.9765",
+  "image_path": "/home/wuzhixuan/Project/PCJC/1/output/task_20260306_121320/Xi'an-Y-20/key_frame.jpg"
+}

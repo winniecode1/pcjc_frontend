@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "车",
+      "model": "VT4A1主战坦克",
+      "kind": "坦克",
+      "color": "数码迷彩涂装材",
+      "size": "长度约10.3米、宽度约3.6米、高度约2.3米",
+      "firepower": "同轴7.62mm机枪、遥控12.7mm重机枪8管烟幕弹",
+      "scene": "地面",
+      "shape": "履带式车体、低矮宽体、斜面复合装甲炮塔、炮塔后部突出弹药舱与烟雾弹发射器",
+      "power": "VT/E1V12柴油发动机、功率1400shp",
+      "country": "中国",
+      "outline": "焊接车体、楔形炮塔、尾部弹舱布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "VT4A1主战坦克(1.0)",
+      "kind": "坦克(1.0)",
+      "color": "数码迷彩涂装(0.9706)",
+      "size": "长度10.3m、宽度3.6m、高度2.3m(0.7902)",
+      "firepower": "同轴7.62mm机枪、遥控12.7mm重机枪(0.9655)",
+      "scene": "地面(1.0)",
+      "shape": "履带式车体、低矮宽体、斜面复合装甲炮塔、炮塔后部突出弹药舱(0.9864)",
+      "power": "VT/E1V12柴油发动机(0.7745)",
+      "outline": "焊接车体、楔形炮塔、尾部弹舱(0.9798)"
+    }
+  ],
+  "accuracy_list": "0.9619",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/images_frame_qsc/VT4A1.png"
+}

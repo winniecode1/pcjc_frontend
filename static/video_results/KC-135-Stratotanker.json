@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "KC-135同温层加油机",
+      "kind": "加油机",
+      "color": "美国空军标准灰白低可视涂装、部分带纪念彩绘",
+      "size": "长41.5m、高12.7m、全幅38.9m、最大起飞重量146000 kg",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "平直翼、流线型机身、宽大尾翼、T型尾翼",
+      "power": "4具普惠 JT3D 系列涡扇发动机、单台推力76 kN",
+      "country": "美国",
+      "outline": "平直翼、T型尾翼布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "KC-135同温层加油机",
+      "kind": "加油机",
+      "color": "军用灰色涂装",
+      "size": "长41.5m、高12.7m、全幅38.9m",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "平直翼、流线型机身、宽大尾翼",
+      "power": "4具普惠 JT3D 系列涡扇发动机",
+      "country": "美国",
+      "outline": "平直翼、T型尾翼"
+    }
+  ],
+  "accuracy_list": "0.9569",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/KC-135-Stratotanker.png"
+}

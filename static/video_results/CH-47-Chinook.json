@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "CH-47支努干直升机",
+      "kind": "运输机",
+      "color": "浅灰色迷彩涂装",
+      "size": "长度30.1m、旋翼直径18.3m、高度5.7m、最大起飞重量22680kg",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "双旋翼、直立尾桨、大型机身、后部跳板式尾门",
+      "power": "2具莱康明T55-GA-714型涡轮轴发动机、单台功率3800shp",
+      "country": "荷兰",
+      "outline": "纵列双旋翼、尾桨布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "CH-47支努干直升机",
+      "kind": "运输机",
+      "color": "浅灰色",
+      "size": "长度30.1m、旋翼直径18.3m、高度5.7m",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "双旋翼、直立尾桨、大型机身",
+      "power": "2具莱康明T55-GA-714型涡轮轴发动机",
+      "country": "美国",
+      "outline": "纵列双旋翼、尾桨"
+    }
+  ],
+  "accuracy_list": "0.9119",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/CH-47-Chinook.png"
+}

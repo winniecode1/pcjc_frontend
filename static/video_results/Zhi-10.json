@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "武直-10",
+      "kind": "武装直升机",
+      "color": "绿色数码迷彩或高原荒漠涂装",
+      "size": "长度14m、旋翼直径13m、高4m重量6000 kg",
+      "firepower": "1×23mmPX-10A自动链式机炮4个挂点可挂8枚HJ-10反坦克导弹",
+      "scene": "天空",
+      "shape": "单旋翼带尾桨、串列式座舱、阶梯式装甲布局、短翼挂架红外抑制排气口",
+      "power": "2台国产涡轴-9（WZ-9）改进型涡轴发动机、单台功率1200 shp（895 kW）",
+      "country": "中国",
+      "outline": "串列座舱、五叶主旋翼、涵道尾桨布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "武直-10",
+      "kind": "武装直升机",
+      "color": "黑色",
+      "size": "长度14m、旋翼直径13m、高4m",
+      "firepower": "1×23mm PX-10A自动链式机炮",
+      "scene": "天空",
+      "shape": "单旋翼带尾桨、串列式座舱、阶梯式装甲布局、短翼挂架",
+      "power": "2×WZ-9涡轴发动机",
+      "country": "中国",
+      "outline": "串列座舱、五叶主旋翼、涵道尾桨"
+    }
+  ],
+  "accuracy_list": "0.9195",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/Zhi-10.png"
+}

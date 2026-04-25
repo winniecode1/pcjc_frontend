@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "F-18f",
+      "kind": "战斗机",
+      "color": "美国海军舰载机标准灰色低可视涂装、带黄色着舰指示标记",
+      "size": "长度约18.31m、翼展约13.62m、高度约4.9m",
+      "firepower": "1×20mmM61A2加特林机炮、11个挂点、可携带AIM-120AMRAAM、AIM-9Sidewinder、AGM-84Harpoon、AGM-88HARM、对地可挂AGM-84H SLAM-E等",
+      "scene": "天空",
+      "shape": "双发双垂尾、中等后掠翼、翼身融合、机翼可折叠、加强起落架、尾钩",
+      "power": "2具通用电气F414-GE-400系列涡扇/涡增发动机",
+      "country": "美国",
+      "outline": "双发、双垂尾、中等后掠翼、可折叠机翼布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "F-18f",
+      "kind": "战斗机",
+      "color": "海军灰、低可视涂装",
+      "size": "长度18.31米、翼展13.62米、高度4.9米",
+      "firepower": "1×20mm M61A2加特林机炮、11个挂点、可携带AGM-84 Harpoon、AGM-88 HARM",
+      "scene": "天空",
+      "shape": "双发、单垂尾、低后掠翼、机身-翼融合设计、折叠翼与舰载着陆结构",
+      "power": "2具通用电气F414-GE-400系列涡扇发动机",
+      "country": "美国",
+      "outline": "双发、双垂尾、中等后掠翼、可折叠机翼"
+    }
+  ],
+  "accuracy_list": "0.9578",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/F-18.png"
+}

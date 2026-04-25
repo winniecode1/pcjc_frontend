@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "Tu-95",
+      "kind": "特种飞机",
+      "color": "浅灰色俄军军用涂装标识",
+      "size": "长度49.2m、翼展约51.1m、高约12.12m起飞重量188000 kg",
+      "firepower": "内置外挂多型巡航导弹、炸弹舱翼下",
+      "scene": "天空",
+      "shape": "四发、涡桨动力、后掠翼、大型机身大型",
+      "power": "4台库兹涅佐夫NK-12MV涡桨发动机、单台功率14795 shp（11033 kW）、驱动AV-60H同轴反转螺旋桨",
+      "country": "俄罗斯",
+      "outline": "后掠高单翼、同轴反转四涡桨布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "Tu-95",
+      "kind": "特种飞机",
+      "color": "浅灰色俄军军用涂装",
+      "size": "长度49.2米、翼展约51.1米、高度约12.12米",
+      "firepower": "内置外挂多型巡航导弹、炸弹舱",
+      "scene": "天空",
+      "shape": "四发、涡桨动力、后掠翼、大型机身",
+      "power": "4具NK-12系列涡桨发动机",
+      "country": "俄罗斯",
+      "outline": "后掠高单翼、同轴反转四涡桨"
+    }
+  ],
+  "accuracy_list": "0.9588",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/Tu-95.png"
+}

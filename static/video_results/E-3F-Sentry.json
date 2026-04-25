@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "E-3F预警机",
+      "kind": "特种飞机",
+      "color": "美国空军AEW&C标准灰白涂装、雷达罩为白色、机身带低可视标志",
+      "size": "长度 46.61m、翼展 44.42m、高度 12.60m、最大起飞重量157000kg",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "大翼展、机身大、垂尾突出、四发布局",
+      "power": "4×Pratt&WhitneyTF33-PW-100A涡扇发动机、单台推力93kN",
+      "country": "美国",
+      "outline": "大翼展、背负雷达罩布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "E-3F预警机",
+      "kind": "特种飞机",
+      "color": "灰色与白色涂装",
+      "size": "长度46.61米、翼展44.42米、高度12.60米",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "大翼展、机身大、垂尾突出、背负雷达罩",
+      "power": "4×Pratt&Whitney TF33-PW-100A涡扇发动机",
+      "country": "美国",
+      "outline": "大翼展、背负雷达罩"
+    }
+  ],
+  "accuracy_list": "0.9508",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/E-3F-Sentry.png"
+}

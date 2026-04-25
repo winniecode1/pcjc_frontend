@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "C-17",
+      "kind": "运输机",
+      "color": "标准灰色涂装",
+      "size": "机长53.0 m、翼展51.7 m、机高16.8 m、最大起飞重量265000 kg",
+      "firepower": "无",
+      "scene": "地面",
+      "shape": "上单翼和T 形尾翼、四发大",
+      "power": "4台普拉特·惠特尼F117-PW-100涡扇发动机、单台推力181kN",
+      "country": "美国",
+      "outline": "高翼、T尾、四发大"
+    }
+  ],
+  "result": [
+    {
+      "model": "C-17(1.0)",
+      "kind": "运输机(1.0)",
+      "color": "灰色涂装(0.9528)",
+      "size": "长53.0m、翼展51.7m、高16.8m(0.8911)",
+      "firepower": "无(1.0)",
+      "scene": "天空(0.3843)",
+      "shape": "高翼、T尾、四发(0.7669)",
+      "power": "4具普拉特惠特尼F117-PW-100涡扇发动机(0.9051)",
+      "outline": "高翼、T形尾翼、四发(0.8553)"
+    }
+  ],
+  "accuracy_list": "0.9111",
+  "image_path": "/home/wuzhixuan/Project/PCJC/5/result/C-17-Globemaster-4/single_task/stage1_results/C-17-Globemaster-4.png"
+}

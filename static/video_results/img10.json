@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "",
+      "model": "",
+      "kind": "",
+      "color": "",
+      "size": "",
+      "firepower": "",
+      "scene": "",
+      "shape": "",
+      "power": "",
+      "country": "",
+      "outline": ""
+    }
+  ],
+  "result": [
+    {
+      "model": "J-20",
+      "kind": "战斗机",
+      "color": "灰色迷彩涂装",
+      "size": "长度20.3m、翼展12.5m、高度5.4m",
+      "firepower": "内部武舱携带中远距空空导弹及侧舱短程导弹、具备对地精确武器能力",
+      "scene": "天空",
+      "shape": "单座、双发、隐身外形、后倾垂尾、机身‑翼融合设计",
+      "power": "2具涡扇发动机",
+      "outline": "菱形截面、DSI进气道、全动垂尾"
+    }
+  ],
+  "accuracy_list": "0.4622",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/img10.png"
+}

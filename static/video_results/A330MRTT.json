@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "",
+      "model": "",
+      "kind": "",
+      "color": "",
+      "size": "",
+      "firepower": "",
+      "scene": "",
+      "shape": "",
+      "power": "",
+      "country": "",
+      "outline": ""
+    }
+  ],
+  "result": [
+    {
+      "model": "未知",
+      "kind": "民用客机",
+      "color": "机身主要为白色，带有灰色或深色的细节",
+      "size": "长度约50-60米，翼展约60米左右",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "双发、后掠翼、T型尾翼",
+      "power": "两台大涵道比涡扇发动机",
+      "outline": "流线型机身设计"
+    }
+  ],
+  "accuracy_list": "0.4034",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/A330MRTT.png"
+}

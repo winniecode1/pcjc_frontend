@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "",
+      "model": "",
+      "kind": "",
+      "color": "",
+      "size": "",
+      "firepower": "",
+      "scene": "",
+      "shape": "",
+      "power": "",
+      "country": "",
+      "outline": ""
+    }
+  ],
+  "result": [
+    {
+      "model": "F-22",
+      "kind": "战斗机",
+      "color": "灰色",
+      "size": "长度18.9米、翼展13.55米、高度4.4米",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "双发、单座、气泡座舱、双垂直尾翼、前掠翼、菱形机身",
+      "power": "2台F119-PW-100发动机",
+      "outline": "菱形机身、隐身外形"
+    }
+  ],
+  "accuracy_list": "0.4578",
+  "image_path": "/home/wuzhixuan/Project/PCJC/1/output/task_20260418_184047/Su-57/key_frame.jpg"
+}

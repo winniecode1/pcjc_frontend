@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "歼-10",
+      "kind": "战斗机",
+      "color": "深蓝、白、红三色涂装、红五星",
+      "size": "长度约16.9 m、翼展约9.8 m、高度约5.7 m",
+      "firepower": "1×23毫米双管机炮，可挂载空地导弹、霹雳-10近距空空导弹、制导炸弹等",
+      "scene": "天空",
+      "shape": "单发单垂尾、三角翼前缘襟翼、腹部进气道",
+      "power": "1台沈阳黎明WS-10B太行涡扇发动机",
+      "country": "中国",
+      "outline": "三角翼、腹部进气布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "歼-10",
+      "kind": "战斗机",
+      "color": "深蓝、白、红三色涂装",
+      "size": "长度16.9米、翼展9.8米、高度5.7米",
+      "firepower": "1×23毫米双管机炮，可挂载空地导弹、制导炸弹等",
+      "scene": "天空",
+      "shape": "单发单垂尾、三角翼前缘襟翼、后掠翼设计",
+      "power": "1×Shenyang WS-10涡扇发动机",
+      "outline": "三角翼、腹部进气"
+    }
+  ],
+  "accuracy_list": "0.9485",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/J-10.png"
+}

@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "Usafc17",
+      "kind": "运输机",
+      "color": "浅灰色低可视涂装带标识",
+      "size": "长度53.04m、翼展51.81m、高度16.79m重量265000kg",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "上单翼、T 型尾翼、大型货舱主起落架12轮",
+      "power": "4个普惠F117-PW-100涡扇发动机单台推力181 kN",
+      "country": "美国",
+      "outline": "高单翼、T型尾翼、后跳板货舱门布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "Usafc17",
+      "kind": "运输机",
+      "color": "浅灰色低可视涂装",
+      "size": "长度53.04m、翼展51.81m、高度16.79m",
+      "firepower": "无",
+      "scene": "地面",
+      "shape": "上单翼、T型尾翼、大型货舱",
+      "power": "4个普惠F117-PW-100涡扇发动机",
+      "country": "美国",
+      "outline": "高单翼、T型尾翼、后跳板货舱门"
+    }
+  ],
+  "accuracy_list": "0.9411",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/Usafc-17.png"
+}

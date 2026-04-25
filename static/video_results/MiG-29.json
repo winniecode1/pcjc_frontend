@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "米格29",
+      "kind": "战斗机",
+      "color": "浅灰色颜色涂装",
+      "size": "长度17.32m、翼展11.36m、高度4.73m最大起飞重量20000 kg",
+      "firepower": "1×30 毫米GSh-30-1机炮，可挂载R-60、R-27、R-73 等系列空空导弹以及空地武器",
+      "scene": "天空",
+      "shape": "双发、双垂尾、边条翼布局融合",
+      "power": "2台克里莫夫RD-33涡扇发动机、单台推力81 kN",
+      "country": "苏联",
+      "outline": "中等后掠翼、双垂尾布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "米格29",
+      "kind": "战斗机",
+      "color": "浅灰色涂装",
+      "size": "长度17.32m、翼展11.36m、高度4.73m",
+      "firepower": "1×30 毫米GSh-30-1机炮，可挂载R-60、R-27、R-73 等系列空空导弹",
+      "scene": "天空",
+      "shape": "双发、双垂尾、边条翼布局",
+      "power": "2×Klimov RD-33 涡扇发动机",
+      "outline": "中等后掠翼、双垂尾"
+    }
+  ],
+  "accuracy_list": "0.9696",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/MiG-29.png"
+}

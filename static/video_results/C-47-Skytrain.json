@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "C-47",
+      "kind": "运输机",
+      "color": "二战至越战时期标准橄榄绿/棕褐色迷彩、现代博物馆展品多保留原厂涂装",
+      "size": "机长19.4 m、翼展28.96 m、机高5.16 m、最大起飞重量13900 kg",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "低翼布局、尾部可开启货舱门、前三点式起落架",
+      "power": "2×Pratt&WhitneyR-1830TwinWasp星型活塞发动机",
+      "country": "美国",
+      "outline": "低翼、尾部货舱门布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "C-47",
+      "kind": "运输机",
+      "color": "浅灰色与灰色迷彩",
+      "size": "长度19.4m、翼展28.96m、高度5.16m",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "低翼布局、尾部可开启货舱门",
+      "power": "2×Pratt星型活塞发动机",
+      "country": "美国",
+      "outline": "低翼、尾部货舱门"
+    }
+  ],
+  "accuracy_list": "0.9308",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/C-47-Skytrain.png"
+}

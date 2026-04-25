@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "加拿大CT-114Tutor",
+      "kind": "教练机",
+      "color": "机身红白相间、机尾有加拿大国旗、带低可视编号",
+      "size": "机长9.75 m、翼展11.07 m、机高2.858 m、最大起飞重量3175 kg",
+      "firepower": "无",
+      "scene": "地面",
+      "shape": "双座、后掠翼、双垂直尾翼、机头进气、前三点起落架",
+      "power": "1台普惠JT12A-5涡喷发动机、推力12.7 kN（2850 lbf）",
+      "country": "加拿大",
+      "outline": "双座、后掠翼、双垂尾、机头进气布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "加拿大CT-114 Tutor",
+      "kind": "教练机",
+      "color": "机身红白相间、机尾有加拿大国旗",
+      "size": "长度9.75m、翼展11.07m、高度2.858m",
+      "firepower": "无",
+      "scene": "地面",
+      "shape": "双座、后掠翼、双垂直尾翼、机头进气",
+      "power": "1具普惠JT12A-5涡轮喷气发动机、最大推力约12.7千牛",
+      "country": "加拿大",
+      "outline": "双座、后掠翼、双垂尾、机头进气"
+    }
+  ],
+  "accuracy_list": "0.9707",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/CT-114-Tutor.png"
+}

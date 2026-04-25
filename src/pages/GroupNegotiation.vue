@@ -174,7 +174,7 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentABNegotiation === 'object' && agentABNegotiation !== null" class="agent-result">
-                    <span class="result-line">推理分析：{{ agentABNegotiation.battlefield_analysis || '***' }}</span>
+                    <span class="result-line">推理分析：{{ agentABNegotiation.battlefield_analysis || agentABNegotiation.final_model_name || '***' }}</span>
                     <span class="result-line">推理共识：{{ agentABNegotiation.negotiation_basis || '***' }}</span>
                     <span class="result-line">推理分歧：{{ agentABNegotiation.deviation || '***' }}</span>
                   </p>
@@ -193,7 +193,7 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentBCNegotiation === 'object' && agentBCNegotiation !== null" class="agent-result">
-                    <span class="result-line">推理分析：{{ agentBCNegotiation.battlefield_analysis || '***' }}</span>
+                    <span class="result-line">推理分析：{{ agentBCNegotiation.battlefield_analysis || agentBCNegotiation.final_model_name || '***' }}</span>
                     <span class="result-line">推理共识：{{ agentBCNegotiation.negotiation_basis || '***' }}</span>
                     <span class="result-line">推理分歧：{{ agentBCNegotiation.deviation || '***' }}</span>
                   </p>
@@ -212,7 +212,7 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentCANegotiation === 'object' && agentCANegotiation !== null" class="agent-result">
-                    <span class="result-line">推理分析：{{ agentCANegotiation.battlefield_analysis || '***' }}</span>
+                    <span class="result-line">推理分析：{{ agentCANegotiation.battlefield_analysis || agentCANegotiation.final_model_name || '***' }}</span>
                     <span class="result-line">推理共识：{{ agentCANegotiation.negotiation_basis || '***' }}</span>
                     <span class="result-line">推理分歧：{{ agentCANegotiation.deviation || '***' }}</span>
                   </p>
@@ -386,6 +386,8 @@ export default {
       selectedDetailType: null, // 'compare' | 'video'
       selectedSourceKey: null,
       compareMessage: '暂无compare图片文件',
+      /** 视频：从 /static/video_results 对应 JSON 解析出、用于 module3 请求的字段 */
+      videoModule3RequestPayload: null,
 
       // 视频相关数据（此页面已不展示，但保留兼容）
       videoUrl: null,
@@ -474,9 +476,15 @@ export default {
       }
       return String(this.accuracyRate);
     },
-    // 仅当点击了上方列表中的图片（非视频）时允许开始群体协商
+    // 图片逻辑保持不变；视频需先成功展示先验知识信息后才允许开始群体协商
     canStartNegotiation() {
-      return this.selectedDetailType === 'compare' && !!this.selectedCompareFile;
+      if (this.selectedDetailType === 'compare' && !!this.selectedCompareFile) {
+        return true;
+      }
+      if (this.selectedDetailType === 'video' && !!this.selectedVideoName) {
+        return !!this.videoModule3RequestPayload;
+      }
+      return false;
     },
     deviationAnalysisText() {
       const v = this.deviationAnalysis;
@@ -488,9 +496,15 @@ export default {
             ? v.different_analysis_and_reason
             : v.differentModelAndReason
         );
+        const modelReason = this.toDisplayString(
+          v.different_model_and_reason != null
+            ? v.different_model_and_reason
+            : this.differentModelAndReason
+        );
         const lines = [];
         if (points) lines.push(`分歧点: ${points}`);
         if (reason) lines.push(`分歧分析及原因: ${reason}`);
+        if (modelReason) lines.push(`分歧原因: ${modelReason}`);
         return lines.join('\n');
       }
       return this.toDisplayString(v);
@@ -511,6 +525,15 @@ export default {
     this.checkAccuracyTimer();
   },
   methods: {
+    /**
+     * 仅当未处于“compare 图片详情 / 视频详情”时，允许模块二预测信息覆盖左侧属性区。
+     * 目的：避免先验 JSON 或视频 result 被后续异步回包覆盖。
+     */
+    canOverwriteAttributeInfo() {
+      if (this.selectedDetailType === 'compare' && this.selectedCompareFile) return false;
+      if (this.selectedDetailType === 'video' && this.selectedVideoName) return false;
+      return true;
+    },
     toDisplayString(val) {
       if (val == null) return '';
       if (typeof val === 'string') return val;
@@ -613,6 +636,12 @@ export default {
         this.consensusSummary = fr && fr.consensus_summary != null ? fr.consensus_summary : '';
         this.deviationAnalysis = fr && fr.deviation_analysis != null ? fr.deviation_analysis : '';
         this.deviationReport = fr && fr.deviation_analysis_report != null ? fr.deviation_analysis_report : '';
+        this.differentModelAndReason =
+          fr &&
+          fr.deviation_analysis &&
+          fr.deviation_analysis.different_model_and_reason != null
+            ? fr.deviation_analysis.different_model_and_reason
+            : '';
         this.disagreementPoints = this.toDisplayString(this.deviationAnalysis);
         this.disagreementPointsHighlight = '';
       }
@@ -664,15 +693,19 @@ export default {
           });
 
           // 设置属性信息，去除括号及其内容
-          this.attributeInfoList = [
-            `小类信息：${predictData.kind ? predictData.kind.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
-            `火力信息：${predictData.firepower ? predictData.firepower.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
-            `颜色信息：${predictData.color ? predictData.color.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
-            `形状信息：${predictData.shape ? predictData.shape.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
-            `尺寸信息：${predictData.size ? predictData.size.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
-            `动力信息：${predictData.power ? predictData.power.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
-            `轮廓信息：${predictData.outline ? predictData.outline.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
-          ];
+          if (this.canOverwriteAttributeInfo()) {
+            this.attributeInfoList = [
+              `小类信息：${predictData.kind ? predictData.kind.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+              `火力信息：${predictData.firepower ? predictData.firepower.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+              `颜色信息：${predictData.color ? predictData.color.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+              `形状信息：${predictData.shape ? predictData.shape.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+              `尺寸信息：${predictData.size ? predictData.size.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+              `动力信息：${predictData.power ? predictData.power.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+              `轮廓信息：${predictData.outline ? predictData.outline.replace(/\s*\([^)]*\)/g, '') : '未知'}`,
+            ];
+            // 保留原来的 attributeInfo 用于兼容
+            this.attributeInfo = this.attributeInfoList.join('\n');
+          }
           
           // 设置其他需要的变量
           // 去除括号及其内容
@@ -706,8 +739,6 @@ export default {
             this.ground_truth = '';
           }
           
-          // 保留原来的 attributeInfo 用于兼容
-          this.attributeInfo = this.attributeInfoList.join('\n');
           this.isApiLoaded = true; // 数据加载完成，解锁按钮
         } else {
           console.warn('localStorage中没有找到预测信息');
@@ -733,22 +764,24 @@ export default {
         // 处理预测信息
         if (data.result && data.result.length > 0 && data.result[0].length > 0) {
           const predictData = data.result[0][0];
-          this.attributeInfoList = [
-            `小类信息：${predictData.kind || '未知'}`,
-            `火力信息：${predictData.firepower || '未知'}`,
-            `颜色信息：${predictData.color || '未知'}`,
-            `形状信息：${predictData.shape || '未知'}`,
-            `尺寸信息：${predictData.size || '未知'}`,
-            `动力信息：${predictData.power || '未知'}`,
-            `轮廓信息：${predictData.outline || '未知'}`,
-          ];
+          if (this.canOverwriteAttributeInfo()) {
+            this.attributeInfoList = [
+              `小类信息：${predictData.kind || '未知'}`,
+              `火力信息：${predictData.firepower || '未知'}`,
+              `颜色信息：${predictData.color || '未知'}`,
+              `形状信息：${predictData.shape || '未知'}`,
+              `尺寸信息：${predictData.size || '未知'}`,
+              `动力信息：${predictData.power || '未知'}`,
+              `轮廓信息：${predictData.outline || '未知'}`,
+            ];
+            // 保留原来的 attributeInfo 用于兼容
+            this.attributeInfo = this.attributeInfoList.join('\n');
+          }
           this.color = predictData.color;
           this.kind = predictData.kind;
           this.shape = predictData.shape;
           this.ground_truth = predictData.model;
         }
-        // 保留原来的 attributeInfo 用于兼容
-        this.attributeInfo = this.attributeInfoList.join('\n');
         this.isApiLoaded = true; // 接口成功返回，解锁按钮
       }).catch(err => {
         console.error(err.response && err.response.data || err);
@@ -832,6 +865,7 @@ export default {
         this.selectedDetailType = 'compare';
         this.selectedVideoName = null;
         this.selectedVideoUrl = null;
+        this.videoModule3RequestPayload = null;
         this.openCompareImage(item.name);
         return;
       }
@@ -840,8 +874,7 @@ export default {
       this.selectedCompareFile = null;
       this.selectedVideoName = item.name;
       this.selectedVideoUrl = this.buildTargetVideoUrl(item.name);
-      this.attributeInfoList = [];
-      this.attributeInfo = '';
+      this.loadVideoResultByName(item.name);
     },
     // 切换到图片详情
     async openCompareImage(name) {
@@ -851,9 +884,91 @@ export default {
       this.selectedDetailType = 'compare';
       this.selectedVideoName = null;
       this.selectedVideoUrl = null;
+      this.videoModule3RequestPayload = null;
       await this.loadDescriptionByImageName(name);
     },
-    // 根据 compare 图片名加载对应 json 里的 detailed_description
+    /**
+     * 从 /static/video_results/{basename}.json 读取 result，
+     * 按与预测信息相同的多行「xx信息：」格式展示。
+     */
+    loadVideoResultByName(videoName) {
+      this.videoModule3RequestPayload = null;
+      if (!videoName || typeof videoName !== 'string') {
+        this.attributeInfoList = ['未找到有效视频名称，无法加载 result'];
+        this.attributeInfo = this.attributeInfoList.join('\n');
+        return Promise.resolve();
+      }
+      const jsonName = videoName.replace(/\.[^/.]+$/, '') + '.json';
+      const jsonUrl = `/static/video_results/${jsonName}`;
+
+      const stripParens = s =>
+        s != null && s !== '' ? String(s).replace(/\s*\([^)]*\)/g, '') : s;
+
+      return axios
+        .get(jsonUrl)
+        .then(res => {
+          const data = res && res.data ? res.data : {};
+          let r = data.result;
+          if (Array.isArray(r) && r.length > 0) r = r[0];
+          else if (r && typeof r === 'object' && !Array.isArray(r)) {
+            // 已是单对象
+          } else {
+            r = null;
+          }
+          if (!r || typeof r !== 'object') {
+            this.attributeInfoList = ['该视频对应 JSON 无有效 result 字段'];
+            this.attributeInfo = this.attributeInfoList.join('\n');
+            this.videoModule3RequestPayload = null;
+            return;
+          }
+          const str = v => (v == null || v === '' ? '' : String(v).trim());
+          this.videoModule3RequestPayload = {
+            color: str(r.color),
+            kind: str(r.kind),
+            shape: str(r.shape),
+            image_path: str(data.image_path),
+            ground_truth: str(r.model)
+          };
+          console.log(
+            '[GroupNegotiation] 视频先验 JSON 已解析，供 module3 传参用:',
+            this.videoModule3RequestPayload,
+            '源文件:',
+            jsonUrl
+          );
+          const label = (key, v) => {
+            const t = v != null && String(v).trim() !== '' ? stripParens(String(v)) : '未知';
+            return `${key}：${t}`;
+          };
+          const lines = [];
+          if (r.model != null && String(r.model).trim() !== '') {
+            lines.push(label('型号信息', r.model));
+          }
+          lines.push(
+            label('小类信息', r.kind),
+            label('火力信息', r.firepower),
+            label('颜色信息', r.color),
+            label('形状信息', r.shape),
+            label('尺寸信息', r.size),
+            label('动力信息', r.power),
+            label('轮廓信息', r.outline)
+          );
+          if (r.country != null && String(r.country).trim() !== '') {
+            lines.push(label('国家信息', r.country));
+          }
+          if (r.scene != null && String(r.scene).trim() !== '') {
+            lines.push(label('场景信息', r.scene));
+          }
+          this.attributeInfoList = lines;
+          this.attributeInfo = this.attributeInfoList.join('\n');
+        })
+        .catch(err => {
+          console.error(`加载视频 result 失败: ${jsonUrl}`, err);
+          this.videoModule3RequestPayload = null;
+          this.attributeInfoList = [`未找到对应 JSON：${jsonName}（/static/video_results/）`];
+          this.attributeInfo = this.attributeInfoList.join('\n');
+        });
+    },
+    // 根据 compare 图片名加载 mllm_commands_gt 中同名 json 的 command_text
     loadDescriptionByImageName(imageName) {
       if (!imageName || typeof imageName !== 'string') {
         this.attributeInfoList = ['未找到有效图片名称，无法加载描述'];
@@ -862,25 +977,24 @@ export default {
       }
 
       const jsonName = imageName.replace(/\.[^/.]+$/, '.json');
-      const jsonUrl = `/static/mllm_descriptions_gt/${jsonName}`;
+      const jsonUrl = `/static/mllm_commands_gt/${jsonName}`;
 
       return axios
         .get(jsonUrl)
         .then(res => {
           const data = res && res.data ? res.data : {};
-          const detailedDescription =
-            data.analysis_result && data.analysis_result.detailed_description
-              ? String(data.analysis_result.detailed_description).trim()
-              : '';
+          const commandText = data.command_text
+            ? String(data.command_text).trim()
+            : '';
 
           this.attributeInfoList = [
-            detailedDescription || '该图片对应 JSON 未提供 detailed_description'
+            commandText || '该图片对应 JSON 未提供 command_text'
           ];
           this.attributeInfo = this.attributeInfoList.join('\n');
         })
         .catch(err => {
-          console.error(`加载描述失败: ${jsonUrl}`, err);
-          this.attributeInfoList = [`未找到对应描述文件：${jsonName}`];
+          console.error(`加载认知传播信息失败: ${jsonUrl}`, err);
+          this.attributeInfoList = [`未找到对应指令文件：${jsonName}`];
           this.attributeInfo = this.attributeInfoList.join('\n');
         });
     },
@@ -893,6 +1007,7 @@ export default {
       this.selectedDetailType = null;
       this.selectedSourceKey = null;
       this.compareMessage = this.compareFiles && this.compareFiles.length > 0 ? '' : '暂无compare图片文件';
+      this.videoModule3RequestPayload = null;
       // 返回列表时，清空下方描述区域，回到“暂无属性信息”
       this.attributeInfoList = [];
       this.attributeInfo = '';
@@ -949,11 +1064,16 @@ export default {
     },
     startNegotiation() {
       if (!this.canStartNegotiation) {
-        console.warn('[GroupNegotiation] 未选择图片，禁止发起群体协商');
-        alert('请先点击上方列表中的图片，再开始群体协商。');
+        console.warn('[GroupNegotiation] 未满足发起条件，禁止群体协商');
+        alert('请先在上方列表中选择图片，或选择视频并成功显示先验知识认知传播信息。');
         return;
       }
-      console.log('[GroupNegotiation] 开始群体协商，当前图片:', this.selectedCompareFile);
+      const selectedSourceName =
+        this.selectedDetailType === 'compare' ? this.selectedCompareFile : this.selectedVideoName;
+      console.log('[GroupNegotiation] 开始群体协商，模式:', this.selectedDetailType, '数据源:', selectedSourceName);
+      if (this.selectedDetailType === 'video') {
+        console.log('[GroupNegotiation] 视频模式将使用已加载的 videoModule3RequestPayload:', this.videoModule3RequestPayload);
+      }
       this.startInfer();
     },
     exportResults() {
@@ -1009,23 +1129,45 @@ export default {
       this.isRound1Displayed = false;
       this.isRound2Displayed = false;
       this.isRightLoadingResults = false;
-      const selectedImageName = this.selectedCompareFile || '';
+      const selectedImageName = this.selectedCompareFile || this.selectedVideoName || '';
       if (!selectedImageName) {
-        console.warn('[GroupNegotiation] startInfer 中未检测到选中图片，取消请求');
+        console.warn('[GroupNegotiation] startInfer 中未检测到选中数据源，取消请求');
         this.isLoadingRound1 = false;
         this.isLoadingRound2 = false;
         return;
       }
 
-      const resdata = {
-        color: '灰色',
-        kind: '战斗机',
-        shape: '三角翼',
-        image_path: selectedImageName,
-        ground_truth: 'F-22'
-      };
-      console.log('[GroupNegotiation] 模块三请求地址:', MODULE3_REFINE_URL);
-      console.log('[GroupNegotiation] 发送的推理数据:', resdata);
+      let resdata;
+      if (this.selectedDetailType === 'video') {
+        if (!this.videoModule3RequestPayload) {
+          console.warn(
+            '[GroupNegotiation] 视频模式但 videoModule3RequestPayload 为空，取消 module3 请求'
+          );
+          this.isLoadingRound1 = false;
+          this.isLoadingRound2 = false;
+          return;
+        }
+        const p = this.videoModule3RequestPayload;
+        resdata = {
+          color: p.color,
+          kind: p.kind,
+          shape: p.shape,
+          image_path: p.image_path,
+          ground_truth: p.ground_truth
+        };
+        console.log('[GroupNegotiation] 模块三请求地址（视频模式，与图片同一接口）:', MODULE3_REFINE_URL);
+        console.log('[GroupNegotiation] 请求体（来自 video_results JSON 的 result + image_path）:', resdata);
+      } else {
+        resdata = {
+          color: '灰色',
+          kind: '战斗机',
+          shape: '三角翼',
+          image_path: selectedImageName,
+          ground_truth: 'F-22'
+        };
+        console.log('[GroupNegotiation] 模块三请求地址（图片模式，逻辑不变）:', MODULE3_REFINE_URL);
+        console.log('[GroupNegotiation] 请求体（图片模式，与此前一致）:', resdata);
+      }
       try {
         const response = await axios.post(MODULE3_REFINE_URL, resdata, {
           headers: {
@@ -1309,6 +1451,7 @@ export default {
   z-index: 2;
   box-sizing: border-box;
   flex-shrink: 0;
+  min-height: 0;
 }
 
 .panel-content {
@@ -1342,19 +1485,20 @@ export default {
 }
 
 .panel-right-top {
-  flex-shrink: 0;
+  flex: 1 1 0;
   background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  margin-bottom: 15px;
+  margin-bottom: 8px;
   padding: 0;
   display: flex;
   flex-direction: column;
-  min-height: 420px;
+  min-height: 0;
   width: 100%;
-  margin-top: 20px;
+  margin-top: 8px;
   position: relative;
   z-index: 1;
+  overflow: hidden;
 }
 
 .panel-right-top .panel-content {
@@ -1403,19 +1547,30 @@ export default {
   /* 确保两个内容框高度完全一致 */
   display: flex;
   flex-direction: column;
+  padding: 10px 12px;
+  scrollbar-gutter: stable;
 }
 
 .panel-right-top .section-content .result-text {
   overflow: visible;
   max-height: none;
+  display: block;
+  width: 100%;
+  white-space: pre-wrap !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+
+.panel-right-top .section-content .section-sub {
+  margin-bottom: 4px;
 }
 
 .panel-right-bottom {
-  flex-grow: 0;
-  flex-shrink: 0;
-  height: auto;
-  min-height: 180px;
-  max-height: 340px;
+  flex: 0 0 240px;
+  height: 240px;
+  min-height: 240px;
+  max-height: 240px;
   width: 100%;
   /* 与上方「群体协商认知偏差检测结果」同系列弹框底图 */
   background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
@@ -1427,8 +1582,9 @@ export default {
   position: relative;
   z-index: 1;
   gap: 8px;
-  margin-bottom: 15px;
+  margin-bottom: 8px;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .panel-content {
@@ -2015,7 +2171,7 @@ export default {
 /* 6. 右侧列 - 结果区域 */
 /* 偏差检测准确率面板 */
 .panel-right-accuracy {
-  flex-shrink: 0;
+  flex: 0 0 100px;
   width: 100%;
   background-image: url('~@/assets/images/step5/底部多主体和不一致的背景.png');
   background-repeat: no-repeat;
@@ -2026,7 +2182,9 @@ export default {
   align-items: center;
   justify-content: center;
   min-height: 100px;
-  margin-top: 8px;
+  max-height: 100px;
+  margin-top: 0;
+  box-sizing: border-box;
 }
 
 .result-section {
@@ -2143,10 +2301,10 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 5px 0;
+  padding: 0;
   min-height: 70px;
   background: none;
-  margin-top: 8px;
+  margin-top: auto;
 }
 
 /* 新增：右侧偏差检测按钮区域与样式（与左下角按钮尺寸风格一致） */

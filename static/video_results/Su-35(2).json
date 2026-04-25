@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "su-35",
+      "kind": "战斗机",
+      "color": "低可视暗灰色涂装暗灰",
+      "size": "机长22.2 m、翼展14.3 m、机高5.6 m",
+      "firepower": "1×30mmGSh‑30‑1、多挂点可携带中/近程空空导弹及对地武器、装有先进相控阵雷达与航电IRST+Irbis-E雷达支持超视距攻击",
+      "scene": "天空",
+      "shape": "Su-27深度改进型：取消前翼、加大边条、三维推力矢量喷口、全数字电传、复合材料占比提升",
+      "power": "2台留里卡AL-41F1S（117S）涡扇发动机、单台推力142 kN（32000 lbf）、带三维矢量喷口",
+      "country": "俄罗斯",
+      "outline": "翼身融合、三维推力矢量、双垂尾布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "Su-35",
+      "kind": "战斗机",
+      "color": "低可视暗灰色涂装",
+      "size": "长度22.2m、翼展14.3m、高度5.6m",
+      "firepower": "1×30mmGSh-30-1加农炮、多挂点可携带中/近程空空导弹及对地武器、装有先进相控阵雷达与航电",
+      "scene": "天空",
+      "shape": "单座、双发、机身-机翼融合、加强的气动与推力矢量控制",
+      "power": "2具AL-41F1S涡扇发动机、单台最大推力约142千牛、具备推力矢量功能",
+      "outline": "翼身融合、三维推力矢量、双垂尾"
+    }
+  ],
+  "accuracy_list": "0.9314",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/Su-35(2).png"
+}

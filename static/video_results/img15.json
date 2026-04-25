@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "",
+      "model": "",
+      "kind": "",
+      "color": "",
+      "size": "",
+      "firepower": "",
+      "scene": "",
+      "shape": "",
+      "power": "",
+      "country": "",
+      "outline": ""
+    }
+  ],
+  "result": [
+    {
+      "model": "杰拉尔德·R·福特级航空母舰",
+      "kind": "航空母舰",
+      "color": "海军灰色涂装",
+      "size": "长333m、高度76m、吃水12m",
+      "firepower": "RIM-162进化版海麻雀导弹系统、M212.7毫米机枪、F-35C闪电II战斗机、EA-18G咆哮者式电子作战机",
+      "scene": "海面",
+      "shape": "平直甲板、岛式上层建筑",
+      "power": "2座A1B压水反应堆、总功率28万马力",
+      "country": "美国",
+      "outline": "平直甲板、岛式上层建筑、电磁弹射"
+    }
+  ],
+  "accuracy_list": "0.3991",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/images/img15.png"
+}

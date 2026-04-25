@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "阵风",
+      "kind": "战斗机",
+      "color": "海军、灰色、黑色低可视涂装",
+      "size": "长约15.3m、翼展约10.9m、高约5.3m、最大起飞重量24500kg",
+      "firepower": "1×30mm机炮、多挂点可携带MICA、Meteor、SCALP、StormShadow、AASM等武器、可外挂多种精确制导武器",
+      "scene": "天空",
+      "shape": "单座、双发、前掠/后掠混合机翼、鸭翼可选项、折叠机翼",
+      "power": "2具Snecma/SafranM88系列涡扇发动机、单台最大推力约75千牛、加力推力约102千牛",
+      "country": "法国",
+      "outline": "三角翼、鸭翼、双发布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "su-27",
+      "kind": "战斗机",
+      "color": "蓝灰色迷彩涂装",
+      "size": "长度22.0m、翼展14.7m、高度5.9m",
+      "firepower": "1×30mmGSh‑30‑1加农炮、多达10个挂点、常用R‑73、R‑27系列空空导弹与外挂/对地武器",
+      "scene": "天空",
+      "shape": "双发、双垂尾、边条翼、机腹进气道",
+      "power": "2具AL-31F系列涡扇发动机、单台最大推力约122.5千牛",
+      "country": "俄罗斯",
+      "outline": "双发双垂尾、边条翼、大型制空战斗机构型"
+    }
+  ],
+  "accuracy_list": "0.8273",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/Dassault-Rafale-1.png"
+}

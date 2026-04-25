@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "车",
+      "model": "M113装甲运兵车",
+      "kind": "装甲运输车辆",
+      "color": "橄榄绿与深灰迷彩白底涂装",
+      "size": "长度4.863m、宽度2.686m、高度2.5m、战斗全重10900 kg",
+      "firepower": "1挺M2HB勃朗宁M2重机枪",
+      "scene": "地面",
+      "shape": "方形装甲车体、正面斜角、履带驱动顶部舱门",
+      "power": "底特律柴油6V-53 6缸二冲程柴油机功率215hp",
+      "country": "美国",
+      "outline": "全铝车体、前斜甲板、履带底盘布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "BMP-2步兵战车",
+      "kind": "步兵战车",
+      "color": "军绿色/荒漠迷彩涂装",
+      "size": "长6.86m、宽3.09m、高2.08m、战斗全重14.6吨",
+      "firepower": "无",
+      "scene": "地面",
+      "shape": "履带式两栖底盘、双人炮塔、大倾角首上装甲、车体两侧6对负重轮",
+      "power": "1台UTD-20柴油发动机，最大功率300马力",
+      "outline": "履带式两栖底盘、30mm机关炮炮塔、大倾角装甲、6对负重轮"
+    }
+  ],
+  "accuracy_list": "0.565",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/M113-Armored-Personnel-Carrier.png"
+}

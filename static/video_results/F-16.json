@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "F-16",
+      "kind": "战斗机",
+      "color": "灰色涂装、涂层",
+      "size": "长度15.06约m、翼展9.45约m、高度4.88约m",
+      "firepower": "1×20mmM61A1/A2加特林机炮、多挂点可挂AIM-9/AIM-120空空导弹、鹰击-83反舰导弹、JDAM/制导炸弹、火箭弹与电子/油箱/瞄准吊舱等",
+      "scene": "天空",
+      "shape": "双发单垂尾、气泡驾驶舱、融合机身‑机翼的低后掠翼",
+      "power": "1具普拉特惠特尼F100系列或通用电气F110系列涡扇发动机、推力142kN",
+      "country": "美国",
+      "outline": "双发、单垂尾、边条翼、气泡座舱布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "F-16",
+      "kind": "战斗机",
+      "color": "浅灰色",
+      "size": "长度15.06米、翼展9.45米、高度4.88米",
+      "firepower": "1×20mm M61A1/A2加特林机炮、多挂点可挂AIM-9/AIM-120空空导弹、AGM-65/各类空地导弹、JDAM/制导炸弹",
+      "scene": "天空",
+      "shape": "单发、单座、气泡驾驶舱、融合机身、边条翼",
+      "power": "1具普拉特惠特尼F100系列或通用电气F110系列涡扇发动机",
+      "country": "美国",
+      "outline": "流线型水滴状机身"
+    }
+  ],
+  "accuracy_list": "0.9415",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/F-16.png"
+}
