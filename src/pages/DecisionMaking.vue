@@ -208,7 +208,37 @@
           </template>
           <template v-else>
             <div class="accuracy-content">
-              <span class="accuracy-label">偏差识别准确率</span>
+              <span class="accuracy-label-group">
+                <span class="accuracy-label">偏差识别准确率</span>
+                <span class="formula-tooltip-trigger" aria-label="查看准确率计算公式">?</span>
+                <span class="formula-tooltip">
+                  <span class="formula-math" aria-label="A_comp 等于 alpha 乘 S_text 加 (1 减 alpha)S_rating 加 S_cor">
+                    <span class="f-term">
+                      A<sub class="f-sub">comp</sub>
+                    </span>
+                    <span class="f-op">=</span>
+                    <span class="f-term f-greek">α</span>
+                    <span class="f-mul-gap" aria-hidden="true"></span>
+                    <span class="f-term f-product">
+                      <span class="f-group">
+                        S<sub class="f-sub">text</sub>
+                      </span>
+                    </span>
+                    <span class="f-op">+</span>
+                    <span class="f-paren">(1 − <span class="f-greek">α</span>)</span>
+                    <span class="f-mul-gap" aria-hidden="true"></span>
+                    <span class="f-term f-product">
+                      <span class="f-group">
+                        S<sub class="f-sub">rating</sub>
+                      </span>
+                    </span>
+                    <span class="f-op">+</span>
+                    <span class="f-term f-product">
+                      <span class="f-group">S<sub class="f-sub">cor</sub></span>
+                    </span>
+                  </span>
+                </span>
+              </span>
               <span class="accuracy-value">
                 <template
                   v-if="deviationDetectionAccuracy !== 'N/A' && deviationDetectionAccuracy !== '计算中...' && deviationDetectionAccuracy !== null && deviationDetectionAccuracy !== undefined && deviationDetectionAccuracy !== ''">
@@ -304,6 +334,7 @@ export default {
       testVideoMessage: '正在从 LocalStorage 加载视频...',
       sourceImageList: [],
       selectedSourceImagePath: null,
+      selectedSourceItem: null,
       sourceImageMessage: '正在加载 static/Image 图片列表...',
       tempModule4Res: null,
       // 新增：用于存储定时器ID
@@ -529,6 +560,15 @@ export default {
       this.windowWidth = window.innerWidth;
       this.windowHeight = window.innerHeight;
     },
+    /**
+     * 去掉常见视频/文件扩展名，供 weapon_model 等传参使用（无扩展名则原样返回）
+     */
+    stripFileExtension(filename) {
+      if (filename == null) return '';
+      const s = String(filename).trim();
+      if (!s) return '';
+      return s.replace(/\.(mp4|webm|mov|avi|mkv|m4v|flv|wmv)$/i, '');
+    },
     initializeDataFromStorage() {
       try {
         const module3ResStr = localStorage.getItem('module3Res');
@@ -546,7 +586,7 @@ export default {
           const module1Res = JSON.parse(module1ResStr);
           const videoName = module1Res.video_name;
           if (videoName) {
-            this.apiConfig.weaponModel = videoName;
+            this.apiConfig.weaponModel = this.stripFileExtension(videoName);
           }
         }
       } catch (e) {
@@ -710,21 +750,47 @@ export default {
       this.samePoints = '请点击 "决策认知偏差检测"';
       this.differentPoints = '请点击 "决策认知偏差检测"';
       this.isBiasResultLoading = false;
-      const model = this.apiConfig.weaponModel;
+      const selectedName = this.selectedSourceItem && this.selectedSourceItem.name
+        ? String(this.selectedSourceItem.name).trim()
+        : '';
+      const isVideoSelection = this.selectedSourceItem && this.selectedSourceItem.type === 'video';
+      const fromList = isVideoSelection && selectedName
+        ? this.stripFileExtension(selectedName)
+        : selectedName;
+      const fromConfig = this.stripFileExtension(this.apiConfig.weaponModel);
+      const model = fromList || fromConfig;
 
       try {
         const requestBody = { weapon_model: model };
+        console.log('[DecisionMaking] 开始人机决策 请求体:', requestBody, {
+          api: `${API_BASE_URL}/analyze-weapon`,
+          selectedSource: this.selectedSourceItem,
+          listDisplayName: selectedName,
+          isVideoSelection,
+          weaponModelFromConfig: this.apiConfig.weaponModel
+        });
         const mainResponse = await axios.post(`${API_BASE_URL}/analyze-weapon`, requestBody);
         const mainData = mainResponse.data;
+        console.log('[DecisionMaking] analyze-weapon 完整响应 mainResponse.data:', mainData);
+        if (mainData && mainData.data) {
+          console.log('[DecisionMaking] analyze-weapon 业务数据 mainData.data:', mainData.data);
+        }
 
         if (mainData.status === 'success') {
           const accuracyResponse = await axios.get(`${IMAGE_API_BASE_URL}/statistics/accuracy`);
           const accuracyData = accuracyResponse.data;
+          console.log('[DecisionMaking] statistics/accuracy 完整响应 accuracyResponse.data:', accuracyData, {
+            url: `${IMAGE_API_BASE_URL}/statistics/accuracy`
+          });
 
           const imageResponse = await axios.get(`${IMAGE_API_BASE_URL}/weapon-all-images`, {
             params: { weapon_model: model }
           });
           const imageData = imageResponse.data;
+          console.log('[DecisionMaking] weapon-all-images 完整响应 imageResponse.data:', imageData, {
+            url: `${IMAGE_API_BASE_URL}/weapon-all-images`,
+            params: { weapon_model: model }
+          });
 
           if (imageData.images && Array.isArray(imageData.images)) {
             this.imageList = imageData.images
@@ -756,6 +822,7 @@ export default {
             coredimensionratingaccuracy: mainData.data.core_dimension_rating_accuracy,
             average_comprehensive_accuracy: accuracyData['average_comprehensive_accuracy']
           };
+          console.log('[DecisionMaking] 合并后写入 localStorage 的 module4Res:', module4Res);
           localStorage.setItem('module4Res', JSON.stringify(module4Res));
           // 在成功获取数据并保存到 localStorage 后，重置偏差检测相关状态：
           localStorage.removeItem('decisionBiasStartTime');
@@ -779,9 +846,15 @@ export default {
           this.parseBackendData(mainData.data);
         } else {
           this.currentStageText = `分析接口数据获取失败：${(mainData.error && mainData.error.message) || '未知错误'}`;
+          console.warn('[DecisionMaking] analyze-weapon 非 success:', mainData);
         }
       } catch (error) {
         this.currentStageText = '接口调用失败，请检查网络、CORS配置或后端服务';
+        console.error('[DecisionMaking] 开始人机决策 接口失败:', error, {
+          message: error && error.message,
+          response: error && error.response && error.response.data,
+          status: error && error.response && error.response.status
+        });
       } finally {
         this.isLoading = false;
         this.isAssessing = false;
@@ -789,6 +862,7 @@ export default {
       }
     },
     parseBackendData(backendData) {
+      console.log('[DecisionMaking] parseBackendData 入参 backendData:', backendData);
       const currentThirdStageText = String(this.thirdStageText);
       if (!currentThirdStageText || currentThirdStageText.includes('正在加载') || currentThirdStageText.includes('未找到')) {
         this.thirdStageText = `发现目标武器型号：${backendData.weapon_model}，位于指定区域，行为模式初步匹配已知威胁，待进一步分析验证`;
@@ -898,6 +972,7 @@ export default {
 
     // 新增：计时结束处理逻辑
     handleTimerComplete() {
+      console.log('[DecisionMaking] 决策认知偏差检测 计时结束 handleTimerComplete');
       this.isBiasDetecting = false;
       this.isBiasResultLoading = false;
       this.accuracyTimeout = null;
@@ -911,8 +986,10 @@ export default {
       if (module4ResStr) {
         try {
           const data = JSON.parse(module4ResStr);
+          console.log('[DecisionMaking] 计时结束读取 module4Res 用于准确率:', data);
           const accuracyValue = parseFloat(data.average_comprehensive_accuracy);
           this.deviationDetectionAccuracy = isNaN(accuracyValue) ? 'N/A' : (accuracyValue * 100).toFixed(2);
+          console.log('[DecisionMaking] 偏差识别准确率展示值 deviationDetectionAccuracy:', this.deviationDetectionAccuracy);
         } catch (e) {
           this.deviationDetectionAccuracy = 'N/A';
         }
@@ -920,6 +997,7 @@ export default {
     },
     // 修改：点击"决策认知偏差检测"按钮
     performDeviationDetection() {
+      console.log('[DecisionMaking] 点击「决策认知偏差检测」：本页不向新接口请求，使用 localStorage.module4Res 做展示与计时');
       this.isBiasDetecting = true;
       this.isBiasResultLoading = true;
       this.deviationDetectionAccuracy = '计算中...';
@@ -937,11 +1015,18 @@ export default {
         const module4ResStr = localStorage.getItem('module4Res');
         if (module4ResStr) {
           const module4Res = JSON.parse(module4ResStr);
+          console.log('[DecisionMaking] 决策认知偏差检测 使用的 module4Res（来自「开始人机决策」缓存）:', module4Res);
 
           // 模拟文本生成延迟（比如3秒后显示文本，但准确率要等4分钟）
           setTimeout(() => {
             if (module4Res.summary) {
               const { behaviorInfo, samePoints, differentPoints } = this.parseSummaryText(module4Res.summary);
+              console.log('[DecisionMaking] 决策认知偏差检测 解析 summary 后的展示字段:', {
+                rawSummary: module4Res.summary,
+                behaviorInfo,
+                samePoints,
+                differentPoints
+              });
               this.behaviorInfo = behaviorInfo;
               this.samePoints = samePoints;
               this.differentPoints = differentPoints;
@@ -957,6 +1042,7 @@ export default {
           // 启动4分钟准确率计时
           this.startAccuracyTimer(BIAS_DETECTION_DELAY);
         } else {
+          console.warn('[DecisionMaking] 决策认知偏差检测：localStorage 中无 module4Res');
           // 如果没有数据
           alert('请先点击 "开始人机决策" 获取数据');
           this.isBiasDetecting = false;
@@ -989,15 +1075,24 @@ export default {
     async loadSourceImageList() {
       try {
         const ctx = require.context('../../static/Image', true, /\.(png|jpe?g|webp|gif)$/i);
-        const imageFiles = ctx.keys().map((key) => {
+        const imageFolderMap = new Map();
+        ctx.keys().forEach((key) => {
           const normalized = key.replace(/^\.\//, '');
-          return {
-            name: normalized.split('/').pop(),
-            path: `image:${normalized}`,
-            url: `/static/Image/${normalized}`,
-            type: 'image'
-          };
+          const parts = normalized.split('/').filter(Boolean);
+          const fileName = parts.length ? parts[parts.length - 1] : normalized;
+          const parentFolder = parts.length > 1 ? parts[parts.length - 2] : '';
+          const imageDisplayName = parentFolder || fileName.replace(/\.[^.]+$/, '');
+          // 同一文件夹只显示一次，保留该文件夹遇到的第一张图
+          if (!imageFolderMap.has(imageDisplayName)) {
+            imageFolderMap.set(imageDisplayName, {
+              name: imageDisplayName,
+              path: `image:${normalized}`,
+              url: `/static/Image/${normalized}`,
+              type: 'image'
+            });
+          }
         });
+        const imageFiles = Array.from(imageFolderMap.values());
 
         let videoFiles = [];
         try {
@@ -1034,6 +1129,7 @@ export default {
     selectSourceImage(item) {
       if (!item || !item.path) return;
       this.selectedSourceImagePath = item.path;
+      this.selectedSourceItem = item;
     },
     loadVideoFromStorage() {
       try {
@@ -2040,6 +2136,114 @@ export default {
   font-size: 1rem;
   font-weight: bold;
   white-space: nowrap;
+}
+
+.accuracy-label-group {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.formula-tooltip-trigger {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 229, 255, 0.8);
+  color: #00e5ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: help;
+  user-select: none;
+}
+
+.formula-tooltip {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  min-width: 430px;
+  max-width: 520px;
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 229, 255, 0.5);
+  border-radius: 6px;
+  background: rgba(4, 18, 32, 0.95);
+  color: #d8f6ff;
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  white-space: normal;
+  z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-2px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+  pointer-events: none;
+}
+
+.formula-math {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  font-variant: normal;
+}
+
+.f-term {
+  display: inline;
+}
+
+.f-product {
+  display: inline;
+  margin: 0 0.1em;
+}
+
+.f-group {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 0.05em;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.f-sub {
+  font-size: 0.7em;
+  line-height: 0;
+  font-weight: 600;
+}
+
+.f-op {
+  display: inline;
+  margin: 0 0.2em;
+  font-weight: 700;
+}
+
+.f-greek {
+  font-style: normal;
+  font-weight: 700;
+  margin: 0 0.15em 0 0.05em;
+}
+
+.f-paren {
+  display: inline;
+  font-weight: 600;
+  margin: 0 0.1em 0 0.05em;
+  white-space: nowrap;
+}
+
+.f-mul-gap {
+  display: inline-block;
+  width: 0.2em;
+}
+
+.accuracy-label-group:hover .formula-tooltip,
+.accuracy-label-group:focus-within .formula-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 
 .accuracy-value {

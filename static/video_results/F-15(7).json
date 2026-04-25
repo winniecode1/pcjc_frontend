@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "F-15",
+      "kind": "战斗机",
+      "color": "美国空军低可视灰色涂装、表面含雷达吸波涂层",
+      "size": "长约19.43m、翼展约13.05m、高约5.63m",
+      "firepower": "1门M61A120mm火神机炮、可挂载AIM-120中距空空导弹、精确制导炸弹、AIM-9近距空空导弹及各类导弹挂舱",
+      "scene": "地面",
+      "shape": "高翼载机、双垂尾、缩减翼梁、油箱",
+      "power": "2具普拉特惠特尼F100系列涡扇发动机、单台推力130kN",
+      "country": "美国",
+      "outline": "双垂尾、高翼载布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "Su-27",
+      "kind": "战斗机",
+      "color": "蓝灰色迷彩涂装",
+      "size": "长度22.0m、翼展14.7m、高度5.9m",
+      "firepower": "1×30mm GSh-30-1加农炮、多达10个挂点、常用R-73、R-27系列空空导弹与外挂/对地武器",
+      "scene": "天空",
+      "shape": "双发、双垂尾、边条翼、机腹进气道",
+      "power": "2具AL-31F系列涡扇发动机、单台最大推力约122.5千牛",
+      "country": "俄罗斯",
+      "outline": "双发双垂尾、边条翼、大型制空战斗机构型"
+    }
+  ],
+  "accuracy_list": "0.7954",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/F-15(7).png"
+}

@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "UH-60",
+      "kind": "武装直升机",
+      "color": "黑色与军绿色迷彩",
+      "size": "机长19.76m、旋翼直径16.36m、机高5.13m、空重4819kg、最大起飞重量9979kg",
+      "firepower": "可配备机关炮、火箭弹、反坦克导弹等武器、短翼可挂载70mm火箭巢、非专用武装平台、火力依任务模块而定",
+      "scene": "天空",
+      "shape": "单旋翼、尾桨、流线型机身、开放式舱门",
+      "power": "2具通用电气T700系列涡轴发动机、单台功率1900",
+      "country": "美国",
+      "outline": "单主旋翼、尾桨系统"
+    }
+  ],
+  "result": [
+    {
+      "model": "UH-60(1.0)",
+      "kind": "武装直升机(1.0)",
+      "color": "黑色(0.6692)",
+      "size": "长度19.76m、旋翼直径16.36m、高度5.13m(0.9217)",
+      "firepower": "可配备机关炮、火箭弹、反坦克导弹等武器(0.8221)",
+      "scene": "天空(1.0)",
+      "shape": "单主旋翼、尾桨、流线型机身(0.8589)",
+      "power": "2具通用电气T700系列涡轴发动机(0.9319)",
+      "outline": "单主旋翼、尾桨(0.9764)"
+    }
+  ],
+  "accuracy_list": "0.9414",
+  "image_path": "/home/wuzhixuan/Project/PCJC/5/result/UH‑60-Black-Hawk-5/single_task/stage1_results/UH‑60-Black-Hawk-5.png"
+}

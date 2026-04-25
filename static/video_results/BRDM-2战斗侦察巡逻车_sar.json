@@ -1,0 +1,35 @@
+{
+  "label_info": [
+    {
+      "type": "BRDM2",
+      "model": "BRDM-2战斗侦察巡逻车",
+      "kind": "装甲侦察车",
+      "color": "军绿色/荒漠迷彩",
+      "size": "长5.75m、宽2.35m、高2.31m、战斗全重7.0吨",
+      "firepower": "1挺14.5mm KPVT重机枪，备弹500发；同轴1挺7.62mm PKT机枪，备弹2000发",
+      "scene": "地面",
+      "shape": "4×4轮式两栖底盘、圆锥形小型炮塔、船型车体、大尺寸越野轮胎",
+      "power": "1台GAZ-41 V型8缸汽油发动机，最大功率140马力",
+      "country": "俄罗斯",
+      "outline": "4×4轮式底盘、船型两栖车体、顶部小型机枪炮塔、大直径越野轮胎"
+    }
+  ],
+  "result": [
+    {
+      "type": "BRDM2",
+      "model": "BRDM-2战斗侦察巡逻车",
+      "kind": "装甲侦察车",
+      "color": "军绿色/荒漠迷彩",
+      "size": "长5.75m、宽2.35m、高2.31m、战斗全重7.0吨",
+      "firepower": "1挺14.5mm KPVT重机枪，备弹500发；同轴1挺7.62mm PKT机枪，备弹2000发",
+      "scene": "地面",
+      "shape": "4×4轮式两栖底盘、圆锥形小型炮塔、船型车体、大尺寸越野轮胎",
+      "power": "1台GAZ-41 V型8缸汽油发动机，最大功率140马力",
+      "country": "俄罗斯",
+      "outline": "4×4轮式底盘、船型两栖车体、顶部小型机枪炮塔、大直径越野轮胎"
+    }
+  ],
+  "accuracy_list": "1.0625",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/sar/BRDM-2战斗侦察巡逻车/HB14936.jpeg",
+  "method": "sar_inference"
+}

@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "C-40",
+      "kind": "运输机",
+      "color": "白色与浅蓝涂装",
+      "size": "机长33.53 m、翼展35.8 m、机高12.5 m、最大起飞重量79000 kg",
+      "firepower": "无",
+      "scene": "地面",
+      "shape": "商改机型，高机舱、双轮",
+      "power": "2具CFM56系列涡扇发动机、单台推力121kN",
+      "country": "美国",
+      "outline": "高机舱布"
+    }
+  ],
+  "result": [
+    {
+      "model": "C-40",
+      "kind": "运输机",
+      "color": "白色与浅蓝色涂装",
+      "size": "长33.53米、翼展35.8米、高12.5米",
+      "firepower": "无",
+      "scene": "地面",
+      "shape": "商改机型，高机舱",
+      "power": "2具CFM56系列涡扇发动机",
+      "country": "美国",
+      "outline": "高机舱"
+    }
+  ],
+  "accuracy_list": "0.9697",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/C-40-Clipper.png"
+}

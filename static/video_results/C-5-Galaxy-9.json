@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "C-5Galaxy",
+      "kind": "运输机",
+      "color": "美国空军标准“欧洲一号”灰白迷彩（FS36173浅灰、FS36270中灰）、或全灰色低可视涂装",
+      "size": "机长75.5 m、翼展67.9 m、机高19.8 m、最大起飞重量381000 kg",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "巨型圆筒形机身、高单翼、四发布局、前后蚌壳式货舱门、T型尾翼、主起落架28轮",
+      "power": "4台通用电气F138-GE-100涡扇发动机、单台推力191kN",
+      "country": "美国",
+      "outline": "巨型机身、高翼、四发布局、前后货舱门布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "C-5Galaxy(1.0)",
+      "kind": "运输机(1.0)",
+      "color": "灰色(0.5233)",
+      "size": "长度75.5m、翼展67.9m、高度19.8m(0.8039)",
+      "firepower": "无(1.0)",
+      "scene": "天空(1.0)",
+      "shape": "巨型机身、高翼、四发布局、前后货舱门(0.8717)",
+      "power": "4具通用电气TF39或F138-GE-100涡扇发动机(0.8802)",
+      "outline": "巨型机身、高翼、四发布局、前后货舱门(0.9948)"
+    }
+  ],
+  "accuracy_list": "0.9338",
+  "image_path": "/home/wuzhixuan/Project/PCJC/5/result/C-5-Galaxy-9/single_task/stage1_results/C-5-Galaxy-9.png"
+}

@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "",
+      "model": "",
+      "kind": "",
+      "color": "",
+      "size": "",
+      "firepower": "",
+      "scene": "",
+      "shape": "",
+      "power": "",
+      "country": "",
+      "outline": ""
+    }
+  ],
+  "result": [
+    {
+      "model": "CT-114Tutor",
+      "kind": "教练机",
+      "color": "机身红色、机翼和尾翼白色、有蓝色条纹和加拿大国旗标志",
+      "size": "长度12.2m、翼展11.3m、高度4.1m",
+      "firepower": "无",
+      "scene": "地面",
+      "shape": "单发、单座、高单翼、后掠翼、T型尾翼",
+      "power": "1×普惠PT6A-66A涡轮轴发动机",
+      "outline": "简洁的教练机气动布局"
+    }
+  ],
+  "accuracy_list": "0.489",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/img5.png"
+}

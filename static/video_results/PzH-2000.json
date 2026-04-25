@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "车",
+      "model": "PzH2000自行榴弹炮",
+      "kind": "火力支援车辆",
+      "color": "德国联邦国防军标准绿棕迷彩、或联合国白底涂装",
+      "size": "长度11.7m、宽度3.6m、高度3.1m全重57000 kg",
+      "firepower": "莱茵金属155毫米L52ArtilleryGun、莱茵金属MG37.62mm通用机枪M982“神剑”制导炮弹50 km",
+      "scene": "地面",
+      "shape": "履带式底盘、大型封闭式炮塔、长身管火炮三防系统",
+      "power": "MTU 881 Ka-500 8缸涡轮增压柴油机、功率1000 hp",
+      "country": "德国",
+      "outline": "全封闭炮塔、履带底盘布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "PzH2000自行榴弹炮",
+      "kind": "火力支援车辆",
+      "color": "丛林迷彩",
+      "size": "长度11.7m、宽度3.6m、高度3.1m",
+      "firepower": "莱茵金属155毫米L52ArtilleryGun、莱茵金属MG37.62mm通用机枪",
+      "scene": "地面",
+      "shape": "履带式底盘、大型封闭式炮塔、长身管火炮",
+      "power": "MTU881Ka-500型10缸涡轮增压柴油发动机",
+      "country": "德国",
+      "outline": "全封闭炮塔、履带底盘"
+    }
+  ],
+  "accuracy_list": "0.9399",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/PzH-2000.png"
+}

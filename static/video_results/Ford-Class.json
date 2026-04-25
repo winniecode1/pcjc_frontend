@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "船",
+      "model": "杰拉尔德·R·福特级航空母舰",
+      "kind": "航空母舰",
+      "color": "海军灰色涂装、舰岛",
+      "size": "舰长333 m、舰宽76 m、吃水12 m、满载排水量100000 吨",
+      "firepower": "RIM-162进化版海麻雀导弹系统、公羊导弹方阵快炮、M212.7毫米机枪、F-35C闪电II战斗机、EA-18G咆哮者式电子作战机E-2D鹰眼早期预警机MH-60R/S骑士鹰式多用途直升机MQ-25黄貂鱼无人机CMV-22B鱼鹰式运输机",
+      "scene": "海面",
+      "shape": "平直甲板、岛式上层建筑、电磁弹射布局",
+      "power": "2座A1B压水反应堆、总功率约28万马力、最大航速超过30节",
+      "country": "美国",
+      "outline": "平直甲板、岛式上层建筑、电磁弹射布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "杰拉尔德·R·福特级航空母舰",
+      "kind": "航空母舰",
+      "color": "海军灰色涂装",
+      "size": "长333m、高度76m、吃水12m",
+      "firepower": "RIM-162进化版海麻雀导弹系统、M212.7毫米机枪、F-35C闪电II战斗机、EA-18G咆哮者式电子作战机",
+      "scene": "海面",
+      "shape": "平直甲板、岛式上层建筑",
+      "power": "2座A1B压水反应堆、总功率28万马力",
+      "country": "美国",
+      "outline": "平直甲板、岛式上层建筑、电磁弹射"
+    }
+  ],
+  "accuracy_list": "0.949",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/Ford-Class.png"
+}

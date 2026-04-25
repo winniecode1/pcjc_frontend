@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "歼-16潜龙",
+      "kind": "战斗机",
+      "color": "深灰色低可视涂装",
+      "size": "长度21.9m、翼展14.7m、高度6.0m、最大起飞重量36000 kg",
+      "firepower": "1门GSh-30-1型30毫米机炮、12外部硬点、可挂载近距空空导弹、霹雳距空空导弹",
+      "scene": "天空",
+      "shape": "双发、双座串列座舱、机身延长与多挂点尾、双垂尾外倾",
+      "power": "2具涡扇-10B涡扇发动机、单台推力142kN",
+      "country": "中国",
+      "outline": "双发、双座、串列座舱布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "su-35",
+      "kind": "战斗机",
+      "color": "低可视暗灰色涂装",
+      "size": "长度22.2m、翼展14.3m、高度5.6m",
+      "firepower": "1×30mmGSh‑30‑1、多挂点可携带中/近程空空导弹及对地武器、装有先进相控阵雷达与航电",
+      "scene": "天空",
+      "shape": "单座、双发、机身‑机翼融合、加强的气动与推力矢量控制",
+      "power": "2具AL-41F1S涡扇发动机、单台最大推力约142千牛、具备推力矢量功能",
+      "country": "俄罗斯",
+      "outline": "翼身融合、三维推力矢量、双垂尾"
+    }
+  ],
+  "accuracy_list": "0.8508",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/J-16(2).png"
+}

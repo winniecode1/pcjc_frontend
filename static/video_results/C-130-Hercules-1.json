@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "C-130大力神",
+      "kind": "运输机",
+      "color": "浅蓝灰色、带低可视标志和防眩黑机鼻",
+      "size": "机长29.8 m、翼展40.4 m、机高11.7 m、最大起飞重量70300 kg",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "平直高翼、后舱跳跃式货舱门、四发涡桨布局、主起落架四轮",
+      "power": "、4台Allison T56-A-15涡桨发动机、单台功率4508shp、驱动四叶恒速螺旋桨",
+      "country": "美国",
+      "outline": "高翼、后跳板货舱门、四发涡桨布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "C-130大力神",
+      "kind": "运输机",
+      "color": "浅蓝灰色、带低可视标志",
+      "size": "长度29.8m、翼展40.4m、高度11.7m",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "平直高翼、后舱跳跃式货舱门、四发涡桨布局",
+      "power": "4具Allison T56系列涡桨发动机",
+      "country": "美国",
+      "outline": "高翼、后跳板货舱门、四发涡桨"
+    }
+  ],
+  "accuracy_list": "0.9613",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/C-130-Hercules-1.png"
+}

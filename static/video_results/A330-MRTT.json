@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "A330MRTT",
+      "kind": "加油机",
+      "color": "北约灰白色军涂装          ",
+      "size": "长58.8m、翼展60.3m、机高17.4m、重量233000kg",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "流线型机身、宽展翼、配备加油吊舱、尾部可选硬管加油系统",
+      "power": "2具劳斯莱斯遄达700系列涡扇发动机、总推力632kN",
+      "country": "法国",
+      "outline": "宽展翼、加油吊舱系统"
+    }
+  ],
+  "result": [
+    {
+      "model": "A330MRTT",
+      "kind": "加油机",
+      "color": "灰白色",
+      "size": "长度58.8米、翼展60.3米、高度17.4米",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "流线型机身、宽展翼、配备加油吊舱",
+      "power": "2具劳斯莱斯遄达700系列涡扇发动机",
+      "outline": "宽展翼、加油吊舱"
+    }
+  ],
+  "accuracy_list": "0.9344",
+  "image_path": "/home/wuzhixuan/Project/PCJC/1/output/task_20260415_220708/A330-MRTT/key_frame.jpg"
+}

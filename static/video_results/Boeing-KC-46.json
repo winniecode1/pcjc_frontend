@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "波音KC-46",
+      "kind": "加油机",
+      "color": "浅灰色或银灰色防反光涂层、机腹带有空中加油吊杆标识",
+      "size": "长度约50.5米、翼展约47.5米、高度16.1米",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "大型宽体机身、下单翼布局、双发动机悬挂于机翼下方尾部有加油吊杆",
+      "power": "2具PW4062涡扇发动机、单台功率1500shp",
+      "country": "美国",
+      "outline": "宽体机身、下单翼、双发布局、尾部硬管布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "波音KC-46(1.0)",
+      "kind": "加油机(1.0)",
+      "color": "浅灰色(0.5665)",
+      "size": "长度50.5m、翼展47.5m、高度16.1m(0.7602)",
+      "firepower": "无(1.0)",
+      "scene": "天空(1.0)",
+      "shape": "大型宽体机身、下单翼布局、双发动机悬挂于机翼下方(0.9081)",
+      "power": "2具PW4062涡扇发动机(0.8832)",
+      "outline": "宽体机身、下单翼、双发布局、尾部硬管(0.9866)"
+    }
+  ],
+  "accuracy_list": "0.936",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/images_frame_qsc/Boeing-KC-46.png"
+}

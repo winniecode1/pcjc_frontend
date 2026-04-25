@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "虎式武装直升机",
+      "kind": "武装直升机",
+      "color": "暗绿颜色与灰色迷彩",
+      "size": "长度约12m、旋翼直径约13m、高约4.0m",
+      "firepower": "1×30毫米GIAT 30机首炮塔（备弹450发）",
+      "scene": "天空",
+      "shape": "流线型机身、机头搭载机炮、尾部尾桨突出、颜色突出",
+      "power": "2具MTR390涡轴发动机",
+      "country": "德法",
+      "outline": "串列座舱、五叶主旋翼、涵道尾桨布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "虎式武装直升机",
+      "kind": "武装直升机",
+      "color": "暗绿与灰色迷彩",
+      "size": "长度12m、旋翼直径13m、高4.0 m",
+      "firepower": "1× 30毫米GIAT 30机首炮塔",
+      "scene": "天空",
+      "shape": "流线型机身、机头搭载机炮、尾部尾桨突出",
+      "power": "2×MTR390涡轴发动机",
+      "country": "德法",
+      "outline": "串列座舱、五叶主旋翼、涵道尾桨"
+    }
+  ],
+  "accuracy_list": "0.9709",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/Eurocopter-Tiger.png"
+}

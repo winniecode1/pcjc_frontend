@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "车",
+      "model": "ZBL-08式轮式步兵战车",
+      "kind": "步兵战车",
+      "color": "由深绿、浅绿、土黄、褐红等多色组成的数码迷彩城市战型为全灰",
+      "size": "长度约8.0m、宽度约3.0m、高度约2.5m全重21000 kg",
+      "firepower": "主武器30毫米ZPT‑99+同轴机枪、并可携带2枚HJ‑73/改进型反坦导弹、配备遥控/车载机枪与烟幕弹车顶可加装QJC-88遥控机枪",
+      "scene": "地面",
+      "shape": "8×8轮式底盘、低矮模块化炮塔两栖浮渡能力",
+      "power": "DeutzBF6M1015C柴油发动机功率330 hp（246 kW）",
+      "country": "中国",
+      "outline": "8×8轮式底盘、模块化炮塔布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "ZBL-08式轮式步兵战车",
+      "kind": "步兵战车",
+      "color": "由深绿、浅绿、土黄、褐红等多色组成的数码迷彩",
+      "size": "长度约8.0m、宽度约3.0m、高度约2.5m",
+      "firepower": "主武器30毫米ZPT‑99+同轴机枪、并可携带2枚HJ‑73/改进型反坦导弹、配备遥控/车载机枪与烟幕弹",
+      "scene": "地面",
+      "shape": "8×8轮式底盘、低矮模块化炮塔",
+      "power": "DeutzBF6M1015C柴油发动机",
+      "country": "中国",
+      "outline": "8×8轮式底盘、模块化炮塔"
+    }
+  ],
+  "accuracy_list": "0.9648",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/ZBL-08.png"
+}

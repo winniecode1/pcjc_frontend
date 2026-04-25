@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "车",
+      "model": "M1艾布拉姆斯主战坦克",
+      "kind": "坦克",
+      "color": "美国陆军标准CARC三色迷彩、或中东沙色单色",
+      "size": "长度7.93m、宽度3.66m、高度2.44m",
+      "firepower": "105口径毫米52倍径M68A1线膛炮、12.7毫米口径勃朗宁M2重机枪",
+      "scene": "地面",
+      "shape": "履带式、炮塔位于车体中部、7对负重轮",
+      "power": "霍尼韦尔AGT-1500燃气涡轮发动机",
+      "country": "美国",
+      "outline": "铸造车体、炮塔居中布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "M1艾布拉姆斯主战坦克",
+      "kind": "坦克",
+      "color": "沙漠迷彩涂装",
+      "size": "长度7.93米、宽度3.66米、高度2.44米",
+      "firepower": "105毫米口径M68A1线膛炮、12.7毫米口径重机枪",
+      "scene": "地面",
+      "shape": "履带式、炮塔位于车体中部",
+      "power": "霍尼韦尔航天AGT-1500燃气涡轮发动机",
+      "outline": "铸造车体、炮塔居中"
+    }
+  ],
+  "accuracy_list": "0.9454",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/M1-Abrams.png"
+}
