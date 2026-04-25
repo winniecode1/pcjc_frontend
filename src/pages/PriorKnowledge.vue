@@ -65,19 +65,16 @@
         <div class="design-module text-module-left fixed-left-text">
           <div class="panel-header">多模态认知传播信息</div>
           <div class="design-module-content">
-            <!-- 原始图片展示（认知传播信息源） -->
-            <div v-if="cognitiveImageUrl" class="cognitive-image-container">
-              <div class="cognitive-image-label">认知传播信息源</div>
-              <img :src="cognitiveImageUrl" class="cognitive-source-image" @error="handleImageError" />
-            </div>
             <!-- 细粒度检测后的信息：固定图片区域（不滚动） -->
             <div v-if="multimodalDetectionInfo && multimodalDetectionInfo.image" class="multimodal-image-fixed">
-              <img :src="multimodalDetectionInfo.image" class="multimodal-image" />
+              <div class="cognitive-image-container">
+                <img :src="multimodalDetectionInfo.image" class="multimodal-image" @error="handleImageError" />
+              </div>
             </div>
             <!-- 可滚动的信息区域 -->
             <div class="text-scrollable">
               <!-- 细粒度检测后的信息（颜色、形状、轮廓） -->
-              <div v-if="multimodalDetectionInfo">
+              <div v-if="multimodalDetectionInfo && (multimodalDetectionInfo.color || multimodalDetectionInfo.shape || multimodalDetectionInfo.outline)">
                 <div v-if="multimodalDetectionInfo.color" class="multimodal-info-item">
                   <span class="info-label">颜色：</span>
                   <span>{{ multimodalDetectionInfo.color }}</span>
@@ -291,15 +288,13 @@ export default {
           // 数据选择相关
           videoList: [],
           selectedVideo: null,
-          isVideoSelected: false,
-          // 认知传播信息源模块的原始图片URL
-          cognitiveImageUrl: null
+          isVideoSelected: false
         };
       },
   mounted() {
     window.addEventListener('resize', this.handleResize);
-    // 获取作战指令
-    this.fetchOrders();
+    // 获取作战指令（使用默认图片路径）
+    this.fetchOrders(IMG_PATH_URL);
     // 获取视频列表
     this.fetchVideoList();
     // 页面加载时加载视频
@@ -329,6 +324,54 @@ export default {
     // 只有在计时完成时才清除localStorage
   },
   methods: {
+    // 重置所有模块数据（当更换图片时调用）
+    resetModuleData() {
+      console.log('更换图片，重置所有模块数据');
+      
+      // 重置细粒度检测相关数据
+      this.multimodalDetectionInfo = null;
+      this.initialDescriptionInfo = null;
+      this.listResultData = null;
+      this.isDetecting = false;
+      this.isQueryingPriorKnowledge = false;
+      
+      // 重置图谱数据
+      this.nodes = [];
+      this.links = [];
+      this.isColorized = false;
+      
+      // 重置预测信息为默认状态
+      this.predictInfoList = ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息", "轮廓信息"];
+      
+      // 重置属性颜色
+      this.propertyColors = {};
+      
+      // 重置准确率数据
+      this.accuracyRate = '—';
+      this.cachedAccuracy = '—';
+      if (this.accuracyTimer) {
+        clearTimeout(this.accuracyTimer);
+        this.accuracyTimer = null;
+      }
+      this.isWaitingForAccuracy = false;
+      
+      // 清除 imageBase64（以便重新加载新图片的 base64）
+      this.imageBase64 = '';
+      
+      // 清除相关 localStorage 缓存
+      localStorage.removeItem('module2Res');
+      localStorage.removeItem('multimodalDetectionInfo');
+      localStorage.removeItem('listResultData');
+      localStorage.removeItem('module2AccuracyTimerStart');
+      localStorage.removeItem('module2CachedAccuracy');
+      localStorage.removeItem('imageBase64');
+      
+      // 重新渲染图谱（使用默认节点）
+      this.$nextTick(() => {
+        this.renderGraph();
+      });
+    },
+    
     // 判断是否是图片文件
     isImageFile(filename) {
       if (!filename) return false;
@@ -390,6 +433,16 @@ export default {
     },
     // 选择数据
     selectVideo(video) {
+      // 检查是否选择了不同的图片，如果是则重置所有模块信息
+      const isDifferentImage = this.selectedVideo && (
+        this.selectedVideo.path !== video.path || 
+        this.selectedVideo.id !== video.id
+      );
+      
+      if (isDifferentImage || !this.selectedVideo) {
+        this.resetModuleData();
+      }
+      
       this.selectedVideo = video;
       this.isVideoSelected = true;
 
@@ -407,8 +460,6 @@ export default {
         // 调用后端接口获取图片
         const imageBaseUrl = 'http://10.109.253.71:8001/module2/get_image';
         this.videoUrl = `${imageBaseUrl}?img_path=${encodeURIComponent(imagePath)}`;
-        // 设置认知传播信息源的原始图片
-        this.cognitiveImageUrl = this.videoUrl;
         this.videoMessage = '图片加载中...';
       } else {
         // 如果是视频类型，使用视频接口
@@ -417,8 +468,8 @@ export default {
         this.videoMessage = '视频加载中...';
       }
 
-      // 获取作战指令
-      this.fetchOrders(sampleId);
+      // 获取作战指令（使用选中的图片路径）
+      this.fetchOrders(imagePath);
 
       console.log('选中数据:', JSON.parse(JSON.stringify(video)), 'isImage:', isImage, 'videoUrl:', this.videoUrl);
 
@@ -428,12 +479,16 @@ export default {
         type: video.type,
         name: video.name
       }));
+      
+      // 如果更换了图片，重新加载 base64 数据
+      if (isDifferentImage) {
+        this.loadImageBase64(imagePath);
+      }
     },
     // 返回选择列表
     backToList() {
       this.isVideoSelected = false;
       this.videoUrl = null;
-      this.cognitiveImageUrl = null;
       this.selectedVideo = null;
       this.videoMessage = '请选择数据源';
     },
@@ -751,11 +806,7 @@ export default {
         this.listResultData = data;
 
         // 在"多模态认知传播信息"框内展示图像信息和颜色、形状、轮廓
-        // 使用之前存储的imageBase64
         const multimodalContent = {};
-        if (this.imageBase64) {
-          multimodalContent.image = `data:image/png;base64,${this.imageBase64}`;
-        }
         
         // 获取颜色、形状、轮廓信息
         if (data.result && data.result.length > 0 && data.result[0].length > 0) {
@@ -771,6 +822,13 @@ export default {
           }
         }
         
+        // 获取细粒度检测后的图片（segmented_images）
+        // 使用后端返回的 segmented_images 字段，通过 get_image 接口获取图片
+        if (data.segmented_images && data.segmented_images.length > 0) {
+          const segmentedImagePath = data.segmented_images[0];
+          multimodalContent.image = `http://10.109.253.71:8001/module2/get_image?img_path=${encodeURIComponent(segmentedImagePath)}`;
+        }
+        
         // 更新细粒度检测的信息（不替换原有的VIDEO_DESCRIPTION）
         this.multimodalDetectionInfo = Object.keys(multimodalContent).length > 0 ? multimodalContent : null;
         
@@ -782,10 +840,6 @@ export default {
         // 保存多模态检测信息到 localStorage，以便页面刷新后恢复
         if (this.multimodalDetectionInfo) {
           localStorage.setItem('multimodalDetectionInfo', JSON.stringify(this.multimodalDetectionInfo));
-        }
-        // 保存 imageBase64 到 localStorage
-        if (this.imageBase64) {
-          localStorage.setItem('imageBase64', this.imageBase64);
         }
 
         // 中间和右侧不展示拿到的信息，保持为空状态
@@ -1062,8 +1116,17 @@ export default {
     },
     
     // 加载图片base64数据
-    loadImageBase64() {
-      // 先尝试从 localStorage 加载
+    loadImageBase64(customPath = null) {
+      // 如果有自定义路径，使用自定义路径；否则使用默认路径
+      const imgPath = customPath || IMG_PATH_URL;
+      
+      // 如果有自定义路径，不从缓存加载，直接从接口获取新的 base64
+      if (customPath) {
+        this.fetchImageBase64(imgPath);
+        return;
+      }
+      
+      // 先尝试从 localStorage 加载（仅用于默认路径）
       const cachedImageBase64 = localStorage.getItem('imageBase64');
       if (cachedImageBase64) {
         this.imageBase64 = cachedImageBase64;
@@ -1072,9 +1135,14 @@ export default {
       }
       
       // 如果缓存中没有，则从接口获取
+      this.fetchImageBase64(imgPath);
+    },
+    
+    // 从接口获取图片 base64 数据
+    fetchImageBase64(imgPath) {
       axios.get('http://10.109.253.71:8001/module2/get_image_base64', {
         params: {
-          img_path: `${IMG_PATH_URL}`
+          img_path: imgPath
         }
       }).then(res => {
         console.log('Image base64 loaded:', res.data);
@@ -1885,11 +1953,11 @@ text-decoration: none;
 }
 
 .multimodal-image {
-  max-width: 85%;
-  height: auto;
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
   border-radius: 4px;
-  display: block;
-  margin: 0 auto;
+  background-color: rgba(0, 0, 0, 0.3);
 }
 
 .multimodal-info-item {
