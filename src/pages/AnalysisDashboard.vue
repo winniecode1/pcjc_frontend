@@ -14,19 +14,18 @@
 
     <!-- 主要内容网格 -->
     <b-row class="content-row no-gutters">
-      <!-- 左侧栏：数据分类与交互 (与 CombinedDiagnosis 一致) -->
+      <!-- 左侧栏：数据集与交互 -->
       <b-col cols="3" class="left-column px-2">
-        <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
+        <div class="panel-header header-select-data clean-header">选择指挥官作战指令数据集</div>
 
         <div class="sidebar-scroll-area">
           <div class="folder-group">
-            <div class="video-item folder-header-item" @click="isLiveOpen = !isLiveOpen">
+            <div class="video-item folder-header-item">
               <span class="folder-name-container">
-                <span class="fold-arrow" :class="{ rotated: isLiveOpen }">▶</span>
-                <span class="folder-label">指挥官作战指令传播数据</span>
+                <span class="folder-label">全部样本</span>
               </span>
             </div>
-            <div v-show="isLiveOpen" class="items-container">
+            <div class="items-container">
               <div v-for="video in videoList" :key="video.id" class="video-item" @click="selectVideo(video)"
                 :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }">
                 <span class="video-name">{{ video.name }}</span>
@@ -50,7 +49,7 @@
               background="transparent"
               class="w-100 h-100 custom-carousel"
             >
-              <b-carousel-slide v-for="(item, index) in carouselItems" :key="index">
+              <b-carousel-slide v-for="(item, index) in carouselItems" :key="`${item.type || 'x'}-${item.src || item.title || index}`">
                 <template #img>
                   <div class="carousel-slide-content">
                     <img v-if="item.type === 'image'" :src="item.src" class="slide-media slide-media-image">
@@ -141,8 +140,7 @@ const API_BASE_URL = process.env.VUE_APP_MODULE5_API_BASE_URL || 'http://127.0.0
 const DATASET_API_BASE_URL = process.env.VUE_APP_STAGE1_API_BASE_URL ||
   process.env.VUE_APP_DATASET_API_BASE_URL ||
   'http://10.109.253.71:5237';
-const ANALYSIS_ACCURACY_TIMER_KEY = 'pcjc_analysis_root_accuracy_timer_v1';
-const ANALYSIS_ACCURACY_DELAY_MS = 5 * 60 * 1000;
+const KNOWLEDGE_API_BASE_URL = process.env.VUE_APP_KNOWLEDGE_API_BASE_URL || 'http://10.109.253.71:8001';
 const ANALYSIS_ACCURACY_DONE_VALUE = 89.3;
 
 function firstNonEmptyValue(...values) {
@@ -188,18 +186,17 @@ export default {
   name: 'AnalysisDashboard',
   data() {
     return {
-      isLiveOpen: true,
       videoList: [],
       selectedVideo: null,
       isSelectingFile: false,
       selectedFileContext: null,
+      selectedInstructionText: '',
       carouselSlide: 0,
       carouselItems: [],
       isLoading: false,
       isGraphParsing: false,
       analysisHighlightRunId: 0,
       rootCauseAccuracy: null,
-      rootCauseAccuracyTimer: null,
       myChart: null,
       graphBaseData: [],
       graphBaseLinks: [],
@@ -211,13 +208,6 @@ export default {
     this.initChart();
     this.renderFormula();
     await this.restorePreviousSelection();
-    this.restoreRootCauseAccuracyTimerFromStorage();
-  },
-  beforeDestroy() {
-    if (this.rootCauseAccuracyTimer) {
-      clearTimeout(this.rootCauseAccuracyTimer);
-      this.rootCauseAccuracyTimer = null;
-    }
   },
   methods: {
     renderFormula() {
@@ -272,7 +262,7 @@ export default {
               { name: 'V2', value: 'V_instr', x: 300, y: 100, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "指挥官下达的初始指令文本。" },
               { name: 'V3', value: 'V_det', x: 550, y: 200, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "目标检测识别结果。" },
               { name: 'V4', value: 'V_desc', x: 500, y: 350, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "场景语义描述特征向量。" },
-              { name: 'V5', value: 'V_know', x: 1000, y: 350, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "外部先验知识库条目。" },
+              { name: 'V5', value: 'V_know', x: 1000, y: 350, symbol: 'circle', symbolSize: 88, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "外部先验知识库条目。" },
               { name: 'V6', value: 'V_cand', x: 650, y: 500, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "候选偏差原因集合。" },
               { name: 'V7', value: 'V_class', x: 550, y: 650, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "偏差所属的分类等级。" },
               { name: 'V8', value: 'V_hazard', x: 800, y: 750, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "最终评估的冲突危害等级。" }
@@ -323,6 +313,28 @@ export default {
         lineStyle: { ...(link.lineStyle || {}) }
       }));
     },
+    resolveConsistencyFolderType(source = {}) {
+      const typeKey = String(source.type_key || '').trim().toLowerCase();
+      if (typeKey === 'consistent') return 'live';
+      if (typeKey === 'inconsistent') return 'demo';
+      const numericType = Number(source.type);
+      if (Number.isFinite(numericType)) {
+        if (numericType === 0) return 'live';
+        if (numericType === 1) return 'demo';
+      }
+      return 'live';
+    },
+    normalizeContextType(rawType) {
+      const t = String(rawType || '').trim().toLowerCase();
+      if (t === 'live' || t === 'consistent') return 'live';
+      if (t === 'demo' || t === 'inconsistent') return 'demo';
+      const n = Number(rawType);
+      if (Number.isFinite(n)) {
+        if (n === 0) return 'live';
+        if (n === 1) return 'demo';
+      }
+      return 'live';
+    },
     async fetchVideoList() {
       try {
         const response = await this.$ajax.get(`${API_BASE_URL}/module5/api/data-sources`);
@@ -333,7 +345,10 @@ export default {
             source_id: src.source_id,
             name: src.source_id,
             path: src.path,
-            type: 'live'
+            type: this.resolveConsistencyFolderType(src),
+            type_key: src.type_key || '',
+            type_label: src.type_label || '',
+            dataset_type: src.type
           }));
         }
       } catch (error) {
@@ -342,10 +357,6 @@ export default {
       }
     },
     async selectVideo(video, options = {}) {
-      const { resetAccuracyTimer = true } = options;
-      if (resetAccuracyTimer) {
-        this.resetRootCauseAccuracyTimerByDataSelection();
-      }
       this.selectedVideo = video;
       await this.handleFileSelection(video);
     },
@@ -354,6 +365,7 @@ export default {
       this.carouselSlide = 0;
       this.carouselItems = [];
       this.selectedFileContext = null;
+      this.selectedInstructionText = '';
       try {
         const response = await this.requestFileSelection(video);
         this.applyFileSelectionResult(response, video);
@@ -425,100 +437,10 @@ export default {
       const match = String(stageName).match(/Stage(\d+)/i);
       return match ? Number(match[1]) : null;
     },
-    readRootCauseAccuracyTimerState() {
-      try {
-        const raw = localStorage.getItem(ANALYSIS_ACCURACY_TIMER_KEY);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object') return null;
-        return parsed;
-      } catch (e) {
-        return null;
-      }
-    },
-    persistRootCauseAccuracyTimerState(state) {
-      try {
-        localStorage.setItem(ANALYSIS_ACCURACY_TIMER_KEY, JSON.stringify(state || {}));
-      } catch (e) {
-        // ignore
-      }
-    },
-    clearRootCauseAccuracyTimerState() {
-      try {
-        localStorage.removeItem(ANALYSIS_ACCURACY_TIMER_KEY);
-      } catch (e) {
-        // ignore
-      }
-    },
-    finishRootCauseAccuracyTimer() {
-      if (this.rootCauseAccuracyTimer) {
-        clearTimeout(this.rootCauseAccuracyTimer);
-        this.rootCauseAccuracyTimer = null;
-      }
-      this.rootCauseAccuracy = ANALYSIS_ACCURACY_DONE_VALUE;
-      this.persistRootCauseAccuracyTimerState({
-        status: 'done',
-        value: ANALYSIS_ACCURACY_DONE_VALUE,
-        finishedAt: Date.now()
-      });
-    },
-    scheduleRootCauseAccuracyTimer() {
-      if (this.rootCauseAccuracyTimer) {
-        clearTimeout(this.rootCauseAccuracyTimer);
-        this.rootCauseAccuracyTimer = null;
-      }
-      this.rootCauseAccuracy = null;
-      const startedAt = Date.now();
-      const fireAt = startedAt + ANALYSIS_ACCURACY_DELAY_MS;
-      this.persistRootCauseAccuracyTimerState({
-        status: 'running',
-        startedAt,
-        fireAt,
-        value: ANALYSIS_ACCURACY_DONE_VALUE
-      });
-      this.rootCauseAccuracyTimer = setTimeout(() => {
-        this.finishRootCauseAccuracyTimer();
-      }, ANALYSIS_ACCURACY_DELAY_MS);
-    },
-    restoreRootCauseAccuracyTimerFromStorage() {
-      if (this.rootCauseAccuracyTimer) {
-        clearTimeout(this.rootCauseAccuracyTimer);
-        this.rootCauseAccuracyTimer = null;
-      }
-      const state = this.readRootCauseAccuracyTimerState();
-      if (!state) return;
-      if (state.status === 'done') {
-        const doneValue = Number(state.value);
-        this.rootCauseAccuracy = Number.isFinite(doneValue) ? doneValue : ANALYSIS_ACCURACY_DONE_VALUE;
-        return;
-      }
-      if (state.status !== 'running') return;
-      const fireAt = Number(state.fireAt);
-      if (!Number.isFinite(fireAt) || fireAt <= 0) {
-        this.clearRootCauseAccuracyTimerState();
-        return;
-      }
-      const remaining = fireAt - Date.now();
-      if (remaining <= 0) {
-        this.finishRootCauseAccuracyTimer();
-        return;
-      }
-      this.rootCauseAccuracy = null;
-      this.rootCauseAccuracyTimer = setTimeout(() => {
-        this.finishRootCauseAccuracyTimer();
-      }, remaining);
-    },
-    resetRootCauseAccuracyTimerByDataSelection() {
-      if (this.rootCauseAccuracyTimer) {
-        clearTimeout(this.rootCauseAccuracyTimer);
-        this.rootCauseAccuracyTimer = null;
-      }
-      this.rootCauseAccuracy = null;
-      this.clearRootCauseAccuracyTimerState();
-    },
     applyFileSelectionResult(response, video) {
       const res = response || {};
       let carouselItems = this.normalizeCarouselItems(res.carouselItems);
+      const instructionText = String(res.instruction_text || '').trim();
       if (carouselItems.length === 0) {
         carouselItems = this.buildItemsFromStagePreviews(res.stagePreviews);
       }
@@ -532,6 +454,67 @@ export default {
       }
 
       this.selectedFileContext = res.stage1 || { source_id: video.source_id || video.name, path: video.path };
+      this.selectedInstructionText = instructionText;
+      if (!this.selectedFileContext.type) {
+        this.selectedFileContext = {
+          ...this.selectedFileContext,
+          type: this.normalizeContextType(video.type)
+        };
+      }
+
+      const sampleId = resolveSampleId(
+        {
+          source_id: this.firstNonEmpty(this.selectedFileContext.source_id, video.source_id, video.name),
+          path: this.firstNonEmpty(this.selectedFileContext.path, video.path)
+        },
+        {},
+        {},
+        ''
+      );
+      if (sampleId) {
+        let imageSrc = String(res.image_set_image_url || '').trim();
+        if (!imageSrc) {
+          imageSrc = `${API_BASE_URL}/module5/api/image-set/${encodeURIComponent(sampleId)}`;
+        }
+        const firstImageItem = this.normalizeCarouselItems([
+          {
+            type: 'image',
+            src: imageSrc,
+            title: '原始样本图片',
+            stage: 'Stage1',
+            stage_index: 1,
+            file_name: `${sampleId}.jpg`
+          }
+        ])[0];
+        const dedupItems = carouselItems.filter(item => !(item && item.src === imageSrc));
+        const instructionItem = instructionText
+          ? this.normalizeCarouselItems([{
+            type: 'text',
+            stage: 'Stage1',
+            stage_index: 1,
+            title: '作战指令',
+            content: instructionText
+          }])[0]
+          : null;
+        carouselItems = instructionItem
+          ? [instructionItem, firstImageItem, ...dedupItems]
+          : [firstImageItem, ...dedupItems];
+      } else if (instructionText) {
+        const instructionItem = this.normalizeCarouselItems([{
+          type: 'text',
+          stage: 'Stage1',
+          stage_index: 1,
+          title: '作战指令',
+          content: instructionText
+        }])[0];
+        const dedupItems = carouselItems.filter((item) => !(
+          item &&
+          item.type === 'text' &&
+          String(item.content || '').trim() === instructionText
+        ));
+        carouselItems = [instructionItem, ...dedupItems];
+      }
+
       this.carouselSlide = 0;
       this.carouselItems = carouselItems;
       this.persistSelectedSourceContext(this.selectedFileContext);
@@ -540,36 +523,26 @@ export default {
       if (!this.selectedVideo && !this.selectedFileContext) return;
       const runId = (this.analysisHighlightRunId || 0) + 1;
       this.analysisHighlightRunId = runId;
-      if (this.rootCauseAccuracyTimer) {
-        clearTimeout(this.rootCauseAccuracyTimer);
-        this.rootCauseAccuracyTimer = null;
-      }
       this.rootCauseAccuracy = null;
-      this.clearRootCauseAccuracyTimerState();
       this.isLoading = true;
       this.isGraphParsing = true;
       try {
-        const startTs = Date.now();
         const payload = this.buildDiagnosisPayload();
         const sampleId = resolveSampleId({ source_id: payload.source_id, path: payload.path });
-        const [response, sampleData, detectionData] = await Promise.all([
+        const [response, sampleData, detectionData, knowledgeData] = await Promise.all([
           this.requestStageDiagnosisResult(payload),
           sampleId ? this.requestSampleDataById(sampleId) : Promise.resolve({}),
-          sampleId ? this.requestSampleDetectionById(sampleId) : Promise.resolve({})
+          sampleId ? this.requestSampleDetectionById(sampleId) : Promise.resolve({}),
+          this.requestKnowledgeGraphAll()
         ]);
-        const randomWaitMs = 18000 + Math.floor(Math.random() * 5000);
-        const elapsed = Date.now() - startTs;
-        const remaining = Math.max(0, randomWaitMs - elapsed);
-        if (remaining > 0) {
-          await this.waitMs(remaining);
-        }
         if (runId !== this.analysisHighlightRunId) return;
         this.applyDiagnosisToGraph(response || {}, {
           sampleId,
           sampleData,
-          detectionData
+          detectionData,
+          knowledgeData
         });
-        this.scheduleRootCauseAccuracyTimer();
+        this.rootCauseAccuracy = ANALYSIS_ACCURACY_DONE_VALUE;
       } catch (error) {
         console.error("解析接口调用失败", error);
       } finally {
@@ -619,6 +592,18 @@ export default {
         return {};
       }
     },
+    async requestKnowledgeGraphAll() {
+      try {
+        const res = await this.$ajax.get(
+          `${KNOWLEDGE_API_BASE_URL}/module2/knowledge/all`,
+          { timeout: 10000 }
+        );
+        return this.safeGet(res, 'data', {});
+      } catch (error) {
+        console.warn('获取知识图谱信息失败', error);
+        return {};
+      }
+    },
     applyDiagnosisToGraph(raw, external = {}) {
       if (!this.myChart) return;
       if (!this.graphBaseData.length) this.cacheGraphBaseStyles();
@@ -644,14 +629,15 @@ export default {
       const sourceInfo = this.selectedFileContext || this.selectedVideo || {};
       const sampleData = this.asDict(external.sampleData);
       const detectionData = this.asDict(external.detectionData);
+      const knowledgeData = external.knowledgeData;
       const sampleId = resolveSampleId(sourceInfo, sampleData, s1, external.sampleId);
       const videoAddress = sampleId;
-      const instrText = this.extractInstructionText(s1, sampleData);
+      const instrText = this.extractInstructionText(s1, sampleData, sourceInfo);
       const detectionText = this.extractDetectionText(s2, detectionData);
       const sceneText = this.extractSceneDescription(s1, s3, detectionData);
-      const knowText = this.extractKnowledgeText(s2, s3);
+      const knowText = this.extractKnowledgeText(knowledgeData, s2, s3);
       const candText = this.extractCandidateText(s2, s3);
-      const classText = this.extractClassText(s3);
+      const classText = this.extractClassText(s2, s3, s4);
       const hazardText = this.extractHazardText(s4);
       const hazardLevel = this.extractHazardLevel(s4);
 
@@ -755,7 +741,12 @@ export default {
     extractSampleId(sourceInfo = {}, sampleData = {}, s1 = {}, explicitSampleId = '') {
       return resolveSampleId(sourceInfo, sampleData, s1, explicitSampleId);
     },
-    extractInstructionText(s1, sampleData = {}) {
+    extractInstructionText(s1, sampleData = {}, sourceInfo = {}) {
+      const fromSelection = this.firstNonEmpty(
+        this.selectedInstructionText,
+        this.safeGet(sourceInfo, 'instruction_text', '')
+      );
+      if (fromSelection) return fromSelection;
       const instruction = this.firstNonEmpty(sampleData.instruction);
       if (instruction) return instruction;
       const out = this.asDict(this.safeGet(s1, 'model_output', {}));
@@ -824,7 +815,56 @@ export default {
       if (battlefield) lines.push(`场景描述: ${battlefield}`);
       return lines.join('\n');
     },
-    extractKnowledgeText(s2, s3) {
+    truncateTextWithEllipsis(text, maxLen = 220) {
+      const value = String(text || '').trim();
+      if (!value) return '';
+      if (value.length <= maxLen) return value;
+      return `${value.slice(0, maxLen)}...`;
+    },
+    summarizeKnowledgeData(value, maxLines = 12) {
+      const lines = [];
+      const pushLine = (line) => {
+        if (lines.length >= maxLines) return;
+        const trimmed = this.truncateTextWithEllipsis(line, 220);
+        if (trimmed) lines.push(trimmed);
+      };
+
+      if (Array.isArray(value)) {
+        for (let i = 0; i < value.length && lines.length < maxLines; i += 1) {
+          const item = value[i];
+          if (item && typeof item === 'object' && !Array.isArray(item)) {
+            const keys = Object.keys(item);
+            const kv = keys.slice(0, 3).map((k) => `${k}: ${this.toCompactText(item[k])}`).join(', ');
+            pushLine(kv);
+          } else {
+            pushLine(this.toCompactText(item));
+          }
+        }
+      } else if (value && typeof value === 'object') {
+        const keys = Object.keys(value);
+        for (let i = 0; i < keys.length && lines.length < maxLines; i += 1) {
+          const k = keys[i];
+          const v = value[k];
+          if (v && typeof v === 'object') {
+            pushLine(`${k}: ${this.truncateTextWithEllipsis(this.toCompactText(v), 220)}`);
+          } else {
+            pushLine(`${k}: ${this.toCompactText(v)}`);
+          }
+        }
+      } else {
+        pushLine(this.toCompactText(value));
+      }
+      return lines;
+    },
+    extractKnowledgeText(knowledgeData, s2, s3) {
+      const knowledgeObj = knowledgeData && typeof knowledgeData === 'object' ? knowledgeData : null;
+      if (knowledgeObj) {
+        const body = Object.prototype.hasOwnProperty.call(knowledgeObj, 'data') ? knowledgeObj.data : knowledgeObj;
+        const lines = this.summarizeKnowledgeData(body, 12);
+        if (lines.length) {
+          return `${lines.join('\n')}\n...`;
+        }
+      }
       const s2Out = this.asDict(this.safeGet(s2, 'model_output', {}));
       const s2Req = this.asDict(s2Out.request_params);
       const s3Out = this.asDict(this.safeGet(s3, 'model_output', {}));
@@ -847,20 +887,24 @@ export default {
       const kind = this.firstNonEmpty(s3Out.kind, s3Req.kind, s2Out.kind, s2Out.ground_truth);
       return this.formatKVText({ image_path: imagePath, sub_class: kind }, ['image_path', 'sub_class']);
     },
-    extractClassText(s3) {
-      const out = this.asDict(this.safeGet(s3, 'model_output', {}));
-      const review = this.asDict(out.final_review);
-      const deviation = this.asDict(review.deviation_analysis);
-      const sections = [];
-      const consensus = this.firstNonEmpty(review.consensus_summary);
-      const disagreement = this.firstNonEmpty(deviation.disagreement_points);
-      const reason = this.firstNonEmpty(deviation.different_analysis_and_reason);
-      const summary = this.firstNonEmpty(out.summary);
-      if (consensus) sections.push(`【共识】\n${consensus}`);
-      if (disagreement) sections.push(`【分歧】\n${disagreement}`);
-      if (reason) sections.push(`【协商理由】\n${reason}`);
-      if (summary) sections.push(`【结论】\n${summary}`);
-      return sections.join('\n\n');
+    extractClassText(s2, s3, s4) {
+      const s2Out = this.asDict(this.safeGet(s2, 'model_output', {}));
+      const s2Req = this.asDict(s2Out.request_params);
+      const s3Out = this.asDict(this.safeGet(s3, 'model_output', {}));
+      const s3Req = this.asDict(s3Out.request_params);
+      const s4Out = this.asDict(this.safeGet(s4, 'model_output', {}));
+      const s4Req = this.asDict(s4Out.request_params);
+      return this.firstNonEmpty(
+        s4Out.weapon_model,
+        s4Req.weapon_model,
+        s2Out.model,
+        s2Out.label,
+        s2Out.ground_truth,
+        s2Req.ground_truth,
+        s3Req.ground_truth,
+        s3Out.model,
+        s3Out.ground_truth
+      );
     },
     extractHazardLevel(s4) {
       const out = this.asDict(this.safeGet(s4, 'model_output', {}));
@@ -886,22 +930,112 @@ export default {
       if (reason) lines.push(`判断理由: ${reason}`);
       return lines.join('\n');
     },
+    firstResultObject(value) {
+      if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+      if (!Array.isArray(value)) return {};
+      const queue = [...value];
+      while (queue.length) {
+        const item = queue.shift();
+        if (item && typeof item === 'object' && !Array.isArray(item)) return item;
+        if (Array.isArray(item)) queue.push(...item);
+      }
+      return {};
+    },
+    clipText(value, max = 220) {
+      const txt = String(value || '').trim();
+      if (!txt) return '';
+      if (txt.length <= max) return txt;
+      return `${txt.slice(0, max)}...`;
+    },
+    summarizePropagationStage(stageKey, stagePayload) {
+      const key = String(stageKey || '').toLowerCase();
+      const data = this.asDict(stagePayload);
+      if (!Object.keys(data).length) return '';
+
+      if (key === 'stage2') {
+        const resultObj = this.firstResultObject(this.safeGet(data, 'result', null));
+        const labelObj = this.firstResultObject(this.safeGet(data, 'label_info', null));
+        const model = this.firstNonEmpty(resultObj.model, labelObj.model, resultObj.kind, labelObj.kind);
+        const kind = this.firstNonEmpty(resultObj.kind, labelObj.kind);
+        const scene = this.firstNonEmpty(resultObj.scene, labelObj.scene);
+        const accuracy = this.firstNonEmpty(data.accuracy, (Array.isArray(data.accuracy_list) ? data.accuracy_list[0] : ''));
+        const parts = [];
+        if (model) parts.push(`识别目标=${model}`);
+        if (kind) parts.push(`类型=${kind}`);
+        if (scene) parts.push(`场景=${scene}`);
+        if (accuracy) parts.push(`准确率=${accuracy}`);
+        return `Stage2 传播结果: ${parts.join('，') || this.clipText(this.toCompactText(data), 260)}`;
+      }
+
+      if (key === 'stage3') {
+        const summary = this.firstNonEmpty(
+          data.final_battlefield_analysis,
+          data.summary,
+          this.safeGet(data, 'final_review.consensus_summary', '')
+        );
+        if (summary) return `Stage3 传播结果: ${this.clipText(summary, 300)}`;
+        return `Stage3 传播结果: ${this.clipText(this.toCompactText(data), 260)}`;
+      }
+
+      if (key === 'stage4') {
+        const pred = this.asDict(this.safeGet(data, 'prediction', {}));
+        const model = this.firstNonEmpty(pred.weapon_model, data.weapon_model);
+        const level = this.firstNonEmpty(pred.risk_level, data.risk_level, data.decision);
+        const reason = this.firstNonEmpty(pred.summary, data.summary);
+        const parts = [];
+        if (model) parts.push(`型号=${model}`);
+        if (level) parts.push(`威胁等级=${level}`);
+        if (reason) parts.push(`结论=${this.clipText(reason, 180)}`);
+        return `Stage4 传播结果: ${parts.join('，') || this.clipText(this.toCompactText(data), 260)}`;
+      }
+
+      return `${stageKey} 传播结果: ${this.clipText(this.toCompactText(data), 260)}`;
+    },
     formatPropagationIntermediate(stageName, stageData) {
       const propagation = this.asDict(this.safeGet(stageData, 'propagation_output', {}));
+      if (!Object.keys(propagation).length) return '';
+
       const upstream = this.toCompactText(this.safeGet(propagation, 'counterfactual_upstream_output', ''));
-      const downstream = this.toCompactText(this.safeGet(propagation, 'downstream_results', ''));
+      const downstreamObj = this.asDict(this.safeGet(propagation, 'downstream_results', {}));
       const lines = [];
-      lines.push(`[${stageName}] 认知传播偏差中间结果`);
-      if (upstream) lines.push(`反事实上游输出:\n${upstream}`);
-      if (downstream) lines.push(`后续模块输出:\n${downstream}`);
+      lines.push(`[${stageName}] 认知传播结果`);
+
+      if (upstream) {
+        lines.push(`上游替换结果: ${this.clipText(upstream, 240)}`);
+      }
+
+      // 新结构：propagation_output 直接含 Stage2/Stage3/Stage4
+      const directStageKeys = Object.keys(propagation)
+        .filter(k => /^stage[1-4]$/i.test(k))
+        .sort((a, b) => Number(a.replace(/[^0-9]/g, '')) - Number(b.replace(/[^0-9]/g, '')));
+      directStageKeys.forEach((k) => {
+        const text = this.summarizePropagationStage(k, propagation[k]);
+        if (text) lines.push(text);
+      });
+
+      // 兼容旧结构：downstream_results.stage2/3/4
+      const downstreamStageKeys = Object.keys(downstreamObj)
+        .filter(k => /^stage[1-4]$/i.test(k))
+        .sort((a, b) => Number(a.replace(/[^0-9]/g, '')) - Number(b.replace(/[^0-9]/g, '')));
+      downstreamStageKeys.forEach((k) => {
+        const text = this.summarizePropagationStage(k, downstreamObj[k]);
+        if (text) lines.push(text);
+      });
+
+      // 若还是没有有效内容，兜底展示 propagation_output 摘要。
+      if (lines.length === 1) {
+        lines.push(this.clipText(this.toCompactText(propagation), 320));
+      }
+
       return lines.join('\n\n');
     },
     getPreviousSourceContext() {
       const query = (this.$route && this.$route.query) ? this.$route.query : {};
       const qSourceId = String(query.source_id || '').trim();
       const qPath = String(query.path || '').trim();
+      const qType = this.normalizeContextType(query.type);
       if (qSourceId || qPath) {
-        return { source_id: qSourceId, path: qPath };
+        return { source_id: qSourceId, path: qPath, type: qType };
       }
       try {
         const raw = sessionStorage.getItem('pcjc_selected_source_context');
@@ -910,8 +1044,9 @@ export default {
         if (!parsed || typeof parsed !== 'object') return null;
         const source_id = String(parsed.source_id || '').trim();
         const path = String(parsed.path || '').trim();
+        const type = this.normalizeContextType(parsed.type);
         if (!source_id && !path) return null;
-        return { source_id, path };
+        return { source_id, path, type };
       } catch (e) {
         return null;
       }
@@ -929,7 +1064,7 @@ export default {
           source_id: previous.source_id || `source_${Date.now()}`,
           name: previous.source_id || previous.path,
           path: previous.path,
-          type: 'live'
+          type: this.normalizeContextType(previous.type)
         };
         this.videoList = [target, ...this.videoList];
       }
@@ -938,17 +1073,13 @@ export default {
     persistSelectedSourceContext(ctx) {
       const source_id = String((ctx || {}).source_id || '').trim();
       const path = String((ctx || {}).path || '').trim();
+      const type = this.normalizeContextType((ctx || {}).type);
       if (!source_id && !path) return;
       try {
-        sessionStorage.setItem('pcjc_selected_source_context', JSON.stringify({ source_id, path }));
+        sessionStorage.setItem('pcjc_selected_source_context', JSON.stringify({ source_id, path, type }));
       } catch (e) {
         // ignore
       }
-    },
-    waitMs(ms) {
-      return new Promise((resolve) => {
-        setTimeout(resolve, ms);
-      });
     },
     // 固定高亮方式 1：亮 V_det，然后除了 Video、instr、desc，其他节点全亮
     highlightPresetDetAllExceptVideoInstrDesc() {
@@ -1299,11 +1430,18 @@ export default {
 .no-selection { height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-style: italic; }
 .node-info { display: flex; flex-direction: column; gap: 15px; }
 .info-row { display: flex; align-items: baseline; }
+.description-row {
+  display: block;
+}
+.description-row .info-label {
+  display: block;
+  margin-bottom: 6px;
+}
 .info-label { font-weight: bold; min-width: 80px; color: #4ED8FF; }
 .info-value { flex: 1; word-break: break-all; }
 .highlight-blue { color: #00e5ff; font-weight: bold; font-size: 1.1rem; }
 .highlight-red { color: #ff5e5e; font-weight: bold; }
-.info-text { margin-top: 5px; line-height: 1.5; color: rgba(139, 211, 249, 0.8); background: rgba(0, 0, 0, 0.2); padding: 10px; border-radius: 4px; white-space: pre-wrap; overflow: auto; overflow-wrap: anywhere; word-break: break-word; }
+.info-text { margin-top: 0; width: 100%; line-height: 1.5; color: rgba(139, 211, 249, 0.8); background: rgba(0, 0, 0, 0.2); padding: 10px; border-radius: 4px; white-space: pre-wrap; overflow: auto; overflow-wrap: anywhere; word-break: break-word; }
 .info-text::-webkit-scrollbar { width: 6px; height: 3px; }
 .info-text::-webkit-scrollbar-track {
   background: rgba(6, 24, 40, 0.45);
