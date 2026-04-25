@@ -65,7 +65,7 @@
         </div>
 
         <div class="design-module text-module-left fixed-left-text" :style="leftTextPanelBgStyle">
-          <div class="panel-header clean-header">群体协商认知传播信息</div>
+          <div class="panel-header clean-header">指令和认知传播信息</div>
           <div class="design-module-content text-scrollable">
             <template v-if="sourceRefineCommand || sourceRefineNegotiation">
               <div class="result-section small-section left-info-section">
@@ -75,9 +75,9 @@
                 </div>
               </div>
               <div class="result-section consensus-section left-info-section">
-                <div class="section-header">群体协商认知传播信息：</div>
+                <div class="section-header">目标识别和群体协商传播信息：</div>
                 <div class="section-content">
-                  <p class="result-text">{{ sourceRefineNegotiation || '暂无群体协商认知传播信息' }}</p>
+                  <p class="result-text">{{ sourceRefineNegotiation || '暂无目标识别和群体协商传播信息' }}</p>
                 </div>
               </div>
             </template>
