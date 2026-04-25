@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "EA-18G",
+      "kind": "战斗机",
+      "color": "   浅灰低可视机身、红色和白色尾翼涂装",
+      "size": "长度18.3m、翼展13.6m、高度约4.9m",
+      "firepower": "挂载AIM-120AMRAAM导弹用于自卫、ALQ-99战术干扰吊舱、并可挂载AGM-88HARM反辐射导弹、",
+      "scene": "天空",
+      "shape": "机体与F/A-18F高通用度、改进翼根整流与翼尖电子战设备、翼尖电子战专用吊舱",
+      "power": "2台通用电气F414-GE-400涡扇发动机、单台推力98 kN22000lbf",
+      "country": "美国",
+      "outline": "双发、双垂尾、翼尖电子战设备布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "EA-18G",
+      "kind": "战斗机",
+      "color": "浅灰低可视机身、红白色尾翼涂装",
+      "size": "长度18.3m、翼展13.6m、高度4.9m",
+      "firepower": "挂载AIM-120AMRAAM导弹用于自卫、并可挂载AGM-88HARM反辐射导弹",
+      "scene": "天空",
+      "shape": "机体与F/A-18F高通用度、改进翼根整流与翼尖电子战设备",
+      "power": "2×GEF414-GE-400涡扇",
+      "outline": "双发、双垂尾、翼尖电子战设备"
+    }
+  ],
+  "accuracy_list": "0.963",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/EA-18G-Growler.png"
+}

@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "车",
+      "model": "PTL02轮式坦克歼击车",
+      "kind": "坦克",
+      "color": "中国陆军标准丛林数码迷彩（绿/褐/黑/灰）、或高原荒漠涂装",
+      "size": "车长8.3 m、车宽2.86 m、车高3.15 m、战斗全重19000 kg",
+      "firepower": "1门100 mm滑膛反坦克炮（仿制俄2A70、备弹30发）、1挺7.62 mm并列机枪、1挺QJC-88 12.7 mm高射机枪、可发射GP100激光驾束制导炮弹",
+      "scene": "地面",
+      "shape": "6×6轮式底盘、低矮焊接钢炮塔、长身管火炮突出明显、炮塔后部储物篮、附加橡胶裙板",
+      "power": "德国道依茨BF8L413F 8缸涡轮增压风冷柴油机、功率330 hp（246 kW）",
+      "country": "中国",
+      "outline": "6×6轮式底盘、长身管火炮布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "ZBL-08式轮式步兵战车",
+      "kind": "步兵战车",
+      "color": "由深绿、浅绿、土黄、褐红等多色组成的数码迷彩",
+      "size": "长度约8.0m、宽度约3.0m、高度约2.5m",
+      "firepower": "主武器30毫米ZPT‑99+同轴机枪、并可携带2枚HJ‑73/改进型反坦导弹、配备遥控/车载机枪与烟幕弹",
+      "scene": "地面",
+      "shape": "8×8轮式底盘、低矮模块化炮塔",
+      "power": "DeutzBF6M1015C柴油发动机",
+      "country": "中国",
+      "outline": "8×8轮式底盘、模块化炮塔"
+    }
+  ],
+  "accuracy_list": "0.6197",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/PTL-02.png"
+}

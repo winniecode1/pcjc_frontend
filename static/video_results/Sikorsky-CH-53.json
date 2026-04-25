@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "CH-53E直升机",
+      "kind": "运输机",
+      "color": "美国海军陆战队标准丛林迷彩或沙漠涂装、或低可视灰",
+      "size": "机长30.188 m、旋翼直径24.08 m、机高8.46 m、最大起飞重量33340 kg",
+      "firepower": "2x12.7×99毫米NATO窗口XM218重机枪、1x12.7×99毫米NATO尾版机枪系统、GAU-21",
+      "scene": "地面",
+      "shape": "单旋翼、大型机身、宽大尾翼、外部吊挂钩（承重16300 kg）",
+      "power": "3台通用电气T64-GE-416A涡轴发动机、单台功率4380 shp（3266 kW）",
+      "country": "美国",
+      "outline": "单主旋翼、尾桨、大型货舱布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "未知(0.3012)",
+      "kind": "人(0.3681)",
+      "color": "深色(0.3539)",
+      "size": "身高约1.7米、体型中等(0.4619)",
+      "firepower": "无(0.2385)",
+      "scene": "户外(0.4071)",
+      "shape": "直立行走姿态、头部戴帽、背部有背包(0.4709)",
+      "power": "无(0.2363)",
+      "outline": "轮廓模糊、呈人形(0.3987)"
+    }
+  ],
+  "accuracy_list": "0.3674",
+  "image_path": "/home/wuzhixuan/Project/PCJC/5/result/Sikorsky-CH-53/single_task/stage1_results/Sikorsky-CH-53.png"
+}

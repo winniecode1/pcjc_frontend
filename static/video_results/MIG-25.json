@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "MiG-25Foxbat",
+      "kind": "战斗机",
+      "color": "浅灰色颜色涂装",
+      "size": "机长19.75 m、翼展13.01 m、机高6.10 m、最大起飞重量36000 kg",
+      "firepower": "4枚R-40（AA-6“毒辣”）远程空空导弹（翼下）+ 2枚R-60（AA-8“蚜虫”）近距导弹（机身）；部分侦察型无武器",
+      "scene": "地面",
+      "shape": "细长水滴形机身、50°后掠上单翼、双垂尾、两侧矩形进气道、不锈钢结构（耐3马赫高温）",
+      "power": "双土曼斯基R-15BD-300带后燃器涡轮喷射发动机加力推力152 kN",
+      "country": "俄罗斯",
+      "outline": "细长机身、后掠上单翼、双垂尾布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "Su-27",
+      "kind": "战斗机",
+      "color": "蓝灰色迷彩涂装",
+      "size": "长度22.0米、翼展14.7米、高度5.9米",
+      "firepower": "1×30mm GSh-30-1加农炮、多达10个挂点、常用R-73、R-27系列空空导弹与外挂/对地武器",
+      "scene": "地面",
+      "shape": "双发、双垂尾、边条翼、机腹进气道",
+      "power": "2具AL-31F系列涡扇发动机、单台最大推力约122.5千牛",
+      "outline": "双发双垂尾、边条翼、大型制空战斗机构型"
+    }
+  ],
+  "accuracy_list": "0.8462",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/MIG-25.png"
+}

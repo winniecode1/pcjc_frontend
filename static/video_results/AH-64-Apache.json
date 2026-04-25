@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "AH64E",
+      "kind": "武装直升机",
+      "color": "军用暗灰与短翼常涂深橄榄绿，边缘对齐以减少雷达反射",
+      "size": "长度17.73m、翼展14.63m、机高约4.72m、重量10433kg",
+      "firepower": "1门30mmM230链炮备弹1200发、短翼挂点可挂载AGM-114地狱火反坦克导弹4枚AIM-92毒刺空空导弹、支持长弓毫米波雷达制导模式",
+      "scene": "天空",
+      "shape": "串列双座布局、细长窄机身、四叶复合材料主旋翼、低置短翼挂架、涵道式尾桨",
+      "power": "2台通用电气T700-GE-701D涡轴发动机、单台功率1994shp、具备FADEC全权数字控制",
+      "country": "美国",
+      "outline": "串列双座、短翼、四叶主旋翼、尾桨系统"
+    }
+  ],
+  "result": [
+    {
+      "model": "AH64E",
+      "kind": "武装直升机",
+      "color": "军用暗灰与橄榄绿迷彩涂装",
+      "size": "长度17.73m、翼展14.63m、机高约4.72m",
+      "firepower": "1门30mm M230链炮备弹1200发、短翼挂点可挂载AGM-114地狱火反坦克导弹、AIM-92毒刺空空导弹、Hydra-70火箭弹等",
+      "scene": "天空",
+      "shape": "串列双座、细长机身、短翼挂点、四叶主旋翼加尾桨",
+      "power": "2具通用电气T700-GE-701D涡轴发动机、单台功率约1994轴马力",
+      "country": "美国",
+      "outline": "串列双座、短翼、四叶主旋翼、尾桨"
+    }
+  ],
+  "accuracy_list": "0.97",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/AH-64-Apache.png"
+}

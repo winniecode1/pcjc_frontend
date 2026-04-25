@@ -1,0 +1,35 @@
+{
+  "label_info": [
+    {
+      "type": "SLICY",
+      "model": "SLICY标准雷达散射测试靶",
+      "kind": "标准雷达散射截面（RCS）测试体",
+      "color": "金属原色/黑色吸波涂层",
+      "size": "长2.75m、宽2.445m、主体高0.765m、总高0.915m",
+      "firepower": "无",
+      "scene": "雷达测试场/微波暗室",
+      "shape": "精密金属组合体，由矩形底座、闭合高圆柱、开口短圆柱、三角反射器、二面角、平板等标准散射单元构成",
+      "power": "无动力，无源雷达反射体",
+      "country": "美国",
+      "outline": "车辆级尺寸、多标准散射体组合、精密金属加工、用于SAR成像与RCS算法验证"
+    }
+  ],
+  "result": [
+    {
+      "type": "SLICY",
+      "model": "SLICY标准雷达散射测试靶",
+      "kind": "标准雷达散射截面（RCS）测试体",
+      "color": "金属原色/黑色吸波涂层",
+      "size": "长2.75m、宽2.445m、主体高0.765m、总高0.915m",
+      "firepower": "无",
+      "scene": "雷达测试场/微波暗室",
+      "shape": "精密金属组合体，由矩形底座、闭合高圆柱、开口短圆柱、三角反射器、二面角、平板等标准散射单元构成",
+      "power": "无动力，无源雷达反射体",
+      "country": "美国",
+      "outline": "车辆级尺寸、多标准散射体组合、精密金属加工、用于SAR成像与RCS算法验证"
+    }
+  ],
+  "accuracy_list": "1.0625",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/sar/SLICY标准雷达散射测试靶/HB14933.jpeg",
+  "method": "sar_inference"
+}

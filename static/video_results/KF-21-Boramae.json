@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "KF-21猎鹰",
+      "kind": "战斗机",
+      "color": "以灰色系为主、包含割裂迷彩",
+      "size": "长度约16.9m、翼展约11.2m、高度约4.7m",
+      "firepower": "主力空空导弹、霹雳-10近距空空导弹、霹雳-15中距空空导弹、霹雳-21远距空空导弹",
+      "scene": "天空",
+      "shape": "后掠翼设计、机身流线型、双尾翼DSI进气道",
+      "power": "2×GeneralElectricF414-GE-400K涡扇发动机",
+      "country": "韩国",
+      "outline": "后掠翼、双垂尾布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "KF-21猎鹰",
+      "kind": "战斗机",
+      "color": "深灰色涂装",
+      "size": "长度16.9m、翼展11.2m、高度4.7m",
+      "firepower": "主力空空导弹、霹雳-10近距空空导弹、霹雳-15导弹、霹雳-21导弹",
+      "scene": "天空",
+      "shape": "后掠翼设计、机身流线型、双尾翼",
+      "power": "2×Electric F414-GE-400K 涡扇发动机",
+      "outline": "后掠翼、双垂尾"
+    }
+  ],
+  "accuracy_list": "0.9567",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/KF-21-Boramae.png"
+}

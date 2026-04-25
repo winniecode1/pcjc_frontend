@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "伊尔-112",
+      "kind": "运输机",
+      "color": "浅灰色或迷彩图涂装、部分机型机鼻与尾部有深灰防眩涂层",
+      "size": "长度约24.15米、翼展约27.15米、高度约8.89米",
+      "firepower": "无",
+      "scene": "地面",
+      "shape": "高翼布局、单垂尾、宽大机身后部装有上掀式货舱门",
+      "power": "2具TV7-117ST涡桨发动机、单台功率1400shp",
+      "country": "俄罗斯",
+      "outline": "高单翼、单垂尾、后货舱门布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "伊尔-112(1.0)",
+      "kind": "运输机(1.0)",
+      "color": "白色(0.3198)",
+      "size": "长度24.15m、翼展27.15m、高度8.89m(0.9776)",
+      "firepower": "无(1.0)",
+      "scene": "地面(1.0)",
+      "shape": "高翼布局、单垂尾、宽大机身(0.8222)",
+      "power": "2具TV7-117ST涡桨发动机(0.8733)",
+      "outline": "高单翼、单垂尾、后货舱门(0.9869)"
+    }
+  ],
+  "accuracy_list": "0.9271",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/images_frame_qsc/Il-112.png"
+}

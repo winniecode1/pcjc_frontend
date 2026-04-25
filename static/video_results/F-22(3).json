@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "F-22猛禽",
+      "kind": "战斗机",
+      "color": "以浅灰色低可视度隐身涂层为主、定期维护以保持隐身性能",
+      "size": "机长约18.92m、翼展约13.56m、高度约5.08m",
+      "firepower": "1门M61A2 20 mm机炮；2个主弹舱+2个侧弹舱；可内埋挂载GBU-32 JDAM",
+      "scene": "天空",
+      "shape": "双垂尾、梯形主翼、机身线条棱角分明、全向隐身优化外形、进气口倾斜矩形、",
+      "power": "2具普惠F119-PW-100涡扇发动机、具备超音速巡航能力",
+      "country": "美国",
+      "outline": "梯形主翼、双外倾垂尾、菱形截面布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "苏-57",
+      "kind": "战斗机",
+      "color": "低可视雷达吸波涂层灰色",
+      "size": "长度18.2m、翼展13.6m、高度5.1m",
+      "firepower": "内部武舱携带中远距空空导弹及侧舱短程导弹、具备对地精确武器能力",
+      "scene": "天空",
+      "shape": "单座、双发、隐身外形、后倾垂尾、机身-翼融合设计",
+      "power": "2具AL-41F1系列涡扇发动机、未来将换装产品30发动机",
+      "outline": "菱形截面、DSI进气道、全动垂尾"
+    }
+  ],
+  "accuracy_list": "0.869",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/F-22(3).png"
+}

@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "C-123",
+      "kind": "运输机",
+      "color": "灰白与绿色迷彩涂装",
+      "size": "长22.8米、翼展28.4米、高8.3米",
+      "firepower": "无",
+      "scene": "地面",
+      "shape": "中翼、推进式双发、后货门可开启",
+      "power": "2具普拉特惠特尼R-2800活塞发动机、单台推力131kN",
+      "country": "美国",
+      "outline": "中翼、推进式双发、后货门布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "C-123",
+      "kind": "运输机",
+      "color": "灰白与绿色迷彩涂装",
+      "size": "长22.8m、翼展28.4m、高8.3m",
+      "firepower": "无",
+      "scene": "地面",
+      "shape": "中翼、推进式双发、后货门",
+      "power": "2具普拉特惠特尼R-2800活塞发动机",
+      "country": "美国",
+      "outline": "中翼、推进式双发、后货门"
+    }
+  ],
+  "accuracy_list": "0.9693",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/C-123-Provider-2.png"
+}

@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "车",
+      "model": "M142HIMARS",
+      "kind": "火力支援车辆",
+      "color": "美国陆军标准沙色/绿色数码迷彩、适用于欧洲或中东、带第18空降军标识",
+      "size": "长约7.0m、宽约2.4m、高约3.2m",
+      "firepower": "1个弹舱1个可整体吊装的发射吊舱、6×GMLRS火箭或1×ATACMS战术弹道导弹",
+      "scene": "地面",
+      "shape": "6×6轮式底盘、具备良好的越野机动性、集成式发射模块轻量化设计便于空运",
+      "power": "1台康明斯ISL9.0柴油发动机、功率约330马力、公路最大速度85km/h、最大公路速度85 km/h",
+      "country": "美国",
+      "outline": "6×6轮式底盘、整体吊装发射舱布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "M142 HIMARS",
+      "kind": "火力支援车辆",
+      "color": "深绿色涂装",
+      "size": "长7.0m、宽2.4m、高3.2m",
+      "firepower": "1个弹舱、6×GMLRS火箭或1×ATACMS战术弹道导弹",
+      "scene": "地面",
+      "shape": "6×6轮式底盘、具备良好的越野机动性、集成式发射模块",
+      "power": "1台康明斯ISL9.0柴油发动机、功率约330马力、公路最大速度85km/h、越野速度45km/h",
+      "outline": "6×6轮式底盘、整体吊装发射舱"
+    }
+  ],
+  "accuracy_list": "0.9456",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/M142-HIMARS.png"
+}

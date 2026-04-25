@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "船",
+      "model": "福建舰",
+      "kind": "航空母舰",
+      "color": "海军灰与黑色迷彩",
+      "size": "长316m、宽76m、吃水11 m、满载排水量约80000–85000 吨",
+      "firepower": "配备近防系统、防空导弹等防御武器、3座1130近防炮系统",
+      "scene": "水面",
+      "shape": "平甲板加电磁弹射、岛式舰桥偏右、甲板带羁留拦阻系统与斜飞甲板",
+      "power": "常规蒸汽轮机加发电、电力系统以驱动EMALS、总功率约200 MW",
+      "country": "中国",
+      "outline": "平甲板、岛式舰桥、电磁弹射布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "福建舰",
+      "kind": "航空母舰",
+      "color": "海军灰与黑色迷彩",
+      "size": "长316m、宽76m、满载排水量约80000–85000吨",
+      "firepower": "配备近防系统、防空导弹等防御武器",
+      "scene": "水面",
+      "shape": "平甲板加电磁弹射、岛式舰桥偏右",
+      "power": "常规蒸汽轮机加发电、电力系统以驱动EMALS",
+      "country": "中国",
+      "outline": "平甲板、岛式舰桥、电磁弹射"
+    }
+  ],
+  "accuracy_list": "0.9592",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/CNS-Fujian.png"
+}

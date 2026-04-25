@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "波音KC-767",
+      "kind": "加油机",
+      "color": "浅灰色或银灰色涂装、带有防眩黑色机鼻和美国空军标识",
+      "size": "长度约48.5米、翼展约47.5米、高度约15.5米",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "低翼布局、双发动机、T型尾翼、机腹配备加油吊杆与软管加油系统",
+      "power": "2具CF6-80C2涡扇发动机、单台功率1203shp",
+      "country": "美国",
+      "outline": "下单翼、双发布局、T型尾翼布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "KC-767(0.7506)",
+      "kind": "加油机(1.0)",
+      "color": "灰色(0.5345)",
+      "size": "长度48.5m、翼展47.5m、高度15.5m(0.7653)",
+      "firepower": "无(1.0)",
+      "scene": "天空(1.0)",
+      "shape": "低翼布局、双发动机、T型尾翼、机腹配备加油吊杆(0.9432)",
+      "power": "2具CF6-80C2涡扇发动机(0.8167)",
+      "outline": "下单翼、双发布局、T型尾翼(0.9925)"
+    }
+  ],
+  "accuracy_list": "0.9323",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/images_frame_qsc/Boeing-KC-767.png"
+}

@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "T-7A红鹰",
+      "kind": "教练机",
+      "color": "红白相间涂装、机首及垂尾以鲜红为主、机身为白色或银灰色",
+      "size": "长度约14.15米、翼展约10米、高度约4米",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "单发、双座布局、尖锐机首、后掠翼T型尾翼设计",
+      "power": "1具奇异航空F404-GE-402涡扇发动机、单台功率1400shp",
+      "country": "美国",
+      "outline": "单发、双座、后掠翼、T型尾翼布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "T-7A红鹰(1.0)",
+      "kind": "教练机(1.0)",
+      "color": "机身为浅灰色、垂尾为鲜红色并带有星条纹(0.6709)",
+      "size": "长度14.15m、翼展10m、高度4m(0.9353)",
+      "firepower": "无(1.0)",
+      "scene": "天空(1.0)",
+      "shape": "单发、双座、尖锐机首、后掠翼、T型尾翼(0.9737)",
+      "power": "1具奇异航空F404-GE-402涡扇发动机(0.8583)",
+      "outline": "T型尾翼、后掠翼、双座布局(0.9409)"
+    }
+  ],
+  "accuracy_list": "0.9556",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/images_frame_qsc/T-7A-Red-Eagle.png"
+}

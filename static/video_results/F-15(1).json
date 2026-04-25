@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "F-15",
+      "kind": "战斗机",
+      "color": "美国空军低可视灰色涂装、表面含雷达吸波涂层",
+      "size": "长约19.43m、翼展约13.05m、高约5.63m",
+      "firepower": "1门M61A120mm火神机炮、可挂载AIM-120中距空空导弹、精确制导炸弹、AIM-9近距空空导弹及各类导弹挂舱",
+      "scene": "地面",
+      "shape": "高翼载机、双垂尾、缩减翼梁、油箱",
+      "power": "2具普拉特惠特尼F100系列涡扇发动机、单台推力130kN",
+      "country": "美国",
+      "outline": "双垂尾、高翼载布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "未知",
+      "kind": "教练机",
+      "color": "不清晰",
+      "size": "长度约8-10米、翼展约6-8米、高度约3-4米",
+      "firepower": "无",
+      "scene": "天空",
+      "shape": "单发、单座、气泡座舱、后掠上单翼",
+      "power": "1台涡扇发动机",
+      "outline": "流线型机身"
+    }
+  ],
+  "accuracy_list": "0.4792",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/F-15(1).png"
+}

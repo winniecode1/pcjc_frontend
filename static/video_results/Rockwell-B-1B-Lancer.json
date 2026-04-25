@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "B-1B枪骑兵",
+      "kind": "特种飞机",
+      "color": "灰色低可视度涂装和深灰色涂装",
+      "size": "长度44.8m、翼展41.8m、高度10.4m最大起飞重量216000 kg",
+      "firepower": "3个内埋弹舱、最大载弹量34000 kg、可挂84枚Mk-82炸弹、24枚GBU-31 JDAM、或24枚AGM-158 JASSM、无机炮",
+      "scene": "天空",
+      "shape": "可变后掠翼、四发、下单翼布局、流线型机身低可观测外形",
+      "power": "4台通用电气F101-GE-102加力涡扇发动机、单台推力137 kN",
+      "country": "美国",
+      "outline": "可变后掠翼、十字尾翼布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "B-1B枪骑兵",
+      "kind": "特种飞机",
+      "color": "灰色低可视度涂装",
+      "size": "长度44.8m、翼展41.8m、高度10.4m",
+      "firepower": "可携带AGM-158JASSM巡航导弹、AGM-154JSOW联合防区外武器、GBU系列制导炸弹等，内置弹舱",
+      "scene": "天空",
+      "shape": "可变后掠翼、四发、下单翼布局、流线型机身",
+      "power": "4具通用电气F101-GE-102系列涡扇发动机、单台最大推力约136千牛",
+      "outline": "可变后掠翼、十字尾翼"
+    }
+  ],
+  "accuracy_list": "0.9321",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/Rockwell-B-1B-Lancer.png"
+}

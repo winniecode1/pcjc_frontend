@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "FC-31鹳鹰",
+      "kind": "战斗机",
+      "color": "深灰色涂装量产涂装",
+      "size": "长度16.9m、翼展11.5m、高度4.8m最大起飞重量25000 kg",
+      "firepower": "内埋弹舱可挂4枚PL-10近距+4枚PL-15中距导弹；6个外挂点（隐身模式不使用）；可挂载小型卫星制导炸弹",
+      "scene": "天空",
+      "shape": "双发、双垂尾、隐身气动布局、DSI 进气道预留舰载加强结构",
+      "power": "2×涡扇发动机推力100–110 kN",
+      "country": "中国",
+      "outline": "梯形主翼、DSI进气道、双内倾垂尾布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "Su-57",
+      "kind": "战斗机",
+      "color": "低可视雷达吸波涂层灰色",
+      "size": "长度18.2m、翼展13.6m、高度5.1m",
+      "firepower": "内部武舱携带中远距空空导弹及侧舱短程导弹、具备对地精确武器能力",
+      "scene": "天空",
+      "shape": "单座、双发、隐身外形、后倾垂尾、机身-翼融合设计",
+      "power": "2具AL-41F1系列涡扇发动机、未来将换装产品30发动机",
+      "country": "俄罗斯",
+      "outline": "菱形截面、DSI进气道、全动垂尾"
+    }
+  ],
+  "accuracy_list": "0.8342",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/Shenyang-FC-31.png"
+}

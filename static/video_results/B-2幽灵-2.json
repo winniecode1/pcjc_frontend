@@ -1,0 +1,32 @@
+{
+  "label_info": [
+    {
+      "type": "",
+      "model": "",
+      "kind": "",
+      "color": "",
+      "size": "",
+      "firepower": "",
+      "scene": "",
+      "shape": "",
+      "power": "",
+      "country": "",
+      "outline": ""
+    }
+  ],
+  "result": [
+    {
+      "model": "B-2",
+      "kind": "特种飞机",
+      "color": "深灰色，低可视雷达吸波涂层",
+      "size": "长度21米、翼展52.4米、高度5.18米",
+      "firepower": "携带精确制导炸弹和巡航导弹",
+      "scene": "天空",
+      "shape": "飞翼布局，隐身设计，无明显机身和尾翼结构",
+      "power": "4台F118-GE-100涡扇发动机",
+      "outline": "飞翼布局，隐身设计"
+    }
+  ],
+  "accuracy_list": "0.4321",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png"
+}

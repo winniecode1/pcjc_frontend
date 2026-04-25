@@ -1,0 +1,33 @@
+{
+  "label_info": [
+    {
+      "type": "飞机",
+      "model": "米-17直升机",
+      "kind": "武装直升机",
+      "color": "俄罗斯空天军标准三色迷彩、或北极地区白底涂装",
+      "size": "长度18.17m、旋翼直径31.0m、高4.76m最大起飞重量13000kg",
+      "firepower": "可配机炮和机枪、火箭发射架反坦克导弹",
+      "scene": "天空",
+      "shape": "单主旋翼和尾桨、宽舱门高置发动机舱",
+      "power": "2×TV3-117系列中型涡轴发动机单台功率2200shp",
+      "country": "俄罗斯",
+      "outline": "单主旋翼、尾桨、宽舱门布局"
+    }
+  ],
+  "result": [
+    {
+      "model": "米-17直升机",
+      "kind": "武装直升机",
+      "color": "黄绿棕三色迷彩涂装",
+      "size": "长度18.17m、旋翼直径31.0m、高4.76m",
+      "firepower": "可配机炮和机枪、火箭发射架",
+      "scene": "天空",
+      "shape": "单主旋翼和尾桨、宽舱门",
+      "power": "2×TV3-117系列中型涡轴发动机",
+      "country": "俄罗斯",
+      "outline": "单主旋翼、尾桨、宽舱门"
+    }
+  ],
+  "accuracy_list": "0.941",
+  "image_path": "/home/wuzhixuan/Project/PCJC/module2/a_image_list/visible_light/Mi-17.png"
+}
