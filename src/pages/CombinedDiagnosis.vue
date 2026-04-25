@@ -662,12 +662,18 @@ export default {
 .result-section {
   flex: 1; display: flex; flex-direction: column; min-height: 0; position: relative; /* 为遮罩层定位 */
 }
-.section-title { color: #00e5ff; font-family: 'PingFang SC', sans-serif !important; font-weight: bold; margin-bottom: 5px; }
-.content-box { flex: 1; line-height: 1.6; color: #FFFFFF; font-size: 14px !important; overflow-y: auto; padding: 0 5px; font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important; white-space: pre-wrap; word-wrap: break-word; }
+.section-title { color: #00e5ff; font-family: 'PingFang SC', sans-serif !important; font-weight: bold; margin-bottom: 5px; text-align: center; }
+.content-box {
+  flex: 1; line-height: 1.6; color: #FFFFFF; font-size: 14px !important; overflow-y: auto; padding: 0 5px; font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important; white-space: pre-wrap; word-wrap: break-word;
+  text-align: center; /* 初始文字居中 */
+}
 .content-box * { font-size: 14px !important; font-family: 'PingFang SC', 'Microsoft YaHei', 'Arial', sans-serif !important; }
 .highlight-text { color: #FF4242 !important; font-weight: 700; }
-.metric-group { margin-top: 1.2vh; padding-top: 1vh; border-top: 1px solid rgba(46, 216, 255, 0.2); display: flex; justify-content: space-between; align-items: center; }
-.metric-item { font-size: 14px; color: #8bd3f9; }
+.metric-group {
+  margin-top: 1.2vh; padding-top: 1vh; border-top: 1px solid rgba(46, 216, 255, 0.2);
+  display: flex; justify-content: space-around; align-items: center; text-align: center;
+}
+.metric-item { font-size: 14px; color: #8bd3f9; text-align: center; flex: 1; }
 .metric-item span { font-weight: bold; color: #c6f4ff; font-size: 16px; margin-left: 0.5em; font-family: 'DingTalk-JinBuTi', sans-serif !important; }
 
 /* 遮罩层逻辑 */

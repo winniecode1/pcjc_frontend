@@ -349,9 +349,10 @@ export default {
         return;
       }
       try {
-        const baseUrl = 'http://10.109.253.71:5237';
-        const response = await axios.get(`${baseUrl}/api/dataset/sample/${sampleId}`);
-        this.ordersText = response.data.instruction || '';
+        const response = await axios.get('http://10.109.253.71:8001/module2/get_mission_order', {
+          params: { img_path: sampleId }
+        });
+        this.ordersText = response.data.mission_order || '';
       } catch (error) {
         console.warn("获取作战指令失败", error);
         this.ordersText = '';

@@ -18,7 +18,7 @@
     <b-row class="justify-content-center content-row no-gutters">
 
       <b-col cols="3" class="left-column px-2">
-  <div class="left-panels-container">
+    <div class="left-panels-container">
     <div class="panel-header header-select-data clean-header">作战指令</div>
 
     <div class="panel-orders">
@@ -29,33 +29,34 @@
       </div>
     </div>
 
-    <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
+    <div class="data-source-section">
+      <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
 
-    <div class="media-type-selector">
-      <button 
-        class="media-type-btn" 
-        :class="{ 'active': selectedMediaType === 'image' }"
-        @click="switchMediaType('image')">
-        图片
-      </button>
-      <button 
-        class="media-type-btn" 
-        :class="{ 'active': selectedMediaType === 'video' }"
-        @click="switchMediaType('video')">
-        视频
-      </button>
-    </div>
-
-    <div class="panel-left">
-      <div class="panel-content">
-        <div class="server-video-list overflow-auto">
-          <div v-for="item in mediaList" :key="item.id" class="video-item" @click="selectMedia(item)"
-            :class="{ 'selected': selectedVideo && selectedVideo.id === item.id }">
-            <span>{{ item.name }}</span>
-            <span class="selector-circle"></span>
+      <div class="panel-left">
+        <div class="panel-content">
+          <div class="media-type-selector">
+            <button 
+              class="media-type-btn" 
+              :class="{ 'active': selectedMediaType === 'image' }"
+              @click="switchMediaType('image')">
+              图片
+            </button>
+            <button 
+              class="media-type-btn" 
+              :class="{ 'active': selectedMediaType === 'video' }"
+              @click="switchMediaType('video')">
+              视频
+            </button>
           </div>
-          <div v-if="mediaList.length === 0" class="empty-list-text">
-            暂无{{ selectedMediaType === 'image' ? '图片' : '视频' }}数据
+          <div class="server-video-list overflow-auto">
+            <div v-for="item in mediaList" :key="item.id" class="video-item" @click="selectMedia(item)"
+              :class="{ 'selected': selectedVideo && selectedVideo.id === item.id }">
+              <span>{{ item.name }}</span>
+              <span class="selector-circle"></span>
+            </div>
+            <div v-if="mediaList.length === 0" class="empty-list-text">
+              暂无{{ selectedMediaType === 'image' ? '图片' : '视频' }}数据
+            </div>
           </div>
         </div>
       </div>
@@ -1465,8 +1466,16 @@ export default {
   background-repeat: no-repeat;
   background-size: 100% 100%;
   width: 100%;
-  min-height: 300px;
+  min-height: 250px;
   padding: 15px;
+}
+
+/* 数据源区域容器 */
+.data-source-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 500px;
 }
 
 /* 媒体类型切换按钮 */
@@ -1474,7 +1483,7 @@ export default {
   display: flex;
   justify-content: center;
   gap: 10px;
-  margin-bottom: 10px;
+  padding: 8px 0;
 }
 
 .media-type-btn {
