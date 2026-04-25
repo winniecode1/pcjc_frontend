@@ -83,8 +83,8 @@
         <div class="video-section">
           <div class="video-label label-processed">多模态目标检测结果</div>
           <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
-            <img v-if="processedVideoURL && !isLoading && selectedMediaType === 'image'" :src="processedVideoURL" class="video-display" alt="检测结果" :key="processedVideoURL" @error="handleImageError" />
-            <video v-else-if="processedVideoURL && !isLoading && selectedMediaType === 'video'" :src="processedVideoURL" class="video-display" controls :key="processedVideoURL" @error="handleVideoError"></video>
+            <img v-if="processedVideoURL && !isLoading && selectedMediaType === 'image'" :src="processedVideoURL" class="video-display" alt="检测结果" :key="'img-' + processedVideoURL" @error="handleImageError" />
+            <video v-else-if="processedVideoURL && !isLoading && selectedMediaType === 'video'" :src="processedVideoURL" class="video-display" controls :key="'video-' + processedVideoURL" @error="handleVideoError"></video>
             <div v-if="isLoading" class="placeholder-text loading-text">检测中……</div>
             <div v-else-if="!processedVideoURL" class="placeholder-text">检测结果将在这里显示</div>
           </div>
@@ -244,7 +244,11 @@ export default {
   computed: {
     canStartBiasDetection() {
       // 需要先完成目标识别（fullResult 有检测结果）且不在加载中
-      return this.fullResult && this.fullResult.key_frame_detection && !this.isLoading;
+      // 视频：需要 key_frame_detection 或 detection_result
+      // 图片：需要 key_frame_detection
+      return this.fullResult && 
+             (this.fullResult.key_frame_detection || this.fullResult.detection_result) && 
+             !this.isLoading;
     }
   },
   mounted() {
@@ -259,6 +263,16 @@ export default {
     this.clearTypingIntervals();
   },
   methods: {
+    // 获取综合准确率（图片和视频综合）
+    async fetchOverallAccuracy() {
+      try {
+        const response = await axios.get(`${IMAGE_API_URL}/api/metrics/overall_accuracy`);
+        return response.data;
+      } catch (error) {
+        console.error("获取综合准确率失败:", error);
+        return null;
+      }
+    },
     async fetchOrders() {
       try {
         const response = await axios.get(`${API_BASE_URL}/orders`);
@@ -472,7 +486,10 @@ export default {
         video_description: null,
         accuracy_results: null,
         video_info: null,
-        key_frame_detection: null
+        key_frame_detection: null,
+        detection_result: null,
+        description_obj: null,
+        current_accuracy: null
       };
       if (!preserveMessages) {
         this.resultMessage = null;
@@ -559,9 +576,18 @@ export default {
     prepareDescriptionDisplay(fullData) {
       this.clearTypingIntervals();
       this.updateLabelsToHighlight(fullData.low_similarity_aspects);
-      this.descriptionEntries = this.buildDescriptionEntries(fullData.description || fullData.video_description || '');
-      // 直接使用 video_description 作为显示内容，没有则显示空字符串
-      this.summaryFullText = fullData.description || fullData.video_description || '';
+
+      // 处理 description 可能是对象或字符串的情况
+      let descText = '';
+      if (typeof fullData.description === 'object' && fullData.description !== null) {
+        // 视频接口返回的 description 是对象，优先使用 ground_truth
+        descText = fullData.description.ground_truth || fullData.description.predicted || '';
+      } else {
+        descText = fullData.description || fullData.video_description || '';
+      }
+
+      this.descriptionEntries = this.buildDescriptionEntries(descText);
+      this.summaryFullText = descText;
       this.summaryTextOnly = '';
       this.summaryTypingText = '';
       this.biasDetailEntries = this.descriptionEntries.filter(entry => entry.label !== '总结');
@@ -725,25 +751,35 @@ export default {
 
           console.log("视频检测结果:", data);
 
-          // 保存结果到 fullResult
-          this.fullResult.detection_result = data.detection_result || {};
-          this.fullResult.accuracy_result = data.accuracy_result || {};
-          this.fullResult.overall_accuracy = (data.overall_accuracy && data.overall_accuracy.accuracy) || 0;
+          // 根据接口文档，video 检测返回结构：
+          // {
+          //   detection: { accuracy: 1.0 },
+          //   description: { similarity, aspect_similarities, predicted, ground_truth, ... },
+          //   has_standard: true,
+          //   current_accuracy: 0.8935
+          // }
 
-          // 构建视频检测详情条目
+          // 保存结果到 fullResult
+          this.fullResult.detection_result = data.detection || {};
+          this.fullResult.description_obj = data.description || {};
+          this.fullResult.current_accuracy = data.current_accuracy;
+          // 也设置 overall_accuracy 以便模板显示
+          this.fullResult.overall_accuracy = data.current_accuracy;
+
+          console.log("视频检测 current_accuracy:", data.current_accuracy);
+          console.log("视频检测 overall_accuracy:", this.fullResult.overall_accuracy);
+
+          // 构建视频检测详情条目（使用新的数据结构）
           this.biasDetailEntries = this.buildVideoBiasDetailEntries(data);
 
           // 设置检测后视频 URL
-          if (data.detected_video_url) {
-            if (data.detected_video_url.startsWith('http://') || data.detected_video_url.startsWith('https://')) {
-              this.processedVideoURL = data.detected_video_url;
-            } else {
-              this.processedVideoURL = `${IMAGE_API_URL}${data.detected_video_url}`;
-            }
-          }
+          this.processedVideoURL = `${IMAGE_API_URL}/api/result/detected_video/${sampleId}`;
 
           // 保存到缓存
           try {
+            const descText = data.description && typeof data.description === 'object'
+              ? data.description.predicted || data.description.ground_truth || ''
+              : (data.description || '');
             const module1Res = {
               ...data,
               deviceType: "N/A",
@@ -752,7 +788,7 @@ export default {
               originalVideoPath: this.originalVideoURL,
               instruction: this.ordersText,
               task_id: this.taskId,
-              video_description: data.description || '',
+              video_description: descText,
               selectedMediaType: 'video'
             };
             localStorage.setItem('module1Res', JSON.stringify(module1Res));
@@ -771,8 +807,8 @@ export default {
             this.biasTypingTimeout = null;
           }, 3000);
 
-          // 准确率直接显示
-          if (data.accuracy_result && data.accuracy_result.current_accuracy !== undefined) {
+          // 准确率直接显示（如果后端已返回 current_accuracy）
+          if (data.current_accuracy !== undefined) {
             this.showAccuracy = true;
             this.isBiasDetecting = false;
             localStorage.setItem('biasDetectionCompleted', 'true');
@@ -790,11 +826,20 @@ export default {
     },
     buildVideoBiasDetailEntries(data) {
       const entries = [];
-      const accuracyResult = data.accuracy_result || {};
+      
+      // 根据接口文档，视频检测返回结构：
+      // {
+      //   detection: { accuracy: 1.0 },
+      //   description: { similarity, aspect_similarities, low_similarity_aspects, predicted, ground_truth },
+      //   current_accuracy: 0.8935
+      // }
 
-      // 描述信息
-      if (data.description) {
-        const descLines = data.description.split(/\r?\n/).filter(line => line.trim() !== '');
+      const descriptionObj = data.description || {};
+      const detection = data.detection || {};
+
+      // 描述信息 - description.predicted 是预测描述，ground_truth 是真实描述
+      if (descriptionObj.predicted) {
+        const descLines = descriptionObj.predicted.split(/\r?\n/).filter(line => line.trim() !== '');
         descLines.forEach(line => {
           const trimmedLine = line.trim();
           const match = trimmedLine.match(/^([^：:]+)[：:]\s*(.*)$/);
@@ -814,29 +859,29 @@ export default {
         });
       }
 
-      // 检测准确率
-      if (accuracyResult.detection && accuracyResult.detection.accuracy !== undefined) {
+      // 检测准确率 - detection.accuracy
+      if (detection.accuracy !== undefined) {
         entries.push({
           label: '检测准确率',
-          text: `检测准确率：${(accuracyResult.detection.accuracy * 100).toFixed(2)}%`,
+          text: `检测准确率：${(detection.accuracy * 100).toFixed(2)}%`,
           highlight: false
         });
       }
 
-      // 描述相似度
-      if (accuracyResult.description && accuracyResult.description.similarity !== undefined) {
+      // 描述相似度 - description.similarity
+      if (descriptionObj.similarity !== undefined) {
         entries.push({
           label: '描述相似度',
-          text: `描述相似度：${(accuracyResult.description.similarity * 100).toFixed(2)}%`,
+          text: `描述相似度：${(descriptionObj.similarity * 100).toFixed(2)}%`,
           highlight: false
         });
       }
 
-      // 当前视频准确率
-      if (accuracyResult.current_accuracy !== undefined) {
+      // 当前视频准确率 - 顶层 current_accuracy 字段
+      if (data.current_accuracy !== undefined) {
         entries.push({
           label: '当前准确率',
-          text: `当前准确率：${(accuracyResult.current_accuracy * 100).toFixed(2)}%`,
+          text: `当前准确率：${(data.current_accuracy * 100).toFixed(2)}%`,
           highlight: true
         });
       }
@@ -1154,29 +1199,31 @@ export default {
           // 设置任务 ID
           this.taskId = fullData.id || this.selectedVideo.id;
 
+          // description 是对象，提取 ground_truth 字段作为标准答案显示文本
+          const descText = fullData.description && typeof fullData.description === 'object' 
+            ? fullData.description.ground_truth || fullData.description.predicted || ''
+            : (fullData.description || '');
+
           // 更新 fullResult
           this.fullResult.task_id = this.taskId;
-          this.fullResult.video_description = fullData.description || '';
+          this.fullResult.video_description = descText;
+          this.fullResult.description_obj = fullData.description; // 保存原始 description 对象
           this.fullResult.video_info = {
             name: this.selectedVideo.name,
             id: this.selectedVideo.id
           };
-          this.fullResult.key_frame_detection = fullData.detection_result || {};
+          // detection 对象包含 accuracy
+          this.fullResult.detection_result = fullData.detection || {};
+          // 保存 current_accuracy 和 overall_accuracy
+          this.fullResult.current_accuracy = fullData.current_accuracy;
+          this.fullResult.overall_accuracy = fullData.current_accuracy;
 
-          // 设置检测后视频 URL
-          if (fullData.detected_video_url) {
-            if (fullData.detected_video_url.startsWith('http://') || fullData.detected_video_url.startsWith('https://')) {
-              this.processedVideoURL = fullData.detected_video_url;
-            } else {
-              this.processedVideoURL = `${IMAGE_API_URL}${fullData.detected_video_url}`;
-            }
-          } else {
-            this.processedVideoURL = `${IMAGE_API_URL}/api/result/detected_video/${this.selectedVideo.id}`;
-          }
+          // 设置检测后视频 URL（检测后视频通过专门接口获取）
+          this.processedVideoURL = `${IMAGE_API_URL}/api/result/detected_video/${this.selectedVideo.id}`;
           console.log("Processed video URL:", this.processedVideoURL);
 
           if (!this.summaryFullText) {
-            this.summaryFullText = fullData.description || '视频检测完成';
+            this.summaryFullText = descText || '视频检测完成';
           }
         }
 
@@ -1221,7 +1268,8 @@ export default {
       console.log(`正在请求导出任务: ${this.taskId}`);
       this.isExporting = true;
       try {
-        const response = await axios.get(`${API_BASE_URL}/export_results/${this.taskId}`, {
+        // 导出接口已改为 /export_results，兼容旧前端调用 /export_results/{任意值}
+        const response = await axios.get(`${IMAGE_API_URL}/export_results/${this.taskId}`, {
           responseType: 'blob',
         });
         const blob = new Blob([response.data], { type: 'application/zip' });
