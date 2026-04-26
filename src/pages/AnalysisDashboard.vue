@@ -1596,7 +1596,7 @@ export default {
 <style scoped>
 /* 使用与 CombinedDiagnosis 一致的样式 */
 .attribution-diagnosis-container {
-  width: 100vw; height: 100vh; background-image: url('~@/assets/images/step5/背景.png');
+  width: 100vw; height: 100vh; background-image: url('~@/assets/images/step5/背景2.png');
   background-size: 100% 100%; color: white; overflow: hidden; position: relative;
 }
 
