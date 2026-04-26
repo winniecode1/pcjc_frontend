@@ -140,8 +140,11 @@
 
         <div class="panel-right-bottom" :class="{ 'loading-overlay': isBiasDetecting }">
           <div class="panel-content">
-            <div class="accuracy-content" v-b-tooltip.hover.top="'公式'">
-              <span class="accuracy-label">偏差识别准确率</span>
+            <div class="accuracy-content">
+              <span class="accuracy-label" @click="showFormulaTooltip = !showFormulaTooltip">
+                偏差识别准确率
+                <span class="formula-hint-icon">?</span>
+              </span>
               <span class="accuracy-value">
                 <template v-if="isBiasDetecting">
                   计算中...
@@ -153,6 +156,11 @@
                   N/A
                 </template>
               </span>
+              <!-- 公式图片提示 -->
+              <div v-if="showFormulaTooltip" class="formula-tooltip" @click.stop>
+                <span class="formula-close" @click="showFormulaTooltip = false">×</span>
+                <img src="@/assets/images/formula.png" alt="准确度公式" class="formula-image" />
+              </div>
             </div>
           </div>
         </div>
@@ -238,7 +246,8 @@ export default {
       isBiasDetecting: false,
       isExporting: false,
       hasStartedDetection: false,
-      hasStartedBiasDetection: false
+      hasStartedBiasDetection: false,
+      showFormulaTooltip: false
     };
   },
   computed: {
@@ -458,6 +467,9 @@ export default {
       console.error("图片加载错误:", e);
       this.resultMessage = "图片加载失败，请检查服务器日志和网络。";
       this.originalVideoURL = null;
+    },
+    handleFormulaImageError(e) {
+      console.warn("公式图片加载失败:", e);
     },
     getMainObject() {
       if (!this.fullResult.key_frame_detection || !this.fullResult.key_frame_detection.detections || !this.fullResult.key_frame_detection.detections.length) {
@@ -1452,7 +1464,6 @@ export default {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 /* 标题样式 */
@@ -1940,7 +1951,9 @@ export default {
 .panel-right-bottom {
   background-image: url('~@/assets/images/step4/准确率框.png');
   width: 400px;
-  height: 90px;
+  height: 120px;
+  position: relative;
+  overflow: visible;
 }
 
 .panel-right-bottom .panel-content {
@@ -1951,6 +1964,7 @@ export default {
   padding: 0;
   width: 100%;
   height: 100%;
+  overflow: visible;
 }
 
 .accuracy-content {
@@ -1959,6 +1973,57 @@ export default {
   align-items: center;
   width: 100%;
   padding: 0 15px;
+  position: relative;
+}
+
+/* 公式提示图标 */
+.formula-hint-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  background-color: rgba(0, 229, 255, 0.3);
+  border: 1px solid #00e5ff;
+  border-radius: 50%;
+  font-size: 10px;
+  color: #00e5ff;
+  margin-left: 5px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+/* 公式悬浮提示框 */
+.formula-tooltip {
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  transform: translateY(-50%);
+  z-index: 9999;
+  background-color: rgba(0, 20, 40, 0.95);
+  border: 2px solid #00e5ff;
+  border-radius: 8px;
+  padding: 25px 10px 10px;
+  box-shadow: 0 4px 20px rgba(0, 229, 255, 0.3);
+  margin-right: 10px;
+  min-width: 200px;
+  overflow: visible;
+}
+
+.formula-close {
+  position: absolute;
+  top: 2px;
+  right: 8px;
+  color: #00e5ff;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.formula-image {
+  max-width: 350px;
+  max-height: 120px;
+  display: block;
 }
 
 /* 公式 tooltip 样式 - 鼠标悬停时字体增大 */
