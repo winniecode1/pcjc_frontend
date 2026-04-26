@@ -25,7 +25,7 @@
     <b-row class="content-row no-gutters">
       <!-- 左侧栏：数据分类与交互 -->
       <b-col cols="3" class="left-column px-2">
-        <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
+        <div class="panel-header header-select-data clean-header">认知传播数据集</div>
 
         <div class="sidebar-scroll-area">
           <div class="folder-group">
@@ -62,7 +62,7 @@
         </div>
 
         <div class="preview-container">
-          <div class="panel-header header-select-data clean-header">多模态结果展示</div>
+          <div class="panel-header header-select-data clean-header">传播数据预览</div>
           <div class="preview-frame" style="position: relative;">
             <div v-if="carouselItems.length === 0" class="preview-placeholder">请选择数据源查看结果</div>
             <b-carousel
@@ -94,7 +94,7 @@
 
         <div class="action-buttons">
           <button @click="startAnalysis" :disabled="isLoading" class="btn-start-detect">
-            <span class="btn-text-pos">{{ isLoading ? '诊断中...' : '开始认知诊断' }}</span>
+            <span class="btn-text-pos">{{ isLoading ? '诊断中...' : '开始根因诊断' }}</span>
           </button>
         </div>
       </b-col>

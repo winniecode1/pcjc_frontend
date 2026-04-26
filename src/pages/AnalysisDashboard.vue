@@ -16,7 +16,7 @@
     <b-row class="content-row no-gutters">
       <!-- 左侧栏：数据集与交互 -->
       <b-col cols="3" class="left-column px-2">
-        <div class="panel-header header-select-data clean-header">选择指挥官作战指令数据集</div>
+        <div class="panel-header header-select-data clean-header">指挥官作战指令数据集</div>
 
         <div class="sidebar-scroll-area">
           <div class="folder-group">
