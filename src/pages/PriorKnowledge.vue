@@ -35,7 +35,20 @@
           <div class="design-module-content video-content-wrapper">
             <!-- 数据选择列表状态 -->
             <div v-if="!isVideoSelected" class="video-select-list">
-              <div class="video-list-header">请选择数据源</div>
+              <div class="source-type-buttons">
+                <button 
+                  class="source-type-btn" 
+                  :class="{ active: currentSourceType === 'image' }"
+                  @click="switchSourceType('image')">
+                  图片
+                </button>
+                <button 
+                  class="source-type-btn" 
+                  :class="{ active: currentSourceType === 'video' }"
+                  @click="switchSourceType('video')">
+                  视频
+                </button>
+              </div>
               <div class="video-list-container">
                 <div v-for="video in videoList" :key="video.id" class="video-select-item"
                   @click="selectVideo(video)">
@@ -44,6 +57,9 @@
                     <span class="video-type">{{ video.type || '未知' }}</span>
                   </div>
                   <span class="selector-circle"></span>
+                </div>
+                <div v-if="videoList.length === 0" class="empty-list-hint">
+                  暂无数据
                 </div>
               </div>
             </div>
@@ -64,7 +80,7 @@
 
         <div class="design-module text-module-left fixed-left-text">
           <div class="panel-header">多模态认知传播信息</div>
-          <div class="design-module-content">
+          <div class="design-module-content overflow-auto">
             <!-- 细粒度检测后的信息：固定图片区域（不滚动） -->
             <div v-if="multimodalDetectionInfo && multimodalDetectionInfo.image" class="multimodal-image-fixed">
               <div class="cognitive-image-container">
@@ -288,15 +304,19 @@ export default {
           // 数据选择相关
           videoList: [],
           selectedVideo: null,
-          isVideoSelected: false
+          isVideoSelected: false,
+          // 当前数据源类型：'image' 或 'video'
+          currentSourceType: 'image',
+          // 视频列表数据（来自 video_list 接口）
+          videoSourceList: []
         };
       },
   mounted() {
     window.addEventListener('resize', this.handleResize);
     // 获取作战指令（使用默认图片路径）
     this.fetchOrders(IMG_PATH_URL);
-    // 获取视频列表
-    this.fetchVideoList();
+    // 获取图片列表
+    this.fetchImageList();
     // 页面加载时加载视频
     this.loadVideoFromStorage();
     // 页面加载时加载初始描述信息（场景、目标、行为、总结）
@@ -402,7 +422,7 @@ export default {
       }
     },
     // 获取图片列表（无人机侦察数据）
-    async fetchVideoList() {
+    async fetchImageList() {
       try {
         const response = await axios.get('http://10.109.253.71:8001/image_list');
         console.log('接口原始返回数据:', response.data);
@@ -431,6 +451,55 @@ export default {
         this.videoList = [];
       }
     },
+    // 获取视频列表（来自 video_list 接口）
+    async fetchVideoSourceList() {
+      try {
+        const response = await axios.get('http://10.109.253.71:8001/module2/get_video_list');
+        console.log('视频列表接口返回数据:', response.data);
+        
+        let rawData = response.data;
+        
+        // 从原始数据中提取 video_list 数组
+        const videoArray = rawData.video_list || [];
+        
+        if (Array.isArray(videoArray)) {
+          this.videoSourceList = videoArray.map((item, index) => {
+            // item 是视频路径字符串，如 "/home/wuzhixuan/Project/PCJC/module2/a_video_list/A330MRTT.mp4"
+            const fullPath = typeof item === 'string' ? item : item.path || item.url || '';
+            const fileName = fullPath.split('/').pop() || `视频${index + 1}`;
+            return {
+              id: index + 1,
+              name: fileName,
+              path: fullPath,
+              type: 'video'
+            };
+          });
+          console.log('视频列表处理后:', this.videoSourceList);
+        }
+      } catch (error) {
+        console.warn("获取视频列表失败", error);
+        this.videoSourceList = [];
+      }
+    },
+    // 切换数据源类型
+    async switchSourceType(type) {
+      if (this.currentSourceType === type) return;
+      
+      this.currentSourceType = type;
+      this.videoList = [];
+      this.isVideoSelected = false;
+      this.selectedVideo = null;
+      this.videoUrl = null;
+      
+      if (type === 'image') {
+        // 图片模式：调用图片列表接口
+        await this.fetchImageList();
+      } else {
+        // 视频模式：调用视频列表接口
+        await this.fetchVideoSourceList();
+        this.videoList = this.videoSourceList;
+      }
+    },
     // 选择数据
     selectVideo(video) {
       // 检查是否选择了不同的图片，如果是则重置所有模块信息
@@ -446,6 +515,28 @@ export default {
       this.selectedVideo = video;
       this.isVideoSelected = true;
 
+      // 如果是视频数据源类型，使用 get_video 接口获取视频
+      if (this.currentSourceType === 'video') {
+        const videoPath = video.path || video.name || '';
+        // 使用 get_video 接口，传入 video_path 参数
+        this.videoUrl = `http://10.109.253.71:8001/module2/get_video?video_path=${encodeURIComponent(videoPath)}`;
+        this.videoMessage = '视频加载中...';
+        
+        // 获取作战指令（使用视频地址）
+        this.fetchOrders(videoPath);
+        
+        // 保存选中的视频数据到 localStorage
+        localStorage.setItem('selectedImageData', JSON.stringify({
+          path: videoPath,
+          type: 'video',
+          name: video.name
+        }));
+        
+        console.log('选中视频数据:', JSON.parse(JSON.stringify(video)), 'videoUrl:', this.videoUrl);
+        return;
+      }
+
+      // 图片数据源类型（原有逻辑）
       // 使用 path 字段
       const imagePath = video.path || video.name || '';
       const fileName = video.name || '';
@@ -1775,6 +1866,45 @@ text-decoration: none;
   text-align: center;
 }
 
+.source-type-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.source-type-btn {
+  padding: 6px 20px;
+  background-color: rgba(0, 100, 150, 0.3);
+  border: 1px solid rgba(0, 229, 255, 0.5);
+  border-radius: 4px;
+  color: #88aabb;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-family: 'DOUYUFont', sans-serif;
+}
+
+.source-type-btn:hover {
+  background-color: rgba(0, 229, 255, 0.2);
+  border-color: #00e5ff;
+  color: #fff;
+}
+
+.source-type-btn.active {
+  background-color: rgba(0, 229, 255, 0.3);
+  border-color: #00e5ff;
+  color: #00e5ff;
+  font-weight: bold;
+}
+
+.empty-list-hint {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+  font-size: 13px;
+}
+
 .video-list-container {
   flex: 1;
   overflow-y: auto;
@@ -1911,6 +2041,10 @@ text-decoration: none;
   overflow: hidden;
 }
 
+.fixed-left-text .design-module-content.overflow-auto {
+  overflow-y: auto;
+}
+
 .multimodal-image-fixed {
   flex-shrink: 0;
   padding: 15px;
@@ -1943,11 +2077,9 @@ text-decoration: none;
 }
 
 .text-scrollable {
-  flex: 1;
   padding: 15px;
-  overflow-y: auto;
+  overflow-y: visible;
   overflow-x: hidden;
-  min-height: 0;
   white-space: normal;
   word-wrap: break-word;
 }
