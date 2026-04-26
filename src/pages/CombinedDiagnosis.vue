@@ -83,7 +83,7 @@
                      <video v-else-if="item.type === 'video'" :src="item.src" autoplay muted loop class="slide-media slide-media-video"></video>
                      <div v-else-if="item.type === 'text'" class="text-slide-content">
                        <div class="text-slide-title">{{ item.stage ? `${item.stage} · ${item.title}` : item.title }}</div>
-                       <div class="text-slide-desc">{{ item.content }}</div>
+                       <div class="text-slide-desc">{{ formatSlideContent(item) }}</div>
                      </div>
                    </div>
                 </template>
@@ -212,11 +212,15 @@
             <div class="metric-half metric-half-right">
               <div class="metric-card recall-card centered-metric">
                 <div class="metric-title">不一致根因召回率</div>
-                <div class="metric-value"><span>{{ formatPercent(recall, 0) }}</span></div>
+                <div class="metric-value">
+                  <span v-if="recall !== null && recall !== undefined">{{ formatPercent(recall, 0) }}</span>
+                  <span v-else-if="recallWaiting" class="metric-spinner"></span>
+                  <span v-else>-</span>
+                </div>
               </div>
             </div>
           </div>
-          <button class="export-btn" @click="exportResult" :disabled="isLoading">结果导出</button>
+          <button class="export-btn" @click="exportResult" :disabled="!exportEnabled">结果导出</button>
         </div>
       </b-col>
     </b-row>
@@ -224,10 +228,36 @@
 </template>
 
 <script>
-const API_BASE_URL = process.env.VUE_APP_MODULE5_API_BASE_URL || 'http://127.0.0.1:5236';
-const COMBINED_RECALL_TIMER_KEY = 'pcjc_combined_recall_timer_v1';
-const COMBINED_RECALL_DELAY_MS = 5 * 60 * 1000;
+const API_BASE_URL = process.env.VUE_APP_MODULE5_API_BASE_URL || 'http://10.109.253.71:5235';
+
+const FIELD_LABEL_MAP = {
+  'ground_truth': '真实标签',
+  'label': '预测标签',
+  'model': '型号',
+  'kind': '目标类型',
+  'color': '颜色',
+  'shape': '外形特征',
+  'scene': '场景',
+  'outline': '轮廓特征',
+  'accuracy': '准确率',
+  'status': '接口状态',
+  'confidence': '置信度',
+  'description': '描述',
+  'type': '类型',
+  'name': '名称',
+  'category': '类别',
+  'target': '目标',
+  'result': '结果',
+  'summary': '摘要',
+  'internal_text': '内部文本',
+  'model_output': '模型输出',
+  'cognitive_bias': '认知偏差',
+  'caption': '图片描述'
+};
+
+const COMBINED_TIMER_KEY = 'pcjc_combined_timers_v2';
 const COMBINED_RECALL_DONE_VALUE = 0.92;
+function randomBetween(min, max) { return min + Math.random() * (max - min); }
 
 export default {
   name: 'CombinedDiagnosis',
@@ -285,7 +315,10 @@ export default {
       diagnosisConsistencyType: null,
       analysisStartedAt: null,
       revealContentTimer: null,
-      recallDisplayTimer: null
+      recallDisplayTimer: null,
+      cachedDiagnosisData: null,
+      exportEnabled: false,
+      recallWaiting: false
     };
   },
   computed: {
@@ -301,21 +334,20 @@ export default {
     }
   },
   mounted() {
-    this.fetchImageList();
+    const isRouteNav = sessionStorage.getItem('pcjc_combined_nav');
+    sessionStorage.removeItem('pcjc_combined_nav');
+    if (!isRouteNav) {
+      this.clearTimerStateFromStorage();
+    }
+    this.fetchImageList().then(() => {
+      this.restoreFullStateFromStorage();
+    });
     this.renderFormula();
-
-    // 初始化默认全量数据展示
-    this.selectedVideo = null;
-    this.selectedImage = null;
-
-    // 初始化四个诊断模块的默认文字与指标
     this.clearResults({ resetPersistentMetric: false });
-
-    // 初始化左下角轮播图的多模态混排数据
     this.carouselItems = [];
-    this.restoreRecallTimerFromStorage();
   },
   beforeDestroy() {
+    sessionStorage.setItem('pcjc_combined_nav', '1');
     if (this.pollTimer) clearInterval(this.pollTimer);
     if (this.module1DelayTimer && this.module1DelayTimer !== 'done') clearTimeout(this.module1DelayTimer);
     if (this.module4DelayTimer && this.module4DelayTimer !== 'done') clearTimeout(this.module4DelayTimer);
@@ -431,11 +463,7 @@ export default {
     async selectImage(image, options = {}) {
       await this.selectVideo(image, options);
     },
-    async selectVideo(video, options = {}) {
-      const { resetTimer = true } = options;
-      if (resetTimer) {
-        this.resetRecallTimerByDataSelection();
-      }
+    async selectVideo(video) {
       this.selectedVideo = video;
       this.selectedImage = video;
       await this.handleFileSelection(video);
@@ -606,29 +634,84 @@ export default {
         this.recallDisplayTimer = null;
       }
     },
-    readRecallTimerStateFromStorage() {
+    readTimerStateFromStorage() {
       try {
-        const raw = localStorage.getItem(COMBINED_RECALL_TIMER_KEY);
+        const raw = localStorage.getItem(COMBINED_TIMER_KEY);
         if (!raw) return null;
         const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object') return null;
-        return parsed;
+        return (parsed && typeof parsed === 'object') ? parsed : null;
       } catch (e) {
         return null;
       }
     },
-    persistRecallTimerState(state) {
+    persistTimerState(patch) {
       try {
-        localStorage.setItem(COMBINED_RECALL_TIMER_KEY, JSON.stringify(state || {}));
+        const current = this.readTimerStateFromStorage() || {};
+        const merged = { ...current, ...patch };
+        localStorage.setItem(COMBINED_TIMER_KEY, JSON.stringify(merged));
       } catch (e) {
         // ignore
       }
     },
-    clearRecallTimerStateFromStorage() {
+    clearTimerStateFromStorage() {
       try {
-        localStorage.removeItem(COMBINED_RECALL_TIMER_KEY);
+        localStorage.removeItem(COMBINED_TIMER_KEY);
       } catch (e) {
         // ignore
+      }
+    },
+    restoreFullStateFromStorage() {
+      const state = this.readTimerStateFromStorage();
+      if (!state) return;
+
+      if (state.selectedSourceId) {
+        const target = this.imageList.find(v => v.source_id === state.selectedSourceId);
+        if (target) {
+          this.selectVideo(target);
+        }
+      }
+
+      if (state.diagnosisData) {
+        this.cachedDiagnosisData = state.diagnosisData;
+      }
+
+      const now = Date.now();
+
+      if (state.contentRevealAt) {
+        const remaining = state.contentRevealAt - now;
+        if (remaining <= 0) {
+          if (this.cachedDiagnosisData) {
+            this.parseData(this.cachedDiagnosisData, true);
+          }
+        } else {
+          this.isLoading = true;
+          this.revealContentTimer = setTimeout(() => {
+            this.revealContentTimer = null;
+            if (this.cachedDiagnosisData) {
+              this.parseData(this.cachedDiagnosisData, true);
+            }
+            this.isLoading = false;
+            this.showMsg('success', '诊断完成！');
+          }, remaining);
+        }
+      }
+
+      if (state.recallStatus === 'done') {
+        const doneValue = Number(state.recallValue);
+        this.recall = Number.isFinite(doneValue) ? doneValue : COMBINED_RECALL_DONE_VALUE;
+        this.exportEnabled = true;
+      } else if (state.recallFireAt) {
+        const remaining = state.recallFireAt - now;
+        if (remaining <= 0) {
+          this.finishRecallTimer();
+        } else {
+          this.recall = null;
+          this.exportEnabled = false;
+          this.recallWaiting = true;
+          this.recallDisplayTimer = setTimeout(() => {
+            this.finishRecallTimer();
+          }, remaining);
+        }
       }
     },
     finishRecallTimer() {
@@ -637,81 +720,59 @@ export default {
         this.recallDisplayTimer = null;
       }
       this.recall = COMBINED_RECALL_DONE_VALUE;
-      this.persistRecallTimerState({
-        status: 'done',
-        value: COMBINED_RECALL_DONE_VALUE,
-        finishedAt: Date.now()
+      this.exportEnabled = true;
+      this.persistTimerState({
+        recallStatus: 'done',
+        recallValue: COMBINED_RECALL_DONE_VALUE,
+        recallFireAt: null
       });
-    },
-    restoreRecallTimerFromStorage() {
-      if (this.recallDisplayTimer) {
-        clearTimeout(this.recallDisplayTimer);
-        this.recallDisplayTimer = null;
-      }
-      const state = this.readRecallTimerStateFromStorage();
-      if (!state) return;
-      if (state.status === 'done') {
-        const doneValue = Number(state.value);
-        this.recall = Number.isFinite(doneValue) ? doneValue : COMBINED_RECALL_DONE_VALUE;
-        return;
-      }
-      if (state.status !== 'running') return;
-      const fireAt = Number(state.fireAt);
-      if (!Number.isFinite(fireAt) || fireAt <= 0) {
-        this.clearRecallTimerStateFromStorage();
-        return;
-      }
-      const remaining = fireAt - Date.now();
-      if (remaining <= 0) {
-        this.finishRecallTimer();
-        return;
-      }
-      this.recall = null;
-      this.recallDisplayTimer = setTimeout(() => {
-        this.finishRecallTimer();
-      }, remaining);
-    },
-    resetRecallTimerByDataSelection() {
-      if (this.recallDisplayTimer) {
-        clearTimeout(this.recallDisplayTimer);
-        this.recallDisplayTimer = null;
-      }
-      this.recall = null;
-      this.clearRecallTimerStateFromStorage();
-    },
-    scheduleContentReveal(data) {
-      if (this.revealContentTimer) clearTimeout(this.revealContentTimer);
-      this.parseData(data, true);
-      this.isLoading = false;
-      this.revealContentTimer = null;
-      this.showMsg('success', '诊断完成！');
-    },
-    scheduleRecallDisplay() {
-      if (this.recallDisplayTimer) clearTimeout(this.recallDisplayTimer);
-      this.recall = COMBINED_RECALL_DONE_VALUE;
-      this.persistRecallTimerState({
-        status: 'done',
-        finishedAt: Date.now(),
-        value: COMBINED_RECALL_DONE_VALUE
-      });
-      this.recallDisplayTimer = null;
     },
     async startAnalysis() {
       if (!this.selectedImage) { this.showMsg('warning', '请先选择数据源！'); return; }
 
       this.clearResults({ resetPersistentMetric: true });
+      this.clearTimerStateFromStorage();
       this.isLoading = true;
+      this.exportEnabled = false;
+      this.recallWaiting = true;
       this.taskId = 'comb_' + Date.now();
       this.analysisStartedAt = Date.now();
 
       try {
         const payload = this.buildDiagnosisPayload();
         const responseData = await this.requestDiagnosisResult(payload);
-        this.scheduleContentReveal(responseData);
-        this.scheduleRecallDisplay();
+
+        this.cachedDiagnosisData = responseData;
+
+        const contentDelayMs = Math.round(randomBetween(20000, 30000));
+        const recallDelayMs = Math.round(randomBetween(4 * 60 * 1000, 5 * 60 * 1000));
+        const now = Date.now();
+        const contentRevealAt = now + contentDelayMs;
+        const recallFireAt = now + recallDelayMs;
+
+        this.persistTimerState({
+          selectedSourceId: this.selectedImage.source_id,
+          diagnosisData: responseData,
+          contentRevealAt: contentRevealAt,
+          recallFireAt: recallFireAt,
+          recallStatus: 'running'
+        });
+
+        this.revealContentTimer = setTimeout(() => {
+          this.revealContentTimer = null;
+          this.parseData(this.cachedDiagnosisData, true);
+          this.isLoading = false;
+          this.showMsg('success', '诊断完成！');
+        }, contentDelayMs);
+
+        this.recallDisplayTimer = setTimeout(() => {
+          this.finishRecallTimer();
+        }, recallDelayMs);
+
       } catch (error) {
         console.error("诊断接口调用失败", error);
         this.clearAnalysisTimers();
+        this.clearTimerStateFromStorage();
         this.isLoading = false;
         this.showMsg('danger', '诊断启动失败，请稍后重试。');
       }
@@ -919,6 +980,25 @@ export default {
       this.module1IsBiasModule = isBiasModule;
       this.module1ShowDiagnosisOverlay = false;
     },
+    translateFieldKey(key) {
+      return FIELD_LABEL_MAP[key] || key;
+    },
+    translateTextContent(text) {
+      if (!text || typeof text !== 'string') return text || '';
+      return text.replace(/^([a-zA-Z_]+)(\s*[:：])/gm, (match, key, sep) => {
+        const translated = FIELD_LABEL_MAP[key];
+        return translated ? translated + sep : match;
+      });
+    },
+    formatSlideContent(item) {
+      const content = item.content || '';
+      if (/^Stage1$/i.test(String(item.stage || '').trim())) {
+        const lines = String(content).split(/\r?\n/);
+        const sceneLine = lines.find(l => /^图像场景\s*[:：]/.test(l.trim()));
+        if (sceneLine) return sceneLine.trim();
+      }
+      return this.translateTextContent(content);
+    },
     parseModule2(module2) {
       if (!module2) return;
 
@@ -927,13 +1007,9 @@ export default {
       let rawModule2Result = '';
       if (prediction && typeof prediction === 'object') {
         const lines = [];
-        if (prediction.kind) {
-          lines.push(`目标类型：${prediction.kind}`);
-        }
         Object.keys(prediction).forEach((key) => {
-          if (key !== 'kind' && key !== 'cognitive_bias') {
-            lines.push(`${key}：${this.formatPredictionValue(prediction[key])}`);
-          }
+          if (key === 'cognitive_bias') return;
+          lines.push(`${this.translateFieldKey(key)}：${this.formatPredictionValue(prediction[key])}`);
         });
         rawModule2Result = lines.join('\n');
       } else {
@@ -1056,8 +1132,11 @@ export default {
       this.diagnosisConsistencyType = null;
       this.accuracy = null; this.recall = null;
       this.analysisStartedAt = null;
+      this.cachedDiagnosisData = null;
+      this.exportEnabled = false;
+      this.recallWaiting = false;
       if (resetPersistentMetric) {
-        this.clearRecallTimerStateFromStorage();
+        this.clearTimerStateFromStorage();
       }
     },
     showMsg(variant, msg) {
@@ -1077,14 +1156,23 @@ export default {
     biasYesClass(v) {
       return (this.diagnosisConsistencyType === 'inconsistent' && v === true) ? 'bias-yes-red' : '';
     },
-    exportResult() { alert("结果已导出至报告文件！"); },
+    exportResult() {
+      const url = `${API_BASE_URL}/module5/api/dataset/archive`;
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', '');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      this.showMsg('success', '正在下载结果文件...');
+    },
     originalImageUrl() {
       if (!this.selectedImage) return '';
       return this.baseUrl + this.selectedImage.imageUrl;
     },
     // 助手函数
     isVideo(name) { return name && (name.endsWith('.mp4') || name.endsWith('.avi')); },
-    videoUrl(path) { return path ? `http://10.109.253.71:5236${path}` : ''; },
+    videoUrl(path) { return path ? `${API_BASE_URL}${path}` : ''; },
     imageUrl(path) {
       return path ? `${this.baseUrl}${path}` : require('@/assets/images/step1/-s-弹框-选择数据.png');
     }
@@ -1392,4 +1480,10 @@ export default {
   padding-right: 20px; text-align: right; font-family: 'DingTalk-JinBuTi', sans-serif !important;
 }
 .export-btn:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
+
+.metric-spinner {
+  display: inline-block; width: 22px; height: 22px;
+  border: 3px solid rgba(0, 229, 255, 0.2); border-left-color: #00e5ff;
+  border-radius: 50%; animation: spin 1s linear infinite; vertical-align: middle;
+}
 </style>
