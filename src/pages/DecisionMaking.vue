@@ -67,7 +67,7 @@
         <div class="design-module text-module-left fixed-left-text" :style="leftTextPanelBgStyle">
           <div class="panel-header clean-header">指令和认知传播信息</div>
           <div class="design-module-content text-scrollable">
-            <template v-if="sourceRefineCommand || sourceRefineNegotiation">
+            <template v-if="canStartDecision && (sourceRefineCommand || sourceRefineNegotiation)">
               <div class="result-section small-section left-info-section">
                 <div class="section-header">指令信息：</div>
                 <div class="section-content">
@@ -112,13 +112,13 @@
                 </div>
                 <div v-else class="description-box assessment-content-box">
                   <ul class="info-list"
-                    v-if="formattedPerformanceDataLocalList && formattedPerformanceDataLocalList.length > 0">
+                    v-if="canStartDecision && formattedPerformanceDataLocalList && formattedPerformanceDataLocalList.length > 0">
                     <li v-for="(item, idx) in formattedPerformanceDataLocalList" :key="'local-' + idx"
                       :class="{ 'first-item': idx === 0 }">
                       <span v-html="item"></span>
                     </li>
                   </ul>
-                  <p class="text-content text-muted" v-else>暂无评估信息</p>
+                  <p class="text-content text-muted" v-else-if="canStartDecision">暂无评估信息</p>
                 </div>
               </div>
             </div>
@@ -134,15 +134,15 @@
                 <div v-if="isImageLoading" class="loading-overlay">
                   <span>分析中</span>
                 </div>
-                <img :src="behaviorImageSrc(0)" :key="behaviorImageRenderKey(0)" v-if="imageList[0] && !isImageLoading" alt="图像 1" class="image-display">
-                <div class="image-placeholder" v-else-if="!isImageLoading">图像 1</div>
+                <img :src="behaviorImageSrc(0)" :key="behaviorImageRenderKey(0)" v-if="canStartDecision && imageList[0] && !isImageLoading" alt="图像 1" class="image-display">
+                <div class="image-placeholder" v-else-if="canStartDecision && !isImageLoading">图像 1</div>
               </div>
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
                   <span>分析中</span>
                 </div>
-                <img :src="behaviorImageSrc(2)" :key="behaviorImageRenderKey(2)" v-if="imageList[2] && !isImageLoading" alt="图像 3" class="image-display">
-                <div class="image-placeholder" v-else-if="!isImageLoading">图像 3</div>
+                <img :src="behaviorImageSrc(2)" :key="behaviorImageRenderKey(2)" v-if="canStartDecision && imageList[2] && !isImageLoading" alt="图像 3" class="image-display">
+                <div class="image-placeholder" v-else-if="canStartDecision && !isImageLoading">图像 3</div>
               </div>
             </div>
 
@@ -162,15 +162,15 @@
                 <div v-if="isImageLoading" class="loading-overlay">
                   <span>分析中</span>
                 </div>
-                <img :src="behaviorImageSrc(1)" :key="behaviorImageRenderKey(1)" v-if="imageList[1] && !isImageLoading" alt="图像 2" class="image-display">
-                <div class="image-placeholder" v-else-if="!isImageLoading">图像 2</div>
+                <img :src="behaviorImageSrc(1)" :key="behaviorImageRenderKey(1)" v-if="canStartDecision && imageList[1] && !isImageLoading" alt="图像 2" class="image-display">
+                <div class="image-placeholder" v-else-if="canStartDecision && !isImageLoading">图像 2</div>
               </div>
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
                   <span>分析中</span>
                 </div>
-                <img :src="behaviorImageSrc(3)" :key="behaviorImageRenderKey(3)" v-if="imageList[3] && !isImageLoading" alt="图像 4" class="image-display">
-                <div class="image-placeholder" v-else-if="!isImageLoading">图像 4</div>
+                <img :src="behaviorImageSrc(3)" :key="behaviorImageRenderKey(3)" v-if="canStartDecision && imageList[3] && !isImageLoading" alt="图像 4" class="image-display">
+                <div class="image-placeholder" v-else-if="canStartDecision && !isImageLoading">图像 4</div>
               </div>
             </div>
           </div>
@@ -193,13 +193,13 @@
                   <span>决策中</span>
                 </div>
                 <div v-else class="description-box assessment-content-box">
-                  <ul class="info-list" v-if="formattedPerformanceDataList && formattedPerformanceDataList.length > 0">
+                  <ul class="info-list" v-if="canStartDecision && formattedPerformanceDataList && formattedPerformanceDataList.length > 0">
                     <li v-for="(item, idx) in formattedPerformanceDataList" :key="'machine-' + idx"
                       :class="{ 'first-item': idx === 0 }">
                       <span v-html="item"></span>
                     </li>
                   </ul>
-                  <p class="text-content text-muted" v-else>暂无评估信息</p>
+                  <p class="text-content text-muted" v-else-if="canStartDecision">暂无评估信息</p>
                 </div>
               </div>
             </div>
@@ -222,21 +222,21 @@
                 <div class="result-section small-section">
                   <div class="section-header">行为信息：</div>
                   <div class="section-content">
-                    <p class="result-text">{{ behaviorInfo || '暂无行为信息' }}</p>
+                    <p class="result-text">{{ canStartDecision ? (behaviorInfo || '暂无行为信息') : '' }}</p>
                   </div>
                 </div>
 
                 <div class="result-section consensus-section">
                   <div class="section-header">共识信息：</div>
                   <div class="section-content">
-                    <p class="result-text">{{ samePoints || '暂无共识信息' }}</p>
+                    <p class="result-text">{{ canStartDecision ? (samePoints || '暂无共识信息') : '' }}</p>
                   </div>
                 </div>
 
                 <div class="result-section different-section">
                   <div class="section-header">分歧信息：</div>
                   <div class="section-content">
-                    <p class="result-text different-points">{{ differentPoints || '暂无分歧信息' }}</p>
+                    <p class="result-text different-points">{{ canStartDecision ? (differentPoints || '暂无分歧信息') : '' }}</p>
                   </div>
                 </div>
               </template>
@@ -311,8 +311,8 @@ import { BButton, BSpinner } from 'bootstrap-vue';
 const API_BASE_URL = 'http://10.109.253.71:12358';
 const IMAGE_API_BASE_URL = 'http://10.109.253.71:12358';
 const REFINE_COMMAND_API_URL = 'http://10.109.253.71:12358/machine-refine-command';
-// 偏差检测准确率延迟时间：4分钟（毫秒）
-const BIAS_DETECTION_DELAY = 4 * 60 * 1000; // 240000 毫秒
+// 偏差检测准确率延迟时间：1分钟（毫秒）
+const BIAS_DETECTION_DELAY = 1 * 60 * 1000; // 60000 毫秒
 
 export default {
   name: 'DecisionMaking',
@@ -363,10 +363,10 @@ export default {
       thirdStageText: '正在加载第三阶段文字信息...',
       currentStageText: '',
       performanceData: '',
-      performanceDataLocal: '正在加载本地性能数据...',
-      behaviorInfo: '正在加载行为信息...',
-      samePoints: '正在加载相同点信息...',
-      differentPoints: '正在加载不同点信息...',
+      performanceDataLocal: '',
+      behaviorInfo: '',
+      samePoints: '',
+      differentPoints: '',
       imageList: [null, null, null, null],
       deviationDetectionAccuracy: 'N/A',
       modelDangerLevel: 'N/A',
@@ -387,6 +387,8 @@ export default {
       sourceRefineText: '',
       sourceRefineCommand: '',
       sourceRefineNegotiation: '',
+      sourceRefineDisplayTimer: null,
+      sourceRefineDisplayDelayMs: 5000,
       // 新增：用于存储定时器ID
       accuracyTimeout: null,
       gifReplayTimer: null,
@@ -490,6 +492,7 @@ export default {
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);
+    this.clearDecisionPageCacheOnEnter();
     this.initializeDataFromStorage();
     this.loadVideoFromStorage();
     this.loadSourceImageList();
@@ -501,10 +504,57 @@ export default {
     window.removeEventListener('resize', this.handleResize);
     // 新增：组件销毁时清除定时器（防止内存泄漏，但 localStorage 依然保留）
     if (this.accuracyTimeout) clearTimeout(this.accuracyTimeout);
+    this.clearSourceRefineDisplayTimer();
     this.clearGifReplayTimer();
     this.clearSourcePreview();
   },
   methods: {
+    clearSourceRefineDisplayTimer() {
+      if (this.sourceRefineDisplayTimer) {
+        clearTimeout(this.sourceRefineDisplayTimer);
+        this.sourceRefineDisplayTimer = null;
+      }
+    },
+    clearDecisionPageCacheOnEnter() {
+      const cacheKeys = ['module4Res', 'decisionBiasStartTime', 'decisionBiasCompleted'];
+      cacheKeys.forEach((key) => localStorage.removeItem(key));
+      this.resetDecisionDisplayState();
+      console.log('[DecisionMaking] 页面初始化：已清理缓存', { cacheKeys });
+    },
+    resetDecisionDisplayState() {
+      this.performanceData = '';
+      this.performanceDataLocal = '';
+      this.behaviorInfo = '';
+      this.samePoints = '';
+      this.differentPoints = '';
+      this.imageList = [null, null, null, null];
+      this.deviationDetectionAccuracy = 'N/A';
+      this.modelDangerLevel = 'N/A';
+      this.expertDangerLevel = 'N/A';
+      this.currentLevel = 4;
+      this.isBiasDetecting = false;
+      this.isBiasResultLoading = false;
+      this.sourceRefineText = '';
+      this.sourceRefineCommand = '';
+      this.sourceRefineNegotiation = '';
+      this.thirdStageText = '';
+    },
+    clearDecisionResultBeforeStart() {
+      const cacheKeys = ['module4Res', 'decisionBiasStartTime', 'decisionBiasCompleted'];
+      cacheKeys.forEach((key) => localStorage.removeItem(key));
+      this.performanceData = '';
+      this.performanceDataLocal = '';
+      this.behaviorInfo = '';
+      this.samePoints = '';
+      this.differentPoints = '';
+      this.imageList = [null, null, null, null];
+      this.deviationDetectionAccuracy = 'N/A';
+      this.modelDangerLevel = 'N/A';
+      this.expertDangerLevel = 'N/A';
+      this.currentLevel = 4;
+      this.isBiasDetecting = false;
+      this.isBiasResultLoading = false;
+    },
     isGifImage(url) {
       const s = String(url || '').trim();
       if (!s) return false;
@@ -724,6 +774,10 @@ export default {
     },
     loadDataFromModule4Res() {
       try {
+        if (!this.canStartDecision) {
+          this.resetDecisionDisplayState();
+          return;
+        }
         const module4ResStr = localStorage.getItem('module4Res');
         if (module4ResStr) {
           const module4Data = JSON.parse(module4ResStr);
@@ -1282,9 +1336,11 @@ export default {
     },
     backToSourceMenu() {
       this.clearSourcePreview();
+      this.clearSourceRefineDisplayTimer();
       this.sourceSelectorMode = 'menu';
       this.selectedSourceImagePath = null;
       this.selectedSourceItem = null;
+      this.clearDecisionResultBeforeStart();
       this.sourceRefineText = '';
       this.sourceRefineCommand = '';
       this.sourceRefineNegotiation = '';
@@ -1294,7 +1350,9 @@ export default {
     backToSourceList() {
       const type = this.sourcePreviewType === 'video' ? 'video' : 'image';
       this.clearSourcePreview();
+      this.clearSourceRefineDisplayTimer();
       this.sourceSelectorMode = type;
+      this.clearDecisionResultBeforeStart();
       this.sourceRefineText = '';
       this.sourceRefineCommand = '';
       this.sourceRefineNegotiation = '';
@@ -1320,6 +1378,9 @@ export default {
       const filename = String(item.name).trim();
       if (!filename) return;
       const filenameNoExt = this.stripFileExtension(filename);
+      const selectedPath = item.path;
+      this.clearSourceRefineDisplayTimer();
+      this.clearDecisionResultBeforeStart();
       this.sourceRefineText = '';
       this.sourceRefineCommand = '';
       this.sourceRefineNegotiation = '';
@@ -1329,7 +1390,7 @@ export default {
         filenameNoExt,
         mediaType: item.type
       });
-      this.fetchMachineRefineCommand(filenameNoExt);
+      this.fetchMachineRefineCommand(filenameNoExt, selectedPath);
 
       const endpoint = item.type === 'video' ? '/load-video' : '/load-image';
       const fullUrl = `${API_BASE_URL}${endpoint}`;
@@ -1401,7 +1462,7 @@ export default {
         this.thirdStageText = `加载媒体失败：${filename}`;
       }
     },
-    async fetchMachineRefineCommand(nameNoExt) {
+    async fetchMachineRefineCommand(nameNoExt, selectedPath) {
       const cleanName = String(nameNoExt || '').trim();
       if (!cleanName) return;
       const logTag = '[DecisionMaking][machine-refine-command]';
@@ -1433,15 +1494,39 @@ export default {
           console.warn(`${logTag} 返回数据缺少 command/negotiation`, { raw });
           return;
         }
-        this.sourceRefineText = `command：${command || '暂无'}\n\nnegotiation：${negotiation || '暂无'}`;
-        this.sourceRefineCommand = command || '';
-        this.sourceRefineNegotiation = negotiation || '';
-        this.thirdStageText = this.sourceRefineText;
-        console.log(`${logTag} 展示已更新`, {
+        const refineText = `command：${command || '暂无'}\n\nnegotiation：${negotiation || '暂无'}`;
+        const commandValue = command || '';
+        const negotiationValue = negotiation || '';
+        this.clearSourceRefineDisplayTimer();
+        this.sourceRefineDisplayTimer = setTimeout(() => {
+          const currentSelectedPath = this.selectedSourceItem && this.selectedSourceItem.path
+            ? this.selectedSourceItem.path
+            : '';
+          if (!currentSelectedPath || (selectedPath && currentSelectedPath !== selectedPath)) {
+            console.log(`${logTag} 延迟展示取消：当前选择已变更`, {
+              selectedPath,
+              currentSelectedPath
+            });
+            return;
+          }
+          this.sourceRefineText = refineText;
+          this.sourceRefineCommand = commandValue;
+          this.sourceRefineNegotiation = negotiationValue;
+          this.thirdStageText = this.sourceRefineText;
+          console.log(`${logTag} 延迟展示已更新`, {
+            request: { name: cleanName },
+            delayMs: this.sourceRefineDisplayDelayMs,
+            commandPreview: commandValue.slice(0, 80),
+            negotiationPreview: negotiationValue.slice(0, 80),
+            thirdStageText: this.thirdStageText
+          });
+          this.sourceRefineDisplayTimer = null;
+        }, this.sourceRefineDisplayDelayMs);
+        console.log(`${logTag} 已获取数据，等待延迟展示`, {
           request: { name: cleanName },
-          commandPreview: command.slice(0, 80),
-          negotiationPreview: negotiation.slice(0, 80),
-          thirdStageText: this.thirdStageText
+          delayMs: this.sourceRefineDisplayDelayMs,
+          commandPreview: commandValue.slice(0, 80),
+          negotiationPreview: negotiationValue.slice(0, 80)
         });
       } catch (error) {
         const status = error && error.response && error.response.status;
