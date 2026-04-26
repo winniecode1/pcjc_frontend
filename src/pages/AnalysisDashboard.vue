@@ -920,18 +920,16 @@ export default {
       const knowText = this.extractKnowledgeText(knowledgeData, s2, s3);
       const candText = this.extractCandidateText(s2, s3);
       const classText = this.extractClassText(s2, s3, s4);
-      const hazardText = this.extractHazardText(s4);
       const hazardLevel = this.extractHazardLevel(s4);
 
       const m1Propagation = this.formatPropagationIntermediate('Stage1', s1);
       const m2Propagation = this.formatPropagationIntermediate('Stage2', s2);
       const m3Propagation = this.formatPropagationIntermediate('Stage3', s3);
-      const m4Propagation = this.formatPropagationIntermediate('Stage4', s4);
+      const m4ModelResult = this.extractHazardText(s4) || this.safeGet(s4, 'final_text', '');
       const m1Accuracy = parseAccuracyRatio(s1);
       const m2Accuracy = parseAccuracyRatio(s2);
       const m3Accuracy = parseAccuracyRatio(s3);
       const m4Accuracy = parseAccuracyRatio(s4);
-      const overall = this.safeGet(result, 'overall_similarity', null);
       const nodePatch = {
         M1: {
           desc: m1Propagation || this.safeGet(s1, 'final_text', ''),
@@ -949,7 +947,7 @@ export default {
           labelFormatter: buildModuleLabelFormatter('M3', fmtPercent(m3Accuracy))
         },
         M4: {
-          desc: m4Propagation || this.safeGet(s4, 'final_text', ''),
+          desc: m4ModelResult,
           status: `解析准确率 ${fmtPercent(m4Accuracy)}`,
           labelFormatter: buildModuleLabelFormatter('M4', fmtPercent(m4Accuracy))
         },
@@ -961,8 +959,8 @@ export default {
         V6: { desc: candText || '-', status: short(candText || '-', 36) },
         V7: { desc: classText || '-', status: short(classText || '-', 36) },
         V8: {
-          desc: hazardText || '-',
-          status: hazardLevel || (overall !== null && overall !== undefined ? `相似度 ${(Number(overall) * 100).toFixed(1)}%` : '-')
+          desc: hazardLevel || '-',
+          status: hazardLevel || '-'
         }
       };
 
@@ -1216,8 +1214,11 @@ export default {
     },
     extractHazardLevel(s4) {
       const out = this.asDict(this.safeGet(s4, 'model_output', {}));
+      const prediction = this.asDict(out.prediction);
       const err = this.asDict(out.error);
       return this.firstNonEmpty(
+        prediction.risk_level,
+        prediction.decision,
         out.risk_level,
         out.danger_level,
         err.danger_level,
@@ -1228,13 +1229,29 @@ export default {
     },
     extractHazardText(s4) {
       const out = this.asDict(this.safeGet(s4, 'model_output', {}));
+      const prediction = this.asDict(out.prediction);
       const err = this.asDict(out.error);
       const lines = [];
       const hazard = this.extractHazardLevel(s4);
-      const reason = this.firstNonEmpty(out.summary, out.reason, err.message);
-      const model = this.firstNonEmpty(out.weapon_model, this.safeGet(s4, 'model_output.request_params.weapon_model', ''));
+      const reason = this.firstNonEmpty(
+        prediction.summary,
+        prediction.reason,
+        out.summary,
+        out.reason,
+        err.message,
+        this.safeGet(s4, 'final_text', '')
+      );
+      const model = this.firstNonEmpty(
+        prediction.weapon_model,
+        out.weapon_model,
+        this.safeGet(s4, 'model_output.request_params.weapon_model', '')
+      );
+      const decision = this.firstNonEmpty(prediction.decision, out.decision);
+      const behavior = this.firstNonEmpty(prediction.behavior_status, out.behavior_status);
       if (model) lines.push(`武器型号: ${model}`);
       if (hazard) lines.push(`威胁等级: ${hazard}`);
+      if (decision) lines.push(`决策结论: ${decision}`);
+      if (behavior) lines.push(`行为状态: ${behavior}`);
       if (reason) lines.push(`判断理由: ${reason}`);
       return lines.join('\n');
     },
