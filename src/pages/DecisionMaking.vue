@@ -134,14 +134,14 @@
                 <div v-if="isImageLoading" class="loading-overlay">
                   <span>分析中</span>
                 </div>
-                <img :src="imageList[0]" v-if="imageList[0] && !isImageLoading" alt="图像 1" class="image-display">
+                <img :src="behaviorImageSrc(0)" :key="behaviorImageRenderKey(0)" v-if="imageList[0] && !isImageLoading" alt="图像 1" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 1</div>
               </div>
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
                   <span>分析中</span>
                 </div>
-                <img :src="imageList[2]" v-if="imageList[2] && !isImageLoading" alt="图像 3" class="image-display">
+                <img :src="behaviorImageSrc(2)" :key="behaviorImageRenderKey(2)" v-if="imageList[2] && !isImageLoading" alt="图像 3" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 3</div>
               </div>
             </div>
@@ -162,14 +162,14 @@
                 <div v-if="isImageLoading" class="loading-overlay">
                   <span>分析中</span>
                 </div>
-                <img :src="imageList[1]" v-if="imageList[1] && !isImageLoading" alt="图像 2" class="image-display">
+                <img :src="behaviorImageSrc(1)" :key="behaviorImageRenderKey(1)" v-if="imageList[1] && !isImageLoading" alt="图像 2" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 2</div>
               </div>
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
                   <span>分析中</span>
                 </div>
-                <img :src="imageList[3]" v-if="imageList[3] && !isImageLoading" alt="图像 4" class="image-display">
+                <img :src="behaviorImageSrc(3)" :key="behaviorImageRenderKey(3)" v-if="imageList[3] && !isImageLoading" alt="图像 4" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 4</div>
               </div>
             </div>
@@ -389,6 +389,10 @@ export default {
       sourceRefineNegotiation: '',
       // 新增：用于存储定时器ID
       accuracyTimeout: null,
+      gifReplayTimer: null,
+      gifReplayNonce: [0, 0, 0, 0],
+      // 越小越接近“播完立刻重播”，但过小会提前打断较长GIF
+      gifReplayIntervalMs: 2000,
     };
   },
   computed: {
@@ -474,6 +478,16 @@ export default {
       };
     }
   },
+  watch: {
+    imageList: {
+      handler(newList) {
+        this.logBehaviorGifStatus(newList);
+        this.syncGifReplayTimer();
+      },
+      deep: true,
+      immediate: true
+    }
+  },
   mounted() {
     window.addEventListener('resize', this.handleResize);
     this.initializeDataFromStorage();
@@ -487,9 +501,65 @@ export default {
     window.removeEventListener('resize', this.handleResize);
     // 新增：组件销毁时清除定时器（防止内存泄漏，但 localStorage 依然保留）
     if (this.accuracyTimeout) clearTimeout(this.accuracyTimeout);
+    this.clearGifReplayTimer();
     this.clearSourcePreview();
   },
   methods: {
+    isGifImage(url) {
+      const s = String(url || '').trim();
+      if (!s) return false;
+      return /\.gif(?:[?#].*)?$/i.test(s);
+    },
+    logBehaviorGifStatus(list) {
+      const source = Array.isArray(list) ? list : [];
+      const checks = [0, 1, 2, 3].map((idx) => {
+        const src = source[idx] || '';
+        return {
+          index: idx + 1,
+          src,
+          isGif: this.isGifImage(src)
+        };
+      });
+      console.log('[DecisionMaking][behavior-images] 四张图GIF判断', {
+        checks,
+        hasGif: checks.some(item => item.isGif)
+      });
+    },
+    behaviorImageRenderKey(index) {
+      const src = this.imageList && this.imageList[index] ? String(this.imageList[index]) : '';
+      if (!src) return `empty-${index}`;
+      if (!this.isGifImage(src)) return src;
+      return `${src}::${this.gifReplayNonce[index] || 0}`;
+    },
+    behaviorImageSrc(index) {
+      const src = this.imageList && this.imageList[index] ? String(this.imageList[index]) : '';
+      if (!src) return '';
+      if (!this.isGifImage(src)) return src;
+      const nonce = this.gifReplayNonce[index] || 0;
+      const sep = src.includes('?') ? '&' : '?';
+      return `${src}${sep}gifReplayNonce=${nonce}`;
+    },
+    clearGifReplayTimer() {
+      if (this.gifReplayTimer) {
+        clearInterval(this.gifReplayTimer);
+        this.gifReplayTimer = null;
+      }
+    },
+    syncGifReplayTimer() {
+      const hasGif = Array.isArray(this.imageList) && this.imageList.some(src => this.isGifImage(src));
+      if (!hasGif) {
+        this.clearGifReplayTimer();
+        return;
+      }
+      if (this.gifReplayTimer) return;
+      this.gifReplayTimer = setInterval(() => {
+        for (let i = 0; i < 4; i++) {
+          if (this.isGifImage(this.imageList[i])) {
+            this.$set(this.gifReplayNonce, i, (this.gifReplayNonce[i] || 0) + 1);
+          }
+        }
+      }, this.gifReplayIntervalMs);
+    },
     escapeToHtml(text) {
       return String(text)
         .replace(/&/g, '&amp;')
