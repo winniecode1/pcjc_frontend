@@ -16,7 +16,7 @@
     <b-row class="content-row no-gutters">
       <!-- 左侧栏：数据集与交互 -->
       <b-col cols="3" class="left-column px-2">
-        <div class="panel-header header-select-data clean-header">选择指挥官作战指令数据集</div>
+        <div class="panel-header header-select-data clean-header">指挥官作战指令数据集</div>
 
         <div class="sidebar-scroll-area">
           <div class="folder-group">
@@ -56,7 +56,7 @@
                     <video v-else-if="item.type === 'video'" :src="item.src" autoplay muted loop class="slide-media slide-media-video"></video>
                     <div v-else-if="item.type === 'text'" class="text-slide-content">
                       <div class="text-slide-title">{{ item.title }}</div>
-                      <div class="text-slide-desc">{{ item.content }}</div>
+                      <div class="text-slide-desc">{{ translateTextContent(item.content) }}</div>
                     </div>
                   </div>
                 </template>
@@ -66,7 +66,7 @@
         </div>
 
         <div class="action-buttons">
-          <button @click="startAnalysis" :disabled="isSelectingFile" class="btn-start-detect">
+          <button @click="startAnalysis" :disabled="isSelectingFile || isGraphParsing" class="btn-start-detect">
             <span class="btn-text-pos">{{ isSelectingFile ? '数据加载中...' : (isLoading ? '分析中...' : '开始主体解析') }}</span>
           </button>
         </div>
@@ -115,19 +115,29 @@
           </div>
           <div class="metric-card-custom">
             <div class="m-title">增强前 多主体解析准确率</div>
-            <div class="m-value">69.8<span>%</span></div>
+            <div class="m-value">
+              <template v-if="preAccuracy !== null">{{ preAccuracy.toFixed(1) }}<span>%</span></template>
+              <span v-else-if="metricsWaiting" class="metric-spinner"></span>
+              <template v-else>--</template>
+            </div>
           </div>
           <div class="metric-card-custom">
             <div class="m-title">增强后 多主体解析准确率</div>
-            <div class="m-value">81.5<span>%</span></div>
+            <div class="m-value">
+              <template v-if="postAccuracy !== null">{{ postAccuracy.toFixed(1) }}<span>%</span></template>
+              <span v-else-if="metricsWaiting" class="metric-spinner"></span>
+              <template v-else>--</template>
+            </div>
           </div>
           <div class="metric-card-custom">
             <div class="m-title">根因诊断后 多主体解析准确率</div>
             <div class="m-value">
-              {{ rootCauseAccuracy === null ? '--' : rootCauseAccuracy.toFixed(1) }}<span>%</span>
+              <template v-if="rootCauseAccuracy !== null">{{ rootCauseAccuracy.toFixed(1) }}<span>%</span></template>
+              <span v-else-if="metricsWaiting" class="metric-spinner"></span>
+              <template v-else>--</template>
             </div>
           </div>
-          <button class="export-btn-custom">结果导出</button>
+          <button class="export-btn-custom" @click="exportResult" :disabled="!exportEnabled">结果导出</button>
         </div>
       </b-col>
     </b-row>
@@ -136,12 +146,39 @@
 
 <script>
 import * as echarts from 'echarts';
-const API_BASE_URL = process.env.VUE_APP_MODULE5_API_BASE_URL || 'http://127.0.0.1:5236';
-const DATASET_API_BASE_URL = process.env.VUE_APP_STAGE1_API_BASE_URL ||
-  process.env.VUE_APP_DATASET_API_BASE_URL ||
-  'http://10.109.253.71:5237';
-const KNOWLEDGE_API_BASE_URL = process.env.VUE_APP_KNOWLEDGE_API_BASE_URL || 'http://10.109.253.71:8001';
+const API_BASE_URL = process.env.VUE_APP_MODULE5_API_BASE_URL || 'http://10.109.253.71:5235';
+const DATASET_API_BASE_URL = process.env.VUE_APP_DATASET_API_BASE_URL || API_BASE_URL;
+const KNOWLEDGE_API_BASE_URL = process.env.VUE_APP_KNOWLEDGE_API_BASE_URL || API_BASE_URL;
+
+const FIELD_LABEL_MAP = {
+  'ground_truth': '真实标签',
+  'label': '预测标签',
+  'model': '型号',
+  'kind': '目标类型',
+  'color': '颜色',
+  'shape': '外形特征',
+  'scene': '场景',
+  'outline': '轮廓特征',
+  'accuracy': '准确率',
+  'status': '接口状态',
+  'confidence': '置信度',
+  'description': '描述',
+  'type': '类型',
+  'name': '名称',
+  'category': '类别',
+  'target': '目标',
+  'result': '结果',
+  'summary': '摘要',
+  'internal_text': '内部文本',
+  'model_output': '模型输出',
+  'cognitive_bias': '认知偏差',
+  'caption': '图片描述'
+};
 const ANALYSIS_ACCURACY_DONE_VALUE = 89.3;
+const ANALYSIS_TIMER_KEY = 'pcjc_analysis_timers_v1';
+const ANALYSIS_PRE_ACCURACY = 69.8;
+const ANALYSIS_POST_ACCURACY = 81.5;
+function randomBetween(min, max) { return min + Math.random() * (max - min); }
 
 function firstNonEmptyValue(...values) {
   for (let i = 0; i < values.length; i += 1) {
@@ -200,14 +237,33 @@ export default {
       myChart: null,
       graphBaseData: [],
       graphBaseLinks: [],
-      selectedNode: null
+      selectedNode: null,
+      revealContentTimer: null,
+      metricsDisplayTimer: null,
+      cachedAnalysisData: null,
+      cachedAnalysisExternal: null,
+      metricsVisible: false,
+      exportEnabled: false,
+      metricsWaiting: false,
+      preAccuracy: null,
+      postAccuracy: null
     };
   },
   async mounted() {
+    const isRouteNav = sessionStorage.getItem('pcjc_analysis_nav');
+    sessionStorage.removeItem('pcjc_analysis_nav');
+    if (!isRouteNav) {
+      this.clearTimerState();
+    }
     await this.fetchVideoList();
     this.initChart();
     this.renderFormula();
-    await this.restorePreviousSelection();
+    this.restoreFullStateFromStorage();
+  },
+  beforeDestroy() {
+    sessionStorage.setItem('pcjc_analysis_nav', '1');
+    if (this.revealContentTimer) clearTimeout(this.revealContentTimer);
+    if (this.metricsDisplayTimer) clearTimeout(this.metricsDisplayTimer);
   },
   methods: {
     renderFormula() {
@@ -462,43 +518,60 @@ export default {
         };
       }
 
-      const sampleId = resolveSampleId(
-        {
-          source_id: this.firstNonEmpty(this.selectedFileContext.source_id, video.source_id, video.name),
-          path: this.firstNonEmpty(this.selectedFileContext.path, video.path)
-        },
-        {},
-        {},
-        ''
-      );
-      if (sampleId) {
-        let imageSrc = String(res.image_set_image_url || '').trim();
-        if (!imageSrc) {
-          imageSrc = `${API_BASE_URL}/module5/api/image-set/${encodeURIComponent(sampleId)}`;
-        }
-        const firstImageItem = this.normalizeCarouselItems([
+      const hasVideoItem = carouselItems.some(item => item && item.type === 'video');
+      if (!hasVideoItem) {
+        const sampleId = resolveSampleId(
           {
-            type: 'image',
-            src: imageSrc,
-            title: '原始样本图片',
-            stage: 'Stage1',
-            stage_index: 1,
-            file_name: `${sampleId}.jpg`
+            source_id: this.firstNonEmpty(this.selectedFileContext.source_id, video.source_id, video.name),
+            path: this.firstNonEmpty(this.selectedFileContext.path, video.path)
+          },
+          {},
+          {},
+          ''
+        );
+        if (sampleId) {
+          let imageSrc = String(res.image_set_image_url || '').trim();
+          if (!imageSrc) {
+            imageSrc = `${API_BASE_URL}/module5/api/image-set/${encodeURIComponent(sampleId)}`;
           }
-        ])[0];
-        const dedupItems = carouselItems.filter(item => !(item && item.src === imageSrc));
-        const instructionItem = instructionText
-          ? this.normalizeCarouselItems([{
+          const firstImageItem = this.normalizeCarouselItems([
+            {
+              type: 'image',
+              src: imageSrc,
+              title: '原始样本图片',
+              stage: 'Stage1',
+              stage_index: 1,
+              file_name: `${sampleId}.jpg`
+            }
+          ])[0];
+          const dedupItems = carouselItems.filter(item => !(item && item.src === imageSrc));
+          const instructionItem = instructionText
+            ? this.normalizeCarouselItems([{
+              type: 'text',
+              stage: 'Stage1',
+              stage_index: 1,
+              title: '作战指令',
+              content: instructionText
+            }])[0]
+            : null;
+          carouselItems = instructionItem
+            ? [instructionItem, firstImageItem, ...dedupItems]
+            : [firstImageItem, ...dedupItems];
+        } else if (instructionText) {
+          const instructionItem = this.normalizeCarouselItems([{
             type: 'text',
             stage: 'Stage1',
             stage_index: 1,
             title: '作战指令',
             content: instructionText
-          }])[0]
-          : null;
-        carouselItems = instructionItem
-          ? [instructionItem, firstImageItem, ...dedupItems]
-          : [firstImageItem, ...dedupItems];
+          }])[0];
+          const dedupItems = carouselItems.filter((item) => !(
+            item &&
+            item.type === 'text' &&
+            String(item.content || '').trim() === instructionText
+          ));
+          carouselItems = [instructionItem, ...dedupItems];
+        }
       } else if (instructionText) {
         const instructionItem = this.normalizeCarouselItems([{
           type: 'text',
@@ -519,13 +592,111 @@ export default {
       this.carouselItems = carouselItems;
       this.persistSelectedSourceContext(this.selectedFileContext);
     },
+    readTimerState() {
+      try {
+        const raw = localStorage.getItem(ANALYSIS_TIMER_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return (parsed && typeof parsed === 'object') ? parsed : null;
+      } catch (e) {
+        return null;
+      }
+    },
+    persistTimerState(patch) {
+      try {
+        const current = this.readTimerState() || {};
+        localStorage.setItem(ANALYSIS_TIMER_KEY, JSON.stringify({ ...current, ...patch }));
+      } catch (e) {
+        // ignore
+      }
+    },
+    clearTimerState() {
+      try { localStorage.removeItem(ANALYSIS_TIMER_KEY); } catch (e) { /* ignore */ }
+    },
+    clearAllTimers() {
+      if (this.revealContentTimer) { clearTimeout(this.revealContentTimer); this.revealContentTimer = null; }
+      if (this.metricsDisplayTimer) { clearTimeout(this.metricsDisplayTimer); this.metricsDisplayTimer = null; }
+    },
+    restoreFullStateFromStorage() {
+      const state = this.readTimerState();
+      if (!state) return;
+
+      if (state.selectedSourceId) {
+        const target = this.videoList.find(v => v.source_id === state.selectedSourceId);
+        if (target) {
+          this.selectVideo(target);
+        }
+      }
+
+      if (state.analysisData) { this.cachedAnalysisData = state.analysisData; }
+      if (state.analysisExternal) { this.cachedAnalysisExternal = state.analysisExternal; }
+
+      const now = Date.now();
+
+      if (state.contentRevealAt) {
+        const remaining = state.contentRevealAt - now;
+        if (remaining <= 0) {
+          this.revealGraphResults();
+        } else {
+          this.isGraphParsing = true;
+          this.revealContentTimer = setTimeout(() => {
+            this.revealContentTimer = null;
+            this.revealGraphResults();
+          }, remaining);
+        }
+      }
+
+      if (state.metricsStatus === 'done') {
+        this.showMetricsDone();
+      } else if (state.metricsFireAt) {
+        const remaining = state.metricsFireAt - now;
+        if (remaining <= 0) {
+          this.showMetricsDone();
+        } else {
+          this.metricsVisible = false;
+          this.exportEnabled = false;
+          this.metricsWaiting = true;
+          this.metricsDisplayTimer = setTimeout(() => {
+            this.showMetricsDone();
+          }, remaining);
+        }
+      }
+    },
+    revealGraphResults() {
+      if (this.cachedAnalysisData && this.cachedAnalysisExternal) {
+        this.applyDiagnosisToGraph(this.cachedAnalysisData, this.cachedAnalysisExternal);
+      }
+      this.isGraphParsing = false;
+    },
+    showMetricsDone() {
+      if (this.metricsDisplayTimer) { clearTimeout(this.metricsDisplayTimer); this.metricsDisplayTimer = null; }
+      this.preAccuracy = ANALYSIS_PRE_ACCURACY;
+      this.postAccuracy = ANALYSIS_POST_ACCURACY;
+      this.rootCauseAccuracy = ANALYSIS_ACCURACY_DONE_VALUE;
+      this.metricsVisible = true;
+      this.exportEnabled = true;
+      this.persistTimerState({ metricsStatus: 'done' });
+    },
     async startAnalysis() {
       if (!this.selectedVideo && !this.selectedFileContext) return;
+
+      this.clearAllTimers();
+      this.clearTimerState();
+      this.rootCauseAccuracy = null;
+      this.preAccuracy = null;
+      this.postAccuracy = null;
+      this.metricsVisible = false;
+      this.exportEnabled = false;
+      this.metricsWaiting = true;
+      this.cachedAnalysisData = null;
+      this.cachedAnalysisExternal = null;
+      this.selectedNode = null;
+
       const runId = (this.analysisHighlightRunId || 0) + 1;
       this.analysisHighlightRunId = runId;
-      this.rootCauseAccuracy = null;
       this.isLoading = true;
       this.isGraphParsing = true;
+
       try {
         const payload = this.buildDiagnosisPayload();
         const sampleId = resolveSampleId({ source_id: payload.source_id, path: payload.path });
@@ -536,19 +707,38 @@ export default {
           this.requestKnowledgeGraphAll()
         ]);
         if (runId !== this.analysisHighlightRunId) return;
-        this.applyDiagnosisToGraph(response || {}, {
-          sampleId,
-          sampleData,
-          detectionData,
-          knowledgeData
+
+        this.cachedAnalysisData = response || {};
+        this.cachedAnalysisExternal = { sampleId, sampleData, detectionData, knowledgeData };
+
+        const contentDelayMs = Math.round(randomBetween(20000, 30000));
+        const metricsDelayMs = Math.round(randomBetween(4 * 60 * 1000, 5 * 60 * 1000));
+        const now = Date.now();
+
+        this.persistTimerState({
+          selectedSourceId: this.selectedVideo ? this.selectedVideo.source_id : '',
+          analysisData: this.cachedAnalysisData,
+          analysisExternal: this.cachedAnalysisExternal,
+          contentRevealAt: now + contentDelayMs,
+          metricsFireAt: now + metricsDelayMs,
+          metricsStatus: 'running'
         });
-        this.rootCauseAccuracy = ANALYSIS_ACCURACY_DONE_VALUE;
+
+        this.revealContentTimer = setTimeout(() => {
+          this.revealContentTimer = null;
+          this.revealGraphResults();
+        }, contentDelayMs);
+
+        this.metricsDisplayTimer = setTimeout(() => {
+          this.showMetricsDone();
+        }, metricsDelayMs);
+
       } catch (error) {
         console.error("解析接口调用失败", error);
+        this.clearAllTimers();
+        this.clearTimerState();
+        this.isGraphParsing = false;
       } finally {
-        if (runId === this.analysisHighlightRunId) {
-          this.isGraphParsing = false;
-        }
         this.isLoading = false;
       }
     },
@@ -1253,6 +1443,22 @@ export default {
       }
       return result !== null && result !== undefined ? result : defaultValue;
     },
+    exportResult() {
+      const url = `${API_BASE_URL}/module5/api/dataset/instr/archive`;
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', '');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    },
+    translateTextContent(text) {
+      if (!text || typeof text !== 'string') return text || '';
+      return text.replace(/^([a-zA-Z_]+)(\s*[:：])/gm, (match, key, sep) => {
+        const translated = FIELD_LABEL_MAP[key];
+        return translated ? translated + sep : match;
+      });
+    },
     isVideo(name) { return name && (name.endsWith('.mp4') || name.endsWith('.avi')); },
     videoUrl(path) {
       if (!path) return '';
@@ -1417,7 +1623,7 @@ export default {
 .details-card { display: flex; flex-direction: column; background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png'); background-size: 100% 100%; padding: 20px; min-width: 0; min-height: 0; overflow: hidden; }
 .small-panel-header { font-family: 'DOUYUFont'; font-size: 14px; color: #c6f4ff; border-bottom: 1px solid rgba(78, 216, 255, 0.3); padding-bottom: 5px; margin-bottom: 15px; text-align: center; padding-top: 8px; }
 
-.details-body { flex: 1; overflow: auto; color: #8bd3f9; min-width: 0; }
+.details-body { flex: 1; overflow: hidden; color: #8bd3f9; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .details-body::-webkit-scrollbar { width: 6px; height: 3px; }
 .details-body::-webkit-scrollbar-track {
   background: rgba(6, 26, 44, 0.55);
@@ -1428,20 +1634,24 @@ export default {
   border-radius: 6px;
 }
 .no-selection { height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0.5; font-style: italic; }
-.node-info { display: flex; flex-direction: column; gap: 15px; }
-.info-row { display: flex; align-items: baseline; }
+.node-info { display: flex; flex-direction: column; gap: 15px; height: 100%; }
+.info-row { display: flex; align-items: baseline; flex-shrink: 0; }
 .description-row {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 .description-row .info-label {
   display: block;
   margin-bottom: 6px;
+  flex-shrink: 0;
 }
 .info-label { font-weight: bold; min-width: 80px; color: #4ED8FF; }
 .info-value { flex: 1; word-break: break-all; }
 .highlight-blue { color: #00e5ff; font-weight: bold; font-size: 1.1rem; }
 .highlight-red { color: #ff5e5e; font-weight: bold; }
-.info-text { margin-top: 0; width: 100%; line-height: 1.5; color: rgba(139, 211, 249, 0.8); background: rgba(0, 0, 0, 0.2); padding: 10px; border-radius: 4px; white-space: pre-wrap; overflow: auto; overflow-wrap: anywhere; word-break: break-word; }
+.info-text { margin-top: 0; width: 100%; line-height: 1.5; color: rgba(139, 211, 249, 0.8); background: rgba(0, 0, 0, 0.2); padding: 10px; border-radius: 4px; white-space: pre-wrap; overflow: auto; overflow-wrap: anywhere; word-break: break-word; flex: 1; min-height: 0; }
 .info-text::-webkit-scrollbar { width: 6px; height: 3px; }
 .info-text::-webkit-scrollbar-track {
   background: rgba(6, 24, 40, 0.45);
@@ -1473,4 +1683,12 @@ export default {
   width: 150px; height: 45px; background-color: transparent; border: none; cursor: pointer; color: #333; font-weight: bold; font-size: 1rem;
   padding-right: 20px; text-align: right; font-family: 'DingTalk-JinBuTi', sans-serif !important;
 }
+.export-btn-custom:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
+
+.metric-spinner {
+  display: inline-block; width: 22px; height: 22px;
+  border: 3px solid rgba(0, 229, 255, 0.2); border-left-color: #00e5ff;
+  border-radius: 50%; animation: metric-spin 1s linear infinite; vertical-align: middle;
+}
+@keyframes metric-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>

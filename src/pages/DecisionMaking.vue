@@ -8,7 +8,7 @@
       <router-link to="/group-negotiation" class="nav-btn nav-back">上个页面</router-link>
     </div>
     <div class="top-nav-right">
-      <router-link to="/attributiondiagnosis" class="nav-btn nav-next">下个页面</router-link>
+      <router-link to="/combined-diagnosis" class="nav-btn nav-next">下个页面</router-link>
     </div>
 
     <div class="title-container" :style="bgImageStyle(assetNames.titleBg)">
@@ -20,31 +20,73 @@
         <div class="design-module video-module" :style="videoPanelBgStyle">
           <div class="panel-header clean-header">认知传播数据源</div>
           <div class="design-module-content video-content-wrapper">
-            <div class="server-video-list overflow-auto" v-if="sourceImageList && sourceImageList.length > 0">
-              <div
-                v-for="item in sourceImageList"
-                :key="item.path"
-                class="video-item"
-                :class="{ selected: selectedSourceImagePath === item.path }"
-                @click="selectSourceImage(item)"
-              >
-                <span>{{ item.name }}</span>
-                <span class="selector-circle"></span>
-              </div>
+            <div v-if="sourceSelectorMode === 'menu'" class="source-type-menu">
+              <button class="source-type-btn" @click="switchSourceMode('image')">图像</button>
+              <button class="source-type-btn" @click="switchSourceMode('video')">视频</button>
             </div>
-            <div v-else class="video-placeholder-text">{{ sourceImageMessage }}</div>
+            <template v-else-if="sourceSelectorMode === 'image' || sourceSelectorMode === 'video'">
+              <button class="source-back-btn" @click="backToSourceMenu">返回</button>
+              <div class="server-video-list overflow-auto" v-if="currentSourceList && currentSourceList.length > 0">
+                <div
+                  v-for="item in currentSourceList"
+                  :key="item.path"
+                  class="video-item"
+                  :class="{ selected: selectedSourceImagePath === item.path }"
+                  @click="selectSourceImage(item)"
+                >
+                  <span>{{ item.name }}</span>
+                  <span class="selector-circle"></span>
+                </div>
+              </div>
+              <div v-else class="video-placeholder-text">{{ sourceImageMessage }}</div>
+            </template>
+            <template v-else-if="sourceSelectorMode === 'preview'">
+              <button class="source-back-btn" @click="backToSourceList">返回</button>
+              <div class="source-preview-wrapper">
+                <img
+                  v-if="sourcePreviewType === 'image' && sourcePreviewUrl"
+                  :src="sourcePreviewUrl"
+                  class="source-preview-media"
+                  alt="选中图片"
+                />
+                <video
+                  v-else-if="sourcePreviewType === 'video' && sourcePreviewUrl"
+                  :src="sourcePreviewUrl"
+                  class="source-preview-media"
+                  controls
+                  autoplay
+                  muted
+                  playsinline
+                ></video>
+                <div v-else class="video-placeholder-text">{{ sourcePreviewMessage || '媒体加载失败' }}</div>
+              </div>
+            </template>
           </div>
         </div>
 
         <div class="design-module text-module-left fixed-left-text" :style="leftTextPanelBgStyle">
-          <div class="panel-header clean-header">群体协商认知传播信息</div>
+          <div class="panel-header clean-header">指令和认知传播信息</div>
           <div class="design-module-content text-scrollable">
-            <p class="text-content" v-html="formattedThirdStageText"></p>
+            <template v-if="sourceRefineCommand || sourceRefineNegotiation">
+              <div class="result-section small-section left-info-section">
+                <div class="section-header">指令信息：</div>
+                <div class="section-content">
+                  <p class="result-text">{{ sourceRefineCommand || '暂无指令信息' }}</p>
+                </div>
+              </div>
+              <div class="result-section consensus-section left-info-section">
+                <div class="section-header">目标识别和群体协商传播信息：</div>
+                <div class="section-content">
+                  <p class="result-text">{{ sourceRefineNegotiation || '暂无目标识别和群体协商传播信息' }}</p>
+                </div>
+              </div>
+            </template>
+            <p v-else class="text-content"></p>
           </div>
         </div>
 
         <div class="button-container">
-          <b-button @click="fetchBackendData" variant="primary" :disabled="isLoading" class="inference-btn"
+          <b-button @click="fetchBackendData" variant="primary" :disabled="!canStartDecision || isLoading" class="inference-btn"
             :style="buttonBgStyle">
             <span class="btn-text-pos">开始人机决策</span>
           </b-button>
@@ -92,14 +134,14 @@
                 <div v-if="isImageLoading" class="loading-overlay">
                   <span>分析中</span>
                 </div>
-                <img :src="imageList[0]" v-if="imageList[0] && !isImageLoading" alt="图像 1" class="image-display">
+                <img :src="behaviorImageSrc(0)" :key="behaviorImageRenderKey(0)" v-if="imageList[0] && !isImageLoading" alt="图像 1" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 1</div>
               </div>
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
                   <span>分析中</span>
                 </div>
-                <img :src="imageList[2]" v-if="imageList[2] && !isImageLoading" alt="图像 3" class="image-display">
+                <img :src="behaviorImageSrc(2)" :key="behaviorImageRenderKey(2)" v-if="imageList[2] && !isImageLoading" alt="图像 3" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 3</div>
               </div>
             </div>
@@ -120,14 +162,14 @@
                 <div v-if="isImageLoading" class="loading-overlay">
                   <span>分析中</span>
                 </div>
-                <img :src="imageList[1]" v-if="imageList[1] && !isImageLoading" alt="图像 2" class="image-display">
+                <img :src="behaviorImageSrc(1)" :key="behaviorImageRenderKey(1)" v-if="imageList[1] && !isImageLoading" alt="图像 2" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 2</div>
               </div>
               <div class="image-item">
                 <div v-if="isImageLoading" class="loading-overlay">
                   <span>分析中</span>
                 </div>
-                <img :src="imageList[3]" v-if="imageList[3] && !isImageLoading" alt="图像 4" class="image-display">
+                <img :src="behaviorImageSrc(3)" :key="behaviorImageRenderKey(3)" v-if="imageList[3] && !isImageLoading" alt="图像 4" class="image-display">
                 <div class="image-placeholder" v-else-if="!isImageLoading">图像 4</div>
               </div>
             </div>
@@ -268,7 +310,7 @@ import { BButton, BSpinner } from 'bootstrap-vue';
 
 const API_BASE_URL = 'http://10.109.253.71:12358';
 const IMAGE_API_BASE_URL = 'http://10.109.253.71:12358';
-const TARGET_DETECTION_API_BASE_URL = 'http://10.109.253.71:5236';
+const REFINE_COMMAND_API_URL = 'http://10.109.253.71:12358/machine-refine-command';
 // 偏差检测准确率延迟时间：4分钟（毫秒）
 const BIAS_DETECTION_DELAY = 4 * 60 * 1000; // 240000 毫秒
 
@@ -333,15 +375,35 @@ export default {
       testVideoUrl: null,
       testVideoMessage: '正在从 LocalStorage 加载视频...',
       sourceImageList: [],
+      sourceVideoList: [],
       selectedSourceImagePath: null,
       selectedSourceItem: null,
-      sourceImageMessage: '正在加载 static/Image 图片列表...',
+      sourceSelectorMode: 'menu', // menu | image | video | preview
+      sourceImageMessage: '请选择数据类型',
+      sourcePreviewUrl: null,
+      sourcePreviewType: '',
+      sourcePreviewMessage: '',
       tempModule4Res: null,
+      sourceRefineText: '',
+      sourceRefineCommand: '',
+      sourceRefineNegotiation: '',
       // 新增：用于存储定时器ID
       accuracyTimeout: null,
+      gifReplayTimer: null,
+      gifReplayNonce: [0, 0, 0, 0],
+      // 越小越接近“播完立刻重播”，但过小会提前打断较长GIF
+      gifReplayIntervalMs: 2000,
     };
   },
   computed: {
+    canStartDecision() {
+      return !!(this.selectedSourceItem && this.selectedSourceItem.name);
+    },
+    currentSourceList() {
+      if (this.sourceSelectorMode === 'image') return this.sourceImageList;
+      if (this.sourceSelectorMode === 'video') return this.sourceVideoList;
+      return [];
+    },
     formattedThirdStageText() {
       const source = this.thirdStageText;
       if (!source) return '';
@@ -416,6 +478,16 @@ export default {
       };
     }
   },
+  watch: {
+    imageList: {
+      handler(newList) {
+        this.logBehaviorGifStatus(newList);
+        this.syncGifReplayTimer();
+      },
+      deep: true,
+      immediate: true
+    }
+  },
   mounted() {
     window.addEventListener('resize', this.handleResize);
     this.initializeDataFromStorage();
@@ -429,8 +501,65 @@ export default {
     window.removeEventListener('resize', this.handleResize);
     // 新增：组件销毁时清除定时器（防止内存泄漏，但 localStorage 依然保留）
     if (this.accuracyTimeout) clearTimeout(this.accuracyTimeout);
+    this.clearGifReplayTimer();
+    this.clearSourcePreview();
   },
   methods: {
+    isGifImage(url) {
+      const s = String(url || '').trim();
+      if (!s) return false;
+      return /\.gif(?:[?#].*)?$/i.test(s);
+    },
+    logBehaviorGifStatus(list) {
+      const source = Array.isArray(list) ? list : [];
+      const checks = [0, 1, 2, 3].map((idx) => {
+        const src = source[idx] || '';
+        return {
+          index: idx + 1,
+          src,
+          isGif: this.isGifImage(src)
+        };
+      });
+      console.log('[DecisionMaking][behavior-images] 四张图GIF判断', {
+        checks,
+        hasGif: checks.some(item => item.isGif)
+      });
+    },
+    behaviorImageRenderKey(index) {
+      const src = this.imageList && this.imageList[index] ? String(this.imageList[index]) : '';
+      if (!src) return `empty-${index}`;
+      if (!this.isGifImage(src)) return src;
+      return `${src}::${this.gifReplayNonce[index] || 0}`;
+    },
+    behaviorImageSrc(index) {
+      const src = this.imageList && this.imageList[index] ? String(this.imageList[index]) : '';
+      if (!src) return '';
+      if (!this.isGifImage(src)) return src;
+      const nonce = this.gifReplayNonce[index] || 0;
+      const sep = src.includes('?') ? '&' : '?';
+      return `${src}${sep}gifReplayNonce=${nonce}`;
+    },
+    clearGifReplayTimer() {
+      if (this.gifReplayTimer) {
+        clearInterval(this.gifReplayTimer);
+        this.gifReplayTimer = null;
+      }
+    },
+    syncGifReplayTimer() {
+      const hasGif = Array.isArray(this.imageList) && this.imageList.some(src => this.isGifImage(src));
+      if (!hasGif) {
+        this.clearGifReplayTimer();
+        return;
+      }
+      if (this.gifReplayTimer) return;
+      this.gifReplayTimer = setInterval(() => {
+        for (let i = 0; i < 4; i++) {
+          if (this.isGifImage(this.imageList[i])) {
+            this.$set(this.gifReplayNonce, i, (this.gifReplayNonce[i] || 0) + 1);
+          }
+        }
+      }, this.gifReplayIntervalMs);
+    },
     escapeToHtml(text) {
       return String(text)
         .replace(/&/g, '&amp;')
@@ -567,7 +696,7 @@ export default {
       if (filename == null) return '';
       const s = String(filename).trim();
       if (!s) return '';
-      return s.replace(/\.(mp4|webm|mov|avi|mkv|m4v|flv|wmv)$/i, '');
+      return s.replace(/\.(mp4|webm|mov|avi|mkv|m4v|flv|wmv|jpg|jpeg|png|webp|gif|bmp)$/i, '');
     },
     initializeDataFromStorage() {
       try {
@@ -742,6 +871,11 @@ export default {
       };
     },
     async fetchBackendData() {
+      if (!this.selectedSourceItem || !this.selectedSourceItem.name) {
+        console.warn('[DecisionMaking] 未选择图片/视频，禁止开始人机决策');
+        alert('请先在左侧列表选择图片或视频后，再开始人机决策。');
+        return;
+      }
       this.isLoading = true;
       this.isAssessing = true;
       this.isImageLoading = true;
@@ -754,18 +888,21 @@ export default {
         ? String(this.selectedSourceItem.name).trim()
         : '';
       const isVideoSelection = this.selectedSourceItem && this.selectedSourceItem.type === 'video';
-      const fromList = isVideoSelection && selectedName
-        ? this.stripFileExtension(selectedName)
-        : selectedName;
-      const fromConfig = this.stripFileExtension(this.apiConfig.weaponModel);
-      const model = fromList || fromConfig;
+      const selectedNameNoExt = this.stripFileExtension(selectedName);
+      const model = selectedNameNoExt;
 
       try {
         const requestBody = { weapon_model: model };
+        console.log('[DecisionMaking] 开始人机决策-选择项参数', {
+          selectedNameWithExt: selectedName,
+          selectedNameNoExt,
+          selectedType: this.selectedSourceItem && this.selectedSourceItem.type
+        });
         console.log('[DecisionMaking] 开始人机决策 请求体:', requestBody, {
           api: `${API_BASE_URL}/analyze-weapon`,
           selectedSource: this.selectedSourceItem,
           listDisplayName: selectedName,
+          listNameNoExt: selectedNameNoExt,
           isVideoSelection,
           weaponModelFromConfig: this.apiConfig.weaponModel
         });
@@ -1073,63 +1210,255 @@ export default {
       return match ? parseInt(match[1], 10) : 4;
     },
     async loadSourceImageList() {
+      // 图片与视频分开加载，避免任一失败影响另一方显示
+      let imageFiles = [];
+      let videoFiles = [];
       try {
-        const ctx = require.context('../../static/Image', true, /\.(png|jpe?g|webp|gif)$/i);
-        const imageFolderMap = new Map();
-        ctx.keys().forEach((key) => {
+        const imageCtx = require.context('../../static/Image_input', true, /\.(png|jpe?g|webp|gif)$/i);
+        imageCtx.keys().forEach((key) => {
           const normalized = key.replace(/^\.\//, '');
-          const parts = normalized.split('/').filter(Boolean);
-          const fileName = parts.length ? parts[parts.length - 1] : normalized;
-          const parentFolder = parts.length > 1 ? parts[parts.length - 2] : '';
-          const imageDisplayName = parentFolder || fileName.replace(/\.[^.]+$/, '');
-          // 同一文件夹只显示一次，保留该文件夹遇到的第一张图
-          if (!imageFolderMap.has(imageDisplayName)) {
-            imageFolderMap.set(imageDisplayName, {
-              name: imageDisplayName,
-              path: `image:${normalized}`,
-              url: `/static/Image/${normalized}`,
-              type: 'image'
-            });
-          }
+          const fileName = normalized.split('/').filter(Boolean).pop() || normalized;
+          imageFiles.push({
+            name: fileName,
+            path: `image:${normalized}`,
+            type: 'image'
+          });
         });
-        const imageFiles = Array.from(imageFolderMap.values());
-
-        let videoFiles = [];
-        try {
-          const response = await axios.get(`${TARGET_DETECTION_API_BASE_URL}/videos`);
-          const videos = response && response.data && Array.isArray(response.data.videos)
-            ? response.data.videos
-            : [];
-          videoFiles = videos
-            .map((video) => {
-              const videoName = video && video.name ? String(video.name).trim() : '';
-              if (!videoName) return null;
-              return {
-                name: videoName,
-                path: `video:${videoName}`,
-                url: `${TARGET_DETECTION_API_BASE_URL}/video/${encodeURIComponent(videoName)}`,
-                type: 'video'
-              };
-            })
-            .filter(Boolean);
-        } catch (videoError) {
-          console.error('加载 TargetDetection 视频列表失败:', videoError);
-        }
-
-        this.sourceImageList = [...imageFiles, ...videoFiles];
-        this.sourceImageMessage = this.sourceImageList.length
-          ? ''
-          : 'static/Image 与 TargetDetection 均无可用数据';
+        imageFiles.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
       } catch (error) {
-        console.error('加载 static/Image 图片列表失败:', error);
-        this.sourceImageList = [];
-        this.sourceImageMessage = '加载左侧列表数据失败';
+        console.error('加载 static/Image_input 列表失败:', error);
+        imageFiles = [];
+      }
+
+      try {
+        // 视频列表改为读取静态清单，避免 webpack 解析二进制视频文件
+        const response = await axios.get('/static/Vedio_input/files.json');
+        const rawVideoList = response && response.data;
+        const videoNameList = this.parseStaticFileList(rawVideoList);
+        videoFiles = videoNameList.map((name) => ({
+          name,
+          path: `video:${name}`,
+          type: 'video'
+        }));
+        videoFiles.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+      } catch (error) {
+        console.error('加载 static/Vedio_input/files.json 失败:', error);
+        videoFiles = [];
+      }
+
+      this.sourceImageList = imageFiles;
+      this.sourceVideoList = videoFiles;
+      this.sourceImageMessage = '请选择数据类型';
+    },
+    parseStaticFileList(raw) {
+      if (raw == null) return [];
+      let v = raw;
+      if (typeof v === 'string') {
+        const t = v.trim();
+        if (t.startsWith('<') || t.startsWith('<!')) {
+          return [];
+        }
+        try {
+          v = JSON.parse(t);
+        } catch (e) {
+          return [];
+        }
+      }
+      if (Array.isArray(v)) return v.filter(Boolean).map(x => String(x).trim()).filter(Boolean);
+      if (v && Array.isArray(v.files)) return v.files.filter(Boolean).map(x => String(x).trim()).filter(Boolean);
+      if (v && Array.isArray(v.list)) return v.list.filter(Boolean).map(x => String(x).trim()).filter(Boolean);
+      if (v && Array.isArray(v.data)) return v.data.filter(Boolean).map(x => String(x).trim()).filter(Boolean);
+      return [];
+    },
+    switchSourceMode(mode) {
+      if (mode !== 'image' && mode !== 'video') return;
+      this.clearSourcePreview();
+      this.sourceSelectorMode = mode;
+      this.selectedSourceImagePath = null;
+      this.selectedSourceItem = null;
+      this.sourceImageMessage = mode === 'image'
+        ? (this.sourceImageList.length ? '' : 'static/Image_input 暂无可用图片')
+        : (this.sourceVideoList.length ? '' : 'static/Vedio_input 暂无可用视频');
+    },
+    backToSourceMenu() {
+      this.clearSourcePreview();
+      this.sourceSelectorMode = 'menu';
+      this.selectedSourceImagePath = null;
+      this.selectedSourceItem = null;
+      this.sourceRefineText = '';
+      this.sourceRefineCommand = '';
+      this.sourceRefineNegotiation = '';
+      this.thirdStageText = '';
+      this.sourceImageMessage = '请选择数据类型';
+    },
+    backToSourceList() {
+      const type = this.sourcePreviewType === 'video' ? 'video' : 'image';
+      this.clearSourcePreview();
+      this.sourceSelectorMode = type;
+      this.sourceRefineText = '';
+      this.sourceRefineCommand = '';
+      this.sourceRefineNegotiation = '';
+      this.thirdStageText = '';
+      this.sourceImageMessage = type === 'image'
+        ? (this.sourceImageList.length ? '' : 'static/Image_input 暂无可用图片')
+        : (this.sourceVideoList.length ? '' : 'static/Vedio_input 暂无可用视频');
+    },
+    clearSourcePreview() {
+      if (this.sourcePreviewUrl) {
+        try {
+          URL.revokeObjectURL(this.sourcePreviewUrl);
+        } catch (e) {
+          // ignore revoke failure
+        }
+      }
+      this.sourcePreviewUrl = null;
+      this.sourcePreviewType = '';
+      this.sourcePreviewMessage = '';
+    },
+    async loadSourceInfo(item) {
+      if (!item || !item.name || !item.type) return;
+      const filename = String(item.name).trim();
+      if (!filename) return;
+      const filenameNoExt = this.stripFileExtension(filename);
+      this.sourceRefineText = '';
+      this.sourceRefineCommand = '';
+      this.sourceRefineNegotiation = '';
+      console.log('[DecisionMaking][selectSource] 选中媒体', {
+        rawItem: item,
+        filename,
+        filenameNoExt,
+        mediaType: item.type
+      });
+      this.fetchMachineRefineCommand(filenameNoExt);
+
+      const endpoint = item.type === 'video' ? '/load-video' : '/load-image';
+      const fullUrl = `${API_BASE_URL}${endpoint}`;
+      const logTag = '[DecisionMaking][loadSourceInfo]';
+      try {
+        this.sourcePreviewMessage = '媒体加载中...';
+        console.log(`${logTag} 请求`, {
+          endpoint,
+          fullUrl,
+          params: { filename: filenameNoExt },
+          originalFilename: filename,
+          itemType: item.type,
+          itemPath: item.path
+        });
+        const response = await axios.get(fullUrl, {
+          params: { filename: filenameNoExt },
+          responseType: 'blob'
+        });
+        const ct = response && response.headers && (response.headers['content-type'] || response.headers['Content-Type']);
+        const payload = response && response.data !== undefined ? response.data : null;
+        const payloadType = payload && payload.constructor ? payload.constructor.name : typeof payload;
+        const preview = payload && typeof payload.size === 'number'
+          ? `Blob(size=${payload.size}, type=${payload.type || 'unknown'})`
+          : String(payload);
+        console.log(`${logTag} 响应`, {
+          status: response && response.status,
+          contentType: ct,
+          dataType: payloadType,
+          dataPreview: preview,
+          rawHeadersSample: response && response.headers
+            ? { 'content-type': ct }
+            : null
+        });
+        if (payload == null || payload === '') {
+          this.sourcePreviewMessage = '后端未返回有效媒体内容';
+          return;
+        }
+        this.clearSourcePreview();
+        const blobType = (payload && payload.type) || ct || (item.type === 'video' ? 'video/mp4' : 'image/jpeg');
+        const mediaBlob = payload instanceof Blob ? payload : new Blob([payload], { type: blobType });
+        this.sourcePreviewUrl = URL.createObjectURL(mediaBlob);
+        const lowerType = String(blobType || '').toLowerCase();
+        this.sourcePreviewType = lowerType.includes('video') ? 'video' : (lowerType.includes('image') ? 'image' : item.type);
+        this.sourceSelectorMode = 'preview';
+        this.sourcePreviewMessage = '';
+        if (this.sourceRefineText) {
+          this.thirdStageText = this.sourceRefineText;
+        } else {
+          this.thirdStageText = `已加载媒体文件：${filename}`;
+        }
+        console.log(`${logTag} 预览设置完成`, {
+          sourcePreviewType: this.sourcePreviewType,
+          sourceSelectorMode: this.sourceSelectorMode,
+          thirdStageText: this.thirdStageText
+        });
+      } catch (error) {
+        const errRes = error && error.response;
+        console.error(`${logTag} 失败`, {
+          endpoint,
+          fullUrl,
+          params: { filename: filenameNoExt },
+          originalFilename: filename,
+          message: error && error.message,
+          status: errRes && errRes.status,
+          contentType: errRes && errRes.headers && (errRes.headers['content-type'] || errRes.headers['Content-Type']),
+          responseData: errRes && errRes.data
+        });
+        this.sourcePreviewMessage = `加载媒体失败：${filename}`;
+        this.thirdStageText = `加载媒体失败：${filename}`;
+      }
+    },
+    async fetchMachineRefineCommand(nameNoExt) {
+      const cleanName = String(nameNoExt || '').trim();
+      if (!cleanName) return;
+      const logTag = '[DecisionMaking][machine-refine-command]';
+      try {
+        console.log(`${logTag} 发起请求`, {
+          url: REFINE_COMMAND_API_URL,
+          params: { name: cleanName }
+        });
+        const response = await axios.get(REFINE_COMMAND_API_URL, {
+          params: { name: cleanName }
+        });
+        console.log(`${logTag} 原始响应`, {
+          status: response && response.status,
+          headers: response && response.headers,
+          data: response && response.data
+        });
+        const raw = response && response.data;
+        const payload = raw && typeof raw === 'object' && raw.data ? raw.data : raw;
+        const command = payload && payload.command !== undefined ? String(payload.command).trim() : '';
+        const negotiation = payload && payload.negotiation !== undefined ? String(payload.negotiation).trim() : '';
+        console.log(`${logTag} 解析结果`, {
+          payload,
+          command,
+          negotiation,
+          commandLength: command.length,
+          negotiationLength: negotiation.length
+        });
+        if (!command && !negotiation) {
+          console.warn(`${logTag} 返回数据缺少 command/negotiation`, { raw });
+          return;
+        }
+        this.sourceRefineText = `command：${command || '暂无'}\n\nnegotiation：${negotiation || '暂无'}`;
+        this.sourceRefineCommand = command || '';
+        this.sourceRefineNegotiation = negotiation || '';
+        this.thirdStageText = this.sourceRefineText;
+        console.log(`${logTag} 展示已更新`, {
+          request: { name: cleanName },
+          commandPreview: command.slice(0, 80),
+          negotiationPreview: negotiation.slice(0, 80),
+          thirdStageText: this.thirdStageText
+        });
+      } catch (error) {
+        const status = error && error.response && error.response.status;
+        const msg = error && error.message;
+        console.error(`${logTag} 请求失败`, {
+          request: { name: cleanName },
+          status,
+          message: msg,
+          responseData: error && error.response && error.response.data
+        });
       }
     },
     selectSourceImage(item) {
       if (!item || !item.path) return;
       this.selectedSourceImagePath = item.path;
       this.selectedSourceItem = item;
+      this.loadSourceInfo(item);
     },
     loadVideoFromStorage() {
       try {
@@ -1614,12 +1943,75 @@ export default {
     overflow: hidden;
   }
 
+  .source-type-menu {
+    width: 92%;
+    max-width: 340px;
+    margin: 14px auto 20px auto;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .source-type-btn {
+    width: 110px;
+    height: 42px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 229, 255, 0.6);
+    background: rgba(0, 100, 150, 0.25);
+    color: #fff;
+    font-family: DOUYUFont;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .source-type-btn:hover {
+    background: rgba(0, 229, 255, 0.35);
+    border-color: #00e5ff;
+  }
+
+  .source-back-btn {
+    align-self: flex-start;
+    margin: 8px 0 0 20px;
+    border: none;
+    background: transparent;
+    color: #fff;
+    font-family: DOUYUFont;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .source-preview-wrapper {
+    width: 92%;
+    max-width: 340px;
+    margin: 8px auto 20px auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.25);
+  }
+
+  .source-preview-media {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+
   .server-video-list {
     width: 92%;
     max-width: 340px;
-    margin: 10px auto 20px auto;
+    margin: 8px auto 20px auto;
     flex-grow: 1;
-    max-height: calc(100% - 30px);
+    max-height: calc(100% - 42px);
     padding-right: 10px;
     min-height: 0;
     box-sizing: border-box;
@@ -2085,6 +2477,19 @@ export default {
 }
 
 .consensus-section .section-content {
+  min-height: 180px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+/* 左侧“指令信息”单独拉长，不改变“群体协商认知传播信息”区域高度 */
+.left-info-section.small-section .section-content {
+  min-height: 120px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.left-info-section.consensus-section .section-content {
   min-height: 180px;
   max-height: 180px;
   overflow-y: auto;

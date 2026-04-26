@@ -243,15 +243,11 @@
             <div v-if="isRightLoadingResults" class="panel-overlay">计算中...</div>
             <template v-else>
               <div class="result-section result-section-main">
-                <div class="section-header">共识摘要：</div>
-                <div class="section-content">
+                <div class="section-content unified-scroll">
+                  <div class="section-sub">共识摘要：</div>
                   <p class="result-text" v-html="formattedConsensusSummary || '***'"></p>
-                </div>
-              </div>
-              
-              <div class="result-section">
-                <div class="section-header">分歧点：</div>
-                <div class="section-content">
+                  <div class="unified-divider"></div>
+                  <div class="section-sub">分歧点：</div>
                   <template v-if="deviationAnalysisText || deviationReportText">
                     <div v-if="deviationAnalysisText">
                       <div class="section-sub">分歧分析</div>
@@ -583,6 +579,32 @@ export default {
       if (!data || typeof data !== 'object') return null;
       return data.negotiation_results || (data.negotiation_details && data.negotiation_details.negotiation_results) || null;
     },
+    /**
+     * 兼容后端返回包装：
+     * 1) 直接返回业务对象
+     * 2) { data: {...业务对象...} }
+     */
+    normalizeModule3Payload(raw) {
+      if (typeof raw === 'string') {
+        try {
+          raw = JSON.parse(raw);
+        } catch (e) {
+          return raw;
+        }
+      }
+      if (!raw || typeof raw !== 'object') return raw;
+      const hasDirectPayload =
+        raw.initial_analyses ||
+        raw.negotiation_results ||
+        raw.negotiation_details ||
+        raw.final_review ||
+        raw.final_battlefield_analysis;
+      if (hasDirectPayload) return raw;
+      if (raw.data && typeof raw.data === 'object') return this.normalizeModule3Payload(raw.data);
+      if (raw.result && typeof raw.result === 'object') return this.normalizeModule3Payload(raw.result);
+      if (raw.payload && typeof raw.payload === 'object') return this.normalizeModule3Payload(raw.payload);
+      return raw;
+    },
     pickFromAgentMap(map) {
       if (!map || typeof map !== 'object') {
         return { a: '', b: '', c: '' };
@@ -594,10 +616,12 @@ export default {
         }
         return '';
       };
+      const values = Object.values(map).filter(v => v !== undefined && v !== null && v !== '');
+      const fallbackByIndex = (idx) => (values[idx] !== undefined ? values[idx] : '');
       return {
-        a: pick(['Agent_A', 'agent_a', 'A']),
-        b: pick(['Agent_B', 'agent_b', 'B']),
-        c: pick(['Agent_C', 'agent_c', 'C'])
+        a: pick(['Agent_A', 'agent_a', 'A', '智能体A', '智能体_A']) || fallbackByIndex(0),
+        b: pick(['Agent_B', 'agent_b', 'B', '智能体B', '智能体_B']) || fallbackByIndex(1),
+        c: pick(['Agent_C', 'agent_c', 'C', '智能体C', '智能体_C']) || fallbackByIndex(2)
       };
     },
     /**
@@ -627,9 +651,20 @@ export default {
       if (o.round2) {
         const res = this.getNegotiationResultsPayload(data);
         const r2 = this.pickFromAgentMap(res);
-        this.agentABNegotiation = r2.a || '';
-        this.agentBCNegotiation = r2.b || '';
-        this.agentCANegotiation = r2.c || '';
+        // 兼容后端字段拼写：negotation_basis -> negotiation_basis
+        const normalizeNegotiation = (v) => {
+          if (!v || typeof v !== 'object') return v;
+          if (
+            (v.negotiation_basis === undefined || v.negotiation_basis === null || v.negotiation_basis === '') &&
+            v.negotation_basis !== undefined
+          ) {
+            return Object.assign({}, v, { negotiation_basis: v.negotation_basis });
+          }
+          return v;
+        };
+        this.agentABNegotiation = normalizeNegotiation(r2.a || '');
+        this.agentBCNegotiation = normalizeNegotiation(r2.b || '');
+        this.agentCANegotiation = normalizeNegotiation(r2.c || '');
       }
       if (o.review) {
         const fr = data.final_review;
@@ -1082,7 +1117,7 @@ export default {
       try {
         // 创建隐藏的下载链接
         const link = document.createElement('a');
-        link.href = '/module3/export';
+        link.href = '/module3/export_batch';
         link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
@@ -1174,7 +1209,7 @@ export default {
             'Content-Type': 'application/json'
           }
         });
-        const data = response.data;
+        const data = this.normalizeModule3Payload(response.data);
         
         console.log('[GroupNegotiation] 推理请求成功，结果:', data);
         this.pendingNegotiationResult = data;
@@ -1202,7 +1237,7 @@ export default {
           this.isRound2Displayed = true;
         }, 3000);
 
-        localStorage.setItem('module3Res', JSON.stringify(response.data));
+        localStorage.setItem('module3Res', JSON.stringify(data));
         console.log('模块3返回值已存入localStorage');
         // 【新增】方便调试：打印 localStorage
           console.log("--- localStorage 已更新 (模块三) ---");
@@ -1505,7 +1540,7 @@ export default {
   flex: 1;
   width: 100%;
   height: 100%;
-  padding: 8px 12px 12px 12px;
+  padding: 4px 8px 8px 8px;
   margin: 0;
   min-height: 0;
   display: flex;
@@ -1527,9 +1562,9 @@ export default {
 .panel-right-top .result-section-main {
   background-color: rgba(0,0,0,0.25);
   border-radius: 8px;
-  padding-top: 15px;
-  padding-bottom: 8px;
-  margin-bottom: 8px;
+  padding-top: 4px;
+  padding-bottom: 6px;
+  margin-bottom: 0;
   box-shadow: 0 2px 8px rgba(0,229,255,0.08);
 }
 
@@ -1547,7 +1582,7 @@ export default {
   /* 确保两个内容框高度完全一致 */
   display: flex;
   flex-direction: column;
-  padding: 10px 12px;
+  padding: 8px 10px;
   scrollbar-gutter: stable;
 }
 
@@ -1563,7 +1598,29 @@ export default {
 }
 
 .panel-right-top .section-content .section-sub {
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  color: #4ED8FF;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.panel-right-top .section-content.unified-scroll {
+  padding-top: 2px;
+}
+
+.panel-right-top .section-content.unified-scroll .result-text {
+  margin-bottom: 8px;
+}
+
+.panel-right-top .section-content.unified-scroll .result-text:last-child {
+  margin-bottom: 0;
+}
+
+.panel-right-top .unified-divider {
+  height: 1px;
+  width: 100%;
+  margin: 6px 0 8px 0;
+  background: rgba(0, 229, 255, 0.35);
 }
 
 .panel-right-bottom {
@@ -1631,8 +1688,9 @@ export default {
 
 /* 右侧“群体协商认知偏差检测结果”更长：适当放大 + 缩小字号 */
 .panel-header.header-results.title-one-line {
-  width: 240px !important;
-  font-size: 12px !important;
+  width: 200px !important;
+  font-size: 11px !important;
+  height: 22px;
 }
 
 /* 左侧“先验知识传播结果”区域标题更长：保留你之前设置的宽度 */
@@ -1655,10 +1713,11 @@ export default {
 }
 
 .header-results {
-  font-size: 14px !important;
-  margin-bottom: 8px !important;
-  padding-left: 15px !important;
-  padding-right: 20px !important;
+  font-size: 12px !important;
+  margin-top: -2px !important;
+  margin-bottom: 4px !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
   justify-content: flex-start !important;
 }
 
