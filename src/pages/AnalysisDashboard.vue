@@ -55,7 +55,7 @@
                     <img v-if="item.type === 'image'" :src="item.src" class="slide-media slide-media-image">
                     <video v-else-if="item.type === 'video'" :src="item.src" autoplay muted loop class="slide-media slide-media-video"></video>
                     <div v-else-if="item.type === 'text'" class="text-slide-content">
-                      <div class="text-slide-title">{{ item.title }}</div>
+                      <div class="text-slide-title">{{ replaceAgentTerms(item.title) }}</div>
                       <div class="text-slide-desc">{{ translateTextContent(item.content) }}</div>
                     </div>
                   </div>
@@ -237,6 +237,8 @@ export default {
       myChart: null,
       graphBaseData: [],
       graphBaseLinks: [],
+      graphInitialData: [],
+      graphInitialLinks: [],
       selectedNode: null,
       revealContentTimer: null,
       metricsDisplayTimer: null,
@@ -245,8 +247,8 @@ export default {
       metricsVisible: false,
       exportEnabled: false,
       metricsWaiting: false,
-      preAccuracy: null,
-      postAccuracy: null
+      preAccuracy: ANALYSIS_PRE_ACCURACY,
+      postAccuracy: ANALYSIS_POST_ACCURACY
     };
   },
   async mounted() {
@@ -359,15 +361,64 @@ export default {
       const data = Array.isArray(series.data) ? series.data : [];
       const links = Array.isArray(series.links) ? series.links : [];
 
-      this.graphBaseData = data.map((node) => ({
+      this.graphBaseData = this.cloneGraphNodes(data);
+      this.graphBaseLinks = this.cloneGraphLinks(links);
+      if (!this.graphInitialData.length) {
+        this.graphInitialData = this.cloneGraphNodes(this.graphBaseData);
+      }
+      if (!this.graphInitialLinks.length) {
+        this.graphInitialLinks = this.cloneGraphLinks(this.graphBaseLinks);
+      }
+    },
+    cloneGraphNodes(nodes = []) {
+      return (Array.isArray(nodes) ? nodes : []).map((node) => ({
         ...node,
         itemStyle: { ...(node.itemStyle || {}) },
         label: { ...(node.label || {}) }
       }));
-      this.graphBaseLinks = links.map((link) => ({
+    },
+    cloneGraphLinks(links = []) {
+      return (Array.isArray(links) ? links : []).map((link) => ({
         ...link,
         lineStyle: { ...(link.lineStyle || {}) }
       }));
+    },
+    resetGraphToInitial() {
+      if (!this.myChart) return;
+      if (!this.graphInitialData.length || !this.graphInitialLinks.length) {
+        this.cacheGraphBaseStyles();
+      }
+      if (!this.graphInitialData.length || !this.graphInitialLinks.length) return;
+      this.graphBaseData = this.cloneGraphNodes(this.graphInitialData);
+      this.graphBaseLinks = this.cloneGraphLinks(this.graphInitialLinks);
+      this.myChart.setOption({
+        series: [{ data: this.graphBaseData, links: this.graphBaseLinks }]
+      });
+    },
+    isSameSelectedData(video) {
+      const nextSourceId = String((video || {}).source_id || '').trim();
+      const nextPath = String((video || {}).path || '').trim();
+      const curSourceId = String((this.selectedFileContext || {}).source_id || (this.selectedVideo || {}).source_id || '').trim();
+      const curPath = String((this.selectedFileContext || {}).path || (this.selectedVideo || {}).path || '').trim();
+      const sameBySourceId = !!(nextSourceId && curSourceId && nextSourceId === curSourceId);
+      const sameByPath = !!(nextPath && curPath && nextPath === curPath);
+      return sameBySourceId || sameByPath;
+    },
+    clearSelectionAnalysisState() {
+      this.clearAllTimers();
+      this.clearTimerState();
+      this.cachedAnalysisData = null;
+      this.cachedAnalysisExternal = null;
+      this.selectedNode = null;
+      this.isLoading = false;
+      this.isGraphParsing = false;
+      this.metricsVisible = false;
+      this.metricsWaiting = false;
+      this.exportEnabled = false;
+      this.rootCauseAccuracy = null;
+      this.preAccuracy = ANALYSIS_PRE_ACCURACY;
+      this.postAccuracy = ANALYSIS_POST_ACCURACY;
+      this.resetGraphToInitial();
     },
     resolveConsistencyFolderType(source = {}) {
       const typeKey = String(source.type_key || '').trim().toLowerCase();
@@ -413,6 +464,11 @@ export default {
       }
     },
     async selectVideo(video, options = {}) {
+      const { preserveCurrentResult = false } = options;
+      const isNewData = !this.isSameSelectedData(video);
+      if (!preserveCurrentResult && isNewData) {
+        this.clearSelectionAnalysisState();
+      }
       this.selectedVideo = video;
       await this.handleFileSelection(video);
     },
@@ -624,7 +680,7 @@ export default {
       if (state.selectedSourceId) {
         const target = this.videoList.find(v => v.source_id === state.selectedSourceId);
         if (target) {
-          this.selectVideo(target);
+          this.selectVideo(target, { preserveCurrentResult: true });
         }
       }
 
@@ -683,8 +739,8 @@ export default {
       this.clearAllTimers();
       this.clearTimerState();
       this.rootCauseAccuracy = null;
-      this.preAccuracy = null;
-      this.postAccuracy = null;
+      this.preAccuracy = ANALYSIS_PRE_ACCURACY;
+      this.postAccuracy = ANALYSIS_POST_ACCURACY;
       this.metricsVisible = false;
       this.exportEnabled = false;
       this.metricsWaiting = true;
@@ -712,7 +768,7 @@ export default {
         this.cachedAnalysisExternal = { sampleId, sampleData, detectionData, knowledgeData };
 
         const contentDelayMs = Math.round(randomBetween(20000, 30000));
-        const metricsDelayMs = Math.round(randomBetween(4 * 60 * 1000, 5 * 60 * 1000));
+        const metricsDelayMs = Math.round(randomBetween(2.8 * 60 * 1000, 3.2 * 60 * 1000));
         const now = Date.now();
 
         this.persistTimerState({
@@ -810,10 +866,46 @@ export default {
         if (v === null || v === undefined || Number.isNaN(Number(v))) return '-';
         return `${(Number(v) * 100).toFixed(1)}%`;
       };
+      const normalizeBiasRatio = (v) => {
+        if (v === null || v === undefined || Number.isNaN(Number(v))) return null;
+        let n = Number(v);
+        // 兼容 0~100 的百分数输入。
+        if (n > 1 && n <= 100) n = n / 100;
+        if (n < 0) n = 0;
+        if (n > 1) n = 1;
+        return n;
+      };
+      const parseAccuracyRatio = (stageData) => {
+        const p1 = this.safeGet(stageData, 'propagation_bias_score', null);
+        const p2 = this.safeGet(stageData, 'propagation_output.bias_score', null);
+        const p3 = this.safeGet(stageData, 'propogation_output.bias_score', null);
+        const i1 = this.safeGet(stageData, 'internal_bias_score', null);
+        const i2 = this.safeGet(stageData, 'internal_output.bias_score', null);
+
+        const propagationBias = normalizeBiasRatio(
+          p1 !== null && p1 !== undefined ? p1 : (p2 !== null && p2 !== undefined ? p2 : p3)
+        );
+        const internalBias = normalizeBiasRatio(i1 !== null && i1 !== undefined ? i1 : i2);
+
+        if (internalBias === null && propagationBias === null) return null;
+        if (internalBias === null) return 1 - propagationBias;
+        if (propagationBias === null) return 1 - internalBias;
+        return 1 - ((internalBias + propagationBias) / 2);
+      };
       const short = (txt, max = 140) => {
         const t = String(txt || '').trim();
         if (!t) return '';
         return t.length > max ? `${t.slice(0, max)}...` : t;
+      };
+      const moduleLabelMap = {
+        M1: '多模态\n认知偏差\n检测',
+        M2: '先验知识\n认知偏差\n检测',
+        M3: '智能体协商\n认知偏差\n检测',
+        M4: '决策选择\n认知偏差\n检测'
+      };
+      const buildModuleLabelFormatter = (moduleName, accuracyText) => {
+        const title = moduleLabelMap[moduleName] || moduleName;
+        return `${title}\n解析准确率\n${accuracyText}`;
       };
 
       const sourceInfo = this.selectedFileContext || this.selectedVideo || {};
@@ -828,30 +920,36 @@ export default {
       const knowText = this.extractKnowledgeText(knowledgeData, s2, s3);
       const candText = this.extractCandidateText(s2, s3);
       const classText = this.extractClassText(s2, s3, s4);
-      const hazardText = this.extractHazardText(s4);
       const hazardLevel = this.extractHazardLevel(s4);
 
       const m1Propagation = this.formatPropagationIntermediate('Stage1', s1);
       const m2Propagation = this.formatPropagationIntermediate('Stage2', s2);
       const m3Propagation = this.formatPropagationIntermediate('Stage3', s3);
-      const m4Propagation = this.formatPropagationIntermediate('Stage4', s4);
-      const overall = this.safeGet(result, 'overall_similarity', null);
+      const m4ModelResult = this.extractHazardText(s4) || this.safeGet(s4, 'final_text', '');
+      const m1Accuracy = parseAccuracyRatio(s1);
+      const m2Accuracy = parseAccuracyRatio(s2);
+      const m3Accuracy = parseAccuracyRatio(s3);
+      const m4Accuracy = parseAccuracyRatio(s4);
       const nodePatch = {
         M1: {
           desc: m1Propagation || this.safeGet(s1, 'final_text', ''),
-          status: `内部偏差 ${fmtPercent(this.safeGet(s1, 'internal_bias_score', null))} | 传播偏差 ${fmtPercent(this.safeGet(s1, 'propagation_bias_score', null))}`
+          status: `解析准确率 ${fmtPercent(m1Accuracy)}`,
+          labelFormatter: buildModuleLabelFormatter('M1', fmtPercent(m1Accuracy))
         },
         M2: {
           desc: m2Propagation || this.safeGet(s2, 'final_text', ''),
-          status: `内部偏差 ${fmtPercent(this.safeGet(s2, 'internal_bias_score', null))} | 传播偏差 ${fmtPercent(this.safeGet(s2, 'propagation_bias_score', null))}`
+          status: `解析准确率 ${fmtPercent(m2Accuracy)}`,
+          labelFormatter: buildModuleLabelFormatter('M2', fmtPercent(m2Accuracy))
         },
         M3: {
           desc: m3Propagation || this.safeGet(s3, 'final_text', ''),
-          status: `内部偏差 ${fmtPercent(this.safeGet(s3, 'internal_bias_score', null))} | 传播偏差 ${fmtPercent(this.safeGet(s3, 'propagation_bias_score', null))}`
+          status: `解析准确率 ${fmtPercent(m3Accuracy)}`,
+          labelFormatter: buildModuleLabelFormatter('M3', fmtPercent(m3Accuracy))
         },
         M4: {
-          desc: m4Propagation || this.safeGet(s4, 'final_text', ''),
-          status: `内部偏差 ${fmtPercent(this.safeGet(s4, 'internal_bias_score', null))} | 传播偏差 ${fmtPercent(this.safeGet(s4, 'propagation_bias_score', null))}`
+          desc: m4ModelResult,
+          status: `解析准确率 ${fmtPercent(m4Accuracy)}`,
+          labelFormatter: buildModuleLabelFormatter('M4', fmtPercent(m4Accuracy))
         },
         V1: { desc: videoAddress || '-', status: short(videoAddress || '-', 36) },
         V2: { desc: instrText || '-', status: short(instrText || '-', 36) },
@@ -861,15 +959,25 @@ export default {
         V6: { desc: candText || '-', status: short(candText || '-', 36) },
         V7: { desc: classText || '-', status: short(classText || '-', 36) },
         V8: {
-          desc: hazardText || '-',
-          status: hazardLevel || (overall !== null && overall !== undefined ? `相似度 ${(Number(overall) * 100).toFixed(1)}%` : '-')
+          desc: hazardLevel || '-',
+          status: hazardLevel || '-'
         }
       };
 
       const mergedData = this.graphBaseData.map((node) => {
         const patch = nodePatch[node.name];
         if (!patch) return node;
-        return { ...node, ...patch };
+        const merged = { ...node, ...patch };
+        if (patch.labelFormatter) {
+          merged.label = {
+            ...(node.label || {}),
+            formatter: this.replaceAgentTerms(patch.labelFormatter),
+            fontSize: 11
+          };
+        }
+        merged.desc = this.replaceAgentTerms(merged.desc);
+        merged.status = this.replaceAgentTerms(merged.status);
+        return merged;
       });
       this.graphBaseData = mergedData;
       this.myChart.setOption({ series: [{ data: mergedData, links: this.graphBaseLinks }] });
@@ -890,6 +998,10 @@ export default {
     asDict(value) {
       return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
     },
+    replaceAgentTerms(value) {
+      if (value === null || value === undefined) return '';
+      return String(value).replace(/Agent/gi, '智能体');
+    },
     firstNonEmpty(...values) {
       for (let i = 0; i < values.length; i += 1) {
         const value = values[i];
@@ -901,12 +1013,12 @@ export default {
     },
     toCompactText(value) {
       if (value === null || value === undefined) return '';
-      if (typeof value === 'string') return value.trim();
+      if (typeof value === 'string') return this.replaceAgentTerms(value.trim());
       if (typeof value === 'number' || typeof value === 'boolean') return String(value);
       try {
-        return JSON.stringify(value, null, 2);
+        return this.replaceAgentTerms(JSON.stringify(value, null, 2));
       } catch (e) {
-        return String(value);
+        return this.replaceAgentTerms(String(value));
       }
     },
     formatKVText(obj, orderedKeys = []) {
@@ -956,8 +1068,12 @@ export default {
       if (Object.keys(yolo).length > 0) {
         const detectedClasses = Array.isArray(yolo.detected_classes) ? yolo.detected_classes : [];
         const detections = Array.isArray(yolo.detections) ? yolo.detections : [];
+        const imageDescription = this.firstNonEmpty(detectionObj.description);
         const lines = [];
         lines.push(`detection_count: ${this.firstNonEmpty(yolo.detection_count, detections.length) || '0'}`);
+        if (imageDescription) {
+          lines.push(`图像描述: ${imageDescription}`);
+        }
         if (detectedClasses.length) {
           lines.push(`detected_classes: ${detectedClasses.join(', ')}`);
         }
@@ -1098,8 +1214,11 @@ export default {
     },
     extractHazardLevel(s4) {
       const out = this.asDict(this.safeGet(s4, 'model_output', {}));
+      const prediction = this.asDict(out.prediction);
       const err = this.asDict(out.error);
       return this.firstNonEmpty(
+        prediction.risk_level,
+        prediction.decision,
         out.risk_level,
         out.danger_level,
         err.danger_level,
@@ -1110,13 +1229,29 @@ export default {
     },
     extractHazardText(s4) {
       const out = this.asDict(this.safeGet(s4, 'model_output', {}));
+      const prediction = this.asDict(out.prediction);
       const err = this.asDict(out.error);
       const lines = [];
       const hazard = this.extractHazardLevel(s4);
-      const reason = this.firstNonEmpty(out.summary, out.reason, err.message);
-      const model = this.firstNonEmpty(out.weapon_model, this.safeGet(s4, 'model_output.request_params.weapon_model', ''));
+      const reason = this.firstNonEmpty(
+        prediction.summary,
+        prediction.reason,
+        out.summary,
+        out.reason,
+        err.message,
+        this.safeGet(s4, 'final_text', '')
+      );
+      const model = this.firstNonEmpty(
+        prediction.weapon_model,
+        out.weapon_model,
+        this.safeGet(s4, 'model_output.request_params.weapon_model', '')
+      );
+      const decision = this.firstNonEmpty(prediction.decision, out.decision);
+      const behavior = this.firstNonEmpty(prediction.behavior_status, out.behavior_status);
       if (model) lines.push(`武器型号: ${model}`);
       if (hazard) lines.push(`威胁等级: ${hazard}`);
+      if (decision) lines.push(`决策结论: ${decision}`);
+      if (behavior) lines.push(`行为状态: ${behavior}`);
       if (reason) lines.push(`判断理由: ${reason}`);
       return lines.join('\n');
     },
@@ -1258,7 +1393,7 @@ export default {
         };
         this.videoList = [target, ...this.videoList];
       }
-      await this.selectVideo(target, { resetAccuracyTimer: false });
+      await this.selectVideo(target, { resetAccuracyTimer: false, preserveCurrentResult: true });
     },
     persistSelectedSourceContext(ctx) {
       const source_id = String((ctx || {}).source_id || '').trim();
@@ -1454,10 +1589,11 @@ export default {
     },
     translateTextContent(text) {
       if (!text || typeof text !== 'string') return text || '';
-      return text.replace(/^([a-zA-Z_]+)(\s*[:：])/gm, (match, key, sep) => {
+      const translated = text.replace(/^([a-zA-Z_]+)(\s*[:：])/gm, (match, key, sep) => {
         const translated = FIELD_LABEL_MAP[key];
         return translated ? translated + sep : match;
       });
+      return this.replaceAgentTerms(translated);
     },
     isVideo(name) { return name && (name.endsWith('.mp4') || name.endsWith('.avi')); },
     videoUrl(path) {
@@ -1477,7 +1613,7 @@ export default {
 <style scoped>
 /* 使用与 CombinedDiagnosis 一致的样式 */
 .attribution-diagnosis-container {
-  width: 100vw; height: 100vh; background-image: url('~@/assets/images/step5/背景.png');
+  width: 100vw; height: 100vh; background-image: url('~@/assets/images/step5/背景2.png');
   background-size: 100% 100%; color: white; overflow: hidden; position: relative;
 }
 

@@ -81,10 +81,10 @@
                      <div v-if="item.stage" class="stage-chip">{{ item.stage }}</div>
                      <img v-if="item.type === 'image'" :src="item.src" class="slide-media slide-media-image">
                      <video v-else-if="item.type === 'video'" :src="item.src" autoplay muted loop class="slide-media slide-media-video"></video>
-                     <div v-else-if="item.type === 'text'" class="text-slide-content">
-                       <div class="text-slide-title">{{ item.stage ? `${item.stage} · ${item.title}` : item.title }}</div>
-                       <div class="text-slide-desc">{{ formatSlideContent(item) }}</div>
-                     </div>
+                       <div v-else-if="item.type === 'text'" class="text-slide-content">
+                         <div class="text-slide-title">{{ item.stage ? `${item.stage} · ${replaceAgentTerms(item.title)}` : replaceAgentTerms(item.title) }}</div>
+                         <div class="text-slide-desc">{{ formatSlideContent(item) }}</div>
+                       </div>
                    </div>
                 </template>
               </b-carousel-slide>
@@ -252,7 +252,9 @@ const FIELD_LABEL_MAP = {
   'internal_text': '内部文本',
   'model_output': '模型输出',
   'cognitive_bias': '认知偏差',
-  'caption': '图片描述'
+  'caption': '图片描述',
+  'image_scene': '图像场景',
+  'image_evidence': '图像描述'
 };
 
 const COMBINED_TIMER_KEY = 'pcjc_combined_timers_v2';
@@ -463,7 +465,28 @@ export default {
     async selectImage(image, options = {}) {
       await this.selectVideo(image, options);
     },
-    async selectVideo(video) {
+    isSameSelectedData(video) {
+      const nextSourceId = String((video || {}).source_id || '').trim();
+      const nextPath = String((video || {}).path || '').trim();
+      const curSourceId = String((this.selectedFileContext || {}).source_id || (this.selectedVideo || {}).source_id || '').trim();
+      const curPath = String((this.selectedFileContext || {}).path || (this.selectedVideo || {}).path || '').trim();
+      const sameBySourceId = !!(nextSourceId && curSourceId && nextSourceId === curSourceId);
+      const sameByPath = !!(nextPath && curPath && nextPath === curPath);
+      return sameBySourceId || sameByPath;
+    },
+    clearSelectionDiagnosisState() {
+      this.clearResults({ resetPersistentMetric: true });
+      this.isLoading = false;
+      this.stagePreviews = {};
+      this.previewSummary = null;
+      this.cachedDiagnosisData = null;
+    },
+    async selectVideo(video, options = {}) {
+      const { preserveCurrentResult = false } = options;
+      const isNewData = !this.isSameSelectedData(video);
+      if (!preserveCurrentResult && isNewData) {
+        this.clearSelectionDiagnosisState();
+      }
       this.selectedVideo = video;
       this.selectedImage = video;
       await this.handleFileSelection(video);
@@ -667,7 +690,7 @@ export default {
       if (state.selectedSourceId) {
         const target = this.imageList.find(v => v.source_id === state.selectedSourceId);
         if (target) {
-          this.selectVideo(target);
+          this.selectVideo(target, { preserveCurrentResult: true });
         }
       }
 
@@ -745,7 +768,7 @@ export default {
         this.cachedDiagnosisData = responseData;
 
         const contentDelayMs = Math.round(randomBetween(20000, 30000));
-        const recallDelayMs = Math.round(randomBetween(4 * 60 * 1000, 5 * 60 * 1000));
+        const recallDelayMs = Math.round(randomBetween(2.8 * 60 * 1000, 3.2 * 60 * 1000));
         const now = Date.now();
         const contentRevealAt = now + contentDelayMs;
         const recallFireAt = now + recallDelayMs;
@@ -983,19 +1006,47 @@ export default {
     translateFieldKey(key) {
       return FIELD_LABEL_MAP[key] || key;
     },
+    replaceAgentTerms(value) {
+      if (value === null || value === undefined) return '';
+      return String(value).replace(/Agent/gi, '智能体');
+    },
     translateTextContent(text) {
       if (!text || typeof text !== 'string') return text || '';
-      return text.replace(/^([a-zA-Z_]+)(\s*[:：])/gm, (match, key, sep) => {
+      const translated = text.replace(/^([a-zA-Z_]+)(\s*[:：])/gm, (match, key, sep) => {
         const translated = FIELD_LABEL_MAP[key];
         return translated ? translated + sep : match;
       });
+      return this.replaceAgentTerms(translated);
     },
     formatSlideContent(item) {
       const content = item.content || '';
       if (/^Stage1$/i.test(String(item.stage || '').trim())) {
-        const lines = String(content).split(/\r?\n/);
-        const sceneLine = lines.find(l => /^图像场景\s*[:：]/.test(l.trim()));
+        let textContent = '';
+        if (typeof content === 'string') {
+          textContent = content;
+        } else if (content && typeof content === 'object') {
+          const scene = content.image_scene || content.scene || '';
+          const desc = content.image_evidence || content.description || '';
+          const lines = [];
+          if (scene) lines.push(`图像场景: ${scene}`);
+          if (desc) lines.push(`图像描述: ${desc}`);
+          textContent = lines.join('\n');
+        } else {
+          textContent = String(content || '');
+        }
+
+        const normalized = this.translateTextContent(textContent);
+        const lines = String(normalized).split(/\r?\n/);
+        const sceneLine = lines.find(l => /^(图像场景|image_scene)\s*[:：]/i.test(l.trim()));
+        const imageDescLineRaw = lines.find(l => /^(图像描述|图像证据|image_evidence|description)\s*[:：]/i.test(l.trim()));
+        const imageDescLine = imageDescLineRaw
+          ? imageDescLineRaw.replace(/^(图像证据|image_evidence|description)\s*[:：]/i, '图像描述: ')
+          : '';
+        if (sceneLine && imageDescLine) {
+          return `${sceneLine.trim()}\n${imageDescLine.trim()}`;
+        }
         if (sceneLine) return sceneLine.trim();
+        if (imageDescLine) return imageDescLine.trim();
       }
       return this.translateTextContent(content);
     },
@@ -1023,12 +1074,12 @@ export default {
     },
     formatPredictionValue(value) {
       if (value === null || value === undefined) return '';
-      if (typeof value === 'string') return value;
+      if (typeof value === 'string') return this.replaceAgentTerms(value);
       if (typeof value === 'number' || typeof value === 'boolean') return String(value);
       try {
-        return JSON.stringify(value, null, 2);
+        return this.replaceAgentTerms(JSON.stringify(value, null, 2));
       } catch (e) {
-        return String(value);
+        return this.replaceAgentTerms(String(value));
       }
     },
     parseModule3(module3) {
@@ -1145,7 +1196,8 @@ export default {
     },
     highlightBrackets(text) {
       if (!text) return '等待中...';
-      const safe = this.escapeHtml(text);
+      const normalized = this.replaceAgentTerms(text);
+      const safe = this.escapeHtml(normalized);
       return safe
         .replace(/《([^》]+)》/g, '<span class="highlight-text" style="color:#FF4242;font-weight:700;">$1</span>')
         .replace(/\(\((.*?)\)\)/g, '<span class="highlight-text" style="color:#FF4242;font-weight:700;">$1</span>')
