@@ -148,7 +148,7 @@
 import * as echarts from 'echarts';
 const API_BASE_URL = process.env.VUE_APP_MODULE5_API_BASE_URL || 'http://10.109.253.71:5235';
 const DATASET_API_BASE_URL = process.env.VUE_APP_DATASET_API_BASE_URL || API_BASE_URL;
-const KNOWLEDGE_API_BASE_URL = process.env.VUE_APP_KNOWLEDGE_API_BASE_URL || API_BASE_URL;
+const KNOWLEDGE_API_BASE_URL = process.env.VUE_APP_KNOWLEDGE_API_BASE_URL || 'http://10.109.253.71:8001';
 
 const FIELD_LABEL_MAP = {
   'ground_truth': '真实标签',
@@ -839,16 +839,22 @@ export default {
       }
     },
     async requestKnowledgeGraphAll() {
-      try {
-        const res = await this.$ajax.get(
-          `${KNOWLEDGE_API_BASE_URL}/module2/knowledge/all`,
-          { timeout: 10000 }
-        );
-        return this.safeGet(res, 'data', {});
-      } catch (error) {
-        console.warn('获取知识图谱信息失败', error);
-        return {};
+      const candidates = [
+        `${KNOWLEDGE_API_BASE_URL}/module2/knowledge/all`,
+        `${API_BASE_URL}/module2/knowledge/all`
+      ];
+      for (let i = 0; i < candidates.length; i += 1) {
+        const url = candidates[i];
+        try {
+          const res = await this.$ajax.get(url, { timeout: 10000 });
+          return this.safeGet(res, 'data', {});
+        } catch (error) {
+          if (i === candidates.length - 1) {
+            console.warn('获取知识图谱信息失败', error);
+          }
+        }
       }
+      return {};
     },
     applyDiagnosisToGraph(raw, external = {}) {
       if (!this.myChart) return;
