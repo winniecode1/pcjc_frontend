@@ -116,7 +116,7 @@
           <div class="metric-card-custom">
             <div class="m-title">增强前 多主体解析准确率</div>
             <div class="m-value">
-              <template v-if="preAccuracy !== null">{{ preAccuracy.toFixed(1) }}<span>%</span></template>
+              <template v-if="preAccuracy !== null">{{ Math.round(preAccuracy) }}<span>%</span></template>
               <span v-else-if="metricsWaiting" class="metric-spinner"></span>
               <template v-else>--</template>
             </div>
@@ -124,7 +124,7 @@
           <div class="metric-card-custom">
             <div class="m-title">增强后 多主体解析准确率</div>
             <div class="m-value">
-              <template v-if="postAccuracy !== null">{{ postAccuracy.toFixed(1) }}<span>%</span></template>
+              <template v-if="postAccuracy !== null">{{ Math.round(postAccuracy) }}<span>%</span></template>
               <span v-else-if="metricsWaiting" class="metric-spinner"></span>
               <template v-else>--</template>
             </div>
@@ -132,7 +132,7 @@
           <div class="metric-card-custom">
             <div class="m-title">根因诊断后 多主体解析准确率</div>
             <div class="m-value">
-              <template v-if="rootCauseAccuracy !== null">{{ rootCauseAccuracy.toFixed(1) }}<span>%</span></template>
+              <template v-if="rootCauseAccuracy !== null">{{ Math.round(rootCauseAccuracy) }}<span>%</span></template>
               <span v-else-if="metricsWaiting" class="metric-spinner"></span>
               <template v-else>--</template>
             </div>
@@ -174,10 +174,10 @@ const FIELD_LABEL_MAP = {
   'cognitive_bias': '认知偏差',
   'caption': '图片描述'
 };
-const ANALYSIS_ACCURACY_DONE_VALUE = 89.3;
+const ANALYSIS_ACCURACY_DONE_VALUE = 89;
 const ANALYSIS_TIMER_KEY = 'pcjc_analysis_timers_v1';
-const ANALYSIS_PRE_ACCURACY = 69.8;
-const ANALYSIS_POST_ACCURACY = 81.5;
+const ANALYSIS_PRE_ACCURACY = 70;
+const ANALYSIS_POST_ACCURACY = 82;
 function randomBetween(min, max) { return min + Math.random() * (max - min); }
 
 function firstNonEmptyValue(...values) {
@@ -284,7 +284,7 @@ export default {
     },
     doRender() {
       if (window.katex && this.$refs.formulaRef) {
-        window.katex.render("\\mathrm{Acc}=\\frac{\\sum_{i}\\sum_{j} w_j\\cdot\\operatorname{Sim}(\\hat{y}_{i,j},y_{i,j})}{N}", this.$refs.formulaRef, {
+        window.katex.render("\\mathrm{Acc}=\\frac{\\sum_i\\left[\\sum_j w_j\\cdot\\operatorname{Sim}(\\hat{y}_{i,j},y_{i,j})>T\\right]}{N}", this.$refs.formulaRef, {
           throwOnError: false, displayMode: false
         });
       }
@@ -1812,7 +1812,7 @@ export default {
 .m-value { font-size: 1.8rem; font-weight: bold; font-family: 'DingTalk-JinBuTi', sans-serif !important; color: #c6f4ff; }
 .m-value span { font-size: 1rem; margin-left: 2px; }
 
-.formula-text-custom { font-size: 1.1rem !important; color: #FFFFFF !important; letter-spacing: 1px; }
+.formula-text-custom { font-size: 0.95rem !important; color: #FFFFFF !important; letter-spacing: 1px; }
 
 .export-btn-custom {
   position: absolute; right: 1vw; background-image: url('~@/assets/images/step5/按钮-结果导出.png'); background-size: 100% 100%;
