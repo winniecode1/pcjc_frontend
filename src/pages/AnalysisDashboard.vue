@@ -116,7 +116,7 @@
           <div class="metric-card-custom">
             <div class="m-title">增强前 多主体解析准确率</div>
             <div class="m-value">
-              <template v-if="preAccuracy !== null">{{ preAccuracy.toFixed(1) }}<span>%</span></template>
+              <template v-if="preAccuracy !== null">{{ Math.round(preAccuracy) }}<span>%</span></template>
               <span v-else-if="metricsWaiting" class="metric-spinner"></span>
               <template v-else>--</template>
             </div>
@@ -124,7 +124,7 @@
           <div class="metric-card-custom">
             <div class="m-title">增强后 多主体解析准确率</div>
             <div class="m-value">
-              <template v-if="postAccuracy !== null">{{ postAccuracy.toFixed(1) }}<span>%</span></template>
+              <template v-if="postAccuracy !== null">{{ Math.round(postAccuracy) }}<span>%</span></template>
               <span v-else-if="metricsWaiting" class="metric-spinner"></span>
               <template v-else>--</template>
             </div>
@@ -132,7 +132,7 @@
           <div class="metric-card-custom">
             <div class="m-title">根因诊断后 多主体解析准确率</div>
             <div class="m-value">
-              <template v-if="rootCauseAccuracy !== null">{{ rootCauseAccuracy.toFixed(1) }}<span>%</span></template>
+              <template v-if="rootCauseAccuracy !== null">{{ Math.round(rootCauseAccuracy) }}<span>%</span></template>
               <span v-else-if="metricsWaiting" class="metric-spinner"></span>
               <template v-else>--</template>
             </div>
@@ -148,7 +148,7 @@
 import * as echarts from 'echarts';
 const API_BASE_URL = process.env.VUE_APP_MODULE5_API_BASE_URL || 'http://10.109.253.71:5235';
 const DATASET_API_BASE_URL = process.env.VUE_APP_DATASET_API_BASE_URL || API_BASE_URL;
-const KNOWLEDGE_API_BASE_URL = process.env.VUE_APP_KNOWLEDGE_API_BASE_URL || API_BASE_URL;
+const KNOWLEDGE_API_BASE_URL = process.env.VUE_APP_KNOWLEDGE_API_BASE_URL || 'http://10.109.253.71:8001';
 
 const FIELD_LABEL_MAP = {
   'ground_truth': '真实标签',
@@ -174,10 +174,10 @@ const FIELD_LABEL_MAP = {
   'cognitive_bias': '认知偏差',
   'caption': '图片描述'
 };
-const ANALYSIS_ACCURACY_DONE_VALUE = 89.3;
+const ANALYSIS_ACCURACY_DONE_VALUE = 89;
 const ANALYSIS_TIMER_KEY = 'pcjc_analysis_timers_v1';
-const ANALYSIS_PRE_ACCURACY = 69.8;
-const ANALYSIS_POST_ACCURACY = 81.5;
+const ANALYSIS_PRE_ACCURACY = 70;
+const ANALYSIS_POST_ACCURACY = 82;
 function randomBetween(min, max) { return min + Math.random() * (max - min); }
 
 function firstNonEmptyValue(...values) {
@@ -284,7 +284,7 @@ export default {
     },
     doRender() {
       if (window.katex && this.$refs.formulaRef) {
-        window.katex.render("\\mathrm{Acc}=\\frac{\\sum_{i}\\sum_{j} w_j\\cdot\\operatorname{Sim}(\\hat{y}_{i,j},y_{i,j})}{N}", this.$refs.formulaRef, {
+        window.katex.render("\\mathrm{Acc}=\\frac{\\sum_i\\left[\\sum_j w_j\\cdot\\operatorname{Sim}(\\hat{y}_{i,j},y_{i,j})>T\\right]}{N}", this.$refs.formulaRef, {
           throwOnError: false, displayMode: false
         });
       }
@@ -839,16 +839,22 @@ export default {
       }
     },
     async requestKnowledgeGraphAll() {
-      try {
-        const res = await this.$ajax.get(
-          `${KNOWLEDGE_API_BASE_URL}/module2/knowledge/all`,
-          { timeout: 10000 }
-        );
-        return this.safeGet(res, 'data', {});
-      } catch (error) {
-        console.warn('获取知识图谱信息失败', error);
-        return {};
+      const candidates = [
+        `${KNOWLEDGE_API_BASE_URL}/module2/knowledge/all`,
+        `${API_BASE_URL}/module2/knowledge/all`
+      ];
+      for (let i = 0; i < candidates.length; i += 1) {
+        const url = candidates[i];
+        try {
+          const res = await this.$ajax.get(url, { timeout: 10000 });
+          return this.safeGet(res, 'data', {});
+        } catch (error) {
+          if (i === candidates.length - 1) {
+            console.warn('获取知识图谱信息失败', error);
+          }
+        }
       }
+      return {};
     },
     applyDiagnosisToGraph(raw, external = {}) {
       if (!this.myChart) return;
@@ -1613,7 +1619,7 @@ export default {
 <style scoped>
 /* 使用与 CombinedDiagnosis 一致的样式 */
 .attribution-diagnosis-container {
-  width: 100vw; height: 100vh; background-image: url('~@/assets/images/step5/背景2.png');
+  width: 100vw; height: 100vh; background-image: url('~@/assets/images/step5/bg-analysis.png');
   background-size: 100% 100%; color: white; overflow: hidden; position: relative;
 }
 
@@ -1812,7 +1818,7 @@ export default {
 .m-value { font-size: 1.8rem; font-weight: bold; font-family: 'DingTalk-JinBuTi', sans-serif !important; color: #c6f4ff; }
 .m-value span { font-size: 1rem; margin-left: 2px; }
 
-.formula-text-custom { font-size: 1.1rem !important; color: #FFFFFF !important; letter-spacing: 1px; }
+.formula-text-custom { font-size: 0.95rem !important; color: #FFFFFF !important; letter-spacing: 1px; }
 
 .export-btn-custom {
   position: absolute; right: 1vw; background-image: url('~@/assets/images/step5/按钮-结果导出.png'); background-size: 100% 100%;
