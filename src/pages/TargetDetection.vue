@@ -188,7 +188,7 @@ const IMAGE_API_URL = 'http://10.109.253.71:5237';
 const BASE_DIR = "/home/wuzhixuan/Project/PCJC/1";
 const VIDEO_DIR = "/home/wuzhixuan/Project/PCJC/datasets/Vedio"
 // 定义偏差检测等待时长 (ms) - 2分钟
-const BIAS_DETECTION_DELAY = 10000; 
+const BIAS_DETECTION_DELAY = 2 * 60 * 1000; // 2分钟
 
 function getFilenameFromPath(fullPath) {
   if (!fullPath || typeof fullPath !== 'string') return null;
@@ -488,6 +488,7 @@ export default {
       // 优先检查是否已经完成
       if (localStorage.getItem('biasDetectionCompleted') === 'true') {
         console.log("检测到偏差检测已完成，直接恢复结果");
+        this.hasStartedBiasDetection = true;
         this.showAccuracy = true;
         this.showBiasDetails = true;
         this.isBiasDetecting = false;
@@ -557,6 +558,7 @@ export default {
         } else {
           // 时间已过，直接显示结果
           console.log('偏差检测计时已过期，直接显示结果');
+          this.hasStartedBiasDetection = true;
           this.isBiasDetecting = false;
           this.showAccuracy = true;
           this.showBiasDetails = true;
