@@ -187,8 +187,8 @@ const FRONTEND_BASE_URL = 'http://10.109.253.71:8889';
 const IMAGE_API_URL = 'http://10.109.253.71:5237';
 const BASE_DIR = "/home/wuzhixuan/Project/PCJC/1";
 const VIDEO_DIR = "/home/wuzhixuan/Project/PCJC/datasets/Vedio"
-// 定义偏差检测等待时长 (ms) - 5分钟
-const BIAS_DETECTION_DELAY = 300000; 
+// 定义偏差检测等待时长 (ms) - 2分钟
+const BIAS_DETECTION_DELAY = 10000; 
 
 function getFilenameFromPath(fullPath) {
   if (!fullPath || typeof fullPath !== 'string') return null;
@@ -270,8 +270,155 @@ export default {
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
     this.clearTypingIntervals();
+    // 页面销毁前保存所有状态到 localStorage
+    this.saveAllStateToCache();
   },
   methods: {
+    // 保存所有状态到缓存
+    saveAllStateToCache() {
+      // 保存媒体类型
+      localStorage.setItem('selectedMediaType', this.selectedMediaType);
+
+      // 保存选中的文件
+      if (this.selectedVideo) {
+        localStorage.setItem('selectedVideo', JSON.stringify({
+          id: this.selectedVideo.id,
+          name: this.selectedVideo.name,
+          mediaType: this.selectedMediaType
+        }));
+      }
+
+      // 保存 URL
+      if (this.originalVideoURL) {
+        localStorage.setItem('originalVideoURL', this.originalVideoURL);
+      }
+      if (this.processedVideoURL) {
+        localStorage.setItem('processedVideoURL', this.processedVideoURL);
+      }
+
+      // 保存作战指令
+      if (this.ordersText) {
+        localStorage.setItem('ordersText', this.ordersText);
+      }
+
+      // 保存目标检测结果（包含 overall_accuracy 等偏差检测结果）
+      if (this.fullResult) {
+        localStorage.setItem('fullResult', JSON.stringify(this.fullResult));
+      }
+
+      // 保存检测状态
+      localStorage.setItem('hasStartedDetection', this.hasStartedDetection ? 'true' : 'false');
+      localStorage.setItem('summaryTypingText', this.summaryTypingText || '');
+      localStorage.setItem('summaryFullText', this.summaryFullText || '');
+
+      // 保存偏差检测状态
+      localStorage.setItem('hasStartedBiasDetection', this.hasStartedBiasDetection ? 'true' : 'false');
+      if (this.biasDetailEntries && this.biasDetailEntries.length > 0) {
+        localStorage.setItem('biasDetailEntries', JSON.stringify(this.biasDetailEntries));
+      }
+      if (this.biasDisplayTexts && this.biasDisplayTexts.length > 0) {
+        localStorage.setItem('biasDisplayTexts', JSON.stringify(this.biasDisplayTexts));
+      }
+      localStorage.setItem('showBiasDetails', this.showBiasDetails ? 'true' : 'false');
+      localStorage.setItem('showAccuracy', this.showAccuracy ? 'true' : 'false');
+      localStorage.setItem('isBiasDetecting', this.isBiasDetecting ? 'true' : 'false');
+
+      // 保存 module1Res
+      const module1ResStr = localStorage.getItem('module1Res');
+      if (module1ResStr) {
+        // module1Res 已存在，保留
+      }
+
+      console.log('所有状态已保存到缓存');
+    },
+    // 从缓存恢复所有状态
+    restoreAllStateFromCache() {
+      // 恢复媒体类型
+      const savedMediaType = localStorage.getItem('selectedMediaType');
+      if (savedMediaType) {
+        this.selectedMediaType = savedMediaType;
+      }
+
+      // 恢复作战指令
+      const savedOrdersText = localStorage.getItem('ordersText');
+      if (savedOrdersText) {
+        this.ordersText = savedOrdersText;
+      }
+
+      // 恢复 URL
+      const savedOriginalURL = localStorage.getItem('originalVideoURL');
+      if (savedOriginalURL) {
+        this.originalVideoURL = savedOriginalURL;
+      }
+      const savedProcessedURL = localStorage.getItem('processedVideoURL');
+      if (savedProcessedURL) {
+        this.processedVideoURL = savedProcessedURL;
+      }
+
+      // 恢复目标检测结果
+      const savedFullResult = localStorage.getItem('fullResult');
+      if (savedFullResult) {
+        try {
+          this.fullResult = JSON.parse(savedFullResult);
+        } catch (e) {
+          console.error('恢复 fullResult 失败:', e);
+        }
+      }
+
+      // 恢复检测状态
+      this.hasStartedDetection = localStorage.getItem('hasStartedDetection') === 'true';
+      this.summaryTypingText = localStorage.getItem('summaryTypingText') || '';
+      this.summaryFullText = localStorage.getItem('summaryFullText') || '';
+
+      // 如果文字已完整显示，确保 summaryTypingText 等于 summaryFullText
+      if (this.summaryFullText && !this.summaryTypingText) {
+        this.summaryTypingText = this.summaryFullText;
+      }
+
+      // 恢复偏差检测状态
+      this.hasStartedBiasDetection = localStorage.getItem('hasStartedBiasDetection') === 'true';
+      const savedBiasDetailEntries = localStorage.getItem('biasDetailEntries');
+      if (savedBiasDetailEntries) {
+        try {
+          this.biasDetailEntries = JSON.parse(savedBiasDetailEntries);
+        } catch (e) {
+          console.error('恢复 biasDetailEntries 失败:', e);
+        }
+      }
+      const savedBiasDisplayTexts = localStorage.getItem('biasDisplayTexts');
+      if (savedBiasDisplayTexts) {
+        try {
+          this.biasDisplayTexts = JSON.parse(savedBiasDisplayTexts);
+        } catch (e) {
+          console.error('恢复 biasDisplayTexts 失败:', e);
+        }
+      } else {
+        // 如果没有保存的 displayTexts，使用完整的 biasDetailEntries 文字
+        this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+      }
+      this.showBiasDetails = localStorage.getItem('showBiasDetails') === 'true';
+      this.showAccuracy = localStorage.getItem('showAccuracy') === 'true';
+      this.isBiasDetecting = localStorage.getItem('isBiasDetecting') === 'true';
+
+      // 恢复 summaryTypingInterval 状态 - 如果文字已显示完毕，不需要重新打字
+      if (this.summaryTypingText === this.summaryFullText) {
+        // 文字已完整显示，不需要打字机效果
+        console.log('目标检测结果已完整显示');
+      }
+
+      // 恢复偏差检测打字状态
+      if (this.biasDisplayTexts.length > 0) {
+        const allTextsComplete = this.biasDetailEntries.every((entry, index) => {
+          return this.biasDisplayTexts[index] === entry.text;
+        });
+        if (allTextsComplete) {
+          console.log('偏差检测结果已完整显示');
+          this.isBiasTyping = false;
+        }
+      }
+
+      console.log('所有状态已从缓存恢复');
+    },
     // 获取综合准确率（图片和视频综合）
     async fetchOverallAccuracy() {
       try {
@@ -293,59 +440,118 @@ export default {
       }
     },
     async loadInitialData() {
-      const module1ResStr = localStorage.getItem('module1Res');
-      if (module1ResStr) {
-        console.log("检测到 module1Res，正在从缓存加载数据...");
+      // 优先从缓存恢复所有状态
+      this.restoreAllStateFromCache();
+
+      // 检查偏差检测计时器状态（用于恢复未完成的计时）
+      this.checkBiasTimerState();
+
+      // 根据选中类型加载对应列表
+      if (this.selectedMediaType === 'image') {
+        await this.fetchImageList();
+      } else {
+        await this.fetchVideoListFromAPI();
+      }
+
+      // 恢复选中的视频状态
+      const savedSelectedVideo = localStorage.getItem('selectedVideo');
+      if (savedSelectedVideo) {
         try {
-          const module1Res = JSON.parse(module1ResStr);
-          this.populateUIFromStorage(module1Res);
-          // 检查偏差检测计时器状态 (需求3)
-          this.checkBiasTimerState();
-          // 根据选中类型加载对应列表
-          if (this.selectedMediaType === 'image') {
-            await this.fetchImageList();
-          } else {
-            await this.fetchVideoListFromAPI();
+          const videoInfo = JSON.parse(savedSelectedVideo);
+          // 检查是否在当前列表中且媒体类型匹配
+          const found = this.mediaList.find(item => item.id === videoInfo.id);
+          if (found && videoInfo.mediaType === this.selectedMediaType) {
+            this.selectedVideo = found;
           }
         } catch (e) {
-          console.error("解析 module1Res 失败:", e);
-          localStorage.clear();
-          await this.fetchImageList();
+          console.error("恢复选中视频失败:", e);
         }
-      } else {
-        console.log("未检测到 module1Res，正常启动...");
-        await this.fetchImageList();
       }
+
+      // 只有在没有已恢复的 summaryFullText 时，才从 module1Res 加载
+      if (!this.summaryFullText) {
+        const module1ResStr = localStorage.getItem('module1Res');
+        if (module1ResStr) {
+          try {
+            const module1Res = JSON.parse(module1ResStr);
+            this.populateUIFromStorage(module1Res);
+          } catch (e) {
+            console.error("解析 module1Res 失败:", e);
+          }
+        }
+      }
+
       await this.fetchOrders();
     },
     // 需求3：检查计时器状态
     checkBiasTimerState() {
-      // --- 新增代码：优先检查是否已经完成 ---
+      // 优先检查是否已经完成
       if (localStorage.getItem('biasDetectionCompleted') === 'true') {
         console.log("检测到偏差检测已完成，直接恢复结果");
         this.showAccuracy = true;
         this.showBiasDetails = true;
+        this.isBiasDetecting = false;
+        // 从 localStorage 恢复偏差详情
+        const savedEntries = localStorage.getItem('biasDetailEntries');
+        if (savedEntries) {
+          this.biasDetailEntries = JSON.parse(savedEntries);
+        }
         // 让文字直接显示，不需要打字机效果
         this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
-        return; 
+
+        // 确保 fullResult 已恢复，并获取准确率
+        if (this.fullResult) {
+          console.log("检查 overall_accuracy，当前值:", this.fullResult.overall_accuracy);
+          if (this.fullResult.overall_accuracy === undefined || this.fullResult.overall_accuracy === null) {
+            console.log("开始获取准确率...");
+            this.fetchOverallAccuracy().then(data => {
+              console.log("获取到的准确率数据:", data);
+              if (data) {
+                // 处理不同的数据格式
+                if (data.overall_accuracy && data.overall_accuracy.accuracy !== undefined) {
+                  this.fullResult.overall_accuracy = data.overall_accuracy.accuracy;
+                } else if (data.accuracy !== undefined) {
+                  this.fullResult.overall_accuracy = data.accuracy;
+                } else if (data.current_accuracy !== undefined) {
+                  this.fullResult.overall_accuracy = data.current_accuracy;
+                }
+                console.log("设置后的 overall_accuracy:", this.fullResult.overall_accuracy);
+                this.$forceUpdate();
+              }
+            }).catch(err => {
+              console.error("获取准确率失败:", err);
+            });
+          }
+        }
+        return;
       }
-      // -------------------------------------
+
+      // 检查是否有正在进行的偏差检测
       const biasStartTimeStr = localStorage.getItem('biasStartTime');
-      if (biasStartTimeStr && this.canStartBiasDetection) {
+      const biasStarted = localStorage.getItem('biasDetectionStarted') === 'true';
+
+      if (biasStartTimeStr && biasStarted) {
         const biasStartTime = parseInt(biasStartTimeStr, 10);
         const now = Date.now();
         const elapsed = now - biasStartTime;
+
+        // 从 localStorage 恢复偏差详情
+        const savedEntries = localStorage.getItem('biasDetailEntries');
+        if (savedEntries) {
+          this.biasDetailEntries = JSON.parse(savedEntries);
+        }
 
         if (elapsed < BIAS_DETECTION_DELAY) {
           const remaining = BIAS_DETECTION_DELAY - elapsed;
           console.log(`恢复偏差检测计时，剩余时间: ${remaining}ms`);
           this.isBiasDetecting = true;
+          this.hasStartedBiasDetection = true;
           this.showAccuracy = false; // 准确率未出
-          
-          // 如果之前的文字显示也应该恢复（这里假设如果刷新页面，文字直接显示）
+
+          // 文本直接显示，不需要打字机效果
           this.showBiasDetails = true;
           this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
-          
+
           // 启动剩余时间的定时器
           this.startAccuracyTimer(remaining);
         } else {
@@ -355,7 +561,35 @@ export default {
           this.showAccuracy = true;
           this.showBiasDetails = true;
           this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+
+          // 确保 fullResult 已恢复，并获取准确率
+          if (this.fullResult) {
+            console.log("计时器过期，检查 overall_accuracy，当前值:", this.fullResult.overall_accuracy);
+            if (this.fullResult.overall_accuracy === undefined || this.fullResult.overall_accuracy === null) {
+              console.log("开始获取准确率...");
+              this.fetchOverallAccuracy().then(data => {
+                console.log("获取到的准确率数据:", data);
+                if (data) {
+                  // 处理不同的数据格式
+                  if (data.overall_accuracy && data.overall_accuracy.accuracy !== undefined) {
+                    this.fullResult.overall_accuracy = data.overall_accuracy.accuracy;
+                  } else if (data.accuracy !== undefined) {
+                    this.fullResult.overall_accuracy = data.accuracy;
+                  } else if (data.current_accuracy !== undefined) {
+                    this.fullResult.overall_accuracy = data.current_accuracy;
+                  }
+                  console.log("设置后的 overall_accuracy:", this.fullResult.overall_accuracy);
+                  this.$forceUpdate();
+                }
+              }).catch(err => {
+                console.error("获取准确率失败:", err);
+              });
+            }
+          }
+
           localStorage.removeItem('biasStartTime');
+          localStorage.removeItem('biasDetectionStarted');
+          localStorage.setItem('biasDetectionCompleted', 'true');
         }
       }
     },
@@ -437,13 +671,17 @@ export default {
         }
       }
 
-      this.prepareDescriptionDisplay(data);
-      this.summaryTypingText = '';
-      // 从缓存恢复时也启用打字机效果
-      this.startSummaryTyping();
-      // 默认先不显示，通过 checkBiasTimerState 决定是否显示
-      this.showBiasDetails = false;
-      this.showAccuracy = false;
+      // 准备描述显示（不重置偏差检测数据，因为会从缓存恢复）
+      this.prepareDescriptionDisplay(data, false);
+
+      // 只有当 summaryTypingText 为空时才启动打字机效果
+      // 如果已经有完整文字显示，保留当前状态
+      if (!this.summaryTypingText && this.summaryFullText) {
+        this.startSummaryTyping();
+      }
+
+      // 重新检查偏差检测计时器状态（因为 prepareDescriptionDisplay 会重置偏差检测数据）
+      this.checkBiasTimerState();
       this.resultMessage = "已从缓存加载数据。";
       this.progressMessage = "加载完成";
       this.isLoading = false;
@@ -491,7 +729,7 @@ export default {
       return maxConfDet.confidence;
     },
     resetResultState(options = {}) {
-      const { preserveMessages = false } = options;
+      const { preserveMessages = false, preserveBiasTimer = false } = options;
       this.processedVideoURL = null;
       this.taskId = null;
       this.fullResult = {
@@ -508,25 +746,31 @@ export default {
         this.progressMessage = null;
       }
       this.descriptionEntries = [];
-      this.biasDetailEntries = [];
-      this.biasDisplayTexts = [];
       this.summaryTextOnly = '';
       this.summaryHighlight = false;
-      this.showBiasDetails = false;
-      this.showAccuracy = false;
       this.labelsToHighlight = [];
       this.isBiasTyping = false;
       this.summaryFullText = '';
       this.summaryTypingText = '';
-      this.isBiasDetecting = false;
       this.hasStartedDetection = false;
-      this.hasStartedBiasDetection = false;
-      
-      // 需求2：强制清理计时器相关
+
+      // 清理计时器
       this.clearTypingIntervals();
-      localStorage.removeItem('biasStartTime'); // 清除计时缓存
-      // --- 新增代码：清除完成标记 ---
-      localStorage.removeItem('biasDetectionCompleted');
+
+      // 如果不保留偏差检测计时，则清除相关状态
+      if (!preserveBiasTimer) {
+        this.biasDetailEntries = [];
+        this.biasDisplayTexts = [];
+        this.showBiasDetails = false;
+        this.showAccuracy = false;
+        this.isBiasDetecting = false;
+        this.hasStartedBiasDetection = false;
+
+        localStorage.removeItem('biasStartTime');
+        localStorage.removeItem('biasDetectionStarted');
+        localStorage.removeItem('biasDetectionCompleted');
+        localStorage.removeItem('biasDetailEntries');
+      }
     },
     clearTypingIntervals() {
       if (this.summaryTypingInterval) {
@@ -538,6 +782,21 @@ export default {
         this.biasTypingInterval = null;
       }
       this.clearBiasTimeouts();
+    },
+    // 只清除目标检测相关缓存，保留偏差检测计时状态
+    clearTargetDetectionCache() {
+      localStorage.removeItem('module1Res');
+      localStorage.removeItem('biasDetailEntries');
+      localStorage.removeItem('biasDetectionCompleted');
+      // 保留 biasStartTime 和 biasDetectionStarted 以便继续计时
+    },
+    // 清除所有缓存
+    clearAllCache() {
+      localStorage.removeItem('module1Res');
+      localStorage.removeItem('biasStartTime');
+      localStorage.removeItem('biasDetectionStarted');
+      localStorage.removeItem('biasDetectionCompleted');
+      localStorage.removeItem('biasDetailEntries');
     },
     autoPlayOriginalVideo() {
       this.$nextTick(() => {
@@ -585,7 +844,7 @@ export default {
       }
       return "N/A";
     },
-    prepareDescriptionDisplay(fullData) {
+    prepareDescriptionDisplay(fullData, resetBiasEntries = true) {
       this.clearTypingIntervals();
       this.updateLabelsToHighlight(fullData.low_similarity_aspects);
 
@@ -602,10 +861,14 @@ export default {
       this.summaryFullText = descText;
       this.summaryTextOnly = '';
       this.summaryTypingText = '';
-      this.biasDetailEntries = this.descriptionEntries.filter(entry => entry.label !== '总结');
-      this.biasDisplayTexts = this.biasDetailEntries.map(() => '');
-      this.showBiasDetails = false;
-      this.showAccuracy = false;
+
+      // 只在 resetBiasEntries 为 true 时才重置偏差检测数据
+      if (resetBiasEntries) {
+        this.biasDetailEntries = this.descriptionEntries.filter(entry => entry.label !== '总结');
+        this.biasDisplayTexts = this.biasDetailEntries.map(() => '');
+        this.showBiasDetails = false;
+        this.showAccuracy = false;
+      }
     },
     startSummaryTyping() {
       if (!this.summaryFullText || this.summaryTypingInterval) {
@@ -736,26 +999,20 @@ export default {
           // 构建偏差详情条目
           this.biasDetailEntries = this.buildBiasDetailEntries(data);
 
-          // 需求3：设置开始时间并存入 localStorage
+          // 保存偏差详情到 localStorage（用于页面切换后恢复）
+          localStorage.setItem('biasDetailEntries', JSON.stringify(this.biasDetailEntries));
+
+          // 设置开始时间并存入 localStorage
           localStorage.setItem('biasStartTime', Date.now().toString());
+          localStorage.setItem('biasDetectionStarted', 'true');
 
-          // 开始文字打字效果倒计时 (3秒后开始)
-          this.biasTypingTimeout = setTimeout(() => {
-            this.showBiasDetails = true;
-            this.isBiasTyping = true;
-            this.startBiasTypingSequence(0);
-            this.biasTypingTimeout = null;
-          }, 3000);
+          // 文本立即显示（去掉延迟）
+          this.showBiasDetails = true;
+          this.isBiasTyping = true;
+          this.startBiasTypingSequence(0);
 
-          // 准确率直接显示（如果后端已返回）
-          if (data.overall_accuracy && data.overall_accuracy.accuracy !== undefined) {
-            this.showAccuracy = true;
-            this.isBiasDetecting = false;
-            localStorage.setItem('biasDetectionCompleted', 'true');
-          } else {
-            // 开始准确率结果倒计时 (5分钟)
-            this.startAccuracyTimer(BIAS_DETECTION_DELAY);
-          }
+          // 准确率延迟2分钟显示
+          this.startAccuracyTimer(BIAS_DETECTION_DELAY);
         } else {
           // 视频检测接口
           response = await axios.get(`${IMAGE_API_URL}/api/video/sample/${sampleId}/detection`);
@@ -784,6 +1041,9 @@ export default {
           // 构建视频检测详情条目（使用新的数据结构）
           this.biasDetailEntries = this.buildVideoBiasDetailEntries(data);
 
+          // 保存偏差详情到 localStorage（用于页面切换后恢复）
+          localStorage.setItem('biasDetailEntries', JSON.stringify(this.biasDetailEntries));
+
           // 设置检测后视频 URL
           this.processedVideoURL = `${IMAGE_API_URL}/api/result/detected_video/${sampleId}`;
 
@@ -810,24 +1070,18 @@ export default {
 
           // 设置开始时间并存入 localStorage
           localStorage.setItem('biasStartTime', Date.now().toString());
+          localStorage.setItem('biasDetectionStarted', 'true');
 
-          // 开始文字打字效果倒计时 (3秒后开始)
-          this.biasTypingTimeout = setTimeout(() => {
-            this.showBiasDetails = true;
-            this.isBiasTyping = true;
-            this.startBiasTypingSequence(0);
-            this.biasTypingTimeout = null;
-          }, 3000);
+          // 文本立即显示（去掉延迟）
+          this.showBiasDetails = true;
+          this.isBiasTyping = true;
+          this.startBiasTypingSequence(0);
 
-          // 准确率直接显示（如果后端已返回 current_accuracy）
-          if (data.current_accuracy !== undefined) {
-            this.showAccuracy = true;
-            this.isBiasDetecting = false;
-            localStorage.setItem('biasDetectionCompleted', 'true');
-          } else {
-            // 开始准确率结果倒计时 (5分钟)
-            this.startAccuracyTimer(BIAS_DETECTION_DELAY);
-          }
+          // 保存当前状态到缓存
+          this.saveAllStateToCache();
+
+          // 准确率延迟2分钟显示
+          this.startAccuracyTimer(BIAS_DETECTION_DELAY);
         }
       } catch (error) {
         console.error("偏差检测请求失败:", error);
@@ -925,13 +1179,6 @@ export default {
           highlight: false
         });
       }
-      if (biasResult.image_evidence) {
-        entries.push({
-          label: '图片证据',
-          text: `图片证据：${biasResult.image_evidence}`,
-          highlight: false
-        });
-      }
       if (biasResult.is_consistent !== undefined) {
         const isConsistent = biasResult.is_consistent;
         const status = isConsistent ? '一致' : '不一致';
@@ -951,6 +1198,13 @@ export default {
           });
         }
       }
+      if (biasResult.image_evidence) {
+        entries.push({
+          label: '图片证据',
+          text: `图片证据：${biasResult.image_evidence}`,
+          highlight: false
+        });
+      }
 
       return entries;
     },
@@ -961,9 +1215,15 @@ export default {
         this.showAccuracy = true;
         this.isBiasDetecting = false;
         this.accuracyTimeout = null;
-        // --- 新增代码：移除计时开始时间，但写入完成标记 ---
-        localStorage.removeItem('biasStartTime'); 
-        localStorage.setItem('biasDetectionCompleted', 'true'); // 标记已完成
+        // 移除计时开始时间，但写入完成标记
+        localStorage.removeItem('biasStartTime');
+        localStorage.setItem('biasDetectionCompleted', 'true');
+        // 立即保存 fullResult（包含 overall_accuracy）到 localStorage
+        if (this.fullResult) {
+          localStorage.setItem('fullResult', JSON.stringify(this.fullResult));
+        }
+        localStorage.setItem('showAccuracy', 'true');
+        localStorage.setItem('isBiasDetecting', 'false');
       }, delay);
     },
     clearBiasTimeouts() {
@@ -1005,10 +1265,14 @@ export default {
     async switchMediaType(type) {
       if (this.selectedMediaType === type) return;
       this.selectedMediaType = type;
+      // 保存媒体类型
+      localStorage.setItem('selectedMediaType', type);
       this.selectedVideo = null;
+      // 切换媒体类型时清除所有缓存
+      this.clearAllCache();
       this.resetResultState();
       this.originalVideoURL = null;
-      
+
       if (type === 'image') {
         await this.fetchImageList();
       } else {
@@ -1057,10 +1321,36 @@ export default {
       await this.fetchImageList();
     },
     async selectMedia(item) {
-      this.selectedVideo = item;
-      localStorage.clear();
-      this.resetResultState();
-      console.log("选择新" + (this.selectedMediaType === 'image' ? '图片' : '视频') + "，状态已重置。");
+      const isSameItem = this.selectedVideo && this.selectedVideo.id === item.id;
+
+      // 只有选择不同的文件时才清理相关缓存
+      if (!isSameItem) {
+        this.selectedVideo = item;
+        // 保存选中状态到 localStorage
+        localStorage.setItem('selectedVideo', JSON.stringify({
+          id: item.id,
+          name: item.name,
+          mediaType: this.selectedMediaType
+        }));
+        // 清除目标检测相关缓存（保留偏差检测计时状态）
+        this.clearTargetDetectionCache();
+        // 保留偏差检测计时状态，只重置目标检测相关UI
+        this.resetResultState({ preserveBiasTimer: true });
+        // 额外保留一些状态
+        this.showBiasDetails = this.hasStartedBiasDetection;
+        if (this.hasStartedBiasDetection && this.biasDetailEntries.length > 0) {
+          this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+        }
+        console.log("选择新" + (this.selectedMediaType === 'image' ? '图片' : '视频') + "，状态已重置。");
+      } else {
+        // 选择相同文件时，也保存 originalVideoURL 到 localStorage
+        localStorage.setItem('selectedVideo', JSON.stringify({
+          id: item.id,
+          name: item.name,
+          mediaType: this.selectedMediaType
+        }));
+        localStorage.setItem('originalVideoURL', this.originalVideoURL || '');
+      }
 
       try {
         if (this.selectedMediaType === 'image') {
@@ -1122,6 +1412,10 @@ export default {
           this.originalVideoURL = null;
         }
       }
+      // 保存原始媒体 URL
+      if (this.originalVideoURL) {
+        localStorage.setItem('originalVideoURL', this.originalVideoURL);
+      }
       console.log("已选择:", this.selectedMediaType === 'image' ? '图片' : '视频', item.name);
     },
     selectVideo(video) {
@@ -1129,12 +1423,25 @@ export default {
     },
     async startDetection() {
       // 这里的逻辑与 selectVideo 类似，需要清理旧状态
-      // 但不要清除 selectVideo 选中的 selectedVideo 对象
+      // 但不要清除 selectVideo 选中的 selectedVideo 对象和偏差检测计时状态
       const currentVideo = this.selectedVideo;
-      localStorage.clear(); // 清理
-      this.selectedVideo = currentVideo; // 恢复选中状态
+      const savedSelectedVideo = localStorage.getItem('selectedVideo');
+      const savedMediaType = localStorage.getItem('selectedMediaType');
+      const savedBiasStartTime = localStorage.getItem('biasStartTime');
+      const savedBiasDetectionStarted = localStorage.getItem('biasDetectionStarted');
 
-      console.log("LocalStorage 已清空。");
+      // 清除目标检测相关缓存
+      this.clearTargetDetectionCache();
+
+      // 恢复偏差检测计时状态
+      if (savedBiasStartTime) localStorage.setItem('biasStartTime', savedBiasStartTime);
+      if (savedBiasDetectionStarted) localStorage.setItem('biasDetectionStarted', savedBiasDetectionStarted);
+
+      this.selectedVideo = currentVideo; // 恢复选中状态
+      if (savedSelectedVideo) localStorage.setItem('selectedVideo', savedSelectedVideo);
+      if (savedMediaType) localStorage.setItem('selectedMediaType', savedMediaType);
+
+      console.log("目标检测缓存已清理，偏差检测计时保留。");
 
       if (!this.selectedVideo) {
         alert("请先选择" + (this.selectedMediaType === 'image' ? '图片' : '视频') + "文件！");
@@ -1264,12 +1571,18 @@ export default {
 
         this.resultMessage = (this.selectedMediaType === 'image' ? '图片' : '视频') + "分析成功！结果已更新。";
         this.progressMessage = "分析完成";
+
+        // 保存目标检测结果到缓存
+        this.saveAllStateToCache();
       } catch (error) {
         console.error("分析请求失败:", error);
         this.resultMessage = "分析失败: " + (error.response && error.response.data && error.response.data.error) || error.message;
         this.progressMessage = "分析失败";
       } finally {
-        this.isLoading = false;
+        // 延迟0.5秒后关闭加载状态，展示结果
+        setTimeout(() => {
+          this.isLoading = false;
+        }, 500);
       }
     },
     async exportResults() {
