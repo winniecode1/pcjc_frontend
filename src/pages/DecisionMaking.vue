@@ -150,10 +150,10 @@
               <div class="pyramid-placeholder" v-if="!designAssetsEnabled"></div>
               <img v-else :src="fileUrl(assetNames.pyramid)" alt="金字塔" style="width:120px;height:120px;opacity:.95;" />
               <div class="level-legend">
-                <div class="legend-item level-1">一级战备</div>
-                <div class="legend-item level-2">二级战备</div>
-                <div class="legend-item level-3">三级战备</div>
-                <div class="legend-item level-4">四级战备</div>
+                <div class="legend-item level-1">一级危险等级</div>
+                <div class="legend-item level-2">二级危险等级</div>
+                <div class="legend-item level-3">三级危险等级</div>
+                <div class="legend-item level-4">四级危险等级</div>
               </div>
             </div>
 
@@ -182,7 +182,7 @@
               <img v-if="designAssetsEnabled" :src="fileUrl(assetNames.machineIcon)" alt="机器决策"
                 class="assessment-module-icon" />
               <div v-else class="icon-placeholder-machine"></div>
-              <div class="assessment-title">机器决策</div>
+              <div class="assessment-title">机器建议决策</div>
             </div>
             <div class="assessment-middle-section">
               <div class="assessment-right-section">
@@ -347,10 +347,10 @@ export default {
         videoLabel: '视频演示标题框.png',
         behaviorLabel: '可视化行为标题框.png',
         resultLabel: '决策选择认知偏差检测结果标题框.png',
-        level1: '一级战备图片.png',
-        level2: '二级战备图片.png',
-        level3: '三级战备图片.png',
-        level4: '四级战备图片.png',
+        level1: '一级危险等级图片.png',
+        level2: '二级危险等级图片.png',
+        level3: '三级危险等级图片.png',
+        level4: '四级危险等级图片.png',
         machineIcon: '机器评估图标.png',
         commanderIcon: '指挥员评估图标.png'
       },
