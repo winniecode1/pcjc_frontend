@@ -1800,8 +1800,9 @@ text-decoration: none;
 
 .orders-text-box {
   width: 100%;
-  height: 100%;
-  min-height: 120px;
+  /* 固定高度：3行文本 + 上下padding */
+  height: calc(0.95rem * 1.6 * 3 + 12px * 2);
+  max-height: calc(0.95rem * 1.6 * 3 + 12px * 2);
   background-color: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(0, 229, 255, 0.3);
   border-radius: 4px;
@@ -1811,6 +1812,7 @@ text-decoration: none;
   padding: 12px 15px;
   white-space: pre-wrap;
   word-break: break-all;
+  overflow-y: auto;
 }
 
 .orders-text-box::-webkit-scrollbar { width: 6px; }
