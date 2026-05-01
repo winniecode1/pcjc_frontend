@@ -1126,7 +1126,8 @@ export default {
         });
     },
     /**
-     * 加载分组侧栏「先验知识认知传播信息」：优先该分组内 *_analysis.json（按中间序号图片先试），其次同名 .txt
+     * 加载分组侧栏「先验知识认知传播信息」：对该分组每张图依次请求 *_analysis.json，
+     * 全部不可用后再按同名顺序尝试 .txt 兜底。
      */
     loadDescriptionForGroupFolder(folder, sortedJpgs) {
       if (!folder || !sortedJpgs || sortedJpgs.length === 0) {
@@ -1134,17 +1135,30 @@ export default {
         this.attributeInfo = this.attributeInfoList.join('\n');
         return Promise.resolve();
       }
-      const stems = [];
-      const mid = Math.floor(sortedJpgs.length / 2);
-      stems.push(sortedJpgs[mid].replace(/\.[^/.]+$/, ''));
-      sortedJpgs.forEach((fn, i) => {
-        if (i !== mid) stems.push(fn.replace(/\.[^/.]+$/, ''));
-      });
-      const tryAnalysis = stem =>
-        axios
-          .get(`/static/grouped_dataset/${folder}/${stem}_analysis.json`)
+      const stems = sortedJpgs.map(fn => String(fn).replace(/\.[^/.]+$/, ''));
+      console.log(
+        '[GroupNegotiation] 加载分组认知传播信息（先全部 _analysis.json，再 .txt），stems 顺序:',
+        stems,
+        'folder:',
+        folder
+      );
+      const tryAnalysis = stem => {
+        const url = `/static/grouped_dataset/${folder}/${stem}_analysis.json`;
+        return axios
+          .get(url)
           .then(res => {
-            const data = res && res.data ? res.data : {};
+            const status = res && res.status;
+            const raw = res && res.data;
+            if (typeof raw === 'string' && /^\s*</.test(raw)) {
+              console.warn(
+                '[GroupNegotiation] _analysis.json 响应体为 HTML（常为 404 被 SPA 兜底），视为失败:',
+                url,
+                'HTTP',
+                status
+              );
+              return null;
+            }
+            const data = raw && typeof raw === 'object' ? raw : {};
             const ar = data.analysis_result;
             const lines = [];
             if (ar && typeof ar === 'object') {
@@ -1156,9 +1170,35 @@ export default {
                 lines.push(`目标数量：${ar.target_count}`);
               }
             }
-            return lines.length > 0 ? lines : null;
+            if (lines.length > 0) {
+              console.log(
+                '[GroupNegotiation] _analysis.json 请求成功且已解析展示字段:',
+                url,
+                'HTTP',
+                status,
+                '条数:',
+                lines.length
+              );
+              return lines;
+            }
+            console.warn(
+              '[GroupNegotiation] _analysis.json HTTP 成功但无可展示内容（检查 analysis_result）:',
+              url,
+              'HTTP',
+              status
+            );
+            return null;
           })
-          .catch(() => null);
+          .catch(err => {
+            const st = err.response && err.response.status;
+            console.warn(
+              '[GroupNegotiation] _analysis.json 请求失败:',
+              url,
+              st != null ? `HTTP ${st}` : String(err.message || err)
+            );
+            return null;
+          });
+      };
 
       const tryTxt = stem =>
         axios
@@ -1171,14 +1211,19 @@ export default {
 
       const run = async () => {
         for (let s = 0; s < stems.length; s++) {
-          const stem = stems[s];
-          const fromAnalysis = await tryAnalysis(stem);
+          const fromAnalysis = await tryAnalysis(stems[s]);
           if (fromAnalysis && fromAnalysis.length) {
             this.attributeInfoList = fromAnalysis;
             this.attributeInfo = fromAnalysis.join('\n');
             return;
           }
-          const fromTxt = await tryTxt(stem);
+        }
+        console.warn(
+          '[GroupNegotiation] 该分组全部 *_analysis.json 均无可用结果，开始 .txt 兜底，stems:',
+          stems
+        );
+        for (let s = 0; s < stems.length; s++) {
+          const fromTxt = await tryTxt(stems[s]);
           if (fromTxt && fromTxt.length) {
             this.attributeInfoList = fromTxt;
             this.attributeInfo = fromTxt.join('\n');
