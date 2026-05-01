@@ -1,0 +1,10 @@
+{
+    "group_name": "group_012",
+    "source_image": "firc_junshi_2510.jpg",
+    "source_label": "firc_junshi_2510.txt",
+    "analysis_result": {
+        "detailed_description": "该图像为俯瞰视角的战场环境，显示了多条呈线状分布的战壕结构，周围有植被覆盖，中部存在一处疑似爆炸或火光区域，战壕主要集中在画面右侧并呈分支状延伸。",
+        "target_class": "战壕",
+        "target_count": 7
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "group_name": "group_016",
+    "source_image": "firc_junshi_4080.jpg",
+    "source_label": "firc_junshi_3080.txt",
+    "analysis_result": {
+        "detailed_description": "图像显示了一片山地地形，有多辆装甲战斗车辆在移动，其中一辆被标记为‘panzer’，周围有烟雾弥漫，表明可能存在战斗或机动行动。",
+        "target_class": "装甲战斗车辆",
+        "target_count": 4
+    }
+}

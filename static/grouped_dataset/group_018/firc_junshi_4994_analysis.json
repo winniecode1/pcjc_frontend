@@ -1,0 +1,10 @@
+{
+    "group_name": "group_018",
+    "source_image": "firc_junshi_4994.jpg",
+    "source_label": "firc_junshi_4994.txt",
+    "analysis_result": {
+        "detailed_description": "图像显示一处野外战场环境，地面有明显挖掘痕迹，疑似战壕结构，附近发生剧烈爆炸并产生大量浓烟，火光可见，周围为植被与土路。",
+        "target_class": "战壕",
+        "target_count": 4
+    }
+}

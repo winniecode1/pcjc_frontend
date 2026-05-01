@@ -1,0 +1,8 @@
+{
+    "source_image": "firc_junshi_255.jpg",
+    "source_detection_json": "firc_junshi_255.json",
+    "analysis_result": {
+        "raw_response": "在一片绿色农田和树林交错的乡村道路上，检测到三辆装甲目标，其中两辆被识别为坦克（panzer），一辆被识别为装甲战斗车辆，它们分布在道路的不同位置。",
+        "status": "parse_failed"
+    }
+}

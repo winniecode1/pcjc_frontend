@@ -1,0 +1,10 @@
+{
+    "group_name": "group_002",
+    "source_image": "firc_junshi_335.jpg",
+    "source_label": "firc_junshi_335.txt",
+    "analysis_result": {
+        "detailed_description": "图像显示一条林间道路上有多辆军事车辆，周围为绿色植被和农田，道路两侧有明显车辙痕迹，车辆呈纵向排列，其中部分车辆被标记为坦克或装甲战斗车辆。",
+        "target_class": "坦克/装甲车",
+        "target_count": 6
+    }
+}

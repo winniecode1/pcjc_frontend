@@ -1,0 +1,8 @@
+{
+    "source_image": "firc_junshi_240.jpg",
+    "source_detection_json": "firc_junshi_240.json",
+    "analysis_result": {
+        "raw_response": "在农田与树林交错的野外环境中，检测到两辆装甲战斗车辆，分别为一辆坦克和一辆装甲战斗车。",
+        "status": "parse_failed"
+    }
+}

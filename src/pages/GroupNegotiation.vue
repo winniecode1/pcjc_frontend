@@ -34,34 +34,87 @@
 
             <!-- 列表视图 -->
             <div v-if="compareView === 'list'" class="compare-list-wrapper">
-              <!-- 采用 TargetDetection 中 server-video-list/video-item 的列表样式 -->
+              <!-- 采用 TargetDetection 中 server-video-list/video-item 的列表样式；分区小标题区分图片与视频 -->
               <div
                 class="server-video-list overflow-auto"
-                v-if="sourceItems && sourceItems.length > 0"
+                v-if="imageSourceItems.length > 0 || videoSourceItems.length > 0"
               >
-                <div
-                  v-for="(item, idx) in sourceItems"
-                  :key="item.key || idx"
-                  class="video-item"
-                  @click="openSourceItem(item)"
-                  :class="{ selected: selectedSourceKey === item.key }"
-                >
-                  <span>{{ item.name }}</span>
-                  <span class="selector-circle"></span>
+                <div v-if="imageSourceItems.length > 0" class="source-list-section">
+                  <div
+                    class="source-list-heading-toggle"
+                    :class="{ 'is-collapsed': !imageSourceListExpanded }"
+                    role="button"
+                    tabindex="0"
+                    :aria-expanded="imageSourceListExpanded ? 'true' : 'false'"
+                    @click="toggleImageSourceList"
+                    @keydown.enter.prevent="toggleImageSourceList"
+                    @keydown.space.prevent="toggleImageSourceList"
+                  >
+                    <span class="source-list-heading-label">图片分组</span>
+                    <span class="source-list-heading-chevron" aria-hidden="true">▼</span>
+                  </div>
+                  <div v-show="imageSourceListExpanded" class="source-list-items">
+                    <div
+                      v-for="(item, idx) in imageSourceItems"
+                      :key="item.key || idx"
+                      class="video-item"
+                      @click="openSourceItem(item)"
+                      :class="{ selected: selectedSourceKey === item.key }"
+                    >
+                      <span>{{ item.name }}</span>
+                      <span class="selector-circle"></span>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="videoSourceItems.length > 0" class="source-list-section">
+                  <div
+                    class="source-list-heading-toggle"
+                    :class="{ 'is-collapsed': !videoSourceListExpanded }"
+                    role="button"
+                    tabindex="0"
+                    :aria-expanded="videoSourceListExpanded ? 'true' : 'false'"
+                    @click="toggleVideoSourceList"
+                    @keydown.enter.prevent="toggleVideoSourceList"
+                    @keydown.space.prevent="toggleVideoSourceList"
+                  >
+                    <span class="source-list-heading-label">视频列表</span>
+                    <span class="source-list-heading-chevron" aria-hidden="true">▼</span>
+                  </div>
+                  <div v-show="videoSourceListExpanded" class="source-list-items">
+                    <div
+                      v-for="(item, idx) in videoSourceItems"
+                      :key="item.key || idx"
+                      class="video-item"
+                      @click="openSourceItem(item)"
+                      :class="{ selected: selectedSourceKey === item.key }"
+                    >
+                      <span>{{ item.name }}</span>
+                      <span class="selector-circle"></span>
+                    </div>
+                  </div>
                 </div>
               </div>
               <p class="text-content text-muted" v-else>{{ sourceListMessage }}</p>
             </div>
 
-            <!-- 图片详情视图 -->
-            <div v-else class="compare-detail-wrapper">
-              <img
-                v-if="selectedDetailType === 'compare' && selectedCompareFile"
-                :src="`/static/compare/${selectedCompareFile}`"
-                :alt="selectedCompareFile"
-                class="compare-image"
-                @error="handleCompareImageError"
-              />
+            <!-- 图片详情视图（分组：三张图从左到右按文件名序号递增） -->
+            <div
+              v-else
+              class="compare-detail-wrapper"
+              :class="{ 'compare-detail-group': selectedDetailType === 'compare' && selectedGroupImageFiles.length > 0 }"
+            >
+              <template
+                v-if="selectedDetailType === 'compare' && selectedCompareFile && selectedGroupImageFiles.length > 0"
+              >
+                <img
+                  v-for="fn in selectedGroupImageFiles"
+                  :key="fn"
+                  :src="`/static/grouped_dataset/${selectedCompareFile}/${fn}`"
+                  :alt="fn"
+                  class="compare-image group-triple-img group-triple-img-clickable"
+                  @click="openGroupImageLightbox(fn)"
+                />
+              </template>
               <video
                 v-else-if="selectedDetailType === 'video' && selectedVideoUrl"
                 :src="selectedVideoUrl"
@@ -119,10 +172,10 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound1" class="panel-overlay">协商中...</div>
                   <p v-if="typeof agentARound1Result === 'object' && agentARound1Result !== null" class="agent-result">
-                    <span class="result-line">推理结果：{{ agentARound1Result.model_name || '***' }}</span>
-                    <span class="result-line">推理依据：{{ agentARound1Result.reason || '***' }}</span>
+                    <span class="result-line">推理型号：{{ agentARound1Result.model_name || '***' }}</span>
+                    <span class="result-line">推理结果：{{ agentARound1Result.reason || '***' }}</span>
                   </p>
-                  <p v-else class="agent-result">{{ agentARound1Result || '推理型号：***\n推理依据：***' }}</p>
+                  <p v-else class="agent-result">{{ agentARound1Result || '推理型号：***\n推理结果：***' }}</p>
                 </div>
               </div>
 
@@ -135,10 +188,10 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound1" class="panel-overlay">协商中...</div>
                   <p v-if="typeof agentBRound1Result === 'object' && agentBRound1Result !== null" class="agent-result">
-                    <span class="result-line">推理结果：{{ agentBRound1Result.model_name || '***' }}</span>
-                    <span class="result-line">推理依据：{{ agentBRound1Result.reason || '***' }}</span>
+                    <span class="result-line">推理型号：{{ agentBRound1Result.model_name || '***' }}</span>
+                    <span class="result-line">推理结果：{{ agentBRound1Result.reason || '***' }}</span>
                   </p>
-                  <p v-else class="agent-result">{{ agentBRound1Result || '推理型号：***\n推理依据：***' }}</p>
+                  <p v-else class="agent-result">{{ agentBRound1Result || '推理型号：***\n推理结果：***' }}</p>
                 </div>
               </div>
 
@@ -151,10 +204,10 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound1" class="panel-overlay">协商中...</div>
                   <p v-if="typeof agentCRound1Result === 'object' && agentCRound1Result !== null" class="agent-result">
-                    <span class="result-line">推理结果：{{ agentCRound1Result.model_name || '***' }}</span>
-                    <span class="result-line">推理依据：{{ agentCRound1Result.reason || '***' }}</span>
+                    <span class="result-line">推理型号：{{ agentCRound1Result.model_name || '***' }}</span>
+                    <span class="result-line">推理结果：{{ agentCRound1Result.reason || '***' }}</span>
                   </p>
-                  <p v-else class="agent-result">{{ agentCRound1Result || '推理型号：***\n推理依据：***' }}</p>
+                  <p v-else class="agent-result">{{ agentCRound1Result || '推理型号：***\n推理结果：***' }}</p>
                 </div>
               </div>
             </div>
@@ -174,11 +227,11 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentABNegotiation === 'object' && agentABNegotiation !== null" class="agent-result">
-                    <span class="result-line">推理分析：{{ agentABNegotiation.battlefield_analysis || agentABNegotiation.final_model_name || '***' }}</span>
+                    <span class="result-line">推理结果：{{ agentABNegotiation.battlefield_analysis || agentABNegotiation.final_model_name || '***' }}</span>
                     <span class="result-line">推理共识：{{ agentABNegotiation.negotiation_basis || '***' }}</span>
                     <span class="result-line">推理分歧：{{ agentABNegotiation.deviation || '***' }}</span>
                   </p>
-                  <p v-else class="agent-result">{{ agentABNegotiation || '推理分析：***\n推理共识：***\n推理分歧：***' }}</p>
+                  <p v-else class="agent-result">{{ agentABNegotiation || '推理结果：***\n推理共识：***\n推理分歧：***' }}</p>
                 </div>
               </div>
 
@@ -193,11 +246,11 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentBCNegotiation === 'object' && agentBCNegotiation !== null" class="agent-result">
-                    <span class="result-line">推理分析：{{ agentBCNegotiation.battlefield_analysis || agentBCNegotiation.final_model_name || '***' }}</span>
+                    <span class="result-line">推理结果：{{ agentBCNegotiation.battlefield_analysis || agentBCNegotiation.final_model_name || '***' }}</span>
                     <span class="result-line">推理共识：{{ agentBCNegotiation.negotiation_basis || '***' }}</span>
                     <span class="result-line">推理分歧：{{ agentBCNegotiation.deviation || '***' }}</span>
                   </p>
-                  <p v-else class="agent-result">{{ agentBCNegotiation || '推理分析：***\n推理共识：***\n推理分歧：***' }}</p>
+                  <p v-else class="agent-result">{{ agentBCNegotiation || '推理结果：***\n推理共识：***\n推理分歧：***' }}</p>
                 </div>
               </div>
 
@@ -212,11 +265,11 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentCANegotiation === 'object' && agentCANegotiation !== null" class="agent-result">
-                    <span class="result-line">推理分析：{{ agentCANegotiation.battlefield_analysis || agentCANegotiation.final_model_name || '***' }}</span>
+                    <span class="result-line">推理结果：{{ agentCANegotiation.battlefield_analysis || agentCANegotiation.final_model_name || '***' }}</span>
                     <span class="result-line">推理共识：{{ agentCANegotiation.negotiation_basis || '***' }}</span>
                     <span class="result-line">推理分歧：{{ agentCANegotiation.deviation || '***' }}</span>
                   </p>
-                  <p v-else class="agent-result">{{ agentCANegotiation || '推理分析：***\n推理共识：***\n推理分歧：***' }}</p>
+                  <p v-else class="agent-result">{{ agentCANegotiation || '推理结果：***\n推理共识：***\n推理分歧：***' }}</p>
                 </div>
               </div>
             </div>
@@ -308,6 +361,29 @@
       </div>
     </div>
 
+    <!-- 分组图片点击放大 -->
+    <div
+      v-if="groupImageLightboxUrl"
+      class="group-image-lightbox"
+      role="dialog"
+      aria-modal="true"
+      @click.self="closeGroupImageLightbox"
+    >
+      <button
+        type="button"
+        class="group-image-lightbox-close"
+        aria-label="关闭"
+        @click="closeGroupImageLightbox"
+      >
+        ×
+      </button>
+      <img
+        :src="groupImageLightboxUrl"
+        alt=""
+        class="group-image-lightbox-img"
+        @click.stop
+      />
+    </div>
   </div>
 </template><script>
 import axios from 'axios';
@@ -374,6 +450,12 @@ export default {
       disagreementPointsHighlight: '',
       // compare 图片列表/详情相关数据
       compareFiles: [],
+      /** groups_manifest.json 解析结果：{ folder, images }[] */
+      groupDatasetGroups: [],
+      /** 当前选中分组内按序号排序后的图片文件名（如 .jpg） */
+      selectedGroupImageFiles: [],
+      /** 分组详情内点击图片时的放大预览 URL */
+      groupImageLightboxUrl: null,
       compareView: 'list', // 'list' | 'detail'
       selectedCompareFile: null,
       targetDetectionVideos: [],
@@ -381,7 +463,10 @@ export default {
       selectedVideoUrl: null,
       selectedDetailType: null, // 'compare' | 'video'
       selectedSourceKey: null,
-      compareMessage: '暂无compare图片文件',
+      compareMessage: '暂无分组数据',
+      /** 列表区：点击标题展开/收起，互不干扰（进入页面默认收起） */
+      imageSourceListExpanded: false,
+      videoSourceListExpanded: false,
       /** 视频：从 /static/video_results 对应 JSON 解析出、用于 module3 请求的字段 */
       videoModule3RequestPayload: null,
 
@@ -402,25 +487,33 @@ export default {
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
+    document.removeEventListener('keydown', this.handleGroupImageLightboxKeydown);
     // 注意：不在这里清除定时器，让计时在页面切换后继续
     // 只有在计时完成时才清除localStorage
   },
   computed: {
-    sourceItems() {
-      const compareItems = (this.compareFiles || []).map((name, idx) => ({
+    imageSourceItems() {
+      return (this.compareFiles || []).map((name, idx) => ({
         key: `compare:${name || idx}`,
         type: 'compare',
         name
       }));
-      const videoItems = (this.targetDetectionVideos || []).map((video, idx) => {
-        const name = typeof video === 'string' ? video : video && video.name;
-        return {
-          key: `video:${name || idx}`,
-          type: 'video',
-          name
-        };
-      }).filter(item => !!item.name);
-      return [...compareItems, ...videoItems];
+    },
+    videoSourceItems() {
+      return (this.targetDetectionVideos || [])
+        .map((video, idx) => {
+          const name = typeof video === 'string' ? video : video && video.name;
+          return {
+            key: `video:${name || idx}`,
+            type: 'video',
+            name
+          };
+        })
+        .filter(item => !!item.name);
+    },
+    /** 合并列表（与分区列表顺序一致，便于其它逻辑统一长度判断） */
+    sourceItems() {
+      return [...this.imageSourceItems, ...this.videoSourceItems];
     },
     sourceListMessage() {
       if (this.sourceItems.length > 0) return '';
@@ -511,6 +604,7 @@ export default {
   },
   mounted() {
     window.addEventListener('resize', this.handleResize);
+    document.addEventListener('keydown', this.handleGroupImageLightboxKeydown);
     // 页面加载时加载 compare 文件列表（不再展示视频）
     this.loadCompareFiles();
     this.loadTargetDetectionVideos();
@@ -823,49 +917,47 @@ export default {
       });
     },
 
-    /** 从 files.json 解析出文件名数组（兼容对象包裹、JSON 字符串；避免误把 HTML 当数组） */
-    parseCompareFileList(raw) {
-      if (raw == null) return [];
-      let v = raw;
-      if (typeof v === 'string') {
-        const t = v.trim();
-        if (t.startsWith('<') || t.startsWith('<!')) {
-          console.warn('[GroupNegotiation] files.json 返回了 HTML 页面而非 JSON，请检查 /static/compare/files.json 是否被路由吞掉');
-          return [];
-        }
-        try {
-          v = JSON.parse(t);
-        } catch (e) {
-          return [];
-        }
-      }
-      if (Array.isArray(v)) return v;
-      if (v && Array.isArray(v.data)) return v.data;
-      if (v && Array.isArray(v.files)) return v.files;
-      if (v && Array.isArray(v.list)) return v.list;
-      return [];
+    /** 从文件名中提取末尾数字序号，用于分组内图片从左到右排序 */
+    sortGroupedImageFilenames(filenames) {
+      if (!Array.isArray(filenames)) return [];
+      const scored = filenames.map(name => {
+        const m = String(name).match(/_(\d+)\.[^.]+$/i);
+        const n = m ? parseInt(m[1], 10) : NaN;
+        return { name, n: Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER };
+      });
+      scored.sort((a, b) => a.n - b.n || String(a.name).localeCompare(String(b.name)));
+      return scored.map(s => s.name);
     },
-    // 加载 compare 静态资源清单（静态文件里提供 files.json）
+    // 加载 static/grouped_dataset 分组清单（groups_manifest.json）
     loadCompareFiles() {
       axios
-        .get('/static/compare/files.json')
+        .get('/static/grouped_dataset/groups_manifest.json')
         .then(res => {
           const raw = res && res.data;
-          const list = this.parseCompareFileList(raw);
-          this.compareFiles = list;
-          if (list.length > 0) {
+          let groups = raw && Array.isArray(raw.groups) ? raw.groups : [];
+          groups = groups
+            .filter(g => g && typeof g.folder === 'string' && Array.isArray(g.images))
+            .slice()
+            .sort((a, b) => {
+              const na = parseInt(String(a.folder).replace(/\D/g, ''), 10) || 0;
+              const nb = parseInt(String(b.folder).replace(/\D/g, ''), 10) || 0;
+              return na - nb || String(a.folder).localeCompare(String(b.folder));
+            });
+          this.groupDatasetGroups = groups;
+          this.compareFiles = groups.map(g => g.folder);
+          if (this.compareFiles.length > 0) {
             this.compareMessage = '';
-            console.log('[GroupNegotiation] compare 列表已加载，条数:', list.length);
+            console.log('[GroupNegotiation] grouped_dataset 列表已加载，分组数:', this.compareFiles.length);
           } else {
-            this.compareMessage = '暂无compare图片文件';
-            const tip = typeof raw === 'string' && raw.length > 200 ? raw.slice(0, 120) + '…' : raw;
-            console.warn('[GroupNegotiation] compare 列表为空。response.data 预览:', tip);
+            this.compareMessage = '暂无分组数据（groups_manifest.json）';
+            console.warn('[GroupNegotiation] groups_manifest.json 中 groups 为空或格式不对');
           }
         })
         .catch(err => {
-          console.error('加载 compare files.json 失败:', err);
+          console.error('加载 groups_manifest.json 失败:', err);
           this.compareFiles = [];
-          this.compareMessage = '加载compare文件清单失败';
+          this.groupDatasetGroups = [];
+          this.compareMessage = '加载分组清单失败';
         });
     },
     loadTargetDetectionVideos() {
@@ -889,6 +981,24 @@ export default {
         : TARGET_DETECTION_API_BASE_URL;
       return `${baseUrl}/video/${encodeURIComponent(videoName)}`;
     },
+    toggleImageSourceList() {
+      this.imageSourceListExpanded = !this.imageSourceListExpanded;
+    },
+    toggleVideoSourceList() {
+      this.videoSourceListExpanded = !this.videoSourceListExpanded;
+    },
+    handleGroupImageLightboxKeydown(e) {
+      if (e.key === 'Escape' && this.groupImageLightboxUrl) {
+        this.closeGroupImageLightbox();
+      }
+    },
+    openGroupImageLightbox(fn) {
+      if (!fn || !this.selectedCompareFile) return;
+      this.groupImageLightboxUrl = `/static/grouped_dataset/${this.selectedCompareFile}/${fn}`;
+    },
+    closeGroupImageLightbox() {
+      this.groupImageLightboxUrl = null;
+    },
     openSourceItem(item) {
       if (!item || !item.type || !item.name) return;
       this.clearNegotiationDisplay();
@@ -905,22 +1015,34 @@ export default {
         return;
       }
 
+      this.closeGroupImageLightbox();
       this.selectedDetailType = 'video';
       this.selectedCompareFile = null;
+      this.selectedGroupImageFiles = [];
       this.selectedVideoName = item.name;
       this.selectedVideoUrl = this.buildTargetVideoUrl(item.name);
       this.loadVideoResultByName(item.name);
     },
-    // 切换到图片详情
-    async openCompareImage(name) {
-      console.log('[GroupNegotiation] 选中协商图片:', name);
-      this.selectedCompareFile = name;
+    // 切换到分组详情（三张图 + 侧栏认知传播信息）
+    async openCompareImage(folder) {
+      this.closeGroupImageLightbox();
+      console.log('[GroupNegotiation] 选中分组:', folder);
+      const entry = (this.groupDatasetGroups || []).find(g => g.folder === folder);
+      if (!entry) {
+        this.selectedGroupImageFiles = [];
+        this.attributeInfoList = ['未在 groups_manifest.json 中找到该分组'];
+        this.attributeInfo = this.attributeInfoList.join('\n');
+        return;
+      }
+      const sorted = this.sortGroupedImageFilenames(entry.images);
+      this.selectedGroupImageFiles = sorted;
+      this.selectedCompareFile = folder;
       this.compareView = 'detail';
       this.selectedDetailType = 'compare';
       this.selectedVideoName = null;
       this.selectedVideoUrl = null;
       this.videoModule3RequestPayload = null;
-      await this.loadDescriptionByImageName(name);
+      await this.loadDescriptionForGroupFolder(folder, sorted);
     },
     /**
      * 从 /static/video_results/{basename}.json 读取 result，
@@ -1003,57 +1125,90 @@ export default {
           this.attributeInfo = this.attributeInfoList.join('\n');
         });
     },
-    // 根据 compare 图片名加载 mllm_commands_gt 中同名 json 的 command_text
-    loadDescriptionByImageName(imageName) {
-      if (!imageName || typeof imageName !== 'string') {
-        this.attributeInfoList = ['未找到有效图片名称，无法加载描述'];
+    /**
+     * 加载分组侧栏「先验知识认知传播信息」：优先该分组内 *_analysis.json（按中间序号图片先试），其次同名 .txt
+     */
+    loadDescriptionForGroupFolder(folder, sortedJpgs) {
+      if (!folder || !sortedJpgs || sortedJpgs.length === 0) {
+        this.attributeInfoList = ['该分组下没有可展示的图片文件'];
         this.attributeInfo = this.attributeInfoList.join('\n');
         return Promise.resolve();
       }
+      const stems = [];
+      const mid = Math.floor(sortedJpgs.length / 2);
+      stems.push(sortedJpgs[mid].replace(/\.[^/.]+$/, ''));
+      sortedJpgs.forEach((fn, i) => {
+        if (i !== mid) stems.push(fn.replace(/\.[^/.]+$/, ''));
+      });
+      const tryAnalysis = stem =>
+        axios
+          .get(`/static/grouped_dataset/${folder}/${stem}_analysis.json`)
+          .then(res => {
+            const data = res && res.data ? res.data : {};
+            const ar = data.analysis_result;
+            const lines = [];
+            if (ar && typeof ar === 'object') {
+              if (ar.detailed_description) lines.push(`场景描述：${ar.detailed_description}`);
+              if (ar.target_class != null && String(ar.target_class).trim() !== '') {
+                lines.push(`目标类别：${ar.target_class}`);
+              }
+              if (ar.target_count != null && String(ar.target_count).trim() !== '') {
+                lines.push(`目标数量：${ar.target_count}`);
+              }
+            }
+            return lines.length > 0 ? lines : null;
+          })
+          .catch(() => null);
 
-      const jsonName = imageName.replace(/\.[^/.]+$/, '.json');
-      const jsonUrl = `/static/mllm_commands_gt/${jsonName}`;
+      const tryTxt = stem =>
+        axios
+          .get(`/static/grouped_dataset/${folder}/${stem}.txt`, { responseType: 'text' })
+          .then(res => {
+            const t = res && res.data != null ? String(res.data).trim() : '';
+            return t ? [t] : null;
+          })
+          .catch(() => null);
 
-      return axios
-        .get(jsonUrl)
-        .then(res => {
-          const data = res && res.data ? res.data : {};
-          const commandText = data.command_text
-            ? String(data.command_text).trim()
-            : '';
-
-          this.attributeInfoList = [
-            commandText || '该图片对应 JSON 未提供 command_text'
-          ];
-          this.attributeInfo = this.attributeInfoList.join('\n');
-        })
-        .catch(err => {
-          console.error(`加载认知传播信息失败: ${jsonUrl}`, err);
-          this.attributeInfoList = [`未找到对应指令文件：${jsonName}`];
-          this.attributeInfo = this.attributeInfoList.join('\n');
-        });
+      const run = async () => {
+        for (let s = 0; s < stems.length; s++) {
+          const stem = stems[s];
+          const fromAnalysis = await tryAnalysis(stem);
+          if (fromAnalysis && fromAnalysis.length) {
+            this.attributeInfoList = fromAnalysis;
+            this.attributeInfo = fromAnalysis.join('\n');
+            return;
+          }
+          const fromTxt = await tryTxt(stem);
+          if (fromTxt && fromTxt.length) {
+            this.attributeInfoList = fromTxt;
+            this.attributeInfo = fromTxt.join('\n');
+            return;
+          }
+        }
+        this.attributeInfoList = [`分组 ${folder} 下未找到可用的 _analysis.json 或 .txt`];
+        this.attributeInfo = this.attributeInfoList.join('\n');
+      };
+      return run();
     },
     // 返回列表
     backToCompareList() {
+      this.closeGroupImageLightbox();
       this.compareView = 'list';
       this.selectedCompareFile = null;
+      this.selectedGroupImageFiles = [];
       this.selectedVideoName = null;
       this.selectedVideoUrl = null;
       this.selectedDetailType = null;
       this.selectedSourceKey = null;
-      this.compareMessage = this.compareFiles && this.compareFiles.length > 0 ? '' : '暂无compare图片文件';
+      this.compareMessage = this.compareFiles && this.compareFiles.length > 0 ? '' : '暂无分组数据';
       this.videoModule3RequestPayload = null;
       // 返回列表时，清空下方描述区域，回到“暂无属性信息”
       this.attributeInfoList = [];
       this.attributeInfo = '';
     },
-    // 图片加载失败兜底
+    // 分组三张图为静态路径，一般无需整页回退；保留占位（视频逻辑未使用此方法）
     handleCompareImageError(e) {
-      console.error('compare图片加载失败:', e);
-      this.compareMessage = '图片加载失败';
-      this.selectedCompareFile = null;
-      this.selectedSourceKey = null;
-      this.compareView = 'list';
+      console.error('图片加载失败:', e);
     },
     // 从 LocalStorage 加载视频
     loadVideoFromStorage() {
@@ -1858,12 +2013,154 @@ export default {
   box-sizing: border-box;
 }
 
+.source-list-section + .source-list-section {
+  margin-top: 12px;
+}
+
+/* 列表分区标题：渐变条 + 钉铛体，与同列 video-item 区分层级 */
+.compare-list-wrapper .source-list-heading-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 229, 255, 0.42);
+  background: linear-gradient(
+    105deg,
+    rgba(0, 229, 255, 0.14) 0%,
+    rgba(0, 90, 130, 0.28) 42%,
+    rgba(0, 35, 55, 0.45) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.compare-list-wrapper .source-list-heading-toggle:hover {
+  border-color: rgba(0, 229, 255, 0.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 12px rgba(0, 229, 255, 0.12);
+}
+
+.compare-list-wrapper .source-list-heading-toggle:focus-visible {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 2px rgba(0, 229, 255, 0.35);
+}
+
+.compare-list-wrapper .source-list-heading-label {
+  font-family: "DingTalk-JinBuTi", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #e8fdff;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compare-list-wrapper .source-list-heading-chevron {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1;
+  color: rgba(0, 229, 255, 0.92);
+  transition: transform 0.2s ease;
+}
+
+.compare-list-wrapper .source-list-heading-toggle.is-collapsed .source-list-heading-chevron {
+  transform: rotate(-90deg);
+}
+
+.source-list-items {
+  padding-bottom: 2px;
+}
+
 .compare-detail-wrapper {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.compare-detail-wrapper.compare-detail-group {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+}
+
+.compare-detail-wrapper .group-triple-img {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.compare-detail-wrapper .group-triple-img-clickable {
+  cursor: zoom-in;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.compare-detail-wrapper .group-triple-img-clickable:hover {
+  opacity: 0.92;
+  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.35);
+}
+
+.group-image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px 24px;
+  box-sizing: border-box;
+}
+
+.group-image-lightbox-img {
+  max-width: min(96vw, 1600px);
+  max-height: 88vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.55);
+}
+
+.group-image-lightbox-close {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 10051;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 229, 255, 0.12);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.group-image-lightbox-close:hover {
+  background: rgba(0, 229, 255, 0.28);
 }
 
 .compare-image {

@@ -1,0 +1,10 @@
+{
+    "group_name": "group_010",
+    "source_image": "firc_junshi_1644.jpg",
+    "source_label": "firc_junshi_1644.txt",
+    "analysis_result": {
+        "detailed_description": "该图像为俯视视角下的战场环境，显示了多处挖掘的战壕，分布在沙土与植被交错的区域，部分战壕内有烟雾或阴影，周围可见少量掩体结构。",
+        "target_class": "战壕",
+        "target_count": 4
+    }
+}

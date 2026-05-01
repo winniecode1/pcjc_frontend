@@ -1,0 +1,8 @@
+{
+    "source_image": "firc_junshi_4985.jpg",
+    "source_detection_json": "firc_junshi_4985.json",
+    "analysis_result": {
+        "raw_response": "在野外山地环境中，检测到四个战壕目标，周围有烟雾和植被。",
+        "status": "parse_failed"
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "source_image": "firc_junshi_354.jpg",
+    "source_detection_json": "firc_junshi_354.json",
+    "analysis_result": {
+        "raw_response": "在一条穿过树林和农田的道路上，检测到6个目标，其中包括2辆装甲战斗车辆和4辆坦克，周围环境为绿色植被覆盖的乡村地带。",
+        "status": "parse_failed"
+    }
+}

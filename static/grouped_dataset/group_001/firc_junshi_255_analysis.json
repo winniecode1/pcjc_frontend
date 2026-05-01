@@ -1,0 +1,10 @@
+{
+    "group_name": "group_001",
+    "source_image": "firc_junshi_255.jpg",
+    "source_label": "firc_junshi_255.txt",
+    "analysis_result": {
+        "detailed_description": "图像显示了一片农田与林地交错的区域，一条土路贯穿其中，路上有两辆装甲车辆，分别被标记为‘panzer’和‘armored-fighting-vehicle’，周围环境有明显的车辙痕迹和植被覆盖。",
+        "target_class": "坦克/装甲车, 装甲战斗车辆",
+        "target_count": 2
+    }
+}

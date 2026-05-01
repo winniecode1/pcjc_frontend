@@ -1,0 +1,8 @@
+{
+    "source_image": "firc_junshi_566.jpg",
+    "source_detection_json": "firc_junshi_566.json",
+    "analysis_result": {
+        "raw_response": "在一片森林边缘的开阔地带，有爆炸产生的烟雾，但未检测到具体目标。",
+        "status": "parse_failed"
+    }
+}

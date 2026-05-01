@@ -1,0 +1,8 @@
+{
+    "source_image": "firc_junshi_4080.jpg",
+    "source_detection_json": "firc_junshi_4080.json",
+    "analysis_result": {
+        "raw_response": "在山地丛林环境中，检测到五辆装甲战斗车辆，其中包括四辆装甲战斗车辆和一辆坦克。",
+        "status": "parse_failed"
+    }
+}

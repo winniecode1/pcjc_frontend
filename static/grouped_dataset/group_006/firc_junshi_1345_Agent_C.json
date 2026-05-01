@@ -1,0 +1,8 @@
+{
+    "source_image": "firc_junshi_1345.jpg",
+    "source_detection_json": "firc_junshi_1345.json",
+    "analysis_result": {
+        "raw_response": "在一片树林和烧焦地面交错的野外环境中，检测到一辆坦克。",
+        "status": "parse_failed"
+    }
+}

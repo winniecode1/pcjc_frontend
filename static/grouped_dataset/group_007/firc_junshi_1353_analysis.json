@@ -1,0 +1,10 @@
+{
+    "group_name": "group_007",
+    "source_image": "firc_junshi_1353.jpg",
+    "source_label": "firc_junshi_1353.txt",
+    "analysis_result": {
+        "detailed_description": "图像显示了一个乡村战场环境，背景中有受损的建筑物和烟雾，前景中有两辆被绿色框标记的装甲战斗车辆，位于开阔地带。",
+        "target_class": "装甲战斗车辆",
+        "target_count": 2
+    }
+}

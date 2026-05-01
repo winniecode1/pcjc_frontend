@@ -1,0 +1,8 @@
+{
+    "source_image": "firc_junshi_3124.jpg",
+    "source_detection_json": "firc_junshi_3124.json",
+    "analysis_result": {
+        "raw_response": "在乡村居民区的环境中，检测到四个坦克目标，其中三个被明确标注为“panzer”，分别具有0.83、0.42和0.33的置信度，分布在村庄道路附近。",
+        "status": "parse_failed"
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "source_image": "firc_junshi_1524.jpg",
+    "source_detection_json": "firc_junshi_1524.json",
+    "analysis_result": {
+        "raw_response": "在建筑物旁的空地上，检测到两辆军用卡车，其中一辆置信度较高，另一辆置信度较低。",
+        "status": "parse_failed"
+    }
+}

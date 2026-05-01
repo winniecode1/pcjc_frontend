@@ -1,0 +1,10 @@
+{
+    "group_name": "group_003",
+    "source_image": "firc_junshi_566.jpg",
+    "source_label": "firc_junshi_566.txt",
+    "analysis_result": {
+        "detailed_description": "图像显示了一片林地边缘的土路，路边有烟尘升起，疑似爆炸或车辆行驶产生的烟雾，两个被标记为坦克/装甲车的目标位于土路上，周围环境为茂密树林和干草地。",
+        "target_class": "坦克/装甲车",
+        "target_count": 2
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "group_name": "group_017",
+    "source_image": "firc_junshi_4846.jpg",
+    "source_label": "firc_junshi_4846.txt",
+    "analysis_result": {
+        "detailed_description": "图像显示一片开阔的沙地地形，背景为丘陵和植被，远处有多辆坦克/装甲车呈线性分布，部分目标被紫色框标注，整体环境符合军事演习或战场侦察场景。",
+        "target_class": "坦克/装甲车",
+        "target_count": 8
+    }
+}

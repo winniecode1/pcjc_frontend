@@ -1,0 +1,8 @@
+{
+    "source_image": "firc_junshi_3016.jpg",
+    "source_detection_json": "firc_junshi_3016.json",
+    "analysis_result": {
+        "raw_response": "在雪地乡村道路上，有五辆重型车辆，其中一辆正在燃烧并冒出浓烟，周围环境为冬季田野和道路。",
+        "status": "parse_failed"
+    }
+}

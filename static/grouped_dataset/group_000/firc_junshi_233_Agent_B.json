@@ -1,0 +1,8 @@
+{
+    "source_image": "firc_junshi_233.jpg",
+    "source_detection_json": "firc_junshi_233.json",
+    "analysis_result": {
+        "raw_response": "这张图中，在一片绿色田野和树林环绕的乡村道路上，有一辆白色车辆正在行驶并产生大量烟尘，周围地面上有多个黑色圆形痕迹。",
+        "status": "parse_failed"
+    }
+}

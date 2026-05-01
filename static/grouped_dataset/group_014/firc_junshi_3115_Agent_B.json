@@ -1,0 +1,8 @@
+{
+    "source_image": "firc_junshi_3115.jpg",
+    "source_detection_json": "firc_junshi_3115.json",
+    "analysis_result": {
+        "raw_response": "这张图中显示的是一个乡村或郊区环境，周围有大量房屋和农田，但未检测到具体的目标物体。",
+        "status": "parse_failed"
+    }
+}

@@ -1,0 +1,8 @@
+{
+    "source_image": "firc_junshi_575.jpg",
+    "source_detection_json": "firc_junshi_575.json",
+    "analysis_result": {
+        "raw_response": "在一片森林边缘的土路上，有一辆坦克正在行驶并引发尘土飞扬。",
+        "status": "parse_failed"
+    }
+}
