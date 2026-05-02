@@ -469,6 +469,11 @@ export default {
       videoSourceListExpanded: false,
       /** 视频：从 /static/video_results 对应 JSON 解析出、用于 module3 请求的字段 */
       videoModule3RequestPayload: null,
+      /**
+       * 图片模式一轮展示：{ a,b,c } 各为 { model_name: '-', reason: raw_response }；
+       * 接口仍用 module3 返回填二轮；仅 round1 展示走静态 JSON。
+       */
+      imageModeRound1FromStatic: null,
 
       // 视频相关数据（此页面已不展示，但保留兼容）
       videoUrl: null,
@@ -655,6 +660,7 @@ export default {
       this.isRound2Displayed = false;
       this.isRightLoadingResults = false;
       this.accuracyRate = '—';
+      this.imageModeRound1FromStatic = null;
     },
     /** 模块三返回的 accuracy_metrics.accuracy */
     getAccuracyFromModule3Data(data) {
@@ -736,11 +742,18 @@ export default {
       if (!data || typeof data !== 'object') return;
 
       if (o.round1) {
-        const init = this.getInitialAnalysesPayload(data);
-        const r1 = this.pickFromAgentMap(init);
-        this.agentARound1Result = r1.a || '';
-        this.agentBRound1Result = r1.b || '';
-        this.agentCRound1Result = r1.c || '';
+        if (this.selectedDetailType === 'compare' && this.imageModeRound1FromStatic) {
+          const s = this.imageModeRound1FromStatic;
+          this.agentARound1Result = s.a || '';
+          this.agentBRound1Result = s.b || '';
+          this.agentCRound1Result = s.c || '';
+        } else {
+          const init = this.getInitialAnalysesPayload(data);
+          const r1 = this.pickFromAgentMap(init);
+          this.agentARound1Result = r1.a || '';
+          this.agentBRound1Result = r1.b || '';
+          this.agentCRound1Result = r1.c || '';
+        }
       }
       if (o.round2) {
         const res = this.getNegotiationResultsPayload(data);
@@ -1235,6 +1248,53 @@ export default {
       };
       return run();
     },
+    /**
+     * 图片分组一轮展示：按分组内排序后的第 1/2/3 张图主文件名，分别请求
+     * `{stem}_Agent_A.json`、`_Agent_B.json`、`_Agent_C.json`，取 analysis_result.raw_response；
+     * 推理型号固定为「-」（与模板 model_name 字段对应）。
+     */
+    async loadCompareRound1StaticAgents(folder, sortedJpgs) {
+      const stems = (sortedJpgs || []).map(fn => String(fn).replace(/\.[^/.]+$/, ''));
+      const specs = [
+        { key: 'a', fileSuffix: 'Agent_A', stemIdx: 0 },
+        { key: 'b', fileSuffix: 'Agent_B', stemIdx: 1 },
+        { key: 'c', fileSuffix: 'Agent_C', stemIdx: 2 }
+      ];
+      const out = { a: null, b: null, c: null };
+      if (!folder || stems.length === 0) {
+        return null;
+      }
+      const fetchOne = async (stem, fileSuffix) => {
+        if (!stem) {
+          return { model_name: '-', reason: '***' };
+        }
+        const url = `/static/grouped_dataset/${folder}/${stem}_${fileSuffix}.json`;
+        try {
+          const res = await axios.get(url);
+          const raw = res && res.data;
+          if (typeof raw === 'string' && /^\s*</.test(raw)) {
+            console.warn('[GroupNegotiation] Agent JSON 响应为 HTML，视为失败:', url);
+            return { model_name: '-', reason: '***' };
+          }
+          const ar = raw && typeof raw === 'object' ? raw.analysis_result : null;
+          const rr =
+            ar && ar.raw_response != null && String(ar.raw_response).trim() !== ''
+              ? String(ar.raw_response)
+              : '***';
+          return { model_name: '-', reason: rr };
+        } catch (e) {
+          console.warn('[GroupNegotiation] 加载一轮 Agent 静态 JSON 失败:', url, e);
+          return { model_name: '-', reason: '***' };
+        }
+      };
+      for (let i = 0; i < specs.length; i++) {
+        const { key, fileSuffix, stemIdx } = specs[i];
+        const stem = stems[stemIdx];
+        out[key] = await fetchOne(stem, fileSuffix);
+      }
+      console.log('[GroupNegotiation] 图片模式一轮静态推理已组装:', folder, out);
+      return out;
+    },
     // 返回列表
     backToCompareList() {
       this.closeGroupImageLightbox();
@@ -1413,6 +1473,15 @@ export default {
         
         console.log('[GroupNegotiation] 推理请求成功，结果:', data);
         this.pendingNegotiationResult = data;
+
+        if (this.selectedDetailType === 'compare') {
+          this.imageModeRound1FromStatic = await this.loadCompareRound1StaticAgents(
+            this.selectedCompareFile,
+            this.selectedGroupImageFiles
+          );
+        } else {
+          this.imageModeRound1FromStatic = null;
+        }
 
         // 只展示一轮/二轮；右侧结果需用户点击“群体协商偏差检测”后再展示
         this.applyModule3Fields(data, {
