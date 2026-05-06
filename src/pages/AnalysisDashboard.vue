@@ -52,10 +52,11 @@
               <b-carousel-slide v-for="(item, index) in carouselItems" :key="`${item.type || 'x'}-${item.src || item.title || index}`">
                 <template #img>
                   <div class="carousel-slide-content">
+                    <div v-if="item.stage" class="stage-chip">{{ formatStageLabel(item.stage) }}</div>
                     <img v-if="item.type === 'image'" :src="item.src" class="slide-media slide-media-image">
                     <video v-else-if="item.type === 'video'" :src="item.src" autoplay muted loop class="slide-media slide-media-video"></video>
                     <div v-else-if="item.type === 'text'" class="text-slide-content">
-                      <div class="text-slide-title">{{ replaceAgentTerms(item.title) }}</div>
+                      <div class="text-slide-title">{{ formatCarouselTitle(item) }}</div>
                       <div class="text-slide-desc">{{ translateTextContent(item.content) }}</div>
                     </div>
                   </div>
@@ -146,9 +147,9 @@
 
 <script>
 import * as echarts from 'echarts';
-const API_BASE_URL = process.env.VUE_APP_MODULE5_API_BASE_URL || 'http://10.109.253.71:5235';
-const DATASET_API_BASE_URL = process.env.VUE_APP_DATASET_API_BASE_URL || API_BASE_URL;
-const KNOWLEDGE_API_BASE_URL = process.env.VUE_APP_KNOWLEDGE_API_BASE_URL || 'http://10.109.253.71:8001';
+const API_BASE_URL = 'http://localhost:5235';
+const DATASET_API_BASE_URL = API_BASE_URL;
+const KNOWLEDGE_API_BASE_URL = 'http://localhost:8001';
 
 const FIELD_LABEL_MAP = {
   'ground_truth': '真实标签',
@@ -178,6 +179,18 @@ const ANALYSIS_ACCURACY_DONE_VALUE = 89;
 const ANALYSIS_TIMER_KEY = 'pcjc_analysis_timers_v1';
 const ANALYSIS_PRE_ACCURACY = 70;
 const ANALYSIS_POST_ACCURACY = 82;
+const STAGE_LABEL_MAP = {
+  Stage1: '多模态信息认知阶段',
+  Stage2: '先验知识认知阶段',
+  Stage3: '群体协商认知阶段',
+  Stage4: '决策选择认知阶段'
+};
+const STAGE_MODULE_NODE_MAP = {
+  Stage1: 'M1',
+  Stage2: 'M2',
+  Stage3: 'M3',
+  Stage4: 'M4'
+};
 function randomBetween(min, max) { return min + Math.random() * (max - min); }
 
 function firstNonEmptyValue(...values) {
@@ -261,11 +274,26 @@ export default {
     this.initChart();
     this.renderFormula();
     this.restoreFullStateFromStorage();
+    this.$nextTick(() => {
+      this.syncCarouselStageHighlight();
+    });
   },
   beforeDestroy() {
     sessionStorage.setItem('pcjc_analysis_nav', '1');
     if (this.revealContentTimer) clearTimeout(this.revealContentTimer);
     if (this.metricsDisplayTimer) clearTimeout(this.metricsDisplayTimer);
+  },
+  watch: {
+    carouselSlide() {
+      this.$nextTick(() => {
+        this.syncCarouselStageHighlight();
+      });
+    },
+    carouselItems() {
+      this.$nextTick(() => {
+        this.syncCarouselStageHighlight();
+      });
+    }
   },
   methods: {
     renderFormula() {
@@ -316,7 +344,7 @@ export default {
               { name: 'M2', value: '先验知识认知偏差检测', x: 800, y: 200, symbol: 'circle', symbolSize: 95, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2, shadowColor: '#4ED8FF', shadowBlur: 10 }, label: { fontSize: 12, fontWeight: 'bold', formatter: '先验知识\n认知偏差\n检测' }, desc: "结合专家知识库，对初步检测结果进行先验逻辑验证。", status: "待启动" },
               { name: 'M3', value: '智能体协商认知偏差检测', x: 300, y: 550, symbol: 'circle', symbolSize: 95, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2, shadowColor: '#4ED8FF', shadowBlur: 10 }, label: { fontSize: 12, fontWeight: 'bold', formatter: '智能体协商\n认知偏差\n检测' }, desc: "通过多个智能体的博弈与协商，进一步精细化偏差定位。", status: "待启动" },
               { name: 'M4', value: '决策选择认知偏差检测', x: 850, y: 550, symbol: 'circle', symbolSize: 95, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2, shadowColor: '#4ED8FF', shadowBlur: 10 }, label: { fontSize: 12, fontWeight: 'bold', formatter: '决策选择\n认知偏差\n检测' }, desc: "在决策层面上分析认知偏差对最终行动方案的影响。", status: "待启动" },
-              { name: 'V1', value: 'V_video', x: 150, y: 100, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "输入视频流数据。" },
+              { name: 'V_img', value: 'V_img', x: 150, y: 100, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "输入图像数据。" },
               { name: 'V2', value: 'V_instr', x: 300, y: 100, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "指挥官下达的初始指令文本。" },
               { name: 'V3', value: 'V_det', x: 550, y: 200, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "目标检测识别结果。" },
               { name: 'V4', value: 'V_desc', x: 500, y: 350, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "场景语义描述特征向量。" },
@@ -326,7 +354,7 @@ export default {
               { name: 'V8', value: 'V_hazard', x: 800, y: 750, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "最终评估的冲突危害等级。" }
             ],
             links: [
-              { source: 'V1', target: 'M1' }, { source: 'V2', target: 'M1' },
+              { source: 'V_img', target: 'M1' }, { source: 'V2', target: 'M1' },
               { source: 'M1', target: 'V3' }, { source: 'M1', target: 'V4' },
               { source: 'V3', target: 'M2' }, { source: 'V4', target: 'M2' },
               { source: 'V5', target: 'M2' }, { source: 'V6', target: 'M3' },
@@ -549,6 +577,76 @@ export default {
       const match = String(stageName).match(/Stage(\d+)/i);
       return match ? Number(match[1]) : null;
     },
+    formatStageLabel(stageName) {
+      const raw = String(stageName || '').trim();
+      const match = raw.match(/^Stage([1-4])$/i);
+      if (!match) return raw;
+      return STAGE_LABEL_MAP[`Stage${match[1]}`] || raw;
+    },
+    replaceStageTerms(text) {
+      if (!text || typeof text !== 'string') return text || '';
+      return text.replace(/\bStage([1-4])\b/gi, (match, stageNo) => (
+        STAGE_LABEL_MAP[`Stage${stageNo}`] || match
+      ));
+    },
+    formatCarouselTitle(item) {
+      const stageLabel = this.formatStageLabel(item && item.stage);
+      const title = this.replaceStageTerms(this.replaceAgentTerms((item || {}).title));
+      if (!stageLabel) return title;
+      const cleanedTitle = String(title || '').replace(new RegExp(`^${stageLabel}\\s*[·•\\-—:]?\\s*`), '');
+      return cleanedTitle ? `${stageLabel} ${cleanedTitle}` : stageLabel;
+    },
+    getStageKeyFromCarouselItem(item = {}) {
+      const rawStage = String(item.stage || '').trim();
+      const match = rawStage.match(/^Stage([1-4])$/i);
+      if (match) return `Stage${match[1]}`;
+      const stageIndex = Number(item.stage_index);
+      if (Number.isInteger(stageIndex) && stageIndex >= 1 && stageIndex <= 4) {
+        return `Stage${stageIndex}`;
+      }
+      return '';
+    },
+    syncCarouselStageHighlight() {
+      if (!this.myChart || !Array.isArray(this.carouselItems) || this.carouselItems.length === 0) {
+        return;
+      }
+      const currentItem = this.carouselItems[this.carouselSlide] || this.carouselItems[0];
+      const currentTitle = String(currentItem.title || '').trim();
+      const isInstructionSlide = currentTitle.includes('作战指令');
+      const isSecondMediaSlide = this.carouselSlide === 1 && ['image', 'video'].includes(currentItem.type);
+      const targetNode = isInstructionSlide
+        ? 'V2'
+        : (isSecondMediaSlide ? 'V_img' : '');
+      if (targetNode) {
+        this.highlightGraphByNodeSet([targetNode]);
+        const node = this.graphBaseData.find(item => item.name === targetNode);
+        if (node) {
+          this.selectedNode = {
+            text: node.value,
+            category: 'Variable',
+            desc: node.desc,
+            value: node.status
+          };
+        }
+        return;
+      }
+      const stageKey = this.getStageKeyFromCarouselItem(currentItem);
+      const moduleNode = STAGE_MODULE_NODE_MAP[stageKey];
+      if (!moduleNode) {
+        this.resetGraphHighlight();
+        return;
+      }
+      this.highlightGraphByNodeSet([moduleNode]);
+      const node = this.graphBaseData.find(item => item.name === moduleNode);
+      if (node) {
+        this.selectedNode = {
+          text: node.value,
+          category: 'Module',
+          desc: node.desc,
+          value: node.status
+        };
+      }
+    },
     applyFileSelectionResult(response, video) {
       const res = response || {};
       let carouselItems = this.normalizeCarouselItems(res.carouselItems);
@@ -647,6 +745,9 @@ export default {
       this.carouselSlide = 0;
       this.carouselItems = carouselItems;
       this.persistSelectedSourceContext(this.selectedFileContext);
+      this.$nextTick(() => {
+        this.syncCarouselStageHighlight();
+      });
     },
     readTimerState() {
       try {
@@ -957,7 +1058,7 @@ export default {
           status: `解析准确率 ${fmtPercent(m4Accuracy)}`,
           labelFormatter: buildModuleLabelFormatter('M4', fmtPercent(m4Accuracy))
         },
-        V1: { desc: videoAddress || '-', status: short(videoAddress || '-', 36) },
+        V_img: { desc: videoAddress || '-', status: short(videoAddress || '-', 36) },
         V2: { desc: instrText || '-', status: short(instrText || '-', 36) },
         V3: { desc: detectionText || '-', status: short(detectionText || '-', 36) },
         V4: { desc: sceneText || '-', status: short(sceneText || '-', 36) },
@@ -1000,6 +1101,9 @@ export default {
           };
         }
       }
+      this.$nextTick(() => {
+        this.syncCarouselStageHighlight();
+      });
     },
     asDict(value) {
       return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -1477,7 +1581,8 @@ export default {
         "多模态": 'M1',
         // 变量
         video: 'V1',
-        v_video: 'V1',
+        v_video: 'V_img',
+        v_img: 'V_img',
         instr: 'V2',
         v_instr: 'V2',
         det: 'V3',
@@ -1599,7 +1704,7 @@ export default {
         const translated = FIELD_LABEL_MAP[key];
         return translated ? translated + sep : match;
       });
-      return this.replaceAgentTerms(translated);
+      return this.replaceStageTerms(this.replaceAgentTerms(translated));
     },
     isVideo(name) { return name && (name.endsWith('.mp4') || name.endsWith('.avi')); },
     videoUrl(path) {
@@ -1688,7 +1793,21 @@ export default {
   min-height: 0; overflow: hidden; position: relative;
 }
 .preview-placeholder { color: #8bd3f9; font-size: 14px; opacity: 0.7; }
-.carousel-slide-content { height: 26vh; display: flex; align-items: center; justify-content: center; width: 100%; padding: 4px; overflow: hidden; }
+.carousel-slide-content { height: 26vh; display: flex; align-items: center; justify-content: center; width: 100%; padding: 4px; overflow: hidden; position: relative; }
+.stage-chip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  background: rgba(0, 229, 255, 0.16);
+  border: 1px solid rgba(0, 229, 255, 0.6);
+  color: #9ff4ff;
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+}
 .slide-media {
   width: 100%;
   height: 100%;

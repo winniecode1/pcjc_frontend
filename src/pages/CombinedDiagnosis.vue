@@ -78,11 +78,11 @@
               <b-carousel-slide v-for="(item, index) in carouselItems" :key="`${item.type || 'x'}-${item.src || item.title || index}`">
                 <template #img>
                    <div class="carousel-slide-content">
-                     <div v-if="item.stage" class="stage-chip">{{ item.stage }}</div>
-                     <img v-if="item.type === 'image'" :src="item.src" class="slide-media slide-media-image">
-                     <video v-else-if="item.type === 'video'" :src="item.src" autoplay muted loop class="slide-media slide-media-video"></video>
+                    <div v-if="item.stage" class="stage-chip">{{ formatStageLabel(item.stage) }}</div>
+                    <img v-if="item.type === 'image'" :src="item.src" class="slide-media slide-media-image">
+                    <video v-else-if="item.type === 'video'" :src="item.src" autoplay muted loop class="slide-media slide-media-video"></video>
                        <div v-else-if="item.type === 'text'" class="text-slide-content">
-                         <div class="text-slide-title">{{ item.stage ? `${item.stage} · ${replaceAgentTerms(item.title)}` : replaceAgentTerms(item.title) }}</div>
+                         <div class="text-slide-title">{{ formatCarouselTitle(item) }}</div>
                          <div class="text-slide-desc">{{ formatSlideContent(item) }}</div>
                        </div>
                    </div>
@@ -228,7 +228,7 @@
 </template>
 
 <script>
-const API_BASE_URL = process.env.VUE_APP_MODULE5_API_BASE_URL || 'http://10.109.253.71:5235';
+const API_BASE_URL = 'http://localhost:5235';
 
 const FIELD_LABEL_MAP = {
   'ground_truth': '真实标签',
@@ -259,6 +259,12 @@ const FIELD_LABEL_MAP = {
 
 const COMBINED_TIMER_KEY = 'pcjc_combined_timers_v2';
 const COMBINED_RECALL_DONE_VALUE = 0.92;
+const STAGE_LABEL_MAP = {
+  Stage1: '多模态信息认知阶段',
+  Stage2: '先验知识认知阶段',
+  Stage3: '群体协商认知阶段',
+  Stage4: '决策选择认知阶段'
+};
 function randomBetween(min, max) { return min + Math.random() * (max - min); }
 
 export default {
@@ -325,7 +331,7 @@ export default {
   },
   computed: {
     // 后端基础地址
-    baseUrl() { return 'http://10.109.253.71:5237'; },
+    baseUrl() { return 'http://localhost:5237'; },
     liveImages() {
       const list = Array.isArray(this.imageList) ? this.imageList : [];
       return list.filter(v => v && v.type === 'live');
@@ -646,6 +652,25 @@ export default {
       if (!stageName) return null;
       const match = String(stageName).match(/Stage(\d+)/i);
       return match ? Number(match[1]) : null;
+    },
+    formatStageLabel(stageName) {
+      const raw = String(stageName || '').trim();
+      const match = raw.match(/^Stage([1-4])$/i);
+      if (!match) return raw;
+      return STAGE_LABEL_MAP[`Stage${match[1]}`] || raw;
+    },
+    replaceStageTerms(text) {
+      if (!text || typeof text !== 'string') return text || '';
+      return text.replace(/\bStage([1-4])\b/gi, (match, stageNo) => (
+        STAGE_LABEL_MAP[`Stage${stageNo}`] || match
+      ));
+    },
+    formatCarouselTitle(item) {
+      const stageLabel = this.formatStageLabel(item && item.stage);
+      const title = this.replaceStageTerms(this.replaceAgentTerms((item || {}).title));
+      if (!stageLabel) return title;
+      const cleanedTitle = String(title || '').replace(new RegExp(`^${stageLabel}\\s*[·•\\-—:]?\\s*`), '');
+      return cleanedTitle ? `${stageLabel} ${cleanedTitle}` : stageLabel;
     },
     clearAnalysisTimers() {
       if (this.revealContentTimer) {
