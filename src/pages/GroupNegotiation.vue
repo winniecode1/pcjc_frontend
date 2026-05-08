@@ -227,7 +227,15 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentABNegotiation === 'object' && agentABNegotiation !== null" class="agent-result">
-                    <span class="result-line">推理结果：{{ agentABNegotiation.battlefield_analysis || agentABNegotiation.final_model_name || '***' }}</span>
+                    <template v-if="abBfTriple">
+                      <span class="result-line">推理结果：</span>
+                      <span class="result-line result-line-nested">场景描述：{{ displayBfField(abBfTriple.detailed_description) }}</span>
+                      <span class="result-line result-line-nested">目标类别：{{ displayBfField(abBfTriple.target_class) }}</span>
+                      <span class="result-line result-line-nested">目标数量：{{ displayBfField(abBfTriple.target_count) }}</span>
+                    </template>
+                    <template v-else>
+                      <span class="result-line">推理结果：{{ agentABNegotiation.battlefield_analysis || agentABNegotiation.final_model_name || '***' }}</span>
+                    </template>
                     <span class="result-line">推理共识：{{ agentABNegotiation.negotiation_basis || '***' }}</span>
                     <span class="result-line">推理分歧：{{ agentABNegotiation.deviation || '***' }}</span>
                   </p>
@@ -246,7 +254,15 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentBCNegotiation === 'object' && agentBCNegotiation !== null" class="agent-result">
-                    <span class="result-line">推理结果：{{ agentBCNegotiation.battlefield_analysis || agentBCNegotiation.final_model_name || '***' }}</span>
+                    <template v-if="bcBfTriple">
+                      <span class="result-line">推理结果：</span>
+                      <span class="result-line result-line-nested">场景描述：{{ displayBfField(bcBfTriple.detailed_description) }}</span>
+                      <span class="result-line result-line-nested">目标类别：{{ displayBfField(bcBfTriple.target_class) }}</span>
+                      <span class="result-line result-line-nested">目标数量：{{ displayBfField(bcBfTriple.target_count) }}</span>
+                    </template>
+                    <template v-else>
+                      <span class="result-line">推理结果：{{ agentBCNegotiation.battlefield_analysis || agentBCNegotiation.final_model_name || '***' }}</span>
+                    </template>
                     <span class="result-line">推理共识：{{ agentBCNegotiation.negotiation_basis || '***' }}</span>
                     <span class="result-line">推理分歧：{{ agentBCNegotiation.deviation || '***' }}</span>
                   </p>
@@ -265,7 +281,15 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentCANegotiation === 'object' && agentCANegotiation !== null" class="agent-result">
-                    <span class="result-line">推理结果：{{ agentCANegotiation.battlefield_analysis || agentCANegotiation.final_model_name || '***' }}</span>
+                    <template v-if="caBfTriple">
+                      <span class="result-line">推理结果：</span>
+                      <span class="result-line result-line-nested">场景描述：{{ displayBfField(caBfTriple.detailed_description) }}</span>
+                      <span class="result-line result-line-nested">目标类别：{{ displayBfField(caBfTriple.target_class) }}</span>
+                      <span class="result-line result-line-nested">目标数量：{{ displayBfField(caBfTriple.target_count) }}</span>
+                    </template>
+                    <template v-else>
+                      <span class="result-line">推理结果：{{ agentCANegotiation.battlefield_analysis || agentCANegotiation.final_model_name || '***' }}</span>
+                    </template>
                     <span class="result-line">推理共识：{{ agentCANegotiation.negotiation_basis || '***' }}</span>
                     <span class="result-line">推理分歧：{{ agentCANegotiation.deviation || '***' }}</span>
                   </p>
@@ -325,7 +349,16 @@
               <div class="final-result-section">
                 <div class="final-result-title">协商结果</div>
                 <div class="final-model-display">
-                  <p class="final-model-text" style="white-space: pre-wrap;">{{ finalResult || '请完成「开始群体协商」并点击「群体协商偏差检测」后查看' }}</p>
+                  <template v-if="selectedDetailType === 'compare' && finalBattlefieldTriple">
+                    <p class="final-model-text">场景描述：{{ displayBfField(finalBattlefieldTriple.detailed_description) }}</p>
+                    <p class="final-model-text">目标类别：{{ displayBfField(finalBattlefieldTriple.target_class) }}</p>
+                    <p class="final-model-text">目标数量：{{ displayBfField(finalBattlefieldTriple.target_count) }}</p>
+                  </template>
+                  <p
+                    v-else
+                    class="final-model-text"
+                    style="white-space: pre-wrap;"
+                  >{{ finalResult || '请完成「开始群体协商」并点击「群体协商偏差检测」后查看' }}</p>
                 </div>
               </div>
             </template>
@@ -434,6 +467,8 @@ export default {
       agentCANegotiation: "",
       deviationProcess: "",
       finalResult: '',
+      /** 仅图片分组 + 偏差检测后：final_battlefield_analysis 解析为对象时用于「协商结果」三行展示；视频模式恒为 null */
+      finalBattlefieldTriple: null,
       isLoading: false,
       accuracyRate: '—',
       color: '',
@@ -605,6 +640,19 @@ export default {
     },
     deviationReportText() {
       return this.toDisplayString(this.deviationReport);
+    },
+    /** 图片分组模式：二轮 battlefield_analysis 可解析为对象时供模板展开为三行 */
+    abBfTriple() {
+      if (this.selectedDetailType !== 'compare') return null;
+      return this.round2BattlefieldTriple(this.agentABNegotiation);
+    },
+    bcBfTriple() {
+      if (this.selectedDetailType !== 'compare') return null;
+      return this.round2BattlefieldTriple(this.agentBCNegotiation);
+    },
+    caBfTriple() {
+      if (this.selectedDetailType !== 'compare') return null;
+      return this.round2BattlefieldTriple(this.agentCANegotiation);
     }
   },
   mounted() {
@@ -661,6 +709,7 @@ export default {
       this.isRightLoadingResults = false;
       this.accuracyRate = '—';
       this.imageModeRound1FromStatic = null;
+      this.finalBattlefieldTriple = null;
     },
     /** 模块三返回的 accuracy_metrics.accuracy */
     getAccuracyFromModule3Data(data) {
@@ -723,6 +772,36 @@ export default {
         b: pick(['Agent_B', 'agent_b', 'B', '智能体B', '智能体_B']) || fallbackByIndex(1),
         c: pick(['Agent_C', 'agent_c', 'C', '智能体C', '智能体_C']) || fallbackByIndex(2)
       };
+    },
+    /** 展示 battlefield_analysis 内字段；空则为 *** */
+    displayBfField(v) {
+      if (v == null || v === '') return '***';
+      const s = String(v).trim();
+      return s !== '' ? s : '***';
+    },
+    /** 将 battlefield_analysis 规范为普通对象（支持 JSON 字符串） */
+    parseBattlefieldAnalysisObject(ba) {
+      if (ba == null || ba === '') return null;
+      if (typeof ba === 'object' && !Array.isArray(ba)) return ba;
+      if (typeof ba === 'string') {
+        const t = ba.trim();
+        if (!t) return null;
+        if (t.startsWith('{')) {
+          try {
+            const p = JSON.parse(t);
+            if (p && typeof p === 'object' && !Array.isArray(p)) return p;
+          } catch (e) {
+            return null;
+          }
+        }
+        return null;
+      }
+      return null;
+    },
+    /** 图片分组且 battlefield_analysis 为结构化对象时返回该对象，否则 null（模板走原单行推理结果） */
+    round2BattlefieldTriple(negot) {
+      if (!negot || typeof negot !== 'object') return null;
+      return this.parseBattlefieldAnalysisObject(negot.battlefield_analysis);
     },
     /**
      * 从 module3 根对象填充界面（与 localStorage module3Res 结构一致）
@@ -788,8 +867,23 @@ export default {
         this.disagreementPointsHighlight = '';
       }
       if (o.finalBlock) {
+        this.finalBattlefieldTriple = null;
         if (data.final_battlefield_analysis != null && data.final_battlefield_analysis !== '') {
-          this.finalResult = this.toDisplayString(data.final_battlefield_analysis);
+          if (this.selectedDetailType === 'compare') {
+            const triple = this.parseBattlefieldAnalysisObject(data.final_battlefield_analysis);
+            if (triple) {
+              this.finalBattlefieldTriple = {
+                detailed_description: triple.detailed_description,
+                target_class: triple.target_class,
+                target_count: triple.target_count
+              };
+              this.finalResult = '';
+            } else {
+              this.finalResult = this.toDisplayString(data.final_battlefield_analysis);
+            }
+          } else {
+            this.finalResult = this.toDisplayString(data.final_battlefield_analysis);
+          }
         } else if (data.final_model_name != null && data.final_model_name !== '') {
           this.finalResult = this.toDisplayString(data.final_model_name);
         }
@@ -1517,6 +1611,7 @@ export default {
         this.isLoadingRound1 = false;
         this.isLoadingRound2 = false;
         const errMsg = (error.response && error.response.data && error.response.data.error) || error.message;
+        this.finalBattlefieldTriple = null;
         this.finalResult = '推理失败: ' + errMsg;
       } finally {
         // 全局不显示遮罩，这里不再处理 isLoading
@@ -2628,6 +2723,12 @@ export default {
   line-height: 1.5;
 }
 
+/* 二轮「推理结果」下挂场景描述 / 目标类别 / 目标数量 */
+.agent-result .result-line-nested {
+  padding-left: 1em;
+  margin-bottom: 6px;
+}
+
 .agent-result .result-line:last-child {
   margin-bottom: 0;
 }
@@ -2721,8 +2822,10 @@ export default {
   flex: 1;
   min-height: 0;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: stretch;
   justify-content: flex-start;
+  gap: 8px;
   background-color: rgba(0, 0, 0, 0.25);
   border: 1px solid rgba(0, 229, 255, 0.35);
   border-radius: 8px;
