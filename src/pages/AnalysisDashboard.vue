@@ -147,9 +147,9 @@
 
 <script>
 import * as echarts from 'echarts';
-const API_BASE_URL = 'http://localhost:5235';
+const API_BASE_URL = 'http://10..109.253.71:5235';
 const DATASET_API_BASE_URL = API_BASE_URL;
-const KNOWLEDGE_API_BASE_URL = 'http://localhost:8001';
+const KNOWLEDGE_API_BASE_URL = 'http://10.109.253.71:8001';
 
 const FIELD_LABEL_MAP = {
   'ground_truth': '真实标签',

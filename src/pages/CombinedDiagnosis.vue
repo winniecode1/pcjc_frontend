@@ -228,7 +228,7 @@
 </template>
 
 <script>
-const API_BASE_URL = 'http://localhost:5235';
+const API_BASE_URL = 'http://10.109.253.71:5235';
 
 const FIELD_LABEL_MAP = {
   'ground_truth': '真实标签',
