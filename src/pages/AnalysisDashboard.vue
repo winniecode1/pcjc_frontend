@@ -147,7 +147,7 @@
 
 <script>
 import * as echarts from 'echarts';
-const API_BASE_URL = 'http://10..109.253.71:5235';
+const API_BASE_URL = 'http://10.109.253.71:5235';
 const DATASET_API_BASE_URL = API_BASE_URL;
 const KNOWLEDGE_API_BASE_URL = 'http://10.109.253.71:8001';
 
