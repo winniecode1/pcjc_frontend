@@ -420,8 +420,8 @@
   </div>
 </template><script>
 import axios from 'axios';
-// 开发环境走 webpack devServer 代理，避免 CORS（config/index.js proxyTable）
-const TARGET_DETECTION_API_BASE_URL = '/td5236';
+// 与 TargetDetection.vue 一致：多模态目标检测服务（视频列表 / 文件流）
+const IMAGE_API_URL = 'http://10.109.253.71:5237';
 const MODULE3_BASE = (process.env.VUE_APP_MODULE3_BASE || '').replace(/\/$/, '');
 const MODULE3_REFINE_URL = MODULE3_BASE
   ? `${MODULE3_BASE}/refine`
@@ -429,6 +429,15 @@ const MODULE3_REFINE_URL = MODULE3_BASE
 const MODULE3_EXPORT_URL = MODULE3_BASE
   ? `${MODULE3_BASE}/export`
   : '/module3/export';
+/** 视频群体协商 POST：JSON 里绝对路径前缀换为 `..`，其余原样 */
+const MODULE3_VIDEO_IMAGE_PATH_PREFIX = '/home/wuzhixuan/Project/PCJC';
+function toModule3VideoImagePath(serverPath) {
+  const s = serverPath == null ? '' : String(serverPath).trim();
+  if (!s) return s;
+  return s.startsWith(MODULE3_VIDEO_IMAGE_PATH_PREFIX)
+    ? '..' + s.slice(MODULE3_VIDEO_IMAGE_PATH_PREFIX.length)
+    : s;
+}
 // img_path地址（模块一传参）
 // const IMG_PATH_URL = localStorage.getItem('imagePath') || '/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png';
 // const DEVICE_TYPE = localStorage.getItem('deviceType') || '飞机';
@@ -542,11 +551,22 @@ export default {
     videoSourceItems() {
       return (this.targetDetectionVideos || [])
         .map((video, idx) => {
-          const name = typeof video === 'string' ? video : video && video.name;
+          if (typeof video === 'string') {
+            const name = video;
+            return {
+              key: `video:${name || idx}`,
+              type: 'video',
+              name
+            };
+          }
+          const name = video && video.name;
           return {
             key: `video:${name || idx}`,
             type: 'video',
-            name
+            name,
+            id: video && video.id,
+            videoUrl: video && video.videoUrl,
+            path: video && video.path
           };
         })
         .filter(item => !!item.name);
@@ -1067,26 +1087,47 @@ export default {
           this.compareMessage = '加载分组清单失败';
         });
     },
-    loadTargetDetectionVideos() {
+    async loadTargetDetectionVideos() {
       this.videoMessage = '正在加载视频列表...';
-      axios
-        .get(`${TARGET_DETECTION_API_BASE_URL}/videos`)
-        .then(res => {
-          const videos = res && res.data && Array.isArray(res.data.videos) ? res.data.videos : [];
-          this.targetDetectionVideos = videos;
-          this.videoMessage = videos.length > 0 ? '' : '暂无远程视频';
-        })
-        .catch(err => {
-          console.error('加载 target-detection 视频列表失败:', err);
+      try {
+        const response = await axios.get(`${IMAGE_API_URL}/api/video/list`);
+        if (response.data && Array.isArray(response.data.videos)) {
+          this.targetDetectionVideos = response.data.videos.map(vid => ({
+            id: vid.id,
+            name: vid.filename,
+            path: vid.video_path,
+            videoUrl: vid.video_url
+          }));
+          this.videoMessage = this.targetDetectionVideos.length > 0 ? '' : '暂无远程视频';
+        } else {
           this.targetDetectionVideos = [];
-          this.videoMessage = '无法加载视频列表（检查网络或代理 /td5236）';
-        });
+          this.videoMessage = '暂无远程视频';
+        }
+      } catch (error) {
+        console.error('获取视频列表失败:', error);
+        this.targetDetectionVideos = [];
+        this.videoMessage = '无法加载视频列表（检查网络或服务 ' + IMAGE_API_URL + '）';
+      }
     },
-    buildTargetVideoUrl(videoName) {
-      const baseUrl = TARGET_DETECTION_API_BASE_URL.endsWith('/')
-        ? TARGET_DETECTION_API_BASE_URL.slice(0, -1)
-        : TARGET_DETECTION_API_BASE_URL;
-      return `${baseUrl}/video/${encodeURIComponent(videoName)}`;
+    /** 与 TargetDetection.vue 选择视频时的 URL 规则一致（videoUrl / path / file/id） */
+    buildTargetVideoPlaybackUrl(item) {
+      if (!item || item.type !== 'video') return null;
+      if (item.videoUrl) {
+        if (item.videoUrl.startsWith('http://') || item.videoUrl.startsWith('https://')) {
+          return item.videoUrl;
+        }
+        return `${IMAGE_API_URL}${item.videoUrl}`;
+      }
+      if (item.path) {
+        if (item.path.startsWith('http://') || item.path.startsWith('https://')) {
+          return item.path;
+        }
+        return `${IMAGE_API_URL}${item.path}`;
+      }
+      if (item.id != null && item.id !== '') {
+        return `${IMAGE_API_URL}/api/video/file/${item.id}`;
+      }
+      return null;
     },
     toggleImageSourceList() {
       this.imageSourceListExpanded = !this.imageSourceListExpanded;
@@ -1127,7 +1168,7 @@ export default {
       this.selectedCompareFile = null;
       this.selectedGroupImageFiles = [];
       this.selectedVideoName = item.name;
-      this.selectedVideoUrl = this.buildTargetVideoUrl(item.name);
+      this.selectedVideoUrl = this.buildTargetVideoPlaybackUrl(item);
       this.loadVideoResultByName(item.name);
     },
     // 切换到分组详情（三张图 + 侧栏认知传播信息）
@@ -1541,11 +1582,11 @@ export default {
           color: p.color,
           kind: p.kind,
           shape: p.shape,
-          image_path: p.image_path,
+          image_path: toModule3VideoImagePath(p.image_path),
           ground_truth: p.ground_truth
         };
         console.log('[GroupNegotiation] 模块三请求地址（视频模式，与图片同一接口）:', MODULE3_REFINE_URL);
-        console.log('[GroupNegotiation] 请求体（来自 video_results JSON 的 result + image_path）:', resdata);
+        console.log('[GroupNegotiation] 请求体（视频模式，image_path 已做前缀替换）:', resdata);
       } else {
         resdata = {
           color: '灰色',
