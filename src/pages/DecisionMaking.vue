@@ -106,10 +106,11 @@
               <template v-if="commanderDangerSelectionPending">
                 <div class="commander-level-pick-column">
                   <button
-                    v-for="lvl in commanderDangerLevelLabels"
+                    v-for="(lvl, idx) in commanderDangerLevelLabels"
                     :key="lvl"
                     type="button"
                     class="commander-danger-level-btn"
+                    :class="'commander-danger-level-btn--' + (idx + 1)"
                     :disabled="isCommanderLevelSubmitting"
                     @click="submitCommanderDangerLevel(lvl)"
                   >{{ lvl }}</button>
@@ -2489,17 +2490,54 @@ export default {
     font-size: 11px;
     line-height: 1.25;
     text-align: center;
-    color: #e6faff;
-    background: rgba(0, 40, 80, 0.55);
-    border: 1px solid rgba(0, 200, 255, 0.35);
     border-radius: 4px;
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   }
 
-  .commander-danger-level-btn:hover:not(:disabled) {
-    background: rgba(0, 80, 120, 0.65);
-    border-color: rgba(0, 220, 255, 0.55);
+  /* 一级红、二级黄、三级蓝、四级绿 */
+  .commander-danger-level-btn--1 {
+    color: #ffe8e8;
+    background: rgba(180, 30, 30, 0.5);
+    border: 1px solid rgba(255, 90, 90, 0.75);
+  }
+
+  .commander-danger-level-btn--1:hover:not(:disabled) {
+    background: rgba(200, 45, 45, 0.65);
+    border-color: rgba(255, 130, 130, 0.9);
+  }
+
+  .commander-danger-level-btn--2 {
+    color: #3d3200;
+    background: rgba(255, 210, 60, 0.65);
+    border: 1px solid rgba(230, 180, 0, 0.9);
+  }
+
+  .commander-danger-level-btn--2:hover:not(:disabled) {
+    background: rgba(255, 225, 100, 0.8);
+    border-color: rgba(255, 200, 40, 1);
+  }
+
+  .commander-danger-level-btn--3 {
+    color: #e8f4ff;
+    background: rgba(25, 90, 180, 0.5);
+    border: 1px solid rgba(90, 160, 255, 0.85);
+  }
+
+  .commander-danger-level-btn--3:hover:not(:disabled) {
+    background: rgba(40, 110, 200, 0.65);
+    border-color: rgba(120, 185, 255, 1);
+  }
+
+  .commander-danger-level-btn--4 {
+    color: #e8fff0;
+    background: rgba(30, 120, 55, 0.5);
+    border: 1px solid rgba(70, 210, 120, 0.8);
+  }
+
+  .commander-danger-level-btn--4:hover:not(:disabled) {
+    background: rgba(45, 145, 70, 0.65);
+    border-color: rgba(100, 235, 150, 0.95);
   }
 
   .commander-danger-level-btn:disabled {
@@ -2632,13 +2670,13 @@ export default {
       }
 
       &.level-3 {
-        color: #2BC3FF;
-        text-shadow: 0 0 5px #2BC3FF;
+        color: #5aa9ff;
+        text-shadow: 0 0 5px rgba(90, 169, 255, 0.85);
       }
 
       &.level-4 {
-        color: #7EFF00;
-        text-shadow: 0 0 5px #7EFF00;
+        color: #4ade80;
+        text-shadow: 0 0 5px rgba(74, 222, 128, 0.75);
       }
     }
   }
