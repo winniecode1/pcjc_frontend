@@ -601,7 +601,7 @@ export default {
       .right-column {
         display: flex !important;
         flex-direction: column !important;
-        height: calc(100vh - 80px) !important;
+        height: calc(100vh - 60px) !important;
       }
       .panel-right-bottom {
         flex-grow: 0 !important;
@@ -1738,26 +1738,38 @@ export default {
 .right-column {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 80px);
+  height: calc(100vh - 60px);
   padding: 0 !important;
   justify-content: flex-start !important;
   gap: 10px;
 }
 
-/* 面板通用样式 */
-[class^="panel-"] {
-  width: 100%;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  padding: 20px 30px 30px 30px;
+/* 左侧列面板容器 */
+.left-panels-container {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  gap: 10px;
 }
 
-/* 特定面板的高度和边距 */
+/* 作战指令面板 */
+.panel-orders {
+  flex: 0 0 180px;
+  min-height: 180px;
+}
+
+/* 数据源区域 */
+.data-source-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 300px;
+}
+
 .panel-left {
   flex-grow: 1;
-  height: 100px;
+  height: auto;
+  min-height: 200px;
 }
 
 .panel-right-top {
@@ -2026,7 +2038,8 @@ export default {
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  height: calc(100vh - 60px);
 }
 
 .video-section {
@@ -2035,11 +2048,28 @@ export default {
   flex-direction: column;
   align-items: center;
   margin-bottom: 0;
-  flex-shrink: 0;
+  flex: 1;
+  min-height: 200px;
+}
+
+.video-section:first-of-type .video-frame {
+  max-width: 800px;
+}
+
+.video-section:nth-of-type(2) .video-frame {
+  max-width: 800px;
+}
+
+.video-display {
+  width: 90%;
+  height: 90%;
+  transform: scale(0.9);
+  transform-origin: center center;
 }
 
 .video-label {
-  width: 400px;
+  width: 100%;
+  max-width: 800px;
   height: 40px;
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
   background-repeat: no-repeat;
@@ -2082,8 +2112,10 @@ export default {
 }
 
 .video-frame {
-  width: 600px;
-  height: 280px;
+  width: 100%;
+  max-width: 600px;
+  height: 100%;
+  flex: 1;
   background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -2093,30 +2125,10 @@ export default {
   align-items: center;
 }
 
-.video-section:first-of-type .video-frame {
-  width: 800px;
-  height: 320px;
-}
-
-.video-section:nth-of-type(2) .video-frame {
-  width: 800px;
-  height: 300px;
-}
-
 .video-display {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-}
-
-.video-section:first-of-type .video-frame .video-display {
-  width: 650px;
-  height: 280px;
-}
-
-.video-section:nth-of-type(2) .video-frame .video-display {
-  width: 660px;
-  height: 260px;
 }
 
 .placeholder-text {
@@ -2125,8 +2137,8 @@ export default {
 }
 
 .summary-box-middle {
-  width: 600px;
-  height: 200px;
+  width: 800px;
+  height: 300px;
   background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -2147,8 +2159,10 @@ export default {
   white-space: pre-wrap;
   overflow: auto;
   text-align: left;
-  padding: 8px 15px;
+  padding: 15px;
+}
 
+.summary-content {
   &::-webkit-scrollbar {
     width: 6px;
   }
@@ -2421,12 +2435,20 @@ export default {
 /* 7. 响应式调整 */
 @media (max-width: 1400px) {
   .video-frame {
-    height: 250px;
+    height: 280px;
+  }
+
+  .video-section:first-of-type .video-frame {
+    height: 300px;
+  }
+
+  .video-section:nth-of-type(2) .video-frame {
+    height: 280px;
   }
 
   .summary-box-middle {
-    min-height: 80px;
-    max-height: 100px;
+    min-height: 120px;
+    max-height: 180px;
   }
 
   .metric-box {

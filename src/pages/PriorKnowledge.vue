@@ -1,7 +1,6 @@
 <template>
   <div class="section">
     <div class="img_box"></div>
-
     <!-- 顶部导航栏 -->
     <b-row class="header-bar align-item-s-center no-gutters">
       <b-col cols="3" class="text-left">
@@ -24,9 +23,7 @@
         <div class="design-module orders-module">
           <div class="panel-header">作战指令</div>
           <div class="design-module-content">
-            <div class="orders-text-box overflow-auto">
-              {{ ordersText || '暂无作战指令' }}
-            </div>
+            <div class="orders-text-box overflow-auto">{{ ordersText || '暂无作战指令' }}</div>
           </div>
         </div>
 
@@ -415,7 +412,7 @@ export default {
         const response = await axios.get('http://10.109.253.71:8001/module2/get_mission_order', {
           params: { img_path: sampleId }
         });
-        this.ordersText = response.data.mission_order || '';
+        this.ordersText = (response.data.mission_order || '').trim();
       } catch (error) {
         console.warn("获取作战指令失败", error);
         this.ordersText = '';
@@ -1478,13 +1475,34 @@ export default {
 <style>
 /* 1. 全局样式 */
 /* 1. 全局和背景 */
+/* 全局隐藏滚动条箭头 */
+::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+  display: block !important;
+}
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+::-webkit-scrollbar-track {
+  background: transparent !important;
+  display: none !important;
+}
+::-webkit-scrollbar-thumb {
+  background: #00e5ff !important;
+  border-radius: 3px !important;
+  border: none !important;
+}
+
 .section {
   width: 100%;
   min-height: 100vh;
   color: #fff;
   font-family: "Helvetica Neue", "Microsoft YaHei", sans-serif;
   z-index: 2;
-  padding: 10px;
+  padding: 0 10px 10px 10px;
   margin: 0;
   background-color: transparent;
   display: flex;
@@ -1813,13 +1831,32 @@ text-decoration: none;
   white-space: pre-wrap;
   word-break: break-all;
   overflow-y: auto;
-  /* 移除文字前的空行 */
-  margin-top: -2em;
+  /* 滚动条样式 */
+  scrollbar-width: thin !important;
+  scrollbar-color: #00e5ff rgba(0, 0, 0, 0.3) !important;
 }
 
-.orders-text-box::-webkit-scrollbar { width: 6px; }
-.orders-text-box::-webkit-scrollbar-thumb { background: #00e5ff; border-radius: 3px; }
-.orders-text-box::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
+.orders-text-box::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+}
+.orders-text-box::-webkit-scrollbar-button {
+  display: none !important;
+}
+.orders-text-box::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-radius: 3px !important;
+}
+.orders-text-box::-webkit-scrollbar-thumb {
+  background: #00e5ff !important;
+  border-radius: 3px !important;
+}
+.orders-text-box::-webkit-scrollbar-thumb:hover {
+  background: #00b8cc !important;
+}
 
 .video-module {
   flex-basis: unset;
@@ -1912,6 +1949,30 @@ text-decoration: none;
 .video-list-container {
   flex: 1;
   overflow-y: auto;
+  scrollbar-width: thin !important;
+  scrollbar-color: #00e5ff rgba(0, 0, 0, 0.3) !important;
+}
+
+.video-list-container::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+}
+.video-list-container::-webkit-scrollbar-button {
+  display: none !important;
+}
+.video-list-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-radius: 3px !important;
+}
+.video-list-container::-webkit-scrollbar-thumb {
+  background: #00e5ff !important;
+  border-radius: 3px !important;
+}
+.video-list-container::-webkit-scrollbar-thumb:hover {
+  background: #00b8cc !important;
 }
 
 .video-select-item {
@@ -2047,6 +2108,34 @@ text-decoration: none;
 
 .fixed-left-text .design-module-content.overflow-auto {
   overflow-y: auto;
+  scrollbar-width: thin !important;
+  scrollbar-color: #00e5ff rgba(10, 25, 50, 0.3) !important;
+}
+
+.fixed-left-text .design-module-content.overflow-auto::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+}
+
+.fixed-left-text .design-module-content.overflow-auto::-webkit-scrollbar-button {
+  display: none !important;
+}
+
+.fixed-left-text .design-module-content.overflow-auto::-webkit-scrollbar-track {
+  background: rgba(10, 25, 50, 0.3) !important;
+  border-radius: 3px !important;
+}
+
+.fixed-left-text .design-module-content.overflow-auto::-webkit-scrollbar-thumb {
+  background: #00e5ff !important;
+  border-radius: 3px !important;
+}
+
+.fixed-left-text .design-module-content.overflow-auto::-webkit-scrollbar-thumb:hover {
+  background: #00b8cc !important;
 }
 
 .multimodal-image-fixed {
@@ -2086,6 +2175,8 @@ text-decoration: none;
   overflow-x: hidden;
   white-space: normal;
   word-wrap: break-word;
+  scrollbar-width: thin !important;
+  scrollbar-color: #00e5ff rgba(10, 25, 50, 0.3) !important;
 }
 
 .multimodal-image {
@@ -2114,21 +2205,29 @@ text-decoration: none;
 }
 
 .text-scrollable::-webkit-scrollbar {
-  width: 6px;
+  width: 6px !important;
+  height: 6px !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+}
+
+.text-scrollable::-webkit-scrollbar-button {
+  display: none !important;
 }
 
 .text-scrollable::-webkit-scrollbar-track {
-  background: rgba(10, 25, 50, 0.3);
-  border-radius: 4px;
+  background: rgba(10, 25, 50, 0.3) !important;
+  border-radius: 4px !important;
 }
 
 .text-scrollable::-webkit-scrollbar-thumb {
-  background: #00e5ff;
-  border-radius: 4px;
+  background: #00e5ff !important;
+  border-radius: 4px !important;
 }
 
 .text-scrollable::-webkit-scrollbar-thumb:hover {
-  background: #00b8d4;
+  background: #00b8d4 !important;
 }
 
 /* 知识图谱容器样式 */
@@ -2190,6 +2289,10 @@ text-decoration: none;
 
 .description-box::-webkit-scrollbar {
   width: 6px;
+}
+
+.description-box::-webkit-scrollbar-button {
+  display: none;
 }
 
 .description-box::-webkit-scrollbar-thumb {
@@ -2485,7 +2588,7 @@ text-decoration: none;
   cursor: pointer;
   width: 250px;
   height: 100px;
-  background-image: url('~@/assets/images/step3/greenbutton.png');
+  background- image: url('~@/assets/images/step3/greenbutton.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   background-color: transparent;
