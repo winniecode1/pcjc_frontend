@@ -1813,6 +1813,8 @@ text-decoration: none;
   white-space: pre-wrap;
   word-break: break-all;
   overflow-y: auto;
+  /* 移除文字前的空行 */
+  margin-top: -2em;
 }
 
 .orders-text-box::-webkit-scrollbar { width: 6px; }
