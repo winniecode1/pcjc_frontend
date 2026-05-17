@@ -62,9 +62,9 @@
             </div>
             <!-- 数据展示状态 -->
             <div v-else class="video-display-container">
-              <!-- 图片展示 -->
+              <!-- 图片展示（可点击放大） -->
               <img v-if="selectedVideo && isImageFile(selectedVideo.name || selectedVideo.image_path)"
-                   :src="videoUrl" class="video-display" @error="handleImageError" />
+                   :src="videoUrl" class="video-display clickable-image" @error="handleImageError" @click="openLightbox(videoUrl)" />
               <!-- 视频展示 -->
               <video v-else-if="videoUrl" :src="videoUrl" controls autoplay loop muted class="video-display" @error="handleVideoError"></video>
               <div v-else class="placeholder-text">
@@ -81,7 +81,7 @@
             <!-- 细粒度检测后的信息：固定图片区域（不滚动） -->
             <div v-if="multimodalDetectionInfo && multimodalDetectionInfo.image" class="multimodal-image-fixed">
               <div class="cognitive-image-container">
-                <img :src="multimodalDetectionInfo.image" class="multimodal-image" @error="handleImageError" />
+                <img :src="multimodalDetectionInfo.image" class="multimodal-image clickable-image" @error="handleImageError" @click="openLightbox(multimodalDetectionInfo.image)" />
               </div>
             </div>
             <!-- 可滚动的信息区域 -->
@@ -230,6 +230,30 @@
         </div>
       </div>
     </div>
+
+    <!-- 图片放大预览灯箱 -->
+    <div
+      v-if="lightboxImageUrl"
+      class="image-lightbox"
+      role="dialog"
+      aria-modal="true"
+      @click.self="closeLightbox"
+    >
+      <button
+        type="button"
+        class="image-lightbox-close"
+        aria-label="关闭"
+        @click="closeLightbox"
+      >
+        ×
+      </button>
+      <img
+        :src="lightboxImageUrl"
+        alt=""
+        class="image-lightbox-img"
+        @click.stop
+      />
+    </div>
   </div>
 </template>
 
@@ -305,7 +329,9 @@ export default {
           // 当前数据源类型：'image' 或 'video'
           currentSourceType: 'image',
           // 视频列表数据（来自 video_list 接口）
-          videoSourceList: []
+          videoSourceList: [],
+          // 图片放大预览 URL
+          lightboxImageUrl: null
         };
       },
   mounted() {
@@ -400,6 +426,25 @@ export default {
       console.error("图片加载失败:", e);
       this.videoMessage = "图片加载失败，请检查图片路径是否正确";
       this.videoUrl = null;
+    },
+
+    // 打开图片放大预览
+    openLightbox(imageUrl) {
+      this.lightboxImageUrl = imageUrl;
+      document.addEventListener('keydown', this.handleLightboxKeydown);
+    },
+
+    // 关闭图片放大预览
+    closeLightbox() {
+      this.lightboxImageUrl = null;
+      document.removeEventListener('keydown', this.handleLightboxKeydown);
+    },
+
+    // 灯箱键盘事件处理
+    handleLightboxKeydown(e) {
+      if (e.key === 'Escape' && this.lightboxImageUrl) {
+        this.closeLightbox();
+      }
     },
     
     // 获取作战指令
@@ -2187,6 +2232,16 @@ text-decoration: none;
   background-color: rgba(0, 0, 0, 0.3);
 }
 
+/* 可点击放大的图片样式 */
+.clickable-image {
+  cursor: zoom-in;
+  transition: opacity 0.2s ease;
+}
+
+.clickable-image:hover {
+  opacity: 0.9;
+}
+
 .multimodal-info-item {
   margin-bottom: 10px;
   line-height: 1.6;
@@ -2588,7 +2643,7 @@ text-decoration: none;
   cursor: pointer;
   width: 250px;
   height: 100px;
-  background- image: url('~@/assets/images/step3/greenbutton.png');
+  background-image: url('~@/assets/images/step3/greenbutton.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   background-color: transparent;
@@ -2627,5 +2682,44 @@ text-decoration: none;
   background-color: rgba(10, 17, 32, 0.4);
   color: #00e5ff;
   font-weight: bold;
+}
+
+/* 图片放大预览灯箱样式 */
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-lightbox-img {
+  width: 98vw;
+  height: 95vh;
+  object-fit: contain;
+}
+
+.image-lightbox-close {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 10051;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 229, 255, 0.12);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.image-lightbox-close:hover {
+  background: rgba(0, 229, 255, 0.28);
 }
 </style>
