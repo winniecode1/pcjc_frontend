@@ -90,6 +90,10 @@
           </div>
         </div>
 
+        <!-- ==========================================
+             底部文本框已注释 - 如需恢复请取消注释
+             用途：显示检测摘要文本
+             ==========================================
         <div class="summary-box-middle" :class="{ 'loading-overlay': isLoading }">
           <div class="summary-content overflow-auto"
             :class="{ 'text-highlight': summaryHighlight, 'loading-text': isLoading }">
@@ -98,6 +102,7 @@
             <div v-show="!hasStartedDetection && !isLoading" class="hint-text">请点击"开始目标检测"按钮</div>
           </div>
         </div>
+        -->
       </b-col>
 
       <b-col cols="3" class="right-column px-2">
@@ -2036,10 +2041,11 @@ export default {
 .middle-column {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: stretch;
   align-items: center;
   gap: 8px;
   height: calc(100vh - 60px);
+  overflow: hidden;
 }
 
 .video-section {
@@ -2049,7 +2055,9 @@ export default {
   align-items: center;
   margin-bottom: 0;
   flex: 1;
-  min-height: 200px;
+  min-height: 150px;
+  /* 注释掉底部文本框后，视频模块撑满剩余空间 */
+  flex-grow: 1;
 }
 
 .video-section:first-of-type .video-frame {
@@ -2115,6 +2123,7 @@ export default {
   width: 100%;
   max-width: 600px;
   height: 100%;
+  min-height: 100px;
   flex: 1;
   background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-repeat: no-repeat;
