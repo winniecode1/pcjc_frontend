@@ -22,13 +22,6 @@
         <!-- 作战指令面板 -->
         <div class="design-module orders-module">
           <div class="panel-header">作战指令</div>
-          <div class="design-module-content">
-            <div class="orders-text-box overflow-auto">{{ ordersText || '暂无作战指令' }}</div>
-          </div>
-        </div>
-
-        <div class="design-module video-module">
-          <div class="panel-header">无人机侦察数据</div>
           <div class="design-module-content video-content-wrapper">
             <!-- 数据选择列表状态 -->
             <div v-if="!isVideoSelected" class="video-select-list">
@@ -60,8 +53,19 @@
                 </div>
               </div>
             </div>
+            <!-- 作战指令展示状态 -->
+            <div v-else class="orders-display">
+              <div class="orders-text-box overflow-auto">{{ ordersText || '暂无作战指令' }}</div>
+              <button class="btn-back-list" @click="backToList">返回选择列表</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="design-module video-module">
+          <div class="panel-header">无人机侦察数据</div>
+          <div class="design-module-content">
             <!-- 数据展示状态 -->
-            <div v-else class="video-display-container">
+            <div class="video-display-container">
               <!-- 图片展示（可点击放大） -->
               <img v-if="selectedVideo && isImageFile(selectedVideo.name || selectedVideo.image_path)"
                    :src="videoUrl" class="video-display clickable-image" @error="handleImageError" @click="openLightbox(videoUrl)" />
@@ -71,7 +75,6 @@
                 {{ videoMessage }}
               </div>
             </div>
-            <button v-if="isVideoSelected" class="btn-back-list" @click="backToList">返回选择列表</button>
           </div>
         </div>
 
@@ -200,6 +203,11 @@
                   <span v-else>{{ item }}</span>
                 </li>
               </ul>
+              <!-- 重要信息 -->
+              <div v-if="importanceInfo" class="importance-info">
+                <span class="info-label">重要信息：</span>
+                <span class="info-value">{{ importanceInfo }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -331,7 +339,9 @@ export default {
           // 视频列表数据（来自 video_list 接口）
           videoSourceList: [],
           // 图片放大预览 URL
-          lightboxImageUrl: null
+          lightboxImageUrl: null,
+          // 重要信息
+          importanceInfo: ''
         };
       },
   mounted() {
@@ -385,6 +395,7 @@ export default {
       
       // 重置预测信息为默认状态
       this.predictInfoList = ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息", "轮廓信息"];
+      this.importanceInfo = '';
       
       // 重置属性颜色
       this.propertyColors = {};
@@ -557,65 +568,128 @@ export default {
       this.selectedVideo = video;
       this.isVideoSelected = true;
 
-      // 如果是视频数据源类型，使用 get_video 接口获取视频
+      // 调用接口获取作战指令和媒体URL
+      this.fetchSampleInfo(video);
+      
+      console.log('选中数据:', JSON.parse(JSON.stringify(video)));
+    },
+    
+    // 获取样本信息（作战指令和媒体URL）
+    async fetchSampleInfo(item) {
+      const IMAGE_API_URL = 'http://10.109.253.71:8001';
+      
+      try {
+        let mediaUrl = null;
+        let ordersText = null;
+        
+        if (this.currentSourceType === 'image') {
+          // 图片接口
+          const response = await axios.get(`${IMAGE_API_URL}/api/dataset/sample/${item.id}`);
+          const data = response.data;
+
+          if (data.image_url) {
+            if (data.image_url.startsWith('http://') || data.image_url.startsWith('https://')) {
+              mediaUrl = data.image_url;
+            } else {
+              mediaUrl = `${IMAGE_API_URL}${data.image_url}`;
+            }
+          }
+
+          if (data.instruction) {
+            ordersText = data.instruction;
+          }
+        } else {
+          // 视频接口
+          const response = await axios.get(`${IMAGE_API_URL}/api/video/sample/${item.id}`);
+          const data = response.data;
+
+          if (data.video_url) {
+            if (data.video_url.startsWith('http://') || data.video_url.startsWith('https://')) {
+              mediaUrl = data.video_url;
+            } else {
+              mediaUrl = `${IMAGE_API_URL}${data.video_url}`;
+            }
+          }
+
+          if (data.directive) {
+            ordersText = data.directive;
+          }
+        }
+
+        // 立即显示作战指令
+        if (ordersText) {
+          this.ordersText = ordersText;
+          console.log("作战指令:", this.ordersText);
+        }
+
+        // 保存选中状态到 localStorage
+        localStorage.setItem('selectedImageData', JSON.stringify({
+          id: item.id,
+          name: item.name,
+          path: item.path || item.name,
+          type: this.currentSourceType
+        }));
+
+        // 图片/视频延时2秒显示
+        if (mediaUrl) {
+          this.videoUrl = null;
+          this.videoMessage = '数据加载中...';
+          setTimeout(() => {
+            this.videoUrl = mediaUrl;
+            this.videoMessage = '';
+            console.log("媒体URL:", this.videoUrl);
+            // 保存媒体URL到 localStorage
+            if (this.videoUrl) {
+              localStorage.setItem('priorKnowledgeVideoUrl', this.videoUrl);
+            }
+          }, 2000);
+        }
+      } catch (error) {
+        console.error("获取样本信息失败:", error);
+        // 备用方案：使用原有逻辑
+        this.useFallbackMediaUrl(item);
+      }
+    },
+    
+    // 备用方案：使用原有逻辑获取媒体URL
+    useFallbackMediaUrl(video) {
       if (this.currentSourceType === 'video') {
         const videoPath = video.path || video.name || '';
-        // 使用 get_video 接口，传入 video_path 参数
         this.videoUrl = `http://10.109.253.71:8001/module2/get_video?video_path=${encodeURIComponent(videoPath)}`;
         this.videoMessage = '视频加载中...';
-        
-        // 获取作战指令（使用视频地址）
         this.fetchOrders(videoPath);
-        
-        // 保存选中的视频数据到 localStorage
         localStorage.setItem('selectedImageData', JSON.stringify({
           path: videoPath,
           type: 'video',
           name: video.name
         }));
-        
-        console.log('选中视频数据:', JSON.parse(JSON.stringify(video)), 'videoUrl:', this.videoUrl);
-        return;
-      }
-
-      // 图片数据源类型（原有逻辑）
-      // 使用 path 字段
-      const imagePath = video.path || video.name || '';
-      const fileName = video.name || '';
-      const sampleId = video.id;
-
-      // 判断是否是图片：类型为 image/图片，或者文件名后缀是图片格式
-      const isImage = video.type === 'image' ||
-                      video.type === '图片' ||
-                      /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileName);
-
-      if (isImage) {
-        // 调用后端接口获取图片
-        const imageBaseUrl = 'http://10.109.253.71:8001/module2/get_image';
-        this.videoUrl = `${imageBaseUrl}?img_path=${encodeURIComponent(imagePath)}`;
-        this.videoMessage = '图片加载中...';
       } else {
-        // 如果是视频类型，使用视频接口
-        const baseUrl = 'http://10.109.253.71:5236';
-        this.videoUrl = `${baseUrl}/video/${encodeURIComponent(video.name)}`;
-        this.videoMessage = '视频加载中...';
-      }
+        const imagePath = video.path || video.name || '';
+        const isImage = video.type === 'image' ||
+                        video.type === '图片' ||
+                        /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(imagePath);
 
-      // 获取作战指令（使用选中的图片路径）
-      this.fetchOrders(imagePath);
-
-      console.log('选中数据:', JSON.parse(JSON.stringify(video)), 'isImage:', isImage, 'videoUrl:', this.videoUrl);
-
-      // 保存选中的图片路径和类型到 localStorage
-      localStorage.setItem('selectedImageData', JSON.stringify({
-        path: imagePath,
-        type: video.type,
-        name: video.name
-      }));
-      
-      // 如果更换了图片，重新加载 base64 数据
-      if (isDifferentImage) {
-        this.loadImageBase64(imagePath);
+        if (isImage) {
+          this.videoUrl = `http://10.109.253.71:8001/module2/get_image?img_path=${encodeURIComponent(imagePath)}`;
+          this.videoMessage = '图片加载中...';
+        } else {
+          this.videoUrl = `http://10.109.253.71:5236/video/${encodeURIComponent(video.name)}`;
+          this.videoMessage = '视频加载中...';
+        }
+        this.fetchOrders(imagePath);
+        localStorage.setItem('selectedImageData', JSON.stringify({
+          path: imagePath,
+          type: video.type,
+          name: video.name
+        }));
+        
+        // 延迟2秒显示
+        const tempUrl = this.videoUrl;
+        this.videoUrl = null;
+        setTimeout(() => {
+          this.videoUrl = tempUrl;
+          this.videoMessage = '';
+        }, 2000);
       }
     },
     // 返回选择列表
@@ -624,6 +698,7 @@ export default {
       this.videoUrl = null;
       this.selectedVideo = null;
       this.videoMessage = '请选择数据源';
+      this.ordersText = '';
     },
     // 导航到首页
     navigateHome() {
@@ -1043,6 +1118,10 @@ export default {
             { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
             { label: '轮廓信息：', value: predictData.outline || '未知', color: this.propertyColors.outline || '#000' },
           ];
+          // 重要信息
+          if (predictData.importance) {
+            this.importanceInfo = predictData.importance;
+          }
         }
         // 准确率：缓存准确率值，但显示取决于计时状态
         if (data.accuracy !== undefined) {
@@ -1228,6 +1307,10 @@ export default {
             { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
             { label: '轮廓信息：', value: predictData.outline || '未知', color: this.propertyColors.outline || '#000' },
           ];
+          // 重要信息
+          if (predictData.importance) {
+            this.importanceInfo = predictData.importance;
+          }
           // 将预测信息存入localStorage，供群体协商界面使用
           localStorage.setItem('predictInfoList', JSON.stringify(this.predictInfoList));
           localStorage.setItem('module2Res', JSON.stringify(data));
@@ -1903,6 +1986,21 @@ text-decoration: none;
   background: #00b8cc !important;
 }
 
+/* 作战指令展示区域 */
+.orders-display {
+  width: 100%;
+  height: calc(0.95rem * 1.6 * 3 + 12px * 2 + 40px);
+  max-height: calc(0.95rem * 1.6 * 3 + 12px * 2 + 40px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.orders-display .orders-text-box {
+  height: calc(0.95rem * 1.6 * 3 + 12px * 2);
+  max-height: calc(0.95rem * 1.6 * 3 + 12px * 2);
+}
+
 .video-module {
   flex-basis: unset;
   height: 250px;
@@ -1939,7 +2037,8 @@ text-decoration: none;
 /* 视频选择列表样式 */
 .video-select-list {
   width: 100%;
-  height: 100%;
+  height: calc(0.95rem * 1.6 * 3 + 12px * 2);
+  max-height: calc(0.95rem * 1.6 * 3 + 12px * 2);
   display: flex;
   flex-direction: column;
   padding: 5px;
@@ -2406,6 +2505,29 @@ text-decoration: none;
 }
 
 /* 所有项都需要底部分隔线，包括最后一项 */
+
+/* 重要信息样式 */
+.importance-info {
+  margin-top: 15px;
+  padding: 12px;
+  background-color: rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 4px;
+  font-family: "DingTalk-JinBuTi";
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.importance-info .info-label {
+  color: #ffd700;
+  font-weight: bold;
+}
+
+.importance-info .info-value {
+  color: #ffffff;
+  margin-left: 5px;
+}
 
 .text-red {
   color: #ff4d4d;
