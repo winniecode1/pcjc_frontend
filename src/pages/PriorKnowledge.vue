@@ -126,7 +126,7 @@
 
         <div class="button-container">
           <button @click="startNegotiation" class="btn-start-detect" :disabled="isDetecting">
-            <span>开始细粒度检测</span>
+            <span>目标信息类别识别</span>
           </button>
           <button @click="queryPriorKnowledge" class="btn-start-detect" :disabled="isLoading || isQueryingPriorKnowledge">
             <span>查询先验知识</span>

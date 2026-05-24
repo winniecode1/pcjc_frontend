@@ -19,19 +19,9 @@
 
       <b-col cols="3" class="left-column px-2">
     <div class="left-panels-container">
-    <div class="panel-header header-select-data clean-header">作战指令</div>
-
-    <div class="panel-orders">
-      <div class="panel-content">
-        <div class="orders-text-box overflow-auto">
-          {{ ordersText || '暂无作战指令' }}
-        </div>
-      </div>
-    </div>
+    <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
 
     <div class="data-source-section">
-      <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
-
       <div class="panel-left">
         <div class="panel-content">
           <div class="media-type-selector">
@@ -62,11 +52,22 @@
       </div>
     </div>
 
+    <div class="panel-header header-select-data clean-header">作战指令</div>
+
+    <div class="panel-orders">
+      <div class="panel-content">
+        <div class="orders-text-box overflow-auto">
+          {{ ordersText || '暂无作战指令' }}
+        </div>
+      </div>
+    </div>
+
     <div class="action-buttons">
       <button @click="startDetection" :disabled="isLoading" class="btn-start-detect">
-        <span class="btn-text-pos">开始目标检测</span>
+        <span class="btn-text-pos">目标信息类别识别</span>
       </button>
     </div>
+
   </div>
 </b-col>
 
@@ -1360,6 +1361,7 @@ export default {
       }
 
       try {
+        let videoUrl = null;
         if (this.selectedMediaType === 'image') {
           // 图片接口
           const response = await axios.get(`${IMAGE_API_URL}/api/dataset/sample/${item.id}`);
@@ -1367,12 +1369,11 @@ export default {
 
           if (data.image_url) {
             if (data.image_url.startsWith('http://') || data.image_url.startsWith('https://')) {
-              this.originalVideoURL = data.image_url;
+              videoUrl = data.image_url;
             } else {
-              this.originalVideoURL = `${IMAGE_API_URL}${data.image_url}`;
+              videoUrl = `${IMAGE_API_URL}${data.image_url}`;
             }
           }
-          console.log("原图片URL:", this.originalVideoURL);
 
           if (data.instruction) {
             this.ordersText = data.instruction;
@@ -1385,43 +1386,58 @@ export default {
 
           if (data.video_url) {
             if (data.video_url.startsWith('http://') || data.video_url.startsWith('https://')) {
-              this.originalVideoURL = data.video_url;
+              videoUrl = data.video_url;
             } else {
-              this.originalVideoURL = `${IMAGE_API_URL}${data.video_url}`;
+              videoUrl = `${IMAGE_API_URL}${data.video_url}`;
             }
           }
-          console.log("原视频URL:", this.originalVideoURL);
 
           if (data.directive) {
             this.ordersText = data.directive;
             console.log("作战指令:", this.ordersText);
           }
         }
+
+        // 图片/视频延时2秒显示
+        if (videoUrl) {
+          setTimeout(() => {
+            this.originalVideoURL = videoUrl;
+            console.log("原图片/视频URL:", this.originalVideoURL);
+            if (this.originalVideoURL) {
+              localStorage.setItem('originalVideoURL', this.originalVideoURL);
+            }
+          }, 2000);
+        }
       } catch (error) {
         console.error("获取样本信息失败:", error);
         // 备用方案
         try {
+          let videoUrl = null;
           if (this.selectedMediaType === 'image') {
             if (item.imageUrl) {
-              this.originalVideoURL = item.imageUrl.startsWith('http') ? item.imageUrl : `${IMAGE_API_URL}${item.imageUrl}`;
+              videoUrl = item.imageUrl.startsWith('http') ? item.imageUrl : `${IMAGE_API_URL}${item.imageUrl}`;
             } else if (item.path) {
-              this.originalVideoURL = item.path.startsWith('http') ? item.path : `${IMAGE_API_URL}/api/dataset/image/${item.id}`;
+              videoUrl = item.path.startsWith('http') ? item.path : `${IMAGE_API_URL}/api/dataset/image/${item.id}`;
             }
           } else {
             if (item.videoUrl) {
-              this.originalVideoURL = item.videoUrl.startsWith('http') ? item.videoUrl : `${IMAGE_API_URL}${item.videoUrl}`;
+              videoUrl = item.videoUrl.startsWith('http') ? item.videoUrl : `${IMAGE_API_URL}${item.videoUrl}`;
             } else if (item.path) {
-              this.originalVideoURL = item.path.startsWith('http') ? item.path : `${IMAGE_API_URL}/api/video/file/${item.id}`;
+              videoUrl = item.path.startsWith('http') ? item.path : `${IMAGE_API_URL}/api/video/file/${item.id}`;
             }
+          }
+          if (videoUrl) {
+            setTimeout(() => {
+              this.originalVideoURL = videoUrl;
+              if (this.originalVideoURL) {
+                localStorage.setItem('originalVideoURL', this.originalVideoURL);
+              }
+            }, 2000);
           }
         } catch (fallbackError) {
           console.error("构造媒体URL失败:", fallbackError);
           this.originalVideoURL = null;
         }
-      }
-      // 保存原始媒体 URL
-      if (this.originalVideoURL) {
-        localStorage.setItem('originalVideoURL', this.originalVideoURL);
       }
       console.log("已选择:", this.selectedMediaType === 'image' ? '图片' : '视频', item.name);
     },
@@ -2022,9 +2038,9 @@ export default {
 }
 
 .btn-start-detect {
-  width: 250px;
+  width: 280px;
   height: 100px;
-  font-size: 20px; 
+  font-size: 16px; 
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
