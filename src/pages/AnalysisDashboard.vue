@@ -78,7 +78,7 @@
         <div class="analysis-top-section">
           <!-- 有向图区域 -->
           <div class="graph-card">
-            <div class="small-panel-header">多主体认知传播有向图</div>
+            <div class="small-panel-header">多主体认知传播层级图</div>
             <div id="myDiagramDiv" class="diagram-div"></div>
             <div v-if="isGraphParsing" class="graph-parsing-mask">
               <div class="graph-parsing-text">正在多主体解析...</div>
@@ -186,11 +186,14 @@ const STAGE_LABEL_MAP = {
   Stage4: '决策选择认知阶段'
 };
 const STAGE_MODULE_NODE_MAP = {
-  Stage1: 'M1',
-  Stage2: 'M2',
-  Stage3: 'M3',
-  Stage4: 'M4'
+  Stage1: ['M1'],
+  Stage2: ['M2'],
+  Stage3: ['V_agent_input', 'M3', 'AgentA', 'AgentB', 'AgentC'],
+  Stage4: ['V_decision_input', 'M4']
 };
+const COMMANDER_ICON = 'path://M24 5a7 7 0 1 1 0 14 7 7 0 0 1 0-14M11 42c1.2-8.5 6.1-14 13-14s11.8 5.5 13 14H11zM7 20h34l-4 8H11l-4-8z';
+const AGENT_ICON = 'path://M24 4l16 9v18l-16 9-16-9V13l16-9zM17 18h14v4H17v-4zM17 26h14v4H17v-4zM12 22h4v4h-4v-4zM32 22h4v4h-4v-4z';
+const LAYER_HEADER_SHAPE = 'path://M0 0H150L170 60L150 120H0Z';
 function randomBetween(min, max) { return min + Math.random() * (max - min); }
 
 function firstNonEmptyValue(...values) {
@@ -320,6 +323,65 @@ export default {
     initChart() {
       const chartDom = document.getElementById('myDiagramDiv');
       this.myChart = echarts.init(chartDom);
+      const moduleStyle = {
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 1, [
+          { offset: 0, color: '#173f7a' },
+          { offset: 0.55, color: '#0e2b57' },
+          { offset: 1, color: '#061832' }
+        ]),
+        borderColor: '#55e6ff',
+        borderWidth: 2,
+        shadowColor: '#32d9ff',
+        shadowBlur: 18
+      };
+      const dataStyle = {
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 1, [
+          { offset: 0, color: '#ffec99' },
+          { offset: 1, color: '#f6b950' }
+        ]),
+        borderColor: '#ffe7a0',
+        borderWidth: 2,
+        shadowColor: '#ffb84d',
+        shadowBlur: 12
+      };
+      const iconStyle = {
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 1, [
+          { offset: 0, color: '#41f2ff' },
+          { offset: 1, color: '#1b73ff' }
+        ]),
+        borderColor: '#a9fbff',
+        borderWidth: 1.5,
+        shadowColor: '#43e9ff',
+        shadowBlur: 20
+      };
+      const shellStyle = {
+        color: 'rgba(255, 255, 255, 0.08)',
+        borderColor: '#9db6e4',
+        borderWidth: 1,
+        borderType: 'dashed',
+        shadowColor: 'rgba(63, 118, 200, 0.2)',
+        shadowBlur: 16
+      };
+      const layerStyle = {
+        color: 'rgba(255, 255, 255, 0.06)',
+        borderColor: '#9db6e4',
+        borderWidth: 1,
+        borderType: 'dashed',
+        shadowColor: 'rgba(35, 79, 145, 0.16)',
+        shadowBlur: 12
+      };
+      const layerHeaderStyle = {
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: '#174d92' },
+          { offset: 1, color: '#2867b6' }
+        ]),
+        borderColor: '#2e72bf',
+        borderWidth: 1,
+        shadowColor: 'rgba(16, 66, 140, 0.38)',
+        shadowBlur: 10
+      };
+      const dataLabel = { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' };
+      const iconLabel = { color: '#063b78', fontSize: 12, fontWeight: 'bold', position: 'bottom', distance: 6 };
 
       const option = {
         tooltip: { show: false },
@@ -328,7 +390,7 @@ export default {
             type: 'graph',
             layout: 'none',
             symbolSize: 50,
-            roam: true,
+            roam: false,
             label: {
               show: true,
               position: 'inside',
@@ -338,30 +400,62 @@ export default {
               formatter: '{c}'
             },
             edgeSymbol: ['none', 'arrow'],
-            edgeSymbolSize: [4, 10],
+            edgeSymbolSize: [5, 14],
             data: [
-              { name: 'M1', value: '多模态认知偏差检测', x: 200, y: 300, symbol: 'circle', symbolSize: 95, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2, shadowColor: '#4ED8FF', shadowBlur: 10 }, label: { fontSize: 12, fontWeight: 'bold', formatter: '多模态\n认知偏差\n检测' }, desc: "该模块负责处理视频、指令等多模态输入，识别初步的认知偏差迹象。", status: "检测中" },
-              { name: 'M2', value: '先验知识认知偏差检测', x: 800, y: 200, symbol: 'circle', symbolSize: 95, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2, shadowColor: '#4ED8FF', shadowBlur: 10 }, label: { fontSize: 12, fontWeight: 'bold', formatter: '先验知识\n认知偏差\n检测' }, desc: "结合专家知识库，对初步检测结果进行先验逻辑验证。", status: "待启动" },
-              { name: 'M3', value: '智能体协商认知偏差检测', x: 300, y: 550, symbol: 'circle', symbolSize: 95, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2, shadowColor: '#4ED8FF', shadowBlur: 10 }, label: { fontSize: 12, fontWeight: 'bold', formatter: '智能体协商\n认知偏差\n检测' }, desc: "通过多个智能体的博弈与协商，进一步精细化偏差定位。", status: "待启动" },
-              { name: 'M4', value: '决策选择认知偏差检测', x: 850, y: 550, symbol: 'circle', symbolSize: 95, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#2a5298' }, { offset: 1, color: '#1e3c72' }]), borderColor: '#4ED8FF', borderWidth: 2, shadowColor: '#4ED8FF', shadowBlur: 10 }, label: { fontSize: 12, fontWeight: 'bold', formatter: '决策选择\n认知偏差\n检测' }, desc: "在决策层面上分析认知偏差对最终行动方案的影响。", status: "待启动" },
-              { name: 'V_img', value: 'V_img', x: 150, y: 100, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "输入图像数据。" },
-              { name: 'V2', value: 'V_instr', x: 300, y: 100, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "指挥官下达的初始指令文本。" },
-              { name: 'V3', value: 'V_det', x: 550, y: 200, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "目标检测识别结果。" },
-              { name: 'V4', value: 'V_desc', x: 500, y: 350, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "场景语义描述特征向量。" },
-              { name: 'V5', value: 'V_know', x: 1000, y: 350, symbol: 'circle', symbolSize: 88, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "外部先验知识库条目。" },
-              { name: 'V6', value: 'V_cand', x: 650, y: 500, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "候选偏差原因集合。" },
-              { name: 'V7', value: 'V_class', x: 550, y: 650, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "偏差所属的分类等级。" },
-              { name: 'V8', value: 'V_hazard', x: 800, y: 750, symbol: 'circle', symbolSize: 60, itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#fa709a' }, { offset: 1, color: '#fee140' }]), borderColor: '#ffb07c', borderWidth: 2, shadowColor: '#ffb07c', shadowBlur: 10 }, label: { color: '#4a1a1a', fontStyle: 'italic', fontSize: 11, formatter: '{c}' }, desc: "最终评估的冲突危害等级。" }
+              { name: 'Layer1Band', value: '', x: 500, y: 90, symbol: 'roundRect', symbolSize: [920, 118], itemStyle: layerStyle, label: { show: false }, silent: true, metaType: 'decor' },
+              { name: 'Layer2Band', value: '', x: 500, y: 250, symbol: 'roundRect', symbolSize: [920, 118], itemStyle: layerStyle, label: { show: false }, silent: true, metaType: 'decor' },
+              { name: 'Layer3Band', value: '', x: 500, y: 410, symbol: 'roundRect', symbolSize: [920, 118], itemStyle: layerStyle, label: { show: false }, silent: true, metaType: 'decor' },
+              { name: 'Layer4Band', value: '', x: 500, y: 570, symbol: 'roundRect', symbolSize: [920, 118], itemStyle: layerStyle, label: { show: false }, silent: true, metaType: 'decor' },
+              { name: 'Layer1Head', value: '第一层\n多模态认知偏差检测', x: 55, y: 90, symbol: LAYER_HEADER_SHAPE, symbolSize: [150, 118], itemStyle: layerHeaderStyle, label: { color: '#fff', fontSize: 15, fontWeight: 'bold', lineHeight: 26 }, silent: true, metaType: 'decor' },
+              { name: 'Layer2Head', value: '第二层\n先验知识认知偏差检测', x: 55, y: 250, symbol: LAYER_HEADER_SHAPE, symbolSize: [150, 118], itemStyle: layerHeaderStyle, label: { color: '#fff', fontSize: 15, fontWeight: 'bold', lineHeight: 26 }, silent: true, metaType: 'decor' },
+              { name: 'Layer3Head', value: '第三层\n智能体协商认知偏差检测', x: 55, y: 410, symbol: LAYER_HEADER_SHAPE, symbolSize: [150, 118], itemStyle: layerHeaderStyle, label: { color: '#fff', fontSize: 15, fontWeight: 'bold', lineHeight: 26 }, silent: true, metaType: 'decor' },
+              { name: 'Layer4Head', value: '第四层\n决策选择认知偏差检测', x: 55, y: 570, symbol: LAYER_HEADER_SHAPE, symbolSize: [150, 118], itemStyle: layerHeaderStyle, label: { color: '#fff', fontSize: 15, fontWeight: 'bold', lineHeight: 26 }, silent: true, metaType: 'decor' },
+              { name: 'CommanderInput', value: '指挥员', x: 215, y: 62, symbol: COMMANDER_ICON, symbolSize: [42, 42], itemStyle: iconStyle, label: iconLabel, desc: "作战指令来源。" },
+              { name: 'V2', value: 'V_instr', x: 355, y: 62, symbol: 'roundRect', symbolSize: [96, 36], itemStyle: dataStyle, label: dataLabel, desc: "指挥员下达的初始指令文本。" },
+              { name: 'V_img', value: 'V_img', x: 355, y: 118, symbol: 'roundRect', symbolSize: [86, 36], itemStyle: dataStyle, label: dataLabel, desc: "输入图像数据。" },
+              { name: 'M1', value: '多模态认知偏差检测', x: 535, y: 88, symbol: 'roundRect', symbolSize: [150, 58], itemStyle: moduleStyle, label: { fontSize: 12, fontWeight: 'bold', formatter: '多模态认知偏差检测' }, desc: "该模块负责处理图像、指令等多模态输入，识别初步的认知偏差迹象。", status: "检测中" },
+              { name: 'V4', value: 'V_desc', x: 710, y: 62, symbol: 'roundRect', symbolSize: [86, 36], itemStyle: dataStyle, label: dataLabel, desc: "场景语义描述特征向量。" },
+              { name: 'V3', value: 'V_det', x: 710, y: 118, symbol: 'roundRect', symbolSize: [86, 36], itemStyle: dataStyle, label: dataLabel, desc: "目标检测识别结果。" },
+              { name: 'V_input', value: 'V_input', x: 760, y: 222, symbol: 'roundRect', symbolSize: [96, 36], itemStyle: dataStyle, label: dataLabel, desc: "先验知识阶段输入信息。" },
+              { name: 'V5', value: 'V_know', x: 760, y: 278, symbol: 'roundRect', symbolSize: [86, 36], itemStyle: dataStyle, label: dataLabel, desc: "外部先验知识库条目。" },
+              { name: 'M2', value: '先验知识认知偏差检测', x: 565, y: 250, symbol: 'roundRect', symbolSize: [176, 58], itemStyle: moduleStyle, label: { fontSize: 12, fontWeight: 'bold', formatter: '先验知识认知偏差检测' }, desc: "结合专家知识库，对初步检测结果进行先验逻辑验证。", status: "待启动" },
+              { name: 'V6', value: 'V_cand', x: 365, y: 250, symbol: 'roundRect', symbolSize: [86, 36], itemStyle: { ...dataStyle, color: 'rgba(207, 234, 204, 0.9)', borderColor: '#83bd8b', shadowColor: '#a5dfac' }, label: dataLabel, desc: "候选偏差原因集合。" },
+              { name: 'V_agent_input', value: 'V_input', x: 305, y: 410, symbol: 'roundRect', symbolSize: [96, 36], itemStyle: dataStyle, label: dataLabel, desc: "智能体协商阶段输入信息。" },
+              { name: 'M3', value: '智能体协商认知偏差检测', x: 535, y: 410, symbol: 'roundRect', symbolSize: [260, 82], itemStyle: shellStyle, label: { color: '#315f9e', fontSize: 12, fontWeight: 'bold', position: 'top', distance: -22, formatter: '' }, desc: "通过多个智能体的协商，进一步精细化偏差定位。", status: "待启动" },
+              { name: 'AgentA', value: '智能体A', x: 455, y: 412, symbol: AGENT_ICON, symbolSize: [38, 38], itemStyle: iconStyle, label: iconLabel, desc: "智能体协商子节点 A。" },
+              { name: 'AgentB', value: '智能体B', x: 535, y: 412, symbol: AGENT_ICON, symbolSize: [38, 38], itemStyle: iconStyle, label: iconLabel, desc: "智能体协商子节点 B。" },
+              { name: 'AgentC', value: '智能体C', x: 615, y: 412, symbol: AGENT_ICON, symbolSize: [38, 38], itemStyle: iconStyle, label: iconLabel, desc: "智能体协商子节点 C。" },
+              { name: 'V7', value: 'V_class', x: 850, y: 410, symbol: 'roundRect', symbolSize: [100, 38], itemStyle: dataStyle, label: dataLabel, desc: "偏差所属的分类等级。" },
+              { name: 'V_decision_input', value: 'V_input', x: 760, y: 570, symbol: 'roundRect', symbolSize: [96, 36], itemStyle: dataStyle, label: dataLabel, desc: "决策选择阶段输入信息。" },
+              { name: 'M4', value: '决策选择认知偏差检测', x: 545, y: 570, symbol: 'roundRect', symbolSize: [176, 58], itemStyle: moduleStyle, label: { fontSize: 12, fontWeight: 'bold', formatter: '决策选择认知偏差检测' }, desc: "在决策层面上分析认知偏差对最终行动方案的影响。", status: "待启动" },
+              { name: 'CommanderDecision', value: '指挥员', x: 350, y: 542, symbol: COMMANDER_ICON, symbolSize: [42, 42], itemStyle: iconStyle, label: iconLabel, desc: "接收决策选择认知偏差检测结果的指挥员节点。" },
+              { name: 'V8', value: 'V_hazard', x: 350, y: 598, symbol: 'roundRect', symbolSize: [100, 38], itemStyle: dataStyle, label: dataLabel, desc: "最终评估的冲突危害等级。" }
             ],
             links: [
-              { source: 'V_img', target: 'M1' }, { source: 'V2', target: 'M1' },
-              { source: 'M1', target: 'V3' }, { source: 'M1', target: 'V4' },
-              { source: 'V3', target: 'M2' }, { source: 'V4', target: 'M2' },
-              { source: 'V5', target: 'M2' }, { source: 'V6', target: 'M3' },
-              { source: 'M2', target: 'V6' }, { source: 'M3', target: 'V7' },
-              { source: 'V7', target: 'M4' }, { source: 'M4', target: 'V8' }
+              { source: 'CommanderInput', target: 'V2' },
+              { source: 'V2', target: 'M1' },
+              { source: 'V_img', target: 'M1' },
+              { source: 'M1', target: 'V4' },
+              { source: 'M1', target: 'V3' },
+              { source: 'V4', target: 'V_input', lineStyle: { type: 'dashed' } },
+              { source: 'V3', target: 'V_input', lineStyle: { type: 'dashed' } },
+              { source: 'V_input', target: 'M2' },
+              { source: 'V5', target: 'M2' },
+              { source: 'M2', target: 'V6' },
+              { source: 'V6', target: 'V_agent_input' },
+              { source: 'V_agent_input', target: 'M3' },
+              { source: 'M3', target: 'AgentA' },
+              { source: 'AgentA', target: 'AgentB' },
+              { source: 'AgentB', target: 'AgentA' },
+              { source: 'AgentB', target: 'AgentC' },
+              { source: 'AgentC', target: 'AgentB' },
+              { source: 'AgentC', target: 'V7' },
+              { source: 'V7', target: 'V_decision_input' },
+              { source: 'V_decision_input', target: 'M4' },
+              { source: 'M4', target: 'CommanderDecision' },
+              { source: 'M4', target: 'V8' }
             ],
-            lineStyle: { opacity: 0.9, width: 2, curveness: 0.3, color: '#4ED8FF' }
+            lineStyle: { opacity: 1, width: 3, curveness: 0, color: '#0b4fa2' }
           }
         ]
       };
@@ -631,13 +725,13 @@ export default {
         return;
       }
       const stageKey = this.getStageKeyFromCarouselItem(currentItem);
-      const moduleNode = STAGE_MODULE_NODE_MAP[stageKey];
-      if (!moduleNode) {
+      const moduleNodes = STAGE_MODULE_NODE_MAP[stageKey] || [];
+      if (!moduleNodes.length) {
         this.resetGraphHighlight();
         return;
       }
-      this.highlightGraphByNodeSet([moduleNode]);
-      const node = this.graphBaseData.find(item => item.name === moduleNode);
+      this.highlightGraphByNodeSet(moduleNodes);
+      const node = this.graphBaseData.find(item => item.name === moduleNodes[0]);
       if (node) {
         this.selectedNode = {
           text: node.value,
@@ -889,7 +983,6 @@ export default {
         this.metricsDisplayTimer = setTimeout(() => {
           this.showMetricsDone();
         }, metricsDelayMs);
-
       } catch (error) {
         console.error("解析接口调用失败", error);
         this.clearAllTimers();
@@ -1053,17 +1146,37 @@ export default {
           status: `解析准确率 ${fmtPercent(m3Accuracy)}`,
           labelFormatter: buildModuleLabelFormatter('M3', fmtPercent(m3Accuracy))
         },
+        AgentA: {
+          desc: m3Propagation || this.safeGet(s3, 'final_text', ''),
+          status: `解析准确率 ${fmtPercent(m3Accuracy)}`
+        },
+        AgentB: {
+          desc: m3Propagation || this.safeGet(s3, 'final_text', ''),
+          status: `解析准确率 ${fmtPercent(m3Accuracy)}`
+        },
+        AgentC: {
+          desc: m3Propagation || this.safeGet(s3, 'final_text', ''),
+          status: `解析准确率 ${fmtPercent(m3Accuracy)}`
+        },
         M4: {
           desc: m4ModelResult,
           status: `解析准确率 ${fmtPercent(m4Accuracy)}`,
           labelFormatter: buildModuleLabelFormatter('M4', fmtPercent(m4Accuracy))
         },
+        CommanderInput: { desc: instrText || '-', status: short(instrText || '-', 36) },
+        CommanderDecision: { desc: m4ModelResult || '-', status: short(m4ModelResult || '-', 36) },
+        V_decision_input: { desc: classText || '-', status: short(classText || '-', 36) },
         V_img: { desc: videoAddress || '-', status: short(videoAddress || '-', 36) },
         V2: { desc: instrText || '-', status: short(instrText || '-', 36) },
         V3: { desc: detectionText || '-', status: short(detectionText || '-', 36) },
         V4: { desc: sceneText || '-', status: short(sceneText || '-', 36) },
+        V_input: {
+          desc: [sceneText, detectionText].filter(Boolean).join('\n') || '-',
+          status: short([sceneText, detectionText].filter(Boolean).join(' / ') || '-', 36)
+        },
         V5: { desc: knowText || '-', status: short(knowText || '-', 36) },
         V6: { desc: candText || '-', status: short(candText || '-', 36) },
+        V_agent_input: { desc: candText || '-', status: short(candText || '-', 36) },
         V7: { desc: classText || '-', status: short(classText || '-', 36) },
         V8: {
           desc: hazardLevel || '-',
@@ -1530,12 +1643,12 @@ export default {
     },
     // 固定高亮方式 3：亮 V_cand、智能体协商、class、决策选择、hazard
     highlightPresetCandToHazard() {
-      const nodes = this.resolveNodeNames(['V_cand', '智能体协商', 'class', '决策选择', 'hazard']);
+      const nodes = this.resolveNodeNames(['V_cand', '智能体协商', '智能体A', '智能体B', '智能体C', 'class', '决策选择', '指挥员决策', 'hazard']);
       this.highlightGraphByNodeSet(nodes);
     },
     // 固定高亮方式 4：亮 class、决策选择、hazard
     highlightPresetClassToHazard() {
-      const nodes = this.resolveNodeNames(['class', '决策选择', 'harzand']);
+      const nodes = this.resolveNodeNames(['class', '决策选择', '指挥员决策', 'harzand']);
       this.highlightGraphByNodeSet(nodes);
     },
     // 可选：统一入口，便于外部直接按模式名调用
@@ -1577,14 +1690,32 @@ export default {
         m3: 'M3',
         m4: 'M4',
         '智能体协商': 'M3',
+        '智能体a': 'AgentA',
+        '智能体b': 'AgentB',
+        '智能体c': 'AgentC',
+        agenta: 'AgentA',
+        agentb: 'AgentB',
+        agentc: 'AgentC',
         '决策选择': 'M4',
         "多模态": 'M1',
         // 变量
-        video: 'V1',
+        commander: 'CommanderInput',
+        '指挥员': 'CommanderInput',
+        '指挥员指令': 'CommanderInput',
+        '指挥员决策': 'CommanderDecision',
+        commanderinput: 'CommanderInput',
+        commanderdecision: 'CommanderDecision',
+        video: 'V_img',
         v_video: 'V_img',
         v_img: 'V_img',
         instr: 'V2',
         v_instr: 'V2',
+        input: 'V_input',
+        v_input: 'V_input',
+        agent_input: 'V_agent_input',
+        v_agent_input: 'V_agent_input',
+        decision_input: 'V_decision_input',
+        v_decision_input: 'V_decision_input',
         det: 'V3',
         v_det: 'V3',
         desc: 'V4',
@@ -1621,6 +1752,15 @@ export default {
       const edgeSet = new Set(edges.map((edge) => this.normalizeEdgeKey(edge)));
 
       const highlightedData = this.graphBaseData.map((node) => {
+        if (node.metaType === 'decor') {
+          return {
+            ...node,
+            itemStyle: {
+              ...(node.itemStyle || {}),
+              opacity: 1
+            }
+          };
+        }
         const isActive = nodeSet.has(node.name);
         const defaultLabelColor = node.label && node.label.color ? node.label.color : '#fff';
         return {
@@ -1649,7 +1789,7 @@ export default {
             ...(link.lineStyle || {}),
             opacity: isActive ? 1 : 0.2,
             width: isActive ? 4 : 1.5,
-            color: isActive ? '#ffe66d' : '#4ED8FF'
+            color: isActive ? '#ffe66d' : '#0b4fa2'
           }
         };
       });
@@ -1861,7 +2001,7 @@ export default {
 .analysis-top-section { flex: 1; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; margin-bottom: 20px; min-height: 0; }
 
 .graph-card { display: flex; flex-direction: column; background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png'); background-size: 100% 100%; padding: 10px; overflow: hidden; min-width: 0; min-height: 0; position: relative; }
-.diagram-div { flex: 1; min-height: 0; cursor: crosshair; }
+.diagram-div { flex: 1; min-height: 0; cursor: default; }
 .graph-parsing-mask {
   position: absolute;
   inset: 10px;
