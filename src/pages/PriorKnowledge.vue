@@ -1,7 +1,6 @@
 <template>
   <div class="section">
     <div class="img_box"></div>
-
     <!-- 顶部导航栏 -->
     <b-row class="header-bar align-item-s-center no-gutters">
       <b-col cols="3" class="text-left">
@@ -23,15 +22,6 @@
         <!-- 作战指令面板 -->
         <div class="design-module orders-module">
           <div class="panel-header">作战指令</div>
-          <div class="design-module-content">
-            <div class="orders-text-box overflow-auto">
-              {{ ordersText || '暂无作战指令' }}
-            </div>
-          </div>
-        </div>
-
-        <div class="design-module video-module">
-          <div class="panel-header">无人机侦察数据</div>
           <div class="design-module-content video-content-wrapper">
             <!-- 数据选择列表状态 -->
             <div v-if="!isVideoSelected" class="video-select-list">
@@ -63,18 +53,28 @@
                 </div>
               </div>
             </div>
+            <!-- 作战指令展示状态 -->
+            <div v-else class="orders-display">
+              <div class="orders-text-box overflow-auto">{{ ordersText || '暂无作战指令' }}</div>
+              <button class="btn-back-list" @click="backToList">返回选择列表</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="design-module video-module">
+          <div class="panel-header">无人机侦察数据</div>
+          <div class="design-module-content">
             <!-- 数据展示状态 -->
-            <div v-else class="video-display-container">
-              <!-- 图片展示 -->
+            <div class="video-display-container">
+              <!-- 图片展示（可点击放大） -->
               <img v-if="selectedVideo && isImageFile(selectedVideo.name || selectedVideo.image_path)"
-                   :src="videoUrl" class="video-display" @error="handleImageError" />
+                   :src="videoUrl" class="video-display clickable-image" @error="handleImageError" @click="openLightbox(videoUrl)" />
               <!-- 视频展示 -->
               <video v-else-if="videoUrl" :src="videoUrl" controls autoplay loop muted class="video-display" @error="handleVideoError"></video>
               <div v-else class="placeholder-text">
                 {{ videoMessage }}
               </div>
             </div>
-            <button v-if="isVideoSelected" class="btn-back-list" @click="backToList">返回选择列表</button>
           </div>
         </div>
 
@@ -84,7 +84,7 @@
             <!-- 细粒度检测后的信息：固定图片区域（不滚动） -->
             <div v-if="multimodalDetectionInfo && multimodalDetectionInfo.image" class="multimodal-image-fixed">
               <div class="cognitive-image-container">
-                <img :src="multimodalDetectionInfo.image" class="multimodal-image" @error="handleImageError" />
+                <img :src="multimodalDetectionInfo.image" class="multimodal-image clickable-image" @error="handleImageError" @click="openLightbox(multimodalDetectionInfo.image)" />
               </div>
             </div>
             <!-- 可滚动的信息区域 -->
@@ -129,7 +129,7 @@
 
         <div class="button-container">
           <button @click="startNegotiation" class="btn-start-detect" :disabled="isDetecting">
-            <span>开始细粒度检测</span>
+            <span>目标信息类别识别</span>
           </button>
           <button @click="queryPriorKnowledge" class="btn-start-detect" :disabled="isLoading || isQueryingPriorKnowledge">
             <span>查询先验知识</span>
@@ -203,6 +203,11 @@
                   <span v-else>{{ item }}</span>
                 </li>
               </ul>
+              <!-- 重要信息 -->
+              <div v-if="importanceInfo" class="importance-info">
+                <span class="info-label">重要信息：</span>
+                <span class="info-value">{{ importanceInfo }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -232,6 +237,30 @@
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- 图片放大预览灯箱 -->
+    <div
+      v-if="lightboxImageUrl"
+      class="image-lightbox"
+      role="dialog"
+      aria-modal="true"
+      @click.self="closeLightbox"
+    >
+      <button
+        type="button"
+        class="image-lightbox-close"
+        aria-label="关闭"
+        @click="closeLightbox"
+      >
+        ×
+      </button>
+      <img
+        :src="lightboxImageUrl"
+        alt=""
+        class="image-lightbox-img"
+        @click.stop
+      />
     </div>
   </div>
 </template>
@@ -308,7 +337,11 @@ export default {
           // 当前数据源类型：'image' 或 'video'
           currentSourceType: 'image',
           // 视频列表数据（来自 video_list 接口）
-          videoSourceList: []
+          videoSourceList: [],
+          // 图片放大预览 URL
+          lightboxImageUrl: null,
+          // 重要信息
+          importanceInfo: ''
         };
       },
   mounted() {
@@ -362,6 +395,7 @@ export default {
       
       // 重置预测信息为默认状态
       this.predictInfoList = ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息", "轮廓信息"];
+      this.importanceInfo = '';
       
       // 重置属性颜色
       this.propertyColors = {};
@@ -404,6 +438,25 @@ export default {
       this.videoMessage = "图片加载失败，请检查图片路径是否正确";
       this.videoUrl = null;
     },
+
+    // 打开图片放大预览
+    openLightbox(imageUrl) {
+      this.lightboxImageUrl = imageUrl;
+      document.addEventListener('keydown', this.handleLightboxKeydown);
+    },
+
+    // 关闭图片放大预览
+    closeLightbox() {
+      this.lightboxImageUrl = null;
+      document.removeEventListener('keydown', this.handleLightboxKeydown);
+    },
+
+    // 灯箱键盘事件处理
+    handleLightboxKeydown(e) {
+      if (e.key === 'Escape' && this.lightboxImageUrl) {
+        this.closeLightbox();
+      }
+    },
     
     // 获取作战指令
     async fetchOrders(sampleId) {
@@ -415,7 +468,7 @@ export default {
         const response = await axios.get('http://10.109.253.71:8001/module2/get_mission_order', {
           params: { img_path: sampleId }
         });
-        this.ordersText = response.data.mission_order || '';
+        this.ordersText = (response.data.mission_order || '').trim();
       } catch (error) {
         console.warn("获取作战指令失败", error);
         this.ordersText = '';
@@ -515,65 +568,128 @@ export default {
       this.selectedVideo = video;
       this.isVideoSelected = true;
 
-      // 如果是视频数据源类型，使用 get_video 接口获取视频
+      // 调用接口获取作战指令和媒体URL
+      this.fetchSampleInfo(video);
+      
+      console.log('选中数据:', JSON.parse(JSON.stringify(video)));
+    },
+    
+    // 获取样本信息（作战指令和媒体URL）
+    async fetchSampleInfo(item) {
+      const IMAGE_API_URL = 'http://10.109.253.71:8001';
+      
+      try {
+        let mediaUrl = null;
+        let ordersText = null;
+        
+        if (this.currentSourceType === 'image') {
+          // 图片接口
+          const response = await axios.get(`${IMAGE_API_URL}/api/dataset/sample/${item.id}`);
+          const data = response.data;
+
+          if (data.image_url) {
+            if (data.image_url.startsWith('http://') || data.image_url.startsWith('https://')) {
+              mediaUrl = data.image_url;
+            } else {
+              mediaUrl = `${IMAGE_API_URL}${data.image_url}`;
+            }
+          }
+
+          if (data.instruction) {
+            ordersText = data.instruction;
+          }
+        } else {
+          // 视频接口
+          const response = await axios.get(`${IMAGE_API_URL}/api/video/sample/${item.id}`);
+          const data = response.data;
+
+          if (data.video_url) {
+            if (data.video_url.startsWith('http://') || data.video_url.startsWith('https://')) {
+              mediaUrl = data.video_url;
+            } else {
+              mediaUrl = `${IMAGE_API_URL}${data.video_url}`;
+            }
+          }
+
+          if (data.directive) {
+            ordersText = data.directive;
+          }
+        }
+
+        // 立即显示作战指令
+        if (ordersText) {
+          this.ordersText = ordersText;
+          console.log("作战指令:", this.ordersText);
+        }
+
+        // 保存选中状态到 localStorage
+        localStorage.setItem('selectedImageData', JSON.stringify({
+          id: item.id,
+          name: item.name,
+          path: item.path || item.name,
+          type: this.currentSourceType
+        }));
+
+        // 图片/视频延时2秒显示
+        if (mediaUrl) {
+          this.videoUrl = null;
+          this.videoMessage = '数据加载中...';
+          setTimeout(() => {
+            this.videoUrl = mediaUrl;
+            this.videoMessage = '';
+            console.log("媒体URL:", this.videoUrl);
+            // 保存媒体URL到 localStorage
+            if (this.videoUrl) {
+              localStorage.setItem('priorKnowledgeVideoUrl', this.videoUrl);
+            }
+          }, 2000);
+        }
+      } catch (error) {
+        console.error("获取样本信息失败:", error);
+        // 备用方案：使用原有逻辑
+        this.useFallbackMediaUrl(item);
+      }
+    },
+    
+    // 备用方案：使用原有逻辑获取媒体URL
+    useFallbackMediaUrl(video) {
       if (this.currentSourceType === 'video') {
         const videoPath = video.path || video.name || '';
-        // 使用 get_video 接口，传入 video_path 参数
         this.videoUrl = `http://10.109.253.71:8001/module2/get_video?video_path=${encodeURIComponent(videoPath)}`;
         this.videoMessage = '视频加载中...';
-        
-        // 获取作战指令（使用视频地址）
         this.fetchOrders(videoPath);
-        
-        // 保存选中的视频数据到 localStorage
         localStorage.setItem('selectedImageData', JSON.stringify({
           path: videoPath,
           type: 'video',
           name: video.name
         }));
-        
-        console.log('选中视频数据:', JSON.parse(JSON.stringify(video)), 'videoUrl:', this.videoUrl);
-        return;
-      }
-
-      // 图片数据源类型（原有逻辑）
-      // 使用 path 字段
-      const imagePath = video.path || video.name || '';
-      const fileName = video.name || '';
-      const sampleId = video.id;
-
-      // 判断是否是图片：类型为 image/图片，或者文件名后缀是图片格式
-      const isImage = video.type === 'image' ||
-                      video.type === '图片' ||
-                      /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileName);
-
-      if (isImage) {
-        // 调用后端接口获取图片
-        const imageBaseUrl = 'http://10.109.253.71:8001/module2/get_image';
-        this.videoUrl = `${imageBaseUrl}?img_path=${encodeURIComponent(imagePath)}`;
-        this.videoMessage = '图片加载中...';
       } else {
-        // 如果是视频类型，使用视频接口
-        const baseUrl = 'http://10.109.253.71:5236';
-        this.videoUrl = `${baseUrl}/video/${encodeURIComponent(video.name)}`;
-        this.videoMessage = '视频加载中...';
-      }
+        const imagePath = video.path || video.name || '';
+        const isImage = video.type === 'image' ||
+                        video.type === '图片' ||
+                        /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(imagePath);
 
-      // 获取作战指令（使用选中的图片路径）
-      this.fetchOrders(imagePath);
-
-      console.log('选中数据:', JSON.parse(JSON.stringify(video)), 'isImage:', isImage, 'videoUrl:', this.videoUrl);
-
-      // 保存选中的图片路径和类型到 localStorage
-      localStorage.setItem('selectedImageData', JSON.stringify({
-        path: imagePath,
-        type: video.type,
-        name: video.name
-      }));
-      
-      // 如果更换了图片，重新加载 base64 数据
-      if (isDifferentImage) {
-        this.loadImageBase64(imagePath);
+        if (isImage) {
+          this.videoUrl = `http://10.109.253.71:8001/module2/get_image?img_path=${encodeURIComponent(imagePath)}`;
+          this.videoMessage = '图片加载中...';
+        } else {
+          this.videoUrl = `http://10.109.253.71:5236/video/${encodeURIComponent(video.name)}`;
+          this.videoMessage = '视频加载中...';
+        }
+        this.fetchOrders(imagePath);
+        localStorage.setItem('selectedImageData', JSON.stringify({
+          path: imagePath,
+          type: video.type,
+          name: video.name
+        }));
+        
+        // 延迟2秒显示
+        const tempUrl = this.videoUrl;
+        this.videoUrl = null;
+        setTimeout(() => {
+          this.videoUrl = tempUrl;
+          this.videoMessage = '';
+        }, 2000);
       }
     },
     // 返回选择列表
@@ -582,6 +698,7 @@ export default {
       this.videoUrl = null;
       this.selectedVideo = null;
       this.videoMessage = '请选择数据源';
+      this.ordersText = '';
     },
     // 导航到首页
     navigateHome() {
@@ -1001,6 +1118,10 @@ export default {
             { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
             { label: '轮廓信息：', value: predictData.outline || '未知', color: this.propertyColors.outline || '#000' },
           ];
+          // 重要信息
+          if (predictData.importance) {
+            this.importanceInfo = predictData.importance;
+          }
         }
         // 准确率：缓存准确率值，但显示取决于计时状态
         if (data.accuracy !== undefined) {
@@ -1186,6 +1307,10 @@ export default {
             { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
             { label: '轮廓信息：', value: predictData.outline || '未知', color: this.propertyColors.outline || '#000' },
           ];
+          // 重要信息
+          if (predictData.importance) {
+            this.importanceInfo = predictData.importance;
+          }
           // 将预测信息存入localStorage，供群体协商界面使用
           localStorage.setItem('predictInfoList', JSON.stringify(this.predictInfoList));
           localStorage.setItem('module2Res', JSON.stringify(data));
@@ -1478,13 +1603,34 @@ export default {
 <style>
 /* 1. 全局样式 */
 /* 1. 全局和背景 */
+/* 全局隐藏滚动条箭头 */
+::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+  display: block !important;
+}
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+::-webkit-scrollbar-track {
+  background: transparent !important;
+  display: none !important;
+}
+::-webkit-scrollbar-thumb {
+  background: #00e5ff !important;
+  border-radius: 3px !important;
+  border: none !important;
+}
+
 .section {
   width: 100%;
   min-height: 100vh;
   color: #fff;
   font-family: "Helvetica Neue", "Microsoft YaHei", sans-serif;
   z-index: 2;
-  padding: 10px;
+  padding: 0 10px 10px 10px;
   margin: 0;
   background-color: transparent;
   display: flex;
@@ -1813,11 +1959,47 @@ text-decoration: none;
   white-space: pre-wrap;
   word-break: break-all;
   overflow-y: auto;
+  /* 滚动条样式 */
+  scrollbar-width: thin !important;
+  scrollbar-color: #00e5ff rgba(0, 0, 0, 0.3) !important;
 }
 
-.orders-text-box::-webkit-scrollbar { width: 6px; }
-.orders-text-box::-webkit-scrollbar-thumb { background: #00e5ff; border-radius: 3px; }
-.orders-text-box::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
+.orders-text-box::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+}
+.orders-text-box::-webkit-scrollbar-button {
+  display: none !important;
+}
+.orders-text-box::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-radius: 3px !important;
+}
+.orders-text-box::-webkit-scrollbar-thumb {
+  background: #00e5ff !important;
+  border-radius: 3px !important;
+}
+.orders-text-box::-webkit-scrollbar-thumb:hover {
+  background: #00b8cc !important;
+}
+
+/* 作战指令展示区域 */
+.orders-display {
+  width: 100%;
+  height: calc(0.95rem * 1.6 * 3 + 12px * 2 + 40px);
+  max-height: calc(0.95rem * 1.6 * 3 + 12px * 2 + 40px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.orders-display .orders-text-box {
+  height: calc(0.95rem * 1.6 * 3 + 12px * 2);
+  max-height: calc(0.95rem * 1.6 * 3 + 12px * 2);
+}
 
 .video-module {
   flex-basis: unset;
@@ -1855,7 +2037,8 @@ text-decoration: none;
 /* 视频选择列表样式 */
 .video-select-list {
   width: 100%;
-  height: 100%;
+  height: calc(0.95rem * 1.6 * 3 + 12px * 2);
+  max-height: calc(0.95rem * 1.6 * 3 + 12px * 2);
   display: flex;
   flex-direction: column;
   padding: 5px;
@@ -1910,6 +2093,30 @@ text-decoration: none;
 .video-list-container {
   flex: 1;
   overflow-y: auto;
+  scrollbar-width: thin !important;
+  scrollbar-color: #00e5ff rgba(0, 0, 0, 0.3) !important;
+}
+
+.video-list-container::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+}
+.video-list-container::-webkit-scrollbar-button {
+  display: none !important;
+}
+.video-list-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-radius: 3px !important;
+}
+.video-list-container::-webkit-scrollbar-thumb {
+  background: #00e5ff !important;
+  border-radius: 3px !important;
+}
+.video-list-container::-webkit-scrollbar-thumb:hover {
+  background: #00b8cc !important;
 }
 
 .video-select-item {
@@ -2045,6 +2252,34 @@ text-decoration: none;
 
 .fixed-left-text .design-module-content.overflow-auto {
   overflow-y: auto;
+  scrollbar-width: thin !important;
+  scrollbar-color: #00e5ff rgba(10, 25, 50, 0.3) !important;
+}
+
+.fixed-left-text .design-module-content.overflow-auto::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+}
+
+.fixed-left-text .design-module-content.overflow-auto::-webkit-scrollbar-button {
+  display: none !important;
+}
+
+.fixed-left-text .design-module-content.overflow-auto::-webkit-scrollbar-track {
+  background: rgba(10, 25, 50, 0.3) !important;
+  border-radius: 3px !important;
+}
+
+.fixed-left-text .design-module-content.overflow-auto::-webkit-scrollbar-thumb {
+  background: #00e5ff !important;
+  border-radius: 3px !important;
+}
+
+.fixed-left-text .design-module-content.overflow-auto::-webkit-scrollbar-thumb:hover {
+  background: #00b8cc !important;
 }
 
 .multimodal-image-fixed {
@@ -2084,6 +2319,8 @@ text-decoration: none;
   overflow-x: hidden;
   white-space: normal;
   word-wrap: break-word;
+  scrollbar-width: thin !important;
+  scrollbar-color: #00e5ff rgba(10, 25, 50, 0.3) !important;
 }
 
 .multimodal-image {
@@ -2092,6 +2329,16 @@ text-decoration: none;
   object-fit: contain;
   border-radius: 4px;
   background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* 可点击放大的图片样式 */
+.clickable-image {
+  cursor: zoom-in;
+  transition: opacity 0.2s ease;
+}
+
+.clickable-image:hover {
+  opacity: 0.9;
 }
 
 .multimodal-info-item {
@@ -2112,21 +2359,29 @@ text-decoration: none;
 }
 
 .text-scrollable::-webkit-scrollbar {
-  width: 6px;
+  width: 6px !important;
+  height: 6px !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+}
+
+.text-scrollable::-webkit-scrollbar-button {
+  display: none !important;
 }
 
 .text-scrollable::-webkit-scrollbar-track {
-  background: rgba(10, 25, 50, 0.3);
-  border-radius: 4px;
+  background: rgba(10, 25, 50, 0.3) !important;
+  border-radius: 4px !important;
 }
 
 .text-scrollable::-webkit-scrollbar-thumb {
-  background: #00e5ff;
-  border-radius: 4px;
+  background: #00e5ff !important;
+  border-radius: 4px !important;
 }
 
 .text-scrollable::-webkit-scrollbar-thumb:hover {
-  background: #00b8d4;
+  background: #00b8d4 !important;
 }
 
 /* 知识图谱容器样式 */
@@ -2190,6 +2445,10 @@ text-decoration: none;
   width: 6px;
 }
 
+.description-box::-webkit-scrollbar-button {
+  display: none;
+}
+
 .description-box::-webkit-scrollbar-thumb {
   background: #00e5ff;
   border-radius: 3px;
@@ -2246,6 +2505,29 @@ text-decoration: none;
 }
 
 /* 所有项都需要底部分隔线，包括最后一项 */
+
+/* 重要信息样式 */
+.importance-info {
+  margin-top: 15px;
+  padding: 12px;
+  background-color: rgba(255, 215, 0, 0.15);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 4px;
+  font-family: "DingTalk-JinBuTi";
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.importance-info .info-label {
+  color: #ffd700;
+  font-weight: bold;
+}
+
+.importance-info .info-value {
+  color: #ffffff;
+  margin-left: 5px;
+}
 
 .text-red {
   color: #ff4d4d;
@@ -2522,5 +2804,44 @@ text-decoration: none;
   background-color: rgba(10, 17, 32, 0.4);
   color: #00e5ff;
   font-weight: bold;
+}
+
+/* 图片放大预览灯箱样式 */
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-lightbox-img {
+  width: 98vw;
+  height: 95vh;
+  object-fit: contain;
+}
+
+.image-lightbox-close {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 10051;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 229, 255, 0.12);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.image-lightbox-close:hover {
+  background: rgba(0, 229, 255, 0.28);
 }
 </style>

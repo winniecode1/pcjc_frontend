@@ -37,8 +37,60 @@
               <!-- 采用 TargetDetection 中 server-video-list/video-item 的列表样式；分区小标题区分图片与视频 -->
               <div
                 class="server-video-list overflow-auto"
-                v-if="imageSourceItems.length > 0 || videoSourceItems.length > 0"
+                v-if="imageSourceItems.length > 0 || videoSourceItems.length > 0 || orderCategories.length > 0"
               >
+                <div v-if="orderCategories.length > 0" class="source-list-section order-instruction-section">
+                  <div
+                    class="source-list-heading-toggle"
+                    :class="{ 'is-collapsed': !instructionSetExpanded }"
+                    role="button"
+                    tabindex="0"
+                    :aria-expanded="instructionSetExpanded ? 'true' : 'false'"
+                    @click="toggleInstructionSet"
+                    @keydown.enter.prevent="toggleInstructionSet"
+                    @keydown.space.prevent="toggleInstructionSet"
+                  >
+                    <span class="source-list-heading-label">指令集合</span>
+                    <span class="source-list-heading-chevron" aria-hidden="true">▼</span>
+                  </div>
+                  <div v-show="instructionSetExpanded" class="source-list-items order-category-list">
+                    <div
+                      v-for="(cat, catIdx) in orderCategories"
+                      :key="'order-cat-' + catIdx"
+                      class="order-category-block"
+                    >
+                      <div
+                        class="source-list-heading-toggle order-category-toggle"
+                        :class="{ 'is-collapsed': !isOrderCategoryExpanded(catIdx) }"
+                        role="button"
+                        tabindex="0"
+                        :aria-expanded="isOrderCategoryExpanded(catIdx) ? 'true' : 'false'"
+                        @click.stop="toggleOrderCategory(catIdx)"
+                        @keydown.enter.prevent.stop="toggleOrderCategory(catIdx)"
+                        @keydown.space.prevent.stop="toggleOrderCategory(catIdx)"
+                      >
+                        <span class="source-list-heading-label">{{ cat.category }}</span>
+                        <span class="source-list-heading-chevron" aria-hidden="true">▼</span>
+                      </div>
+                      <div v-show="isOrderCategoryExpanded(catIdx)" class="source-list-items order-group-list">
+                        <div
+                          v-for="(grp, gIdx) in cat.groups"
+                          :key="'order-grp-' + catIdx + '-' + gIdx"
+                          class="order-group-item"
+                          role="button"
+                          tabindex="0"
+                          :class="{ selected: selectedSourceKey === ('order:' + grp) }"
+                          @click="openOrderGroupItem(catIdx, grp)"
+                          @keydown.enter.prevent="openOrderGroupItem(catIdx, grp)"
+                          @keydown.space.prevent="openOrderGroupItem(catIdx, grp)"
+                        >
+                          <span>{{ grp }}</span>
+                          <span class="selector-circle"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <div v-if="imageSourceItems.length > 0" class="source-list-section">
                   <div
                     class="source-list-heading-toggle"
@@ -97,23 +149,29 @@
               <p class="text-content text-muted" v-else>{{ sourceListMessage }}</p>
             </div>
 
-            <!-- 图片详情视图（分组：三张图从左到右按文件名序号递增） -->
+            <!-- 图片详情视图（指令集合 / 图片分组：instruction + 三张图） -->
             <div
               v-else
               class="compare-detail-wrapper"
-              :class="{ 'compare-detail-group': selectedDetailType === 'compare' && selectedGroupImageFiles.length > 0 }"
+              :class="{
+                'compare-detail-group': selectedDetailType === 'compare' && selectedGroupImageFiles.length > 0,
+                'compare-detail-with-instruction': !!orderInstructionText
+              }"
             >
+              <p v-if="orderInstructionText" class="order-instruction-display">{{ orderInstructionText }}</p>
               <template
                 v-if="selectedDetailType === 'compare' && selectedCompareFile && selectedGroupImageFiles.length > 0"
               >
-                <img
-                  v-for="fn in selectedGroupImageFiles"
-                  :key="fn"
-                  :src="`/static/grouped_dataset/${selectedCompareFile}/${fn}`"
-                  :alt="fn"
-                  class="compare-image group-triple-img group-triple-img-clickable"
-                  @click="openGroupImageLightbox(fn)"
-                />
+                <div class="compare-detail-images-row">
+                  <img
+                    v-for="fn in selectedGroupImageFiles"
+                    :key="fn"
+                    :src="`/static/grouped_dataset/${selectedCompareFile}/${fn}`"
+                    :alt="fn"
+                    class="compare-image group-triple-img group-triple-img-clickable"
+                    @click="openGroupImageLightbox(fn)"
+                  />
+                </div>
               </template>
               <video
                 v-else-if="selectedDetailType === 'video' && selectedVideoUrl"
@@ -238,6 +296,10 @@
                     </template>
                     <span class="result-line">推理共识：{{ agentABNegotiation.negotiation_basis || '***' }}</span>
                     <span class="result-line">推理分歧：{{ agentABNegotiation.deviation || '***' }}</span>
+                    <template v-if="selectedDetailType === 'compare'">
+                      <span class="result-line">优先级评估：{{ displayRound2Assessment(agentABNegotiation, 'priority_assessment') }}</span>
+                      <span class="result-line">重要性评估：{{ displayRound2Assessment(agentABNegotiation, 'importance_assessment') }}</span>
+                    </template>
                   </p>
                   <p v-else class="agent-result">{{ agentABNegotiation || '推理结果：***\n推理共识：***\n推理分歧：***' }}</p>
                 </div>
@@ -265,6 +327,10 @@
                     </template>
                     <span class="result-line">推理共识：{{ agentBCNegotiation.negotiation_basis || '***' }}</span>
                     <span class="result-line">推理分歧：{{ agentBCNegotiation.deviation || '***' }}</span>
+                    <template v-if="selectedDetailType === 'compare'">
+                      <span class="result-line">优先级评估：{{ displayRound2Assessment(agentBCNegotiation, 'priority_assessment') }}</span>
+                      <span class="result-line">重要性评估：{{ displayRound2Assessment(agentBCNegotiation, 'importance_assessment') }}</span>
+                    </template>
                   </p>
                   <p v-else class="agent-result">{{ agentBCNegotiation || '推理结果：***\n推理共识：***\n推理分歧：***' }}</p>
                 </div>
@@ -292,6 +358,10 @@
                     </template>
                     <span class="result-line">推理共识：{{ agentCANegotiation.negotiation_basis || '***' }}</span>
                     <span class="result-line">推理分歧：{{ agentCANegotiation.deviation || '***' }}</span>
+                    <template v-if="selectedDetailType === 'compare'">
+                      <span class="result-line">优先级评估：{{ displayRound2Assessment(agentCANegotiation, 'priority_assessment') }}</span>
+                      <span class="result-line">重要性评估：{{ displayRound2Assessment(agentCANegotiation, 'importance_assessment') }}</span>
+                    </template>
                   </p>
                   <p v-else class="agent-result">{{ agentCANegotiation || '推理结果：***\n推理共识：***\n推理分歧：***' }}</p>
                 </div>
@@ -336,6 +406,14 @@
                     </div>
                   </template>
                   <p v-else class="result-text">***</p>
+                  <template v-if="selectedDetailType === 'compare'">
+                    <div class="unified-divider"></div>
+                    <div class="section-sub">优先级重要性评估：</div>
+                    <div class="section-sub">优先级评估</div>
+                    <p class="result-text" style="white-space: pre-wrap;">{{ finalPriorityAssessment || '***' }}</p>
+                    <div class="section-sub" style="margin-top: 10px;">重要性影响</div>
+                    <p class="result-text" style="white-space: pre-wrap;">{{ finalImportanceImpact || '***' }}</p>
+                  </template>
                 </div>
               </div>
             </template>
@@ -420,8 +498,8 @@
   </div>
 </template><script>
 import axios from 'axios';
-// 开发环境走 webpack devServer 代理，避免 CORS（config/index.js proxyTable）
-const TARGET_DETECTION_API_BASE_URL = '/td5236';
+// 与 TargetDetection.vue 一致：多模态目标检测服务（视频列表 / 文件流）
+const IMAGE_API_URL = 'http://10.109.253.71:5237';
 const MODULE3_BASE = (process.env.VUE_APP_MODULE3_BASE || '').replace(/\/$/, '');
 const MODULE3_REFINE_URL = MODULE3_BASE
   ? `${MODULE3_BASE}/refine`
@@ -429,6 +507,15 @@ const MODULE3_REFINE_URL = MODULE3_BASE
 const MODULE3_EXPORT_URL = MODULE3_BASE
   ? `${MODULE3_BASE}/export`
   : '/module3/export';
+/** 视频群体协商 POST：JSON 里绝对路径前缀换为 `..`，其余原样 */
+const MODULE3_VIDEO_IMAGE_PATH_PREFIX = '/home/wuzhixuan/Project/PCJC';
+function toModule3VideoImagePath(serverPath) {
+  const s = serverPath == null ? '' : String(serverPath).trim();
+  if (!s) return s;
+  return s.startsWith(MODULE3_VIDEO_IMAGE_PATH_PREFIX)
+    ? '..' + s.slice(MODULE3_VIDEO_IMAGE_PATH_PREFIX.length)
+    : s;
+}
 // img_path地址（模块一传参）
 // const IMG_PATH_URL = localStorage.getItem('imagePath') || '/home/wuzhixuan/Project/PCJC/module2/images_frame/B-2幽灵-2.png';
 // const DEVICE_TYPE = localStorage.getItem('deviceType') || '飞机';
@@ -483,6 +570,9 @@ export default {
       disagreementPoints: '',
       differentModelAndReason: '',
       disagreementPointsHighlight: '',
+      /** 图片模式：final_review.priority_importance_analysis */
+      finalPriorityAssessment: '',
+      finalImportanceImpact: '',
       // compare 图片列表/详情相关数据
       compareFiles: [],
       /** groups_manifest.json 解析结果：{ folder, images }[] */
@@ -502,6 +592,12 @@ export default {
       /** 列表区：点击标题展开/收起，互不干扰（进入页面默认收起） */
       imageSourceListExpanded: false,
       videoSourceListExpanded: false,
+      /** static/order.json 指令分类与分组 */
+      orderCategories: [],
+      instructionSetExpanded: false,
+      expandedOrderCategoryIndices: {},
+      /** 指令集合选中时，在「先验知识传播结果」详情区展示的 instruction 文案 */
+      orderInstructionText: '',
       /** 视频：从 /static/video_results 对应 JSON 解析出、用于 module3 请求的字段 */
       videoModule3RequestPayload: null,
       /**
@@ -542,11 +638,22 @@ export default {
     videoSourceItems() {
       return (this.targetDetectionVideos || [])
         .map((video, idx) => {
-          const name = typeof video === 'string' ? video : video && video.name;
+          if (typeof video === 'string') {
+            const name = video;
+            return {
+              key: `video:${name || idx}`,
+              type: 'video',
+              name
+            };
+          }
+          const name = video && video.name;
           return {
             key: `video:${name || idx}`,
             type: 'video',
-            name
+            name,
+            id: video && video.id,
+            videoUrl: video && video.videoUrl,
+            path: video && video.path
           };
         })
         .filter(item => !!item.name);
@@ -661,6 +768,7 @@ export default {
     // 页面加载时加载 compare 文件列表（不再展示视频）
     this.loadCompareFiles();
     this.loadTargetDetectionVideos();
+    this.loadOrderCategories();
     
     // 从localStorage读取预测信息
     this.loadPredictInfoFromStorage();
@@ -710,6 +818,8 @@ export default {
       this.accuracyRate = '—';
       this.imageModeRound1FromStatic = null;
       this.finalBattlefieldTriple = null;
+      this.finalPriorityAssessment = '';
+      this.finalImportanceImpact = '';
     },
     /** 模块三返回的 accuracy_metrics.accuracy */
     getAccuracyFromModule3Data(data) {
@@ -778,6 +888,13 @@ export default {
       if (v == null || v === '') return '***';
       const s = String(v).trim();
       return s !== '' ? s : '***';
+    },
+    /** 图片模式二轮：展示 priority_assessment / importance_assessment */
+    displayRound2Assessment(negot, field) {
+      if (!negot || typeof negot !== 'object') return '***';
+      const v = negot[field];
+      if (v == null || v === '') return '***';
+      return this.toDisplayString(v);
     },
     /** 将 battlefield_analysis 规范为普通对象（支持 JSON 字符串） */
     parseBattlefieldAnalysisObject(ba) {
@@ -865,6 +982,17 @@ export default {
             : '';
         this.disagreementPoints = this.toDisplayString(this.deviationAnalysis);
         this.disagreementPointsHighlight = '';
+        this.finalPriorityAssessment = '';
+        this.finalImportanceImpact = '';
+        if (this.selectedDetailType === 'compare' && fr && fr.priority_importance_analysis) {
+          const pia = fr.priority_importance_analysis;
+          if (pia.priority_assessment != null && pia.priority_assessment !== '') {
+            this.finalPriorityAssessment = this.toDisplayString(pia.priority_assessment);
+          }
+          if (pia.importance_impact != null && pia.importance_impact !== '') {
+            this.finalImportanceImpact = this.toDisplayString(pia.importance_impact);
+          }
+        }
       }
       if (o.finalBlock) {
         this.finalBattlefieldTriple = null;
@@ -1067,32 +1195,101 @@ export default {
           this.compareMessage = '加载分组清单失败';
         });
     },
-    loadTargetDetectionVideos() {
+    async loadTargetDetectionVideos() {
       this.videoMessage = '正在加载视频列表...';
-      axios
-        .get(`${TARGET_DETECTION_API_BASE_URL}/videos`)
-        .then(res => {
-          const videos = res && res.data && Array.isArray(res.data.videos) ? res.data.videos : [];
-          this.targetDetectionVideos = videos;
-          this.videoMessage = videos.length > 0 ? '' : '暂无远程视频';
-        })
-        .catch(err => {
-          console.error('加载 target-detection 视频列表失败:', err);
+      try {
+        const response = await axios.get(`${IMAGE_API_URL}/api/video/list`);
+        if (response.data && Array.isArray(response.data.videos)) {
+          this.targetDetectionVideos = response.data.videos.map(vid => ({
+            id: vid.id,
+            name: vid.filename,
+            path: vid.video_path,
+            videoUrl: vid.video_url
+          }));
+          this.videoMessage = this.targetDetectionVideos.length > 0 ? '' : '暂无远程视频';
+        } else {
           this.targetDetectionVideos = [];
-          this.videoMessage = '无法加载视频列表（检查网络或代理 /td5236）';
-        });
+          this.videoMessage = '暂无远程视频';
+        }
+      } catch (error) {
+        console.error('获取视频列表失败:', error);
+        this.targetDetectionVideos = [];
+        this.videoMessage = '无法加载视频列表（检查网络或服务 ' + IMAGE_API_URL + '）';
+      }
     },
-    buildTargetVideoUrl(videoName) {
-      const baseUrl = TARGET_DETECTION_API_BASE_URL.endsWith('/')
-        ? TARGET_DETECTION_API_BASE_URL.slice(0, -1)
-        : TARGET_DETECTION_API_BASE_URL;
-      return `${baseUrl}/video/${encodeURIComponent(videoName)}`;
+    /** 与 TargetDetection.vue 选择视频时的 URL 规则一致（videoUrl / path / file/id） */
+    buildTargetVideoPlaybackUrl(item) {
+      if (!item || item.type !== 'video') return null;
+      if (item.videoUrl) {
+        if (item.videoUrl.startsWith('http://') || item.videoUrl.startsWith('https://')) {
+          return item.videoUrl;
+        }
+        return `${IMAGE_API_URL}${item.videoUrl}`;
+      }
+      if (item.path) {
+        if (item.path.startsWith('http://') || item.path.startsWith('https://')) {
+          return item.path;
+        }
+        return `${IMAGE_API_URL}${item.path}`;
+      }
+      if (item.id != null && item.id !== '') {
+        return `${IMAGE_API_URL}/api/video/file/${item.id}`;
+      }
+      return null;
     },
     toggleImageSourceList() {
       this.imageSourceListExpanded = !this.imageSourceListExpanded;
     },
     toggleVideoSourceList() {
       this.videoSourceListExpanded = !this.videoSourceListExpanded;
+    },
+    async loadOrderCategories() {
+      const urls = ['/static/order.json', '/static/order'];
+      for (const url of urls) {
+        try {
+          const res = await fetch(url, { cache: 'no-cache' });
+          if (!res.ok) continue;
+          const data = await res.json();
+          const list = data && Array.isArray(data.categories) ? data.categories : [];
+          this.orderCategories = list
+            .filter(item => item && item.category)
+            .map(item => ({
+              category: String(item.category),
+              groups: Array.isArray(item.groups)
+                ? item.groups.map(g => String(g))
+                : [],
+              instruction: item.instruction != null ? String(item.instruction) : ''
+            }));
+          return;
+        } catch (e) {
+          console.warn('[GroupNegotiation] 加载指令集合失败:', url, e);
+        }
+      }
+      this.orderCategories = [];
+    },
+    toggleInstructionSet() {
+      this.instructionSetExpanded = !this.instructionSetExpanded;
+    },
+    isOrderCategoryExpanded(catIdx) {
+      return !!this.expandedOrderCategoryIndices[catIdx];
+    },
+    toggleOrderCategory(catIdx) {
+      const next = { ...this.expandedOrderCategoryIndices };
+      if (next[catIdx]) {
+        delete next[catIdx];
+      } else {
+        next[catIdx] = true;
+      }
+      this.expandedOrderCategoryIndices = next;
+    },
+    /** 指令集合末级：展示该分类 instruction + 对应 group 三张图（不占用图片/视频列表选中态） */
+    async openOrderGroupItem(catIdx, groupName) {
+      const cat = this.orderCategories[catIdx];
+      if (!cat || !groupName) return;
+      this.clearNegotiationDisplay();
+      this.selectedSourceKey = `order:${groupName}`;
+      this.orderInstructionText = cat.instruction || '';
+      await this.openCompareImage(groupName);
     },
     handleGroupImageLightboxKeydown(e) {
       if (e.key === 'Escape' && this.groupImageLightboxUrl) {
@@ -1109,6 +1306,7 @@ export default {
     openSourceItem(item) {
       if (!item || !item.type || !item.name) return;
       this.clearNegotiationDisplay();
+      this.orderInstructionText = '';
       this.selectedSourceKey = item.key;
       this.compareView = 'detail';
       console.log('[GroupNegotiation] 点击列表项:', item);
@@ -1123,11 +1321,12 @@ export default {
       }
 
       this.closeGroupImageLightbox();
+      this.orderInstructionText = '';
       this.selectedDetailType = 'video';
       this.selectedCompareFile = null;
       this.selectedGroupImageFiles = [];
       this.selectedVideoName = item.name;
-      this.selectedVideoUrl = this.buildTargetVideoUrl(item.name);
+      this.selectedVideoUrl = this.buildTargetVideoPlaybackUrl(item);
       this.loadVideoResultByName(item.name);
     },
     // 切换到分组详情（三张图 + 侧栏认知传播信息）
@@ -1395,6 +1594,7 @@ export default {
       this.compareView = 'list';
       this.selectedCompareFile = null;
       this.selectedGroupImageFiles = [];
+      this.orderInstructionText = '';
       this.selectedVideoName = null;
       this.selectedVideoUrl = null;
       this.selectedDetailType = null;
@@ -1541,11 +1741,11 @@ export default {
           color: p.color,
           kind: p.kind,
           shape: p.shape,
-          image_path: p.image_path,
+          image_path: toModule3VideoImagePath(p.image_path),
           ground_truth: p.ground_truth
         };
         console.log('[GroupNegotiation] 模块三请求地址（视频模式，与图片同一接口）:', MODULE3_REFINE_URL);
-        console.log('[GroupNegotiation] 请求体（来自 video_results JSON 的 result + image_path）:', resdata);
+        console.log('[GroupNegotiation] 请求体（视频模式，image_path 已做前缀替换）:', resdata);
       } else {
         resdata = {
           color: '灰色',
@@ -2226,6 +2426,111 @@ export default {
   margin-top: 12px;
 }
 
+.order-instruction-section .order-category-block {
+  margin-bottom: 8px;
+}
+
+.order-instruction-section .order-category-block:last-child {
+  margin-bottom: 0;
+}
+
+.compare-list-wrapper .order-category-toggle {
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.compare-list-wrapper .order-category-toggle .source-list-heading-label {
+  font-size: 12px;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.order-group-list {
+  padding-left: 8px;
+}
+
+.order-group-item {
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  background-color: rgba(0, 80, 120, 0.18);
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #c8f6ff;
+  line-height: 1.3;
+  word-break: break-all;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.order-group-item:hover {
+  background-color: rgba(0, 100, 150, 0.28);
+  border-color: rgba(0, 229, 255, 0.4);
+}
+
+.order-group-item.selected {
+  background-color: rgba(0, 229, 255, 0.35);
+  border-color: #00e5ff;
+}
+
+.order-group-item.selected .selector-circle {
+  background-color: #00e5ff;
+}
+
+.order-group-item:last-child {
+  margin-bottom: 0;
+}
+
+.compare-detail-wrapper.compare-detail-with-instruction {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 10px 14px 12px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.order-instruction-display {
+  flex: 0 0 auto;
+  margin: 0 0 10px 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #e8fdff;
+  text-align: left;
+  word-break: break-word;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  background: rgba(0, 60, 90, 0.35);
+}
+
+.compare-detail-images-row {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  width: 100%;
+}
+
+.compare-detail-with-instruction.compare-detail-group .compare-detail-images-row {
+  min-height: 120px;
+}
+
+.compare-detail-with-instruction .compare-detail-images-row .group-triple-img {
+  flex: 1 1 0;
+  min-width: 0;
+  max-height: 100%;
+  object-fit: contain;
+}
+
 /* 列表分区标题：渐变条 + 钉铛体，与同列 video-item 区分层级 */
 .compare-list-wrapper .source-list-heading-toggle {
   display: flex;
@@ -2306,6 +2611,25 @@ export default {
   flex-wrap: nowrap;
   gap: 8px;
   padding: 8px 12px;
+  box-sizing: border-box;
+}
+
+.compare-detail-wrapper.compare-detail-group.compare-detail-with-instruction {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+.compare-detail-wrapper.compare-detail-group .compare-detail-images-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
   box-sizing: border-box;
 }
 

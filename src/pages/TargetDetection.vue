@@ -19,19 +19,9 @@
 
       <b-col cols="3" class="left-column px-2">
     <div class="left-panels-container">
-    <div class="panel-header header-select-data clean-header">作战指令</div>
-
-    <div class="panel-orders">
-      <div class="panel-content">
-        <div class="orders-text-box overflow-auto">
-          {{ ordersText || '暂无作战指令' }}
-        </div>
-      </div>
-    </div>
+    <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
 
     <div class="data-source-section">
-      <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
-
       <div class="panel-left">
         <div class="panel-content">
           <div class="media-type-selector">
@@ -62,11 +52,22 @@
       </div>
     </div>
 
+    <div class="panel-header header-select-data clean-header">作战指令</div>
+
+    <div class="panel-orders">
+      <div class="panel-content">
+        <div class="orders-text-box overflow-auto">
+          {{ ordersText || '暂无作战指令' }}
+        </div>
+      </div>
+    </div>
+
     <div class="action-buttons">
       <button @click="startDetection" :disabled="isLoading" class="btn-start-detect">
-        <span class="btn-text-pos">开始目标检测</span>
+        <span class="btn-text-pos">目标信息类别识别</span>
       </button>
     </div>
+
   </div>
 </b-col>
 
@@ -90,6 +91,10 @@
           </div>
         </div>
 
+        <!-- ==========================================
+             底部文本框已注释 - 如需恢复请取消注释
+             用途：显示检测摘要文本
+             ==========================================
         <div class="summary-box-middle" :class="{ 'loading-overlay': isLoading }">
           <div class="summary-content overflow-auto"
             :class="{ 'text-highlight': summaryHighlight, 'loading-text': isLoading }">
@@ -98,6 +103,7 @@
             <div v-show="!hasStartedDetection && !isLoading" class="hint-text">请点击"开始目标检测"按钮</div>
           </div>
         </div>
+        -->
       </b-col>
 
       <b-col cols="3" class="right-column px-2">
@@ -601,7 +607,7 @@ export default {
       .right-column {
         display: flex !important;
         flex-direction: column !important;
-        height: calc(100vh - 80px) !important;
+        height: calc(100vh - 60px) !important;
       }
       .panel-right-bottom {
         flex-grow: 0 !important;
@@ -1355,6 +1361,7 @@ export default {
       }
 
       try {
+        let videoUrl = null;
         if (this.selectedMediaType === 'image') {
           // 图片接口
           const response = await axios.get(`${IMAGE_API_URL}/api/dataset/sample/${item.id}`);
@@ -1362,12 +1369,11 @@ export default {
 
           if (data.image_url) {
             if (data.image_url.startsWith('http://') || data.image_url.startsWith('https://')) {
-              this.originalVideoURL = data.image_url;
+              videoUrl = data.image_url;
             } else {
-              this.originalVideoURL = `${IMAGE_API_URL}${data.image_url}`;
+              videoUrl = `${IMAGE_API_URL}${data.image_url}`;
             }
           }
-          console.log("原图片URL:", this.originalVideoURL);
 
           if (data.instruction) {
             this.ordersText = data.instruction;
@@ -1380,43 +1386,58 @@ export default {
 
           if (data.video_url) {
             if (data.video_url.startsWith('http://') || data.video_url.startsWith('https://')) {
-              this.originalVideoURL = data.video_url;
+              videoUrl = data.video_url;
             } else {
-              this.originalVideoURL = `${IMAGE_API_URL}${data.video_url}`;
+              videoUrl = `${IMAGE_API_URL}${data.video_url}`;
             }
           }
-          console.log("原视频URL:", this.originalVideoURL);
 
           if (data.directive) {
             this.ordersText = data.directive;
             console.log("作战指令:", this.ordersText);
           }
         }
+
+        // 图片/视频延时2秒显示
+        if (videoUrl) {
+          setTimeout(() => {
+            this.originalVideoURL = videoUrl;
+            console.log("原图片/视频URL:", this.originalVideoURL);
+            if (this.originalVideoURL) {
+              localStorage.setItem('originalVideoURL', this.originalVideoURL);
+            }
+          }, 2000);
+        }
       } catch (error) {
         console.error("获取样本信息失败:", error);
         // 备用方案
         try {
+          let videoUrl = null;
           if (this.selectedMediaType === 'image') {
             if (item.imageUrl) {
-              this.originalVideoURL = item.imageUrl.startsWith('http') ? item.imageUrl : `${IMAGE_API_URL}${item.imageUrl}`;
+              videoUrl = item.imageUrl.startsWith('http') ? item.imageUrl : `${IMAGE_API_URL}${item.imageUrl}`;
             } else if (item.path) {
-              this.originalVideoURL = item.path.startsWith('http') ? item.path : `${IMAGE_API_URL}/api/dataset/image/${item.id}`;
+              videoUrl = item.path.startsWith('http') ? item.path : `${IMAGE_API_URL}/api/dataset/image/${item.id}`;
             }
           } else {
             if (item.videoUrl) {
-              this.originalVideoURL = item.videoUrl.startsWith('http') ? item.videoUrl : `${IMAGE_API_URL}${item.videoUrl}`;
+              videoUrl = item.videoUrl.startsWith('http') ? item.videoUrl : `${IMAGE_API_URL}${item.videoUrl}`;
             } else if (item.path) {
-              this.originalVideoURL = item.path.startsWith('http') ? item.path : `${IMAGE_API_URL}/api/video/file/${item.id}`;
+              videoUrl = item.path.startsWith('http') ? item.path : `${IMAGE_API_URL}/api/video/file/${item.id}`;
             }
+          }
+          if (videoUrl) {
+            setTimeout(() => {
+              this.originalVideoURL = videoUrl;
+              if (this.originalVideoURL) {
+                localStorage.setItem('originalVideoURL', this.originalVideoURL);
+              }
+            }, 2000);
           }
         } catch (fallbackError) {
           console.error("构造媒体URL失败:", fallbackError);
           this.originalVideoURL = null;
         }
-      }
-      // 保存原始媒体 URL
-      if (this.originalVideoURL) {
-        localStorage.setItem('originalVideoURL', this.originalVideoURL);
       }
       console.log("已选择:", this.selectedMediaType === 'image' ? '图片' : '视频', item.name);
     },
@@ -1738,26 +1759,38 @@ export default {
 .right-column {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 80px);
+  height: calc(100vh - 60px);
   padding: 0 !important;
   justify-content: flex-start !important;
   gap: 10px;
 }
 
-/* 面板通用样式 */
-[class^="panel-"] {
-  width: 100%;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  padding: 20px 30px 30px 30px;
+/* 左侧列面板容器 */
+.left-panels-container {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  gap: 10px;
 }
 
-/* 特定面板的高度和边距 */
+/* 作战指令面板 */
+.panel-orders {
+  flex: 0 0 180px;
+  min-height: 180px;
+}
+
+/* 数据源区域 */
+.data-source-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 300px;
+}
+
 .panel-left {
   flex-grow: 1;
-  height: 100px;
+  height: auto;
+  min-height: 200px;
 }
 
 .panel-right-top {
@@ -2005,9 +2038,9 @@ export default {
 }
 
 .btn-start-detect {
-  width: 250px;
+  width: 280px;
   height: 100px;
-  font-size: 20px; 
+  font-size: 16px; 
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -2024,9 +2057,11 @@ export default {
 .middle-column {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: stretch;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  height: calc(100vh - 60px);
+  overflow: hidden;
 }
 
 .video-section {
@@ -2035,11 +2070,30 @@ export default {
   flex-direction: column;
   align-items: center;
   margin-bottom: 0;
-  flex-shrink: 0;
+  flex: 1;
+  min-height: 150px;
+  /* 注释掉底部文本框后，视频模块撑满剩余空间 */
+  flex-grow: 1;
+}
+
+.video-section:first-of-type .video-frame {
+  max-width: 800px;
+}
+
+.video-section:nth-of-type(2) .video-frame {
+  max-width: 800px;
+}
+
+.video-display {
+  width: 90%;
+  height: 90%;
+  transform: scale(0.9);
+  transform-origin: center center;
 }
 
 .video-label {
-  width: 400px;
+  width: 100%;
+  max-width: 800px;
   height: 40px;
   background-image: url('~@/assets/images/step1/-s-二级标题.png');
   background-repeat: no-repeat;
@@ -2082,8 +2136,11 @@ export default {
 }
 
 .video-frame {
-  width: 600px;
-  height: 280px;
+  width: 100%;
+  max-width: 600px;
+  height: 100%;
+  min-height: 100px;
+  flex: 1;
   background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -2093,30 +2150,10 @@ export default {
   align-items: center;
 }
 
-.video-section:first-of-type .video-frame {
-  width: 800px;
-  height: 320px;
-}
-
-.video-section:nth-of-type(2) .video-frame {
-  width: 800px;
-  height: 300px;
-}
-
 .video-display {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-}
-
-.video-section:first-of-type .video-frame .video-display {
-  width: 650px;
-  height: 280px;
-}
-
-.video-section:nth-of-type(2) .video-frame .video-display {
-  width: 660px;
-  height: 260px;
 }
 
 .placeholder-text {
@@ -2125,8 +2162,8 @@ export default {
 }
 
 .summary-box-middle {
-  width: 600px;
-  height: 200px;
+  width: 800px;
+  height: 300px;
   background-image: url('~@/assets/images/step1/-s-框-小视频.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -2147,8 +2184,10 @@ export default {
   white-space: pre-wrap;
   overflow: auto;
   text-align: left;
-  padding: 8px 15px;
+  padding: 15px;
+}
 
+.summary-content {
   &::-webkit-scrollbar {
     width: 6px;
   }
@@ -2421,12 +2460,20 @@ export default {
 /* 7. 响应式调整 */
 @media (max-width: 1400px) {
   .video-frame {
-    height: 250px;
+    height: 280px;
+  }
+
+  .video-section:first-of-type .video-frame {
+    height: 300px;
+  }
+
+  .video-section:nth-of-type(2) .video-frame {
+    height: 280px;
   }
 
   .summary-box-middle {
-    min-height: 80px;
-    max-height: 100px;
+    min-height: 120px;
+    max-height: 180px;
   }
 
   .metric-box {

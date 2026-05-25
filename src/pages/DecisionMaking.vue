@@ -102,25 +102,56 @@
               <div v-else class="icon-placeholder-commander"></div>
               <div class="assessment-title">指挥员决策</div>
             </div>
-            <div class="assessment-middle-section">
-              <div class="assessment-right-section">
-                <div class="icon-placeholder-red" :style="expertIconStyle" v-if="expertDangerLevel !== 'N/A' && expertDangerLevel"></div>
-              </div>
-              <div class="design-module-content text-scrollable">
-                <div v-if="isAssessing" class="loading-overlay">
-                  <span>决策中</span>
+            <div class="assessment-middle-section" :class="{ 'commander-pick-mode': commanderDangerSelectionPending }">
+              <template v-if="commanderDangerSelectionPending">
+                <div class="commander-level-pick-column">
+                  <button
+                    v-for="(lvl, idx) in commanderDangerLevelLabels"
+                    :key="lvl"
+                    type="button"
+                    class="commander-danger-level-btn"
+                    :class="'commander-danger-level-btn--' + (idx + 1)"
+                    :disabled="isCommanderLevelSubmitting"
+                    @click="submitCommanderDangerLevel(lvl)"
+                  >{{ lvl }}</button>
                 </div>
-                <div v-else class="description-box assessment-content-box">
-                  <ul class="info-list"
-                    v-if="canStartDecision && formattedPerformanceDataLocalList && formattedPerformanceDataLocalList.length > 0">
-                    <li v-for="(item, idx) in formattedPerformanceDataLocalList" :key="'local-' + idx"
-                      :class="{ 'first-item': idx === 0 }">
-                      <span v-html="item"></span>
-                    </li>
-                  </ul>
-                  <p class="text-content text-muted" v-else-if="canStartDecision">暂无评估信息</p>
+                <div class="design-module-content text-scrollable commander-auxiliary-column">
+                  <div class="description-box assessment-content-box">
+                    <div v-if="formattedAuxiliaryMessageLines.length" class="auxiliary-message-block">
+                      <p
+                        v-for="(line, idx) in formattedAuxiliaryMessageLines"
+                        :key="'aux-' + idx"
+                        class="auxiliary-line"
+                        v-html="line"
+                      ></p>
+                    </div>
+                    <p v-else class="text-content text-muted">暂无辅助说明</p>
+                  </div>
                 </div>
-              </div>
+              </template>
+              <template v-else>
+                <div class="assessment-right-section">
+                  <div class="icon-placeholder-red" :style="expertIconStyle" v-if="expertDangerLevel !== 'N/A' && expertDangerLevel"></div>
+                </div>
+                <div class="design-module-content text-scrollable">
+                  <div v-if="isAssessing" class="loading-overlay">
+                    <span>决策中</span>
+                  </div>
+                  <div v-else-if="isCommanderLevelSubmitting" class="loading-overlay">
+                    <span>加载评估信息…</span>
+                  </div>
+                  <div v-else class="description-box assessment-content-box">
+                    <ul class="info-list"
+                      v-if="canStartDecision && formattedPerformanceDataLocalList && formattedPerformanceDataLocalList.length > 0">
+                      <li v-for="(item, idx) in formattedPerformanceDataLocalList" :key="'local-' + idx"
+                        :class="{ 'first-item': idx === 0 }">
+                        <span v-html="item"></span>
+                      </li>
+                    </ul>
+                    <p class="text-content text-muted" v-else-if="canStartDecision">暂无评估信息</p>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -395,6 +426,11 @@ export default {
       gifReplayNonce: [0, 0, 0, 0],
       // 越小越接近“播完立刻重播”，但过小会提前打断较长GIF
       gifReplayIntervalMs: 2000,
+      /** 首次 analyze-weapon 后等待指挥员点选危险等级 */
+      commanderDangerSelectionPending: false,
+      auxiliaryMessageRaw: '',
+      isCommanderLevelSubmitting: false,
+      commanderDangerLevelLabels: ['一级危险等级', '二级危险等级', '三级危险等级', '四级危险等级'],
     };
   },
   computed: {
@@ -439,6 +475,35 @@ export default {
     },
     formattedPerformanceDataLocalList() {
       return this.formatAssessmentTextToList(this.performanceDataLocal);
+    },
+    /** 指挥员选择阶段：auxiliary_message 分行展示 */
+    formattedAuxiliaryMessageLines() {
+      const raw = this.auxiliaryMessageRaw;
+      if (raw == null || raw === '') return [];
+      let text;
+      if (typeof raw === 'object') {
+        try {
+          text = JSON.stringify(raw, null, 2);
+        } catch (e) {
+          text = String(raw);
+        }
+      } else {
+        text = String(raw);
+      }
+      const lines = text.split(/\r?\n/);
+      const out = [];
+      lines.forEach((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        if (trimmed.length > 100 && !/[;\n]/.test(line)) {
+          trimmed.split(/[；;]/).map((x) => x.trim()).filter(Boolean).forEach((chunk) => {
+            out.push(this.escapeToHtml(chunk));
+          });
+        } else {
+          out.push(this.escapeToHtml(trimmed));
+        }
+      });
+      return out;
     },
     videoPanelBgStyle() { return this.bgImageStyle(this.assetNames.videoPanel); },
     leftTextPanelBgStyle() { return this.bgImageStyle(this.assetNames.leftTextPanel); },
@@ -531,6 +596,9 @@ export default {
       this.deviationDetectionAccuracy = 'N/A';
       this.modelDangerLevel = 'N/A';
       this.expertDangerLevel = 'N/A';
+      this.commanderDangerSelectionPending = false;
+      this.auxiliaryMessageRaw = '';
+      this.isCommanderLevelSubmitting = false;
       this.currentLevel = 4;
       this.isBiasDetecting = false;
       this.isBiasResultLoading = false;
@@ -551,6 +619,9 @@ export default {
       this.deviationDetectionAccuracy = 'N/A';
       this.modelDangerLevel = 'N/A';
       this.expertDangerLevel = 'N/A';
+      this.commanderDangerSelectionPending = false;
+      this.auxiliaryMessageRaw = '';
+      this.isCommanderLevelSubmitting = false;
       this.currentLevel = 4;
       this.isBiasDetecting = false;
       this.isBiasResultLoading = false;
@@ -781,14 +852,28 @@ export default {
         const module4ResStr = localStorage.getItem('module4Res');
         if (module4ResStr) {
           const module4Data = JSON.parse(module4ResStr);
+          const commanderPickPending = module4Data.commander_danger_selection_pending === true;
 
           this.performanceData = module4Data.performance_data || module4Data.performancedata || '暂无性能数据。';
-          this.performanceDataLocal = module4Data.performance_data_local || '暂无本地性能数据。';
+          this.commanderDangerSelectionPending = commanderPickPending;
+          if (commanderPickPending) {
+            this.auxiliaryMessageRaw = module4Data.auxiliary_message != null ? module4Data.auxiliary_message
+              : (module4Data.auxiliaryMessage != null ? module4Data.auxiliaryMessage : '');
+            this.performanceDataLocal = '';
+            this.expertDangerLevel = 'N/A';
+          } else {
+            this.auxiliaryMessageRaw = '';
+            this.performanceDataLocal = module4Data.performance_data_local || '暂无本地性能数据。';
+            const storedChosen = module4Data.commander_chosen_level_num;
+            const parsedChosen = parseInt(String(storedChosen), 10);
+            const expertLevelNum = Number.isFinite(parsedChosen) && parsedChosen >= 1 && parsedChosen <= 4
+              ? parsedChosen
+              : this.getLevelNum(module4Data.local_txt_danger_level);
+            this.expertDangerLevel = `${expertLevelNum} !`;
+          }
 
           const modelLevelNum = this.getLevelNum(module4Data.modelanalysisdangerlevel);
-          const expertLevelNum = this.getLevelNum(module4Data.local_txt_danger_level);
           this.modelDangerLevel = `${modelLevelNum} !`;
-          this.expertDangerLevel = `${expertLevelNum} !`;
           this.currentLevel = modelLevelNum;
           this.imageList = module4Data.imageList || [null, null, null, null];
 
@@ -840,6 +925,8 @@ export default {
           this.deviationDetectionAccuracy = 'N/A';
           this.modelDangerLevel = 'N/A';
           this.expertDangerLevel = 'N/A';
+          this.commanderDangerSelectionPending = false;
+          this.auxiliaryMessageRaw = '';
           this.currentLevel = 4;
         }
       } catch (e) {
@@ -933,6 +1020,11 @@ export default {
       this.isLoading = true;
       this.isAssessing = true;
       this.isImageLoading = true;
+      this.commanderDangerSelectionPending = false;
+      this.auxiliaryMessageRaw = '';
+      this.isCommanderLevelSubmitting = false;
+      this.performanceDataLocal = '';
+      this.expertDangerLevel = 'N/A';
       // 重置决策选择认知偏差检测结果文本为默认提示
       this.behaviorInfo = '请点击 "决策认知偏差检测"';
       this.samePoints = '请点击 "决策认知偏差检测"';
@@ -994,6 +1086,9 @@ export default {
             this.imageList = [null, null, null, null];
           }
 
+          const auxMsg = mainData.data.auxiliary_message != null
+            ? mainData.data.auxiliary_message
+            : mainData.data.auxiliaryMessage;
           const module4Res = {
             weapon_model: mainData.data.weapon_model,
             performance_data: mainData.data.performance_data,
@@ -1011,7 +1106,9 @@ export default {
             comprehensiveaccuracy: mainData.data.comprehensive_accuracy,
             deviation_value: mainData.data.deviation_value,
             coredimensionratingaccuracy: mainData.data.core_dimension_rating_accuracy,
-            average_comprehensive_accuracy: accuracyData['average_comprehensive_accuracy']
+            average_comprehensive_accuracy: accuracyData['average_comprehensive_accuracy'],
+            auxiliary_message: auxMsg,
+            commander_danger_selection_pending: true
           };
           console.log('[DecisionMaking] 合并后写入 localStorage 的 module4Res:', module4Res);
           localStorage.setItem('module4Res', JSON.stringify(module4Res));
@@ -1034,7 +1131,9 @@ export default {
           this.samePoints = '请点击 "决策认知偏差检测"';
           this.differentPoints = '请点击 "决策认知偏差检测"';
 
-          this.parseBackendData(mainData.data);
+          this.auxiliaryMessageRaw = auxMsg != null && auxMsg !== '' ? auxMsg : '';
+          this.commanderDangerSelectionPending = true;
+          this.parseBackendData(mainData.data, { updateCommander: false });
         } else {
           this.currentStageText = `分析接口数据获取失败：${(mainData.error && mainData.error.message) || '未知错误'}`;
           console.warn('[DecisionMaking] analyze-weapon 非 success:', mainData);
@@ -1052,8 +1151,8 @@ export default {
         this.isImageLoading = false;
       }
     },
-    parseBackendData(backendData) {
-      console.log('[DecisionMaking] parseBackendData 入参 backendData:', backendData);
+    parseBackendData(backendData, { updateCommander = true } = {}) {
+      console.log('[DecisionMaking] parseBackendData 入参 backendData:', backendData, { updateCommander });
       const currentThirdStageText = String(this.thirdStageText);
       if (!currentThirdStageText || currentThirdStageText.includes('正在加载') || currentThirdStageText.includes('未找到')) {
         this.thirdStageText = `发现目标武器型号：${backendData.weapon_model}，位于指定区域，行为模式初步匹配已知威胁，待进一步分析验证`;
@@ -1063,14 +1162,90 @@ export default {
       this.performanceData = rawPerformanceData;
 
       const rawPerformanceDataLocal = backendData.performance_data_local || '暂无本地性能数据。';
-      this.performanceDataLocal = rawPerformanceDataLocal;
-
       const modelLevelNum = this.getLevelNum(backendData.model_analysis_danger_level);
       const expertLevelNum = this.getLevelNum(backendData.local_txt_danger_level);
 
       this.modelDangerLevel = `${modelLevelNum} !`;
-      this.expertDangerLevel = `${expertLevelNum} !`;
       this.currentLevel = modelLevelNum;
+
+      if (updateCommander) {
+        this.performanceDataLocal = rawPerformanceDataLocal;
+        this.expertDangerLevel = `${expertLevelNum} !`;
+      }
+    },
+    /**
+     * 指挥员点选危险等级后，携带 local_txt_danger_level 再次请求 analyze-weapon，仅更新指挥员侧展示与缓存。
+     */
+    async submitCommanderDangerLevel(levelLabel) {
+      if (!this.selectedSourceItem || !this.selectedSourceItem.name) {
+        alert('请先选择图片或视频。');
+        return;
+      }
+      if (this.isCommanderLevelSubmitting) return;
+
+      const selectedName = String(this.selectedSourceItem.name).trim();
+      const model = this.stripFileExtension(selectedName);
+      const chosenLevelNum = this.getLevelNum(levelLabel);
+
+      let prev = {};
+      const module4ResStr = localStorage.getItem('module4Res');
+      if (module4ResStr) {
+        try {
+          prev = JSON.parse(module4ResStr);
+        } catch (e) {
+          prev = {};
+        }
+      }
+      const rollbackAux = prev.auxiliary_message != null ? prev.auxiliary_message
+        : (prev.auxiliaryMessage != null ? prev.auxiliaryMessage : '');
+
+      const rollbackToPick = () => {
+        this.commanderDangerSelectionPending = true;
+        this.auxiliaryMessageRaw = rollbackAux;
+        this.expertDangerLevel = 'N/A';
+        this.performanceDataLocal = '';
+      };
+
+      // 乐观更新：左侧等级图立刻与按钮一致；慢的是后端 analyze-weapon，只挡住右侧评估文案区域
+      this.isCommanderLevelSubmitting = true;
+      this.expertDangerLevel = `${chosenLevelNum} !`;
+      this.commanderDangerSelectionPending = false;
+      this.auxiliaryMessageRaw = '';
+      this.performanceDataLocal = '';
+
+      try {
+        const requestBody = {
+          weapon_model: model,
+          local_txt_danger_level: levelLabel
+        };
+        console.log('[DecisionMaking] 指挥员确认危险等级 analyze-weapon:', requestBody);
+        const mainResponse = await axios.post(`${API_BASE_URL}/analyze-weapon`, requestBody);
+        const mainData = mainResponse.data;
+        if (!mainData || mainData.status !== 'success' || !mainData.data) {
+          const errMsg = (mainData && mainData.error && mainData.error.message) || '未知错误';
+          rollbackToPick();
+          alert(`指挥员危险等级提交失败：${errMsg}`);
+          console.warn('[DecisionMaking] submitCommanderDangerLevel 非 success:', mainData);
+          return;
+        }
+        const d = mainData.data;
+        this.performanceDataLocal = d.performance_data_local || '暂无本地性能数据。';
+
+        const merged = {
+          ...prev,
+          local_txt_danger_level: d.local_txt_danger_level,
+          performance_data_local: d.performance_data_local,
+          commander_danger_selection_pending: false,
+          commander_chosen_level_num: chosenLevelNum
+        };
+        localStorage.setItem('module4Res', JSON.stringify(merged));
+      } catch (error) {
+        console.error('[DecisionMaking] submitCommanderDangerLevel 失败:', error);
+        rollbackToPick();
+        alert('指挥员危险等级提交失败，请检查网络或后端服务。');
+      } finally {
+        this.isCommanderLevelSubmitting = false;
+      }
     },
     // 新增：检查计时器状态（核心逻辑）
     checkBiasTimerState() {
@@ -1247,8 +1422,25 @@ export default {
       }
     },
     getLevelNum(backendLevel) {
+      if (backendLevel == null || backendLevel === '') return 4;
+      if (typeof backendLevel === 'number') {
+        const n = Math.round(backendLevel);
+        if (n >= 1 && n <= 4) return n;
+        return 4;
+      }
+      const s = String(backendLevel).trim();
       const numMap = { '危险等级1': 1, '危险等级2': 2, '危险等级3': 3, '危险等级4': 4 };
-      return numMap[backendLevel] || 4;
+      if (numMap[s] != null) return numMap[s];
+      if (/一级/.test(s)) return 1;
+      if (/二级/.test(s)) return 2;
+      if (/三级/.test(s)) return 3;
+      if (/四级/.test(s)) return 4;
+      const match = s.match(/(\d+)/);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        if (n >= 1 && n <= 4) return n;
+      }
+      return 4;
     },
     getLevelImageName(level) {
       switch (level) {
@@ -1260,8 +1452,13 @@ export default {
     },
     extractLevelFromString(levelString) {
       if (!levelString) return 4;
-      const match = levelString.toString().match(/(\d+)/);
-      return match ? parseInt(match[1], 10) : 4;
+      const s = levelString.toString();
+      const match = s.match(/(\d+)/);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        if (n >= 1 && n <= 4) return n;
+      }
+      return this.getLevelNum(s);
     },
     async loadSourceImageList() {
       // 图片与视频分开加载，避免任一失败影响另一方显示
@@ -2273,6 +2470,105 @@ export default {
     min-width: 0;
   }
 
+  .assessment-middle-section.commander-pick-mode {
+    align-items: stretch;
+  }
+
+  .commander-level-pick-column {
+    flex: 0 0 118px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    justify-content: center;
+    position: relative;
+    min-height: 0;
+  }
+
+  .commander-danger-level-btn {
+    flex: 0 0 auto;
+    padding: 6px 8px;
+    font-size: 11px;
+    line-height: 1.25;
+    text-align: center;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+
+  /* 一级红、二级黄、三级蓝、四级绿 */
+  .commander-danger-level-btn--1 {
+    color: #ffe8e8;
+    background: rgba(180, 30, 30, 0.5);
+    border: 1px solid rgba(255, 90, 90, 0.75);
+  }
+
+  .commander-danger-level-btn--1:hover:not(:disabled) {
+    background: rgba(200, 45, 45, 0.65);
+    border-color: rgba(255, 130, 130, 0.9);
+  }
+
+  .commander-danger-level-btn--2 {
+    color: #3d3200;
+    background: rgba(255, 210, 60, 0.65);
+    border: 1px solid rgba(230, 180, 0, 0.9);
+  }
+
+  .commander-danger-level-btn--2:hover:not(:disabled) {
+    background: rgba(255, 225, 100, 0.8);
+    border-color: rgba(255, 200, 40, 1);
+  }
+
+  .commander-danger-level-btn--3 {
+    color: #e8f4ff;
+    background: rgba(25, 90, 180, 0.5);
+    border: 1px solid rgba(90, 160, 255, 0.85);
+  }
+
+  .commander-danger-level-btn--3:hover:not(:disabled) {
+    background: rgba(40, 110, 200, 0.65);
+    border-color: rgba(120, 185, 255, 1);
+  }
+
+  .commander-danger-level-btn--4 {
+    color: #e8fff0;
+    background: rgba(30, 120, 55, 0.5);
+    border: 1px solid rgba(70, 210, 120, 0.8);
+  }
+
+  .commander-danger-level-btn--4:hover:not(:disabled) {
+    background: rgba(45, 145, 70, 0.65);
+    border-color: rgba(100, 235, 150, 0.95);
+  }
+
+  .commander-danger-level-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .commander-auxiliary-column {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    position: relative;
+  }
+
+  .auxiliary-message-block {
+    margin: 0;
+    padding: 4px 0;
+  }
+
+  .auxiliary-line {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #e6faff;
+    word-break: break-word;
+  }
+
+  .auxiliary-line:last-child {
+    margin-bottom: 0;
+  }
+
   .assessment-module .design-module-content {
     flex: 1;
     height: 100%;
@@ -2374,13 +2670,13 @@ export default {
       }
 
       &.level-3 {
-        color: #2BC3FF;
-        text-shadow: 0 0 5px #2BC3FF;
+        color: #5aa9ff;
+        text-shadow: 0 0 5px rgba(90, 169, 255, 0.85);
       }
 
       &.level-4 {
-        color: #7EFF00;
-        text-shadow: 0 0 5px #7EFF00;
+        color: #4ade80;
+        text-shadow: 0 0 5px rgba(74, 222, 128, 0.75);
       }
     }
   }
