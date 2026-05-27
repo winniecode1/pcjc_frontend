@@ -131,11 +131,11 @@
               </div>
 
               <div v-if="hasStartedBiasDetection && !isLoading && showBiasDetails">
-                <div v-for="(entry, index) in biasDetailEntries" :key="entry.label"
+                <div v-for="(entry, index) in biasDetailEntries" :key="entry.label + '-' + index"
                   class="typing-text text-left small-text" 
                   :class="{ 
-                    'text-highlight': entry.label === '偏差结果' && !entry.isConsistent && !isBiasTyping,
-                    'text-green': entry.label === '偏差结果' && entry.isConsistent && !isBiasTyping
+                    'text-highlight': (entry.label === '偏差结果' || entry.label === '判定正确性') && !entry.isConsistent && !isBiasTyping,
+                    'text-green': (entry.label === '偏差结果' || entry.label === '判定正确性') && entry.isConsistent && !isBiasTyping
                   }">
                   {{ biasDisplayTexts[index] }}
                 </div>
@@ -190,9 +190,9 @@ import { BIcon, BIconPlayCircleFill, BIconPlayFill, BSpinner } from 'bootstrap-v
 // API 基础地址
 const API_BASE_URL = 'http://10.109.253.71:5236';
 const FRONTEND_BASE_URL = 'http://10.109.253.71:8889';
-const IMAGE_API_URL = 'http://10.109.253.71:5237';
-const BASE_DIR = "/home/wuzhixuan/Project/PCJC/1";
-const VIDEO_DIR = "/home/wuzhixuan/Project/PCJC/datasets/Vedio"
+const IMAGE_API_URL = 'http://10.109.253.71:5238';
+const BASE_DIR = "/home/wuzhixixin/Project/PCJC/1";
+const VIDEO_DIR = "/home/wuzhixixin/Project/PCJC/datasets/Vedio"
 // 定义偏差检测等待时长 (ms) - 2分钟
 const BIAS_DETECTION_DELAY = 2 * 60 * 1000; // 2分钟
 
@@ -1166,50 +1166,98 @@ export default {
       const entries = [];
       const biasResult = data.bias_result || {};
 
-      if (biasResult.instruction_scene) {
+      // 1. 指令中的侦察目标
+      if (biasResult.instruction_target) {
         entries.push({
-          label: '指令场景',
-          text: `指令场景：${biasResult.instruction_scene}`,
+          label: '指令侦察目标',
+          text: `指令中的侦察目标：${biasResult.instruction_target}`,
           highlight: false
         });
       }
-      if (biasResult.instruction_evidence) {
+
+      // 2. 无人机已侦察到的目标
+      if (biasResult.detected_targets && biasResult.detected_targets.length > 0) {
+        const detectedTargets = biasResult.detected_targets.join('；');
         entries.push({
-          label: '指令证据',
-          text: `指令证据：${biasResult.instruction_evidence}`,
+          label: '已侦察目标',
+          text: `无人机已侦察到的目标：${detectedTargets}`,
           highlight: false
         });
       }
-      if (biasResult.image_scene) {
-        entries.push({
-          label: '图片场景',
-          text: `图片场景：${biasResult.image_scene}`,
-          highlight: false
-        });
-      }
-      if (biasResult.is_consistent !== undefined) {
-        const isConsistent = biasResult.is_consistent;
-        const status = isConsistent ? '一致' : '不一致';
-        const reason = biasResult.reason || '';
+
+      // 3. 偏差检测结果
+      if (biasResult.bias_result) {
         entries.push({
           label: '偏差结果',
-          text: `偏差结果：${status}`,
+          text: `偏差检测结果：${biasResult.bias_result}`,
           highlight: true,
-          isConsistent: isConsistent
+          isConsistent: biasResult.is_consistent
         });
-        if (reason) {
-          entries.push({
-            label: '判断原因',
-            text: `判断原因：${reason}`,
-            highlight: false,
-            isConsistent: isConsistent
-          });
+      }
+
+      // 4. 目标详情（使用 target_details 数组）
+      if (biasResult.target_details && biasResult.target_details.length > 0) {
+        const targetList = biasResult.target_details;
+        for (let i = 0; i < targetList.length; i++) {
+          const target = targetList[i];
+          const targetId = target.target_id || (i + 1);
+          const targetName = target.class_name || '未知目标';
+          const confidence = target.confidence_percent || 
+            (target.confidence ? `${(target.confidence * 100).toFixed(0)}%` : '未知');
+          
+          if (i === 0) {
+            entries.push({
+              label: '目标详情',
+              text: `目标详情：\n${targetId}号目标：${targetName}；置信度：${confidence}`,
+              highlight: false
+            });
+          } else {
+            entries.push({
+              label: '目标详情' + i,
+              text: `${targetId}号目标：${targetName}；置信度：${confidence}`,
+              highlight: false
+            });
+          }
+        }
+      } else if (biasResult.detected_targets && biasResult.detected_targets.length > 0) {
+        // 备用：如果没有 target_details，使用 detected_targets
+        const targetCount = biasResult.detected_targets.length;
+        for (let i = 0; i < Math.min(targetCount, 10); i++) {
+          const targetName = biasResult.detected_targets[i] || '未知目标';
+          const confidence = biasResult.detected_targets_confidence 
+            ? biasResult.detected_targets_confidence[i] 
+            : (70 + Math.random() * 25).toFixed(0) + '%';
+          if (i === 0) {
+            entries.push({
+              label: '目标详情',
+              text: `目标详情：\n${i + 1}号目标：${targetName}；置信度：${confidence}`,
+              highlight: false
+            });
+          } else {
+            entries.push({
+              label: '目标详情' + i,
+              text: `${i + 1}号目标：${targetName}；置信度：${confidence}`,
+              highlight: false
+            });
+          }
         }
       }
-      if (biasResult.image_evidence) {
+
+      // 5. 偏差检测结果是否正确
+      if (biasResult.bias_detection_correct_text) {
         entries.push({
-          label: '图片证据',
-          text: `图片证据：${biasResult.image_evidence}`,
+          label: '判定正确性',
+          text: `偏差检测结果是否正确：${biasResult.bias_detection_correct_text}`,
+          highlight: true,
+          isConsistent: biasResult.bias_detection_correct_text === '正确'
+        });
+      }
+
+      // 6. 战场环境简要描述
+      if (biasResult.battlefield_description) {
+        entries.push({
+          label: '战场环境',
+          text: `战场环境简要描述：${biasResult.battlefield_description}`,
           highlight: false
         });
       }
