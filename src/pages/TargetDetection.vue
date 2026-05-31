@@ -76,7 +76,7 @@
           <div class="video-label label-original">{{ selectedMediaType === 'image' ? '认知传播图片' : '认知传播视频' }}</div>
           <div class="video-frame">
             <img v-if="originalVideoURL && selectedMediaType === 'image'" :src="originalVideoURL" class="video-display" alt="原始图片" @error="handleImageError" />
-            <video v-else-if="originalVideoURL && selectedMediaType === 'video'" :src="originalVideoURL" class="video-display" controls @error="handleVideoError"></video>
+            <video v-else-if="originalVideoURL && selectedMediaType === 'video'" :src="originalVideoURL" class="video-display" autoplay loop muted controls @error="handleVideoError"></video>
             <div v-else class="placeholder-text">请选择{{ selectedMediaType === 'image' ? '图片' : '视频' }}</div>
           </div>
         </div>
@@ -85,7 +85,7 @@
           <div class="video-label label-processed">多模态目标检测结果</div>
           <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
             <img v-if="processedVideoURL && !isLoading && selectedMediaType === 'image'" :src="processedVideoURL" class="video-display" alt="检测结果" :key="'img-' + processedVideoURL" @error="handleImageError" />
-            <video v-else-if="processedVideoURL && !isLoading && selectedMediaType === 'video'" :src="processedVideoURL" class="video-display" controls :key="'video-' + processedVideoURL" @error="handleVideoError"></video>
+            <video v-else-if="processedVideoURL && !isLoading && selectedMediaType === 'video'" :src="processedVideoURL" class="video-display" autoplay loop muted controls :key="'video-' + processedVideoURL" @error="handleVideoError"></video>
             <div v-if="isLoading" class="placeholder-text loading-text">检测中……</div>
             <div v-else-if="!processedVideoURL" class="placeholder-text">检测结果将在这里显示</div>
           </div>
@@ -1014,10 +1014,12 @@ export default {
           localStorage.setItem('biasStartTime', Date.now().toString());
           localStorage.setItem('biasDetectionStarted', 'true');
 
-          // 文本立即显示（去掉延迟）
-          this.showBiasDetails = true;
-          this.isBiasTyping = true;
-          this.startBiasTypingSequence(0);
+          // 延迟3秒后开始显示文字
+          setTimeout(() => {
+            this.showBiasDetails = true;
+            this.isBiasTyping = true;
+            this.startBiasTypingSequence(0);
+          }, 3000);
 
           // 准确率延迟2分钟显示
           this.startAccuracyTimer(BIAS_DETECTION_DELAY);
@@ -1080,10 +1082,12 @@ export default {
           localStorage.setItem('biasStartTime', Date.now().toString());
           localStorage.setItem('biasDetectionStarted', 'true');
 
-          // 文本立即显示（去掉延迟）
-          this.showBiasDetails = true;
-          this.isBiasTyping = true;
-          this.startBiasTypingSequence(0);
+          // 延迟3秒后开始显示文字
+          setTimeout(() => {
+            this.showBiasDetails = true;
+            this.isBiasTyping = true;
+            this.startBiasTypingSequence(0);
+          }, 3000);
 
           // 保存当前状态到缓存
           this.saveAllStateToCache();
@@ -1650,10 +1654,10 @@ export default {
         this.resultMessage = "分析失败: " + (error.response && error.response.data && error.response.data.error) || error.message;
         this.progressMessage = "分析失败";
       } finally {
-        // 延迟0.5秒后关闭加载状态，展示结果
+        // 延迟2秒后关闭加载状态，展示结果
         setTimeout(() => {
           this.isLoading = false;
-        }, 500);
+        }, 2000);
       }
     },
     async exportResults() {
