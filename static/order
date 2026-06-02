@@ -1,0 +1,44 @@
+{
+    "categories": [
+      {
+        "category": "农田道路装甲机动",
+        "groups": ["group_000", "group_001", "group_002"],
+        "instruction": "沿农田道路侦察装甲集群，标定坦克与战车机动路线"
+      },
+      {
+        "category": "林地山地装甲隐蔽",
+        "groups": ["group_003", "group_006", "group_009", "group_016"],
+        "instruction": "沿林地山地搜索隐蔽装甲，记录烟尘、土路与停驻位置"
+      },
+      {
+        "category": "村镇建筑周边车辆",
+        "groups": ["group_007", "group_008", "group_014"],
+        "instruction": "监视村镇建筑周边车辆，区分军卡、坦克与装甲战车"
+      },
+      {
+        "category": "沙漠开阔坦克集群",
+        "groups": ["group_005", "group_017"],
+        "instruction": "巡查沙漠开阔地坦克集结，评估数量、间距和推进方向"
+      },
+      {
+        "category": "雪地沙尘重装目标",
+        "groups": ["group_004", "group_013"],
+        "instruction": "在雪地或沙尘低能见度下复核重装车辆与异常火点"
+      },
+      {
+        "category": "废墟战场装甲活动",
+        "groups": ["group_011"],
+        "instruction": "侦察废墟战场装甲活动，标注烟雾、残骸与交战区域"
+      },
+      {
+        "category": "植被覆盖沟渠阵地",
+        "groups": ["group_010", "group_012", "group_015"],
+        "instruction": "搜索植被覆盖沟渠阵地，定位连续工事与隐蔽出入口"
+      },
+      {
+        "category": "烟雾附近战壕阵地",
+        "groups": ["group_018"],
+        "instruction": "侦察烟雾附近战壕阵地，锁定爆点、火源与防御线走向"
+      }
+    ]
+  }

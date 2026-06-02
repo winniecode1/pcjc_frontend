@@ -9,6 +9,7 @@ import TargetDetection from '../pages/TargetDetection.vue'
 import GroupNegotiation from '../pages/GroupNegotiation.vue'
 import PriorKnowledge from '../pages/PriorKnowledge.vue'
 import DecisionMaking from '../pages/DecisionMaking.vue'
+import DecisionMakingV2 from '../pages/DecisionMakingV2.vue'
 import AttributionDiagnosis from '../pages/AttributionDiagnosis.vue'
 import AttributionDiagnosisV2 from '../pages/AttributionDiagnosisV2.vue'
 import CombinedDiagnosis from '../pages/CombinedDiagnosis.vue'
@@ -42,7 +43,7 @@ export default new Router({
     {
       path: '/decisionmaking', // 决策选择
       name: 'DecisionMaking',
-      component: DecisionMaking
+      component: DecisionMakingV2
     },
     {
       path: '/group-negotiation', // 群体协商

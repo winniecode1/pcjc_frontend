@@ -1,0 +1,3405 @@
+<template>
+  <div class="section">
+    <div class="img_box"></div>
+
+    <b-row class="header-bar align-item-s-center no-gutters">
+      <b-col cols="3" class="text-left">
+        <button class="header-btn btn-home" @click="navigateHome">首页</button>
+        <button class="header-btn btn-back" @click="navigateHome">上个页面</button>
+      </b-col>
+      <b-col cols="6" class="text-center">
+        <!-- <h1 class="newTitle">多模态信息认知偏差检测模型</h1> -->
+      </b-col>
+      <b-col cols="3" class="text-right">
+        <button class="header-btn btn-next" @click="navigateNextPage">下个页面</button>
+      </b-col>
+    </b-row>
+
+    <b-row class="justify-content-center content-row no-gutters">
+
+      <b-col cols="3" class="left-column px-2">
+    <div class="left-panels-container">
+    <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
+
+    <div class="data-source-section">
+      <div class="panel-left">
+        <div class="panel-content">
+          <div class="media-type-selector">
+            <button 
+              class="media-type-btn" 
+              :class="{ 'active': selectedMediaType === 'image' }"
+              @click="switchMediaType('image')">
+              图片
+            </button>
+            <button 
+              class="media-type-btn" 
+              :class="{ 'active': selectedMediaType === 'video' }"
+              @click="switchMediaType('video')">
+              视频
+            </button>
+          </div>
+          <div class="server-video-list overflow-auto">
+            <div v-for="item in mediaList" :key="item.path" class="video-item" @click="selectMedia(item)"
+              :class="{ 'selected': selectedVideo && selectedVideo.path === item.path }">
+              <span>{{ item.name }}</span>
+              <span class="selector-circle"></span>
+            </div>
+            <div v-if="mediaList.length === 0" class="empty-list-text">
+              暂无{{ selectedMediaType === 'image' ? '图片' : '视频' }}数据
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-header header-select-data clean-header">作战指令</div>
+
+    <div class="panel-orders">
+      <div class="panel-content orders-panel-content">
+        <div class="orders-info-box overflow-auto">
+          <template v-if="isOrdersLoading">
+            <p class="orders-loading-hint">加载中...</p>
+          </template>
+          <template v-else>
+            <div class="result-section small-section left-info-section orders-command-only">
+              <div class="section-header">指令信息：</div>
+              <div class="section-content">
+                <p class="result-text">{{ ordersCommandForDisplay || '暂无指令信息' }}</p>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-buttons">
+      <button @click="startDetection" :disabled="!canStartTrackRecognition" class="btn-start-detect">
+        <span class="btn-text-pos">目标与轨迹识别</span>
+      </button>
+    </div>
+
+  </div>
+</b-col>
+
+      <b-col cols="5" class="middle-column mx-2 px-1">
+        <div class="video-section">
+          <div class="video-label label-original">{{ selectedMediaType === 'image' ? '认知传播图片' : '认知传播视频' }}</div>
+          <div class="video-frame">
+            <img v-if="originalVideoURL && selectedMediaType === 'image'" :src="originalVideoURL" class="video-display" alt="原始图片" @error="handleImageError" />
+            <video v-else-if="originalVideoURL && selectedMediaType === 'video'" :src="originalVideoURL" class="video-display" controls @error="handleOriginalVideoError"></video>
+            <div v-else class="placeholder-text">请选择{{ selectedMediaType === 'image' ? '图片' : '视频' }}</div>
+          </div>
+        </div>
+
+        <div class="video-section">
+          <div class="video-label label-processed">多模态目标检测结果</div>
+          <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
+            <img v-if="processedVideoURL && !isLoading && selectedMediaType === 'image'" :src="processedVideoURL" class="video-display" alt="检测结果" :key="'img-' + processedVideoURL" @error="handleImageError" />
+            <video v-else-if="processedVideoURL && !isLoading && selectedMediaType === 'video' && !processedVideoCodecWarning" :src="processedVideoURL" class="video-display" controls :key="'video-' + processedVideoURL" @error="handleProcessedVideoError"></video>
+            <div v-else-if="processedVideoURL && !isLoading && selectedMediaType === 'video' && processedVideoCodecWarning" class="codec-unsupported-box">
+              <p class="codec-unsupported-text">{{ processedVideoCodecWarning }}</p>
+              <a class="codec-download-link" :href="processedVideoURL" :download="processedVideoDownloadName">下载轨迹视频 ({{ processedVideoDownloadName }})</a>
+            </div>
+            <div v-if="isLoading" class="placeholder-text loading-text">识别中……</div>
+            <div v-else-if="!processedVideoURL" class="placeholder-text">检测结果将在这里显示</div>
+          </div>
+        </div>
+
+        <!-- ==========================================
+             底部文本框已注释 - 如需恢复请取消注释
+             用途：显示检测摘要文本
+             ==========================================
+        <div class="summary-box-middle" :class="{ 'loading-overlay': isLoading }">
+          <div class="summary-content overflow-auto"
+            :class="{ 'text-highlight': summaryHighlight, 'loading-text': isLoading }">
+            <div v-if="isLoading">检测中……</div>
+            <div v-show="hasStartedDetection && !isLoading" class="typing-text">{{ summaryTypingText || '检测中...' }}</div>
+            <div v-show="!hasStartedDetection && !isLoading" class="hint-text">请点击"开始目标检测"按钮</div>
+          </div>
+        </div>
+        -->
+      </b-col>
+
+      <b-col cols="3" class="right-column px-2">
+
+        <div class="bias-button-container">
+          <button class="btn-start-bias" @click="handleStartBiasDetection"
+            :disabled="!canStartBiasDetection || isBiasTyping || isLoading || isBiasDetecting">
+            <span class="btn-text-pos">决策认知偏差检测</span>
+          </button>
+        </div>
+
+        <div class="panel-header header-results clean-header">偏差检测结果</div>
+
+        <div class="panel-right-top" :class="{ 'loading-overlay': isBiasDetecting && !showBiasDetails }">
+          <div class="panel-content">
+            <div class="description-box p-2 overflow-auto"
+              :class="{ 'loading-text': isBiasDetecting && !showBiasDetails }">
+
+              <div v-if="isLoading">检测中……</div>
+              <div v-else-if="isBiasDetecting && !showBiasDetails" class="text-left small-text">
+                计算中…
+              </div>
+              <div v-else-if="!hasStartedBiasDetection" class="text-left small-text hint-text">
+                请点击"决策认知偏差检测"按钮
+              </div>
+
+              <div v-else-if="hasStartedBiasDetection && !isLoading && showBiasDetails">
+                <div v-for="(entry, index) in biasDetailEntries" :key="entry.label"
+                  class="typing-text text-left small-text" 
+                  :class="{ 
+                    'text-highlight': entry.label === '偏差结果' && !entry.isConsistent && !isBiasTyping,
+                    'text-green': entry.label === '偏差结果' && entry.isConsistent && !isBiasTyping
+                  }">
+                  {{ biasDisplayTexts[index] }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-right-bottom" :class="{ 'loading-overlay': isBiasDetecting }">
+          <div class="panel-content">
+            <div class="accuracy-content">
+              <span class="accuracy-label" @click="showFormulaTooltip = !showFormulaTooltip">
+                偏差识别准确率
+                <span class="formula-hint-icon">?</span>
+              </span>
+              <span class="accuracy-value">
+                <template v-if="isBiasDetecting || deviationDetectionAccuracy === '计算中...'">
+                  计算中...
+                </template>
+                <template
+                  v-else-if="deviationDetectionAccuracy !== 'N/A' && deviationDetectionAccuracy !== '计算中...' && deviationDetectionAccuracy !== null && deviationDetectionAccuracy !== undefined && deviationDetectionAccuracy !== ''"
+                >
+                  {{ deviationDetectionAccuracy }}%
+                </template>
+                <template v-else>
+                  N/A
+                </template>
+              </span>
+              <!-- 公式图片提示 -->
+              <div v-if="showFormulaTooltip" class="formula-tooltip" @click.stop>
+                <span class="formula-close" @click="showFormulaTooltip = false">×</span>
+                <img src="@/assets/images/formula.png" alt="准确度公式" class="formula-image" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-buttons-right">
+          <button class="btn-export-result" @click="exportData" :disabled="!hasStartedBiasDetection || isBiasDetecting || isExporting">
+            <b-spinner small v-if="isExporting" class="btn-spinner-pos"></b-spinner>
+            <span class="btn-text-pos">{{ isExporting ? '导出中...' : '结果导出' }}</span>
+          </button>
+        </div>
+
+      </b-col>
+    </b-row>
+  </div>
+</template>
+
+<script>
+import axios from 'axios';
+import { BIcon, BIconPlayCircleFill, BIconPlayFill, BSpinner } from 'bootstrap-vue';
+
+// API 基础地址
+const API_BASE_URL = 'http://10.109.253.71:5236';
+/** 与 DecisionMaking.vue 一致：认知传播数据源 load-image / load-video、作战指令 */
+const SOURCE_API_BASE_URL = 'http://10.109.253.71:12358';
+const REFINE_COMMAND_API_URL = `${SOURCE_API_BASE_URL}/machine-refine-command`;
+const TRACK_ARTIFACT_API_URL = `${SOURCE_API_BASE_URL}/load-track-artifact`;
+const EXTRACT_TRACK_ARTIFACT_API_URL = `${SOURCE_API_BASE_URL}/extract-track-artifact`;
+const ANALYZE_VIDEO_BEHAVIOR_API_URL = `${SOURCE_API_BASE_URL}/analyze-video-behavior`;
+const FRONTEND_BASE_URL = 'http://10.109.253.71:8889';
+const IMAGE_API_URL = 'http://10.109.253.71:5237';
+const BASE_DIR = "/home/wuzhixuan/Project/PCJC/1";
+const VIDEO_DIR = "/home/wuzhixuan/Project/PCJC/datasets/Vedio"
+// 偏差识别准确率延迟展示（与 DecisionMaking.vue 一致：1 分钟）
+const BIAS_DETECTION_DELAY = 1 * 60 * 1000;
+const STATISTICS_ACCURACY_API_URL = `${SOURCE_API_BASE_URL}/statistics/accuracy`;
+const EXPORT_OUTPUT_API_URL = `${SOURCE_API_BASE_URL}/export/output`;
+/** 作战指令：选中媒体后至少延迟展示时长（ms） */
+const ORDERS_DISPLAY_DELAY_MS = 5000;
+/** 轨迹识别结果：接口返回后延迟展示时长（ms） */
+const TRACK_DISPLAY_DELAY_MS = 3000;
+
+function getFilenameFromPath(fullPath) {
+  if (!fullPath || typeof fullPath !== 'string') return null;
+  const parts = fullPath.split(/[/\\]/);
+  return parts.pop() || null;
+}
+
+export default {
+  name: 'TargetDetection',
+  components: {
+    'b-icon': BIcon,
+    'b-icon-play-circle-fill': BIconPlayCircleFill,
+    'b-icon-play-fill': BIconPlayFill,
+    'b-spinner': BSpinner
+  },
+  data() {
+    return {
+      fullWidth: window.innerWidth,
+      fullHeight: window.innerHeight,
+      ordersCommand: '',
+      ordersNegotiation: '',
+      isOrdersLoading: false,
+      ordersRefineDisplayTimer: null,
+      selectedMediaType: 'image',
+      imageList: [],
+      videoList: [],
+      mediaList: [],
+      selectedVideo: null,
+      originalVideoURL: null,
+      processedVideoURL: null,
+      taskId: null,
+      isLoading: false,
+      progressMessage: null,
+      resultMessage: null,
+      fullResult: {
+        video_description: null,
+        accuracy_results: null,
+        video_info: null,
+        key_frame_detection: null
+      },
+      descriptionEntries: [],
+      biasDetailEntries: [],
+      biasDisplayTexts: [],
+      summaryTextOnly: '',
+      summaryHighlight: false,
+      biasTypingInterval: null,
+      biasTypingTimeout: null,
+      accuracyTimeout: null,
+      summaryFullText: '',
+      summaryTypingText: '',
+      summaryTypingInterval: null,
+      showBiasDetails: false,
+      showAccuracy: false,
+      /** 与 DecisionMaking.vue deviationDetectionAccuracy：点击偏差检测后才显示 */
+      deviationDetectionAccuracy: 'N/A',
+      isBiasTyping: false,
+      labelsToHighlight: [],
+      typingSpeed: 60,
+      summaryTypingSpeed: 200,
+      isBiasDetecting: false,
+      isExporting: false,
+      hasStartedDetection: false,
+      hasStartedBiasDetection: false,
+      trackDisplayTimer: null,
+      showFormulaTooltip: false,
+      /** 轨迹 MP4 为 mp4v 等浏览器不支持的编码时展示说明（仍可下载、可做偏差检测） */
+      processedVideoCodecWarning: null,
+      processedVideoDownloadName: '',
+      /** 与「目标与轨迹识别」一致的请求上下文，供偏差检测复用 */
+      trackRecognitionContext: null
+    };
+  },
+  computed: {
+    canStartBiasDetection() {
+      return this.hasStartedDetection && !!this.processedVideoURL && !this.isLoading;
+    },
+    /** 指令信息展示完成后才可点击「目标与轨迹识别」 */
+    canStartTrackRecognition() {
+      return !!(
+        this.selectedVideo &&
+        !this.isOrdersLoading &&
+        this.ordersCommand &&
+        !this.isLoading
+      );
+    },
+    /** 兼容 module1Res 等仍使用合并 instruction 字段的场景 */
+    ordersText() {
+      const parts = [];
+      if (this.ordersCommand) parts.push(this.ordersCommand);
+      if (this.ordersNegotiation) parts.push(this.ordersNegotiation);
+      return parts.join('\n\n');
+    },
+    /** 未选择媒体时不展示缓存指令，进入页默认「暂无指令信息」 */
+    ordersCommandForDisplay() {
+      if (!this.selectedVideo) return '';
+      return this.ordersCommand;
+    }
+  },
+  mounted() {
+    window.addEventListener('resize', this.handleResize);
+    this.loadInitialData();
+    this.$nextTick(() => {
+      this.fixLayoutIssues();
+    });
+  },
+  beforeDestroy() {
+    window.removeEventListener('resize', this.handleResize);
+    this.clearTypingIntervals();
+    this.clearOrdersRefineDisplayTimer();
+    this.clearTrackDisplayTimer();
+    this.revokeOriginalMediaBlob();
+    this.revokeProcessedMediaBlob();
+    // 页面销毁前保存所有状态到 localStorage
+    this.saveAllStateToCache();
+  },
+  methods: {
+    // 保存所有状态到缓存
+    saveAllStateToCache() {
+      // 保存媒体类型
+      localStorage.setItem('selectedMediaType', this.selectedMediaType);
+
+      // 保存选中的文件
+      if (this.selectedVideo) {
+        localStorage.setItem('selectedVideo', JSON.stringify({
+          id: this.selectedVideo.id,
+          name: this.selectedVideo.name,
+          mediaType: this.selectedMediaType
+        }));
+      }
+
+      // 保存 URL
+      if (this.originalVideoURL) {
+        localStorage.setItem('originalVideoURL', this.originalVideoURL);
+      }
+      if (this.processedVideoURL) {
+        localStorage.setItem('processedVideoURL', this.processedVideoURL);
+      }
+
+      // 保存作战指令
+      if (this.ordersCommand) {
+        localStorage.setItem('ordersCommand', this.ordersCommand);
+      }
+      if (this.ordersNegotiation) {
+        localStorage.setItem('ordersNegotiation', this.ordersNegotiation);
+      }
+
+      // 保存目标检测结果（包含 overall_accuracy 等偏差检测结果）
+      if (this.fullResult) {
+        localStorage.setItem('fullResult', JSON.stringify(this.fullResult));
+      }
+
+      // 保存检测状态
+      localStorage.setItem('hasStartedDetection', this.hasStartedDetection ? 'true' : 'false');
+      localStorage.setItem('summaryTypingText', this.summaryTypingText || '');
+      localStorage.setItem('summaryFullText', this.summaryFullText || '');
+
+      // 保存偏差检测状态
+      localStorage.setItem('hasStartedBiasDetection', this.hasStartedBiasDetection ? 'true' : 'false');
+      if (this.biasDetailEntries && this.biasDetailEntries.length > 0) {
+        localStorage.setItem('biasDetailEntries', JSON.stringify(this.biasDetailEntries));
+      }
+      if (this.biasDisplayTexts && this.biasDisplayTexts.length > 0) {
+        localStorage.setItem('biasDisplayTexts', JSON.stringify(this.biasDisplayTexts));
+      }
+      localStorage.setItem('showBiasDetails', this.showBiasDetails ? 'true' : 'false');
+      localStorage.setItem('showAccuracy', this.showAccuracy ? 'true' : 'false');
+      localStorage.setItem('isBiasDetecting', this.isBiasDetecting ? 'true' : 'false');
+      localStorage.setItem('deviationDetectionAccuracy', this.deviationDetectionAccuracy || 'N/A');
+      if (this.trackRecognitionContext) {
+        localStorage.setItem('trackRecognitionContext', JSON.stringify(this.trackRecognitionContext));
+      }
+
+      // 保存 module1Res
+      const module1ResStr = localStorage.getItem('module1Res');
+      if (module1ResStr) {
+        // module1Res 已存在，保留
+      }
+
+      console.log('所有状态已保存到缓存');
+    },
+    // 从缓存恢复所有状态
+    restoreAllStateFromCache() {
+      // 恢复媒体类型
+      const savedMediaType = localStorage.getItem('selectedMediaType');
+      if (savedMediaType) {
+        this.selectedMediaType = savedMediaType;
+      }
+
+      // 恢复作战指令（进入页后会由 resetEnterPageMediaSelection 清空，仅保留选中后拉取）
+      const savedOrdersCommand = localStorage.getItem('ordersCommand');
+      const savedOrdersNegotiation = localStorage.getItem('ordersNegotiation');
+      if (savedOrdersCommand != null) {
+        this.ordersCommand = savedOrdersCommand;
+      }
+      if (savedOrdersNegotiation != null) {
+        this.ordersNegotiation = savedOrdersNegotiation;
+      } else {
+        const savedOrdersText = localStorage.getItem('ordersText');
+        if (savedOrdersText && !savedOrdersCommand) {
+          this.ordersCommand = savedOrdersText;
+        }
+      }
+
+      // 不恢复 originalVideoURL / processedVideoURL，进入页由用户点击后再加载预览
+
+      // 恢复目标检测结果
+      const savedFullResult = localStorage.getItem('fullResult');
+      if (savedFullResult) {
+        try {
+          this.fullResult = JSON.parse(savedFullResult);
+        } catch (e) {
+          console.error('恢复 fullResult 失败:', e);
+        }
+      }
+
+      // 恢复检测状态
+      this.hasStartedDetection = localStorage.getItem('hasStartedDetection') === 'true';
+      this.summaryTypingText = localStorage.getItem('summaryTypingText') || '';
+      this.summaryFullText = localStorage.getItem('summaryFullText') || '';
+
+      // 如果文字已完整显示，确保 summaryTypingText 等于 summaryFullText
+      if (this.summaryFullText && !this.summaryTypingText) {
+        this.summaryTypingText = this.summaryFullText;
+      }
+
+      // 恢复偏差检测状态
+      this.hasStartedBiasDetection = localStorage.getItem('hasStartedBiasDetection') === 'true';
+      const savedBiasDetailEntries = localStorage.getItem('biasDetailEntries');
+      if (savedBiasDetailEntries) {
+        try {
+          this.biasDetailEntries = JSON.parse(savedBiasDetailEntries);
+        } catch (e) {
+          console.error('恢复 biasDetailEntries 失败:', e);
+        }
+      }
+      const savedBiasDisplayTexts = localStorage.getItem('biasDisplayTexts');
+      if (savedBiasDisplayTexts) {
+        try {
+          this.biasDisplayTexts = JSON.parse(savedBiasDisplayTexts);
+        } catch (e) {
+          console.error('恢复 biasDisplayTexts 失败:', e);
+        }
+      } else {
+        // 如果没有保存的 displayTexts，使用完整的 biasDetailEntries 文字
+        this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+      }
+      this.showBiasDetails = localStorage.getItem('showBiasDetails') === 'true';
+      this.showAccuracy = localStorage.getItem('showAccuracy') === 'true';
+      this.isBiasDetecting = localStorage.getItem('isBiasDetecting') === 'true';
+      const savedDeviationAccuracy = localStorage.getItem('deviationDetectionAccuracy');
+      if (savedDeviationAccuracy != null) {
+        this.deviationDetectionAccuracy = savedDeviationAccuracy;
+      }
+      const savedTrackCtx = localStorage.getItem('trackRecognitionContext');
+      if (savedTrackCtx) {
+        try {
+          this.trackRecognitionContext = JSON.parse(savedTrackCtx);
+        } catch (e) {
+          console.error('恢复 trackRecognitionContext 失败:', e);
+        }
+      }
+
+      // 恢复 summaryTypingInterval 状态 - 如果文字已显示完毕，不需要重新打字
+      if (this.summaryTypingText === this.summaryFullText) {
+        // 文字已完整显示，不需要打字机效果
+        console.log('目标检测结果已完整显示');
+      }
+
+      // 恢复偏差检测打字状态
+      if (this.biasDisplayTexts.length > 0) {
+        const allTextsComplete = this.biasDetailEntries.every((entry, index) => {
+          return this.biasDisplayTexts[index] === entry.text;
+        });
+        if (allTextsComplete) {
+          console.log('偏差检测结果已完整显示');
+          this.isBiasTyping = false;
+        }
+      }
+
+      console.log('所有状态已从缓存恢复');
+    },
+    /** 与 DecisionMaking.vue：GET /statistics/accuracy */
+    async fetchStatisticsAccuracy() {
+      const logTag = '[DecisionMakingV2][statistics/accuracy]';
+      try {
+        console.log(`${logTag} GET`, STATISTICS_ACCURACY_API_URL);
+        const response = await axios.get(STATISTICS_ACCURACY_API_URL);
+        console.log(`${logTag} 响应`, response.data);
+        return response.data;
+      } catch (error) {
+        console.error(`${logTag} 失败`, error);
+        return null;
+      }
+    },
+    applyDeviationDetectionAccuracyFromCache() {
+      let raw = null;
+      try {
+        const module1ResStr = localStorage.getItem('module1Res');
+        if (module1ResStr) {
+          const module1Res = JSON.parse(module1ResStr);
+          raw = module1Res.average_comprehensive_accuracy;
+        }
+      } catch (e) {
+        console.error('[DecisionMakingV2] 读取 average_comprehensive_accuracy 失败', e);
+      }
+      const accuracyValue = parseFloat(raw);
+      if (raw != null && !isNaN(accuracyValue)) {
+        this.deviationDetectionAccuracy = (accuracyValue * 100).toFixed(2);
+        this.fullResult.overall_accuracy = accuracyValue;
+      } else {
+        this.deviationDetectionAccuracy = 'N/A';
+      }
+      console.log('[DecisionMakingV2] 偏差识别准确率展示值 deviationDetectionAccuracy:', this.deviationDetectionAccuracy);
+    },
+    /** 清除作战指令延迟展示定时器 */
+    clearOrdersRefineDisplayTimer() {
+      if (this.ordersRefineDisplayTimer) {
+        clearTimeout(this.ordersRefineDisplayTimer);
+        this.ordersRefineDisplayTimer = null;
+      }
+    },
+    clearTrackDisplayTimer() {
+      if (this.trackDisplayTimer) {
+        clearTimeout(this.trackDisplayTimer);
+        this.trackDisplayTimer = null;
+      }
+    },
+    /** 原文件名加 _tracked 后缀，如 F-16(0).mp4 → F-16(0)_tracked.mp4 */
+    buildTrackedArtifactFilename(originalName) {
+      const name = String(originalName || '').trim();
+      if (!name) return '';
+      const dot = name.lastIndexOf('.');
+      if (dot > 0) {
+        return `${name.slice(0, dot)}_tracked${name.slice(dot)}`;
+      }
+      return `${name}_tracked`;
+    },
+    /** 轨迹结果直链（后端要求带扩展名，如 F-16(0)_tracked.mp4） */
+    buildTrackArtifactUrl(trackedFilename) {
+      const name = String(trackedFilename || '').trim();
+      if (!name) return '';
+      return `${TRACK_ARTIFACT_API_URL}?filename=${encodeURIComponent(name)}`;
+    },
+    /** 与 startDetection「目标与轨迹识别」相同的文件名与 query 参数 */
+    buildTrackRecognitionContext(selectedItem) {
+      const item = selectedItem || this.selectedVideo;
+      if (!item || !item.name) return null;
+      const sourceFilename = String(item.name).trim();
+      const trackedFilename = this.buildTrackedArtifactFilename(sourceFilename);
+      const trackedFilenameNoExt = this.stripFileExtension(trackedFilename);
+      const requestParams = { filename: trackedFilename };
+      return {
+        sourceFilename,
+        trackedFilename,
+        trackedFilenameNoExt,
+        requestParams,
+        selectedPath: item.path,
+        selectedMediaType: this.selectedMediaType,
+        artifactType: this.selectedMediaType === 'video' ? 'video' : 'image',
+        trackMode: 'single',
+        label: 'Target'
+      };
+    },
+    /** POST /analyze-video-behavior：仅 filename，与 load-track-artifact 的 params 完全一致 */
+    buildAnalyzeVideoBehaviorBody(trackCtx) {
+      const ctx = trackCtx || this.trackRecognitionContext || this.buildTrackRecognitionContext();
+      if (!ctx || !ctx.requestParams) return null;
+      return { ...ctx.requestParams };
+    },
+    /**
+     * 后端 analyze-video-behavior 要求 tracked 已通过 extract-track-artifact 登记；
+     * extract 使用原视频名（无扩展名），与 load-track-artifact 的 tracked 文件名不同。
+     */
+    async registerTrackArtifactForAnalyze(trackCtx) {
+      const ctx = trackCtx || this.trackRecognitionContext || this.buildTrackRecognitionContext();
+      const logTag = '[DecisionMakingV2][extract-track-artifact]';
+      if (!ctx) {
+        return { ok: false, detail: '无法构建轨迹上下文' };
+      }
+      const extractParams = {
+        filename: this.stripFileExtension(ctx.sourceFilename),
+        artifact_type: ctx.artifactType,
+        mode: ctx.trackMode || 'single',
+        force_rebuild: false
+      };
+      console.group(`${logTag} 登记 tracked（analyze 前置依赖）`);
+      console.log('原视频 sourceFilename:', ctx.sourceFilename);
+      console.log('load-track-artifact 使用 params:', ctx.requestParams);
+      console.log('extract GET params:', extractParams);
+      console.log('URL:', EXTRACT_TRACK_ARTIFACT_API_URL);
+      try {
+        const res = await axios.get(EXTRACT_TRACK_ARTIFACT_API_URL, {
+          params: extractParams,
+          timeout: 300000,
+          validateStatus: () => true
+        });
+        const data = res.data;
+        console.log('HTTP status:', res.status);
+        console.log('响应 data:', data);
+        console.log('响应 JSON:', JSON.stringify(data, null, 2));
+        console.groupEnd();
+        const detail = data && data.detail;
+        if (res.status >= 400 || (detail && typeof detail === 'string')) {
+          return { ok: false, detail: detail || `HTTP ${res.status}`, data };
+        }
+        return { ok: true, data };
+      } catch (error) {
+        const errRes = error && error.response;
+        const detail = this.extractAnalyzeVideoBehaviorError(error);
+        console.error(`${logTag} 请求异常`, {
+          message: error && error.message,
+          status: errRes && errRes.status,
+          responseData: errRes && errRes.data
+        });
+        console.groupEnd();
+        return { ok: false, detail, data: errRes && errRes.data };
+      }
+    },
+    isBlobLikelyErrorResponse(blob, contentType) {
+      const ct = String(contentType || (blob && blob.type) || '').toLowerCase();
+      if (ct.includes('application/json') || ct.includes('text/html') || ct.includes('text/plain')) {
+        return true;
+      }
+      if (blob && typeof blob.size === 'number' && blob.size < 512 && !ct.includes('video') && !ct.includes('image')) {
+        return true;
+      }
+      return false;
+    },
+    /** 轨迹媒体 Blob：与左侧 load-video 一致包装 MIME */
+    buildProcessedMediaBlob(payload, contentType, mediaType) {
+      const ct = String(contentType || (payload && payload.type) || '').toLowerCase();
+      const blobType = ct.includes('video') ? 'video/mp4'
+        : (ct.includes('image') ? (ct.split(';')[0] || 'image/jpeg') : (mediaType === 'video' ? 'video/mp4' : 'image/jpeg'));
+      return payload instanceof Blob ? payload : new Blob([payload], { type: blobType });
+    },
+    /** 扫描 MP4 容器内编码标识（moov 通常在文件后部，读取前 4MB） */
+    async inspectVideoBlobCodec(blob) {
+      if (!blob || !blob.size) return 'unknown';
+      const slice = blob.slice(0, Math.min(blob.size, 4 * 1024 * 1024));
+      const buf = new Uint8Array(await slice.arrayBuffer());
+      let s = '';
+      for (let i = 0; i < buf.length; i += 1) {
+        s += String.fromCharCode(buf[i]);
+      }
+      if (s.includes('avc1') || s.includes('avc3')) return 'h264';
+      if (s.includes('mp4v')) return 'mp4v';
+      if (s.includes('hvc1') || s.includes('hev1')) return 'hevc';
+      return 'unknown';
+    },
+    applyProcessedVideoCodecPolicy(mediaBlob, trackedFilename) {
+      this.processedVideoCodecWarning = null;
+      this.processedVideoDownloadName = trackedFilename || 'tracked.mp4';
+      if (!mediaBlob || this.selectedMediaType !== 'video') return 'ok';
+      return this.inspectVideoBlobCodec(mediaBlob).then((codec) => {
+        if (codec === 'mp4v') {
+          this.processedVideoCodecWarning =
+            '轨迹视频为 OpenCV 常用的 mp4v (MPEG-4 Part 2) 编码，当前浏览器无法在页面内播放。请在后端导出时改用 H.264：ffmpeg -i in.mp4 -c:v libx264 -pix_fmt yuv420p -c:a aac out.mp4';
+          this.resultMessage = `轨迹文件 ${trackedFilename} 已加载，但编码为 mp4v，仅支持下载预览。`;
+          return 'mp4v';
+        }
+        if (codec === 'hevc') {
+          this.processedVideoCodecWarning =
+            '轨迹视频为 HEVC (H.265) 编码，部分浏览器无法播放。建议后端改为 H.264 (libx264) 导出。';
+          this.resultMessage = `轨迹文件 ${trackedFilename} 已加载（HEVC），部分环境无法内嵌播放。`;
+          return 'hevc';
+        }
+        return codec;
+      });
+    },
+    revokeProcessedMediaBlob() {
+      if (this.processedVideoURL && String(this.processedVideoURL).startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(this.processedVideoURL);
+        } catch (e) {
+          // ignore
+        }
+      }
+    },
+    /** 选中媒体后拉取作战指令（与 DecisionMaking.vue 一致） */
+    async fetchMachineRefineCommand(nameNoExt, selectedPath) {
+      const cleanName = String(nameNoExt || '').trim();
+      if (!cleanName) return;
+      const logTag = '[DecisionMakingV2][machine-refine-command]';
+      const requestInfo = {
+        url: REFINE_COMMAND_API_URL,
+        params: { name: cleanName },
+        selectedPath,
+        selectedMediaType: this.selectedMediaType,
+        selectedFileName: this.selectedVideo && this.selectedVideo.name
+      };
+
+      this.clearOrdersRefineDisplayTimer();
+      this.isOrdersLoading = true;
+      this.ordersCommand = '';
+      const requestStartedAt = Date.now();
+
+      let command = '';
+      let negotiation = '';
+      let fetchFailed = false;
+
+      try {
+        console.log(`${logTag} 发起请求`, requestInfo);
+        const response = await axios.get(REFINE_COMMAND_API_URL, {
+          params: { name: cleanName }
+        });
+        const raw = response && response.data;
+        const payload = raw && typeof raw === 'object' && raw.data ? raw.data : raw;
+        command = payload && payload.command !== undefined ? String(payload.command).trim() : '';
+        negotiation = payload && payload.negotiation !== undefined ? String(payload.negotiation).trim() : '';
+
+        console.log(`${logTag} 原始响应`, {
+          status: response && response.status,
+          headers: response && response.headers,
+          data: raw
+        });
+        console.log(`${logTag} 解析结果`, {
+          payload,
+          command,
+          negotiation,
+          commandLength: command.length,
+          negotiationLength: negotiation.length
+        });
+      } catch (error) {
+        fetchFailed = true;
+        const errRes = error && error.response;
+        console.error(`${logTag} 请求失败`, {
+          request: requestInfo,
+          message: error && error.message,
+          status: errRes && errRes.status,
+          contentType: errRes && errRes.headers && (errRes.headers['content-type'] || errRes.headers['Content-Type']),
+          responseData: errRes && errRes.data
+        });
+      }
+
+      const elapsed = Date.now() - requestStartedAt;
+      const delayMs = Math.max(0, ORDERS_DISPLAY_DELAY_MS - elapsed);
+
+      this.ordersRefineDisplayTimer = setTimeout(() => {
+        this.ordersRefineDisplayTimer = null;
+
+        if (selectedPath && (!this.selectedVideo || this.selectedVideo.path !== selectedPath)) {
+          console.log(`${logTag} 延迟展示取消：选中项已变更`, {
+            requestSelectedPath: selectedPath,
+            currentSelectedPath: this.selectedVideo && this.selectedVideo.path
+          });
+          this.isOrdersLoading = false;
+          return;
+        }
+
+        this.isOrdersLoading = false;
+
+        if (fetchFailed || !command) {
+          if (!fetchFailed && !command && !negotiation) {
+            console.warn(`${logTag} 返回数据缺少 command`, { command, negotiation });
+          }
+          this.ordersCommand = '';
+          this.ordersNegotiation = negotiation;
+        } else {
+          this.ordersCommand = command;
+          this.ordersNegotiation = negotiation;
+        }
+
+        localStorage.setItem('ordersCommand', this.ordersCommand);
+        localStorage.setItem('ordersNegotiation', this.ordersNegotiation);
+        console.log(`${logTag} 作战指令已更新`, {
+          request: requestInfo,
+          delayMs: ORDERS_DISPLAY_DELAY_MS,
+          ordersCommand: this.ordersCommand,
+          ordersNegotiation: this.ordersNegotiation,
+          commandPreview: command.slice(0, 120)
+        });
+      }, delayMs);
+
+      console.log(`${logTag} 已获取数据，等待延迟展示`, {
+        request: requestInfo,
+        delayMs,
+        elapsedSinceRequestStart: elapsed
+      });
+    },
+    /** 进入页面：不自动选中任何图片/视频，须用户点击后才选择 */
+    resetEnterPageMediaSelection() {
+      this.clearOrdersRefineDisplayTimer();
+      this.clearTrackDisplayTimer();
+      this.selectedVideo = null;
+      this.isOrdersLoading = false;
+      this.ordersCommand = '';
+      this.ordersNegotiation = '';
+      this.revokeOriginalMediaBlob();
+      this.revokeProcessedMediaBlob();
+      this.originalVideoURL = null;
+      this.processedVideoURL = null;
+      this.hasStartedDetection = false;
+    },
+    async loadInitialData() {
+      // 恢复偏差检测、目标检测文字等非媒体选中状态
+      this.restoreAllStateFromCache();
+      // 进入页不恢复上次选中的图片/视频及预览，须用户点击列表项
+      this.resetEnterPageMediaSelection();
+
+      // 检查偏差检测计时器状态（用于恢复未完成的计时）
+      this.checkBiasTimerState();
+
+      // 根据选中类型加载对应列表
+      if (this.selectedMediaType === 'image') {
+        await this.fetchImageList();
+      } else {
+        await this.fetchVideoListFromAPI();
+      }
+    },
+    // 需求3：检查计时器状态
+    checkBiasTimerState() {
+      // 优先检查是否已经完成
+      if (localStorage.getItem('biasDetectionCompleted') === 'true') {
+        console.log('检测到偏差检测已完成，直接恢复结果');
+        this.hasStartedBiasDetection = true;
+        this.showAccuracy = true;
+        this.showBiasDetails = true;
+        this.isBiasDetecting = false;
+        const savedEntries = localStorage.getItem('biasDetailEntries');
+        if (savedEntries) {
+          this.biasDetailEntries = JSON.parse(savedEntries);
+        }
+        this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+        this.applyDeviationDetectionAccuracyFromCache();
+        return;
+      }
+
+      // 检查是否有正在进行的偏差检测
+      const biasStartTimeStr = localStorage.getItem('biasStartTime');
+      const biasStarted = localStorage.getItem('biasDetectionStarted') === 'true';
+
+      if (biasStartTimeStr && biasStarted) {
+        const biasStartTime = parseInt(biasStartTimeStr, 10);
+        const now = Date.now();
+        const elapsed = now - biasStartTime;
+
+        // 从 localStorage 恢复偏差详情
+        const savedEntries = localStorage.getItem('biasDetailEntries');
+        if (savedEntries) {
+          this.biasDetailEntries = JSON.parse(savedEntries);
+        }
+
+        if (elapsed < BIAS_DETECTION_DELAY) {
+          const remaining = BIAS_DETECTION_DELAY - elapsed;
+          console.log(`恢复偏差检测计时，剩余时间: ${remaining}ms`);
+          this.isBiasDetecting = true;
+          this.hasStartedBiasDetection = true;
+          this.showAccuracy = false;
+          this.deviationDetectionAccuracy = '计算中...';
+          this.showBiasDetails = true;
+          this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+          this.startAccuracyTimer(remaining);
+        } else {
+          console.log('偏差检测计时已过期，直接显示结果');
+          this.hasStartedBiasDetection = true;
+          this.showBiasDetails = true;
+          this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+          this.handleBiasAccuracyTimerComplete();
+        }
+      }
+    },
+    fixLayoutIssues() {
+      const style = document.createElement('style');
+      style.textContent = `
+      .right-column {
+        display: flex !important;
+        flex-direction: column !important;
+        height: calc(100vh - 60px) !important;
+      }
+      .panel-right-bottom {
+        flex-grow: 0 !important;
+        height: 100px !important;
+        min-height: 100px !important;
+      }
+      .action-buttons-right {
+        margin-top: auto !important;
+        padding-top: 15px !important;
+      }
+    `;
+      document.head.appendChild(style);
+    },
+    async populateUIFromStorage(data) {
+      console.log("正在填充UI:", data);
+      // Ensure originalVideoURL is an absolute URL
+      if (data.originalVideoPath) {
+        if (data.originalVideoPath.startsWith('http://') || data.originalVideoPath.startsWith('https://')) {
+          this.originalVideoURL = data.originalVideoPath;
+        } else {
+          this.originalVideoURL = `${IMAGE_API_URL}${data.originalVideoPath}`;
+        }
+      }
+      // Ensure processedVideoURL is an absolute URL
+      if (data.video_path) {
+        if (data.video_path.startsWith('http://') || data.video_path.startsWith('https://')) {
+          this.processedVideoURL = data.video_path;
+        } else {
+          this.processedVideoURL = `${IMAGE_API_URL}${data.video_path}`;
+        }
+      }
+      this.taskId = data.task_id;
+      this.fullResult = data;
+
+      // 恢复选中视频信息
+      if (data.video_info && data.video_info.name) {
+        this.selectedVideo = { name: data.video_info.name, id: data.video_info.id || -1 };
+      } else if (data.originalVideoPath) {
+        const videoName = getFilenameFromPath(data.originalVideoPath);
+        if (videoName) {
+          this.selectedVideo = { name: videoName, id: -1 };
+        }
+      }
+
+      // 尝试从缓存恢复作战指令
+      if (data.instruction) {
+        this.ordersCommand = data.instruction;
+      } else if (this.selectedVideo && this.selectedVideo.name) {
+        await this.fetchMachineRefineCommand(
+          this.stripFileExtension(this.selectedVideo.name),
+          this.selectedVideo.path
+        );
+      }
+
+      // 恢复媒体类型
+      if (data.selectedMediaType) {
+        this.selectedMediaType = data.selectedMediaType;
+        if (this.selectedMediaType === 'video') {
+          await this.fetchVideoListFromAPI();
+        } else {
+          await this.fetchImageList();
+        }
+      }
+
+      // 准备描述显示（不重置偏差检测数据，因为会从缓存恢复）
+      this.prepareDescriptionDisplay(data, false);
+
+      // 只有当 summaryTypingText 为空时才启动打字机效果
+      // 如果已经有完整文字显示，保留当前状态
+      if (!this.summaryTypingText && this.summaryFullText) {
+        this.startSummaryTyping();
+      }
+
+      // 重新检查偏差检测计时器状态（因为 prepareDescriptionDisplay 会重置偏差检测数据）
+      this.checkBiasTimerState();
+      this.resultMessage = "已从缓存加载数据。";
+      this.progressMessage = "加载完成";
+      this.isLoading = false;
+      this.syncAndPlayVideos();
+    },
+    navigateHome() {
+      window.location.href = '/';
+    },
+    navigateNextPage() {
+      window.location.href = '/prior-knowledge';
+    },
+    handleResize() {
+      this.fullWidth = window.innerWidth;
+      this.fullHeight = window.innerHeight;
+    },
+    getVideoElementErrorMessage(videoEl) {
+      if (!videoEl || !videoEl.error) return '';
+      const codes = {
+        1: 'MEDIA_ERR_ABORTED',
+        2: 'MEDIA_ERR_NETWORK',
+        3: 'MEDIA_ERR_DECODE',
+        4: 'MEDIA_ERR_SRC_NOT_SUPPORTED'
+      };
+      return codes[videoEl.error.code] || `code=${videoEl.error.code}`;
+    },
+    handleOriginalVideoError(e) {
+      const videoEl = e && e.target;
+      console.error('认知传播视频加载错误:', this.getVideoElementErrorMessage(videoEl), e);
+      this.resultMessage = '认知传播视频加载失败，请检查 /load-video 接口与文件是否存在。';
+    },
+    handleProcessedVideoError(e) {
+      const videoEl = e && e.target;
+      const tracked = this.fullResult && this.fullResult.key_frame_detection && this.fullResult.key_frame_detection.tracked_artifact;
+      console.error('多模态目标检测结果视频加载错误:', {
+        mediaError: this.getVideoElementErrorMessage(videoEl),
+        src: videoEl && videoEl.src,
+        trackedArtifact: tracked,
+        event: e
+      });
+      const errHint = this.getVideoElementErrorMessage(videoEl);
+      this.resultMessage = tracked
+        ? `检测结果视频无法播放（${tracked}，${errHint}）。请确认轨迹 MP4 文件存在且编码为 H.264/AAC。`
+        : `检测结果视频无法播放（${errHint}），请重新点击「目标与轨迹识别」。`;
+      this.hasStartedDetection = false;
+    },
+    handleImageError(e) {
+      console.error("图片加载错误:", e);
+      this.resultMessage = "图片加载失败，请检查服务器日志和网络。";
+      this.originalVideoURL = null;
+    },
+    handleFormulaImageError(e) {
+      console.warn("公式图片加载失败:", e);
+    },
+    getMainObject() {
+      if (!this.fullResult.key_frame_detection || !this.fullResult.key_frame_detection.detections || !this.fullResult.key_frame_detection.detections.length) {
+        return 'N/A';
+      }
+      const maxConfDet = this.fullResult.key_frame_detection.detections.reduce((prev, curr) => {
+        return curr.confidence > prev.confidence ? curr : prev;
+      }, this.fullResult.key_frame_detection.detections[0]);
+      // 支持 class 和 class_name 两种字段名
+      return maxConfDet.class_name || maxConfDet.class || 'N/A';
+    },
+    getMainConfidence() {
+      if (!this.fullResult.key_frame_detection || !this.fullResult.key_frame_detection.detections || !this.fullResult.key_frame_detection.detections.length) {
+        return 0;
+      }
+      const maxConfDet = this.fullResult.key_frame_detection.detections.reduce((prev, curr) => {
+        return curr.confidence > prev.confidence ? curr : prev;
+      }, this.fullResult.key_frame_detection.detections[0]);
+      return maxConfDet.confidence;
+    },
+    resetResultState(options = {}) {
+      const { preserveMessages = false, preserveBiasTimer = false } = options;
+      this.clearTrackDisplayTimer();
+      this.revokeProcessedMediaBlob();
+      this.processedVideoURL = null;
+      this.processedVideoCodecWarning = null;
+      this.processedVideoDownloadName = '';
+      this.trackRecognitionContext = null;
+      this.deviationDetectionAccuracy = 'N/A';
+      this.taskId = null;
+      this.fullResult = {
+        video_description: null,
+        accuracy_results: null,
+        video_info: null,
+        key_frame_detection: null,
+        detection_result: null,
+        description_obj: null,
+        current_accuracy: null
+      };
+      if (!preserveMessages) {
+        this.resultMessage = null;
+        this.progressMessage = null;
+      }
+      this.descriptionEntries = [];
+      this.summaryTextOnly = '';
+      this.summaryHighlight = false;
+      this.labelsToHighlight = [];
+      this.isBiasTyping = false;
+      this.summaryFullText = '';
+      this.summaryTypingText = '';
+      this.hasStartedDetection = false;
+
+      // 清理计时器
+      this.clearTypingIntervals();
+
+      // 如果不保留偏差检测计时，则清除相关状态
+      if (!preserveBiasTimer) {
+        this.biasDetailEntries = [];
+        this.biasDisplayTexts = [];
+        this.showBiasDetails = false;
+        this.showAccuracy = false;
+        this.isBiasDetecting = false;
+        this.hasStartedBiasDetection = false;
+
+        localStorage.removeItem('biasStartTime');
+        localStorage.removeItem('biasDetectionStarted');
+        localStorage.removeItem('biasDetectionCompleted');
+        localStorage.removeItem('biasDetailEntries');
+      }
+    },
+    clearTypingIntervals() {
+      if (this.summaryTypingInterval) {
+        clearInterval(this.summaryTypingInterval);
+        this.summaryTypingInterval = null;
+      }
+      if (this.biasTypingInterval) {
+        clearInterval(this.biasTypingInterval);
+        this.biasTypingInterval = null;
+      }
+      this.clearBiasTimeouts();
+    },
+    // 只清除目标检测相关缓存，保留偏差检测计时状态
+    clearTargetDetectionCache() {
+      localStorage.removeItem('module1Res');
+      localStorage.removeItem('biasDetailEntries');
+      localStorage.removeItem('biasDetectionCompleted');
+      localStorage.removeItem('trackRecognitionContext');
+      this.trackRecognitionContext = null;
+      // 保留 biasStartTime 和 biasDetectionStarted 以便继续计时
+    },
+    // 清除所有缓存
+    clearAllCache() {
+      localStorage.removeItem('module1Res');
+      localStorage.removeItem('biasStartTime');
+      localStorage.removeItem('biasDetectionStarted');
+      localStorage.removeItem('biasDetectionCompleted');
+      localStorage.removeItem('biasDetailEntries');
+      localStorage.removeItem('trackRecognitionContext');
+      this.trackRecognitionContext = null;
+    },
+    autoPlayOriginalVideo() {
+      this.$nextTick(() => {
+        const videoEl = this.$refs.originalVideo;
+        if (!videoEl) return;
+        try {
+          videoEl.currentTime = 0;
+          const playPromise = videoEl.play();
+          if (playPromise && typeof playPromise.then === 'function') {
+            playPromise.catch(err => console.warn("自动播放原视频失败:", err));
+          }
+        } catch (err) {
+          console.warn("自动播放原视频异常:", err);
+        }
+      });
+    },
+    syncAndPlayVideos() {
+      this.$nextTick(() => {
+        const original = this.$refs.originalVideo;
+        const processed = this.$refs.processedVideo;
+        if (!original || !processed) return;
+        try {
+          original.currentTime = 0;
+          processed.currentTime = 0;
+          [original.play(), processed.play()].forEach(p => {
+            if (p && typeof p.then === 'function') {
+              p.catch(err => console.warn("同步播放失败:", err));
+            }
+          });
+        } catch (err) {
+          console.warn("同步播放异常:", err);
+        }
+      });
+    },
+    extractDeviceTypeFromDescription(description) {
+      if (!description || typeof description !== 'string') {
+        return "N/A";
+      }
+      const lines = description.split(/\r?\n/);
+      for (const line of lines) {
+        const match = line.match(/^目标[：:]\s*(.+)$/);
+        if (match && match[1]) {
+          return match[1].trim();
+        }
+      }
+      return "N/A";
+    },
+    prepareDescriptionDisplay(fullData, resetBiasEntries = true) {
+      this.clearTypingIntervals();
+      this.updateLabelsToHighlight(fullData.low_similarity_aspects);
+
+      // 处理 description 可能是对象或字符串的情况
+      let descText = '';
+      if (typeof fullData.description === 'object' && fullData.description !== null) {
+        // 视频接口返回的 description 是对象，优先使用 ground_truth
+        descText = fullData.description.ground_truth || fullData.description.predicted || '';
+      } else {
+        descText = fullData.description || fullData.video_description || '';
+      }
+
+      this.descriptionEntries = this.buildDescriptionEntries(descText);
+      this.summaryFullText = descText;
+      this.summaryTextOnly = '';
+      this.summaryTypingText = '';
+
+      // 只在 resetBiasEntries 为 true 时才重置偏差检测数据
+      if (resetBiasEntries) {
+        this.biasDetailEntries = this.descriptionEntries.filter(entry => entry.label !== '总结');
+        this.biasDisplayTexts = this.biasDetailEntries.map(() => '');
+        this.showBiasDetails = false;
+        this.showAccuracy = false;
+      }
+    },
+    startSummaryTyping() {
+      if (!this.summaryFullText || this.summaryTypingInterval) {
+        return;
+      }
+      this.summaryTypingText = '';
+      let charIndex = 0;
+      this.summaryTypingInterval = setInterval(() => {
+        this.summaryTypingText = this.summaryFullText.slice(0, charIndex + 1);
+        charIndex += 1;
+        if (charIndex >= this.summaryFullText.length) {
+          clearInterval(this.summaryTypingInterval);
+          this.summaryTypingInterval = null;
+        }
+      }, this.summaryTypingSpeed);
+    },
+    updateLabelsToHighlight(rawAspects) {
+      const aspects = this.parseLowSimilarityAspects(rawAspects);
+      const validLabels = new Set(['场景', '目标', '行为', '总结']);
+      const labels = new Set();
+      (aspects || []).forEach(item => {
+        if (typeof item !== 'string') return;
+        const name = item.trim().replace(/^["'《【\s]+|["'》】\s]+$/g, '');
+        if (name === '目标') {
+          labels.add('目标');
+        }
+        if (validLabels.has(name)) {
+          labels.add(name);
+        }
+      });
+      this.labelsToHighlight = Array.from(labels);
+    },
+    parseLowSimilarityAspects(raw) {
+       // ... existing implementation same as before ...
+       try {
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === 'object') {
+          for (const key of ['low_similarity_aspects', 'data', 'items', 'list']) {
+            if (Array.isArray(raw[key])) return raw[key];
+          }
+          for (const k in raw) {
+            if (Array.isArray(raw[k])) return raw[k];
+          }
+          return [];
+        }
+        if (typeof raw === 'string') {
+          const s = raw.trim();
+          if (!s) return [];
+          if (s.startsWith('[') && s.endsWith(']')) {
+            try { return JSON.parse(s); } catch (_) { }
+          }
+          if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) {
+            const normalized = s.replace(/'/g, '"');
+            try {
+              const obj = JSON.parse(normalized);
+              return this.parseLowSimilarityAspects(obj);
+            } catch (_) { /* ignore */ }
+          }
+          const match = s.match(/\[([^\]]+)\]/);
+          if (match && match[0]) {
+            const arrText = match[0].replace(/'/g, '"');
+            try { return JSON.parse(arrText); } catch (_) {
+              return match[1].split(',').map(t => t.replace(/["'\s]/g, '')).filter(Boolean);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('解析 low_similarity_aspects 失败：', e);
+      }
+      return [];
+    },
+    buildDescriptionEntries(description) {
+      if (!description) return [];
+      const lines = description.split(/\r?\n/).filter(line => line.trim() !== '');
+      return lines.map(line => {
+        const trimmedLine = line.trim();
+        const match = trimmedLine.match(/^([^：:]+)[：:]\s*(.*)$/);
+        if (match) {
+          let label = match[1].trim();
+          if (label === '目标') {
+            label = '目标';
+          }
+          const value = match[2].trim();
+          return {
+            label,
+            text: `${label}：${value}`,
+            highlight: this.labelsToHighlight.includes(label)
+          };
+        }
+        return {
+          label: '其他',
+          text: trimmedLine,
+          highlight: false
+        };
+      });
+    },
+    parseSummaryText(summaryText) {
+      if (!summaryText) {
+        return {
+          behaviorInfo: '',
+          samePoints: '',
+          differentPoints: ''
+        };
+      }
+      try {
+        let summary = summaryText;
+        if (typeof summaryText === 'string' && summaryText.trim().startsWith('{')) {
+          const parsed = JSON.parse(summaryText);
+          summary = parsed.summary || summaryText;
+        }
+        const behaviorMatch = summary.match(/行为信息[：:]?\s*([^]*?)(?=相同点[：:]|共识|分歧|$)/);
+        const samePointsMatch = summary.match(/(?:相同点|共识信息)[：:]?\s*([^]*?)(?=不同点|分歧|$)/);
+        const differentPointsMatch = summary.match(/(?:不同点|分歧信息)[：:]?\s*([^]*?)$/);
+        return {
+          behaviorInfo: behaviorMatch ? behaviorMatch[1].trim() : '',
+          samePoints: samePointsMatch ? samePointsMatch[1].trim() : '',
+          differentPoints: differentPointsMatch ? differentPointsMatch[1].trim() : ''
+        };
+      } catch (e) {
+        return { behaviorInfo: String(summaryText), samePoints: '', differentPoints: '' };
+      }
+    },
+    pickBehaviorField(data, keys) {
+      if (!data || typeof data !== 'object') return '';
+      for (let i = 0; i < keys.length; i += 1) {
+        const v = data[keys[i]];
+        if (v != null && String(v).trim() !== '') return String(v).trim();
+      }
+      return '';
+    },
+    formatBehaviorMetricValue(key, value) {
+      if (value == null || value === '') return 'N/A';
+      if (typeof value === 'number') {
+        if (key.includes('accuracy') || key.includes('rate') || key.includes('similarity') || (value >= 0 && value <= 1)) {
+          return (value * 100).toFixed(2) + '%';
+        }
+        return String(value);
+      }
+      return String(value);
+    },
+    buildBehaviorAnalysisView(payload) {
+      const root = payload && payload.data != null ? payload.data : payload;
+      const data = root && typeof root === 'object' ? root : {};
+      const sections = [];
+      const metrics = [];
+      const pushSection = (key, title, icon, content) => {
+        const text = content != null ? String(content).trim() : '';
+        if (!text) return;
+        sections.push({ key, title, icon, content: text });
+      };
+
+      const summaryText = this.pickBehaviorField(data, ['summary', 'analysis_summary', 'behavior_summary']);
+      if (summaryText) {
+        const parsed = this.parseSummaryText(summaryText);
+        pushSection('behavior', '行为信息', '◎', parsed.behaviorInfo || summaryText);
+        pushSection('consensus', '共识信息', '≈', parsed.samePoints);
+        pushSection('divergence', '分歧信息', '≠', parsed.differentPoints);
+      }
+
+      pushSection('behavior', '行为信息', '◎', this.pickBehaviorField(data, [
+        'behavior_info', 'behavior_analysis', 'predicted_behavior', 'behavior_description',
+        'primary_behavior', 'behavior'
+      ]));
+      pushSection('consensus', '共识信息', '≈', this.pickBehaviorField(data, [
+        'consensus', 'same_points', 'consensus_info', 'agreement_points'
+      ]));
+      pushSection('divergence', '分歧信息', '≠', this.pickBehaviorField(data, [
+        'divergence', 'different_points', 'disagreement_points', 'difference_points'
+      ]));
+
+      const desc = data.description;
+      if (desc && typeof desc === 'object') {
+        pushSection('predicted', '模型描述', '◇', desc.predicted);
+        pushSection('ground_truth', '参考描述', '◇', desc.ground_truth);
+        if (desc.similarity != null) {
+          metrics.push({
+            key: 'desc_similarity',
+            label: '描述相似度',
+            value: this.formatBehaviorMetricValue('similarity', desc.similarity)
+          });
+        }
+      }
+
+      const metricDefs = [
+        ['comprehensive_accuracy', '综合准确率'],
+        ['comprehensiveaccuracy', '综合准确率'],
+        ['average_comprehensive_accuracy', '平均综合准确率'],
+        ['danger_level_match_rate', '危险等级匹配率'],
+        ['dangerlevelmatchrate', '危险等级匹配率'],
+        ['performance_cosine_similarity', '性能余弦相似度'],
+        ['coredimensionratingaccuracy', '核心维度准确率'],
+        ['current_accuracy', '当前准确率'],
+        ['deviation_value', '偏差值']
+      ];
+      metricDefs.forEach(([key, label]) => {
+        if (data[key] != null && data[key] !== '') {
+          metrics.push({ key, label, value: this.formatBehaviorMetricValue(key, data[key]) });
+        }
+      });
+
+      if (data.model_analysis_danger_level != null) {
+        metrics.push({
+          key: 'model_danger',
+          label: '模型危险等级',
+          value: String(data.model_analysis_danger_level)
+        });
+      }
+      if (data.local_txt_danger_level != null) {
+        metrics.push({
+          key: 'local_danger',
+          label: '本地危险等级',
+          value: String(data.local_txt_danger_level)
+        });
+      }
+
+      const seen = new Set();
+      const dedupedSections = sections.filter((s) => {
+        if (seen.has(s.key)) return false;
+        seen.add(s.key);
+        return true;
+      });
+      return { sections: dedupedSections, metrics, raw: data };
+    },
+    pickAccuracyFromBehaviorData(payload) {
+      const data = payload && payload.data != null ? payload.data : payload;
+      if (!data || typeof data !== 'object') return null;
+      const keys = [
+        'comprehensive_accuracy', 'comprehensiveaccuracy', 'current_accuracy',
+        'average_comprehensive_accuracy', 'coredimensionratingaccuracy'
+      ];
+      for (let i = 0; i < keys.length; i += 1) {
+        const v = data[keys[i]];
+        if (typeof v === 'number') return v;
+      }
+      if (data.overall_accuracy && typeof data.overall_accuracy.accuracy === 'number') {
+        return data.overall_accuracy.accuracy;
+      }
+      return null;
+    },
+    extractAnalyzeVideoBehaviorError(error) {
+      const res = error && error.response;
+      const data = res && res.data;
+      if (typeof data === 'string') return data;
+      if (data && typeof data.detail === 'string') return data.detail;
+      if (data && data.detail) return JSON.stringify(data.detail);
+      if (data && data.error) return String(data.error);
+      return (error && error.message) || '未知错误';
+    },
+    buildBiasDetailEntriesFromAnalyzeResponse(payload) {
+      const view = this.buildBehaviorAnalysisView(payload);
+      const entries = [];
+      view.sections.forEach((section) => {
+        entries.push({
+          label: section.title,
+          text: `${section.title}：${section.content}`,
+          highlight: section.key === 'divergence' || section.key === 'different',
+          isConsistent: section.key === 'consensus'
+        });
+      });
+      view.metrics.forEach((metric) => {
+        entries.push({
+          label: metric.label,
+          text: `${metric.label}：${metric.value}`,
+          highlight: metric.key.includes('accuracy')
+        });
+      });
+      if (!entries.length) {
+        const raw = payload && payload.data != null ? payload.data : payload;
+        entries.push({
+          label: '分析结果',
+          text: `分析结果：${typeof raw === 'string' ? raw : JSON.stringify(raw, null, 2)}`,
+          highlight: false
+        });
+      }
+      return entries;
+    },
+    async handleStartBiasDetection() {
+      if (!this.canStartBiasDetection) return;
+      if (!this.selectedVideo || !this.selectedVideo.name) {
+        alert('请先完成目标与轨迹识别');
+        return;
+      }
+
+      const trackCtx = this.trackRecognitionContext || this.buildTrackRecognitionContext();
+      const requestBody = this.buildAnalyzeVideoBehaviorBody(trackCtx);
+      if (!trackCtx || !requestBody) {
+        alert('无法构建轨迹识别参数，请重新选择媒体并执行目标与轨迹识别');
+        return;
+      }
+
+      this.isBiasDetecting = true;
+      this.hasStartedBiasDetection = true;
+      this.clearBiasTimeouts();
+      this.showBiasDetails = false;
+      this.showAccuracy = false;
+      this.deviationDetectionAccuracy = '计算中...';
+      this.resetBiasTyping();
+
+      const logTag = '[DecisionMakingV2][analyze-video-behavior]';
+      const requestStartedAt = Date.now();
+      const loadTrackArtifactParams = trackCtx.requestParams;
+
+      console.group(`${logTag} 点击「决策认知偏差检测」`);
+      console.log('选中媒体 selectedVideo:', this.selectedVideo);
+      console.log('轨迹识别 load-track-artifact 曾用 params:', loadTrackArtifactParams);
+      console.log('analyze-video-behavior POST 传参（与 load-track 相同）:', requestBody);
+      console.log('传参 JSON:', JSON.stringify(requestBody, null, 2));
+      console.log('接口 URL:', ANALYZE_VIDEO_BEHAVIOR_API_URL);
+      console.log('tracked 文件名（带后缀）:', trackCtx.trackedFilename);
+      console.log('上下文来源:', this.trackRecognitionContext ? '目标与轨迹识别缓存' : '现场重建');
+      console.groupEnd();
+
+      try {
+        const registerResult = await this.registerTrackArtifactForAnalyze(trackCtx);
+        console.log(`${logTag} extract 登记结果:`, registerResult);
+        if (!registerResult.ok) {
+          throw new Error(
+            (registerResult.detail || 'extract-track-artifact 失败') +
+            '。analyze-video-behavior 需要服务端已登记 tracked 文件，请先重新点击「目标与轨迹识别」或联系后端修复轨迹生成。'
+          );
+        }
+
+        console.log(`${logTag} axios.post 发起`, {
+          url: ANALYZE_VIDEO_BEHAVIOR_API_URL,
+          body: requestBody,
+          timeout: 600000
+        });
+
+        const response = await axios.post(ANALYZE_VIDEO_BEHAVIOR_API_URL, requestBody, {
+          timeout: 600000
+        });
+        const data = response.data;
+        const elapsed = Date.now() - requestStartedAt;
+
+        console.group(`${logTag} 接口返回`);
+        console.log('HTTP status:', response.status);
+        console.log('耗时 ms:', elapsed);
+        console.log('响应头 content-type:', response.headers && (response.headers['content-type'] || response.headers['Content-Type']));
+        console.log('原始响应 data:', data);
+        console.log('原始响应 JSON:', JSON.stringify(data, null, 2));
+        console.groupEnd();
+
+        if (response.status >= 400 || (data && data.detail && typeof data.detail === 'string' && !data.summary)) {
+          console.error(`${logTag} 业务错误 detail:`, data.detail);
+          throw new Error(data.detail);
+        }
+
+        this.fullResult.video_behavior = data;
+        this.biasDetailEntries = this.buildBiasDetailEntriesFromAnalyzeResponse(data);
+
+        console.group(`${logTag} 偏差检测结果整理`);
+        console.log('biasDetailEntries:', this.biasDetailEntries);
+        console.log('biasDetailEntries JSON:', JSON.stringify(this.biasDetailEntries, null, 2));
+        console.log('fullResult.video_behavior 已写入');
+        console.groupEnd();
+
+        const accuracyData = await this.fetchStatisticsAccuracy();
+        const averageComprehensiveAccuracy = accuracyData && accuracyData.average_comprehensive_accuracy;
+
+        localStorage.setItem('biasDetailEntries', JSON.stringify(this.biasDetailEntries));
+        localStorage.setItem('biasStartTime', Date.now().toString());
+        localStorage.setItem('biasDetectionStarted', 'true');
+        localStorage.removeItem('biasDetectionCompleted');
+
+        try {
+          localStorage.setItem('module1Res', JSON.stringify({
+            ...data,
+            video_behavior: data,
+            track_request: trackCtx.requestParams,
+            originalVideoPath: this.originalVideoURL,
+            processedVideoPath: this.processedVideoURL,
+            instruction: this.ordersText,
+            task_id: this.taskId,
+            selectedMediaType: this.selectedMediaType,
+            source_filename: trackCtx.sourceFilename,
+            tracked_filename: trackCtx.trackedFilename,
+            average_comprehensive_accuracy: averageComprehensiveAccuracy
+          }));
+        } catch (e) {
+          console.error(`${logTag} 保存 module1Res 失败`, e);
+        }
+
+        console.log(`${logTag} 启动偏差识别准确率延迟展示`, BIAS_DETECTION_DELAY, 'ms', {
+          average_comprehensive_accuracy: averageComprehensiveAccuracy
+        });
+        this.startAccuracyTimer(BIAS_DETECTION_DELAY);
+
+        this.showBiasDetails = true;
+        this.isBiasTyping = true;
+        this.startBiasTypingSequence(0);
+        this.resultMessage = '决策认知偏差检测完成';
+        this.saveAllStateToCache();
+      } catch (error) {
+        const errRes = error && error.response;
+        console.group(`${logTag} 请求失败`);
+        console.error('error:', error);
+        console.log('message:', error && error.message);
+        console.log('HTTP status:', errRes && errRes.status);
+        console.log('请求体 requestBody:', requestBody);
+        console.log('trackRecognitionContext:', trackCtx);
+        console.log('响应 data:', errRes && errRes.data);
+        console.log('响应 JSON:', errRes && errRes.data ? JSON.stringify(errRes.data, null, 2) : null);
+        console.groupEnd();
+        this.isBiasDetecting = false;
+        this.showBiasDetails = true;
+        this.hasStartedBiasDetection = true;
+        const errText = this.extractAnalyzeVideoBehaviorError(error);
+        this.biasDetailEntries = [{
+          label: '检测失败',
+          text: `检测失败：${errText}`,
+          highlight: true,
+          isConsistent: false
+        }];
+        this.biasDisplayTexts = [this.biasDetailEntries[0].text];
+        this.isBiasTyping = false;
+        this.deviationDetectionAccuracy = 'N/A';
+        localStorage.setItem('biasDetailEntries', JSON.stringify(this.biasDetailEntries));
+        this.resultMessage = '决策认知偏差检测失败';
+      }
+    },
+    buildVideoBiasDetailEntries(data) {
+      const entries = [];
+      
+      // 根据接口文档，视频检测返回结构：
+      // {
+      //   detection: { accuracy: 1.0 },
+      //   description: { similarity, aspect_similarities, low_similarity_aspects, predicted, ground_truth },
+      //   current_accuracy: 0.8935
+      // }
+
+      const descriptionObj = data.description || {};
+      const detection = data.detection || {};
+
+      // 描述信息 - description.predicted 是预测描述，ground_truth 是真实描述
+      if (descriptionObj.predicted) {
+        const descLines = descriptionObj.predicted.split(/\r?\n/).filter(line => line.trim() !== '');
+        descLines.forEach(line => {
+          const trimmedLine = line.trim();
+          const match = trimmedLine.match(/^([^：:]+)[：:]\s*(.*)$/);
+          if (match) {
+            entries.push({
+              label: match[1].trim(),
+              text: trimmedLine,
+              highlight: false
+            });
+          } else {
+            entries.push({
+              label: '描述',
+              text: trimmedLine,
+              highlight: false
+            });
+          }
+        });
+      }
+
+      // 检测准确率 - detection.accuracy
+      if (detection.accuracy !== undefined) {
+        entries.push({
+          label: '检测准确率',
+          text: `检测准确率：${(detection.accuracy * 100).toFixed(2)}%`,
+          highlight: false
+        });
+      }
+
+      // 描述相似度 - description.similarity
+      if (descriptionObj.similarity !== undefined) {
+        entries.push({
+          label: '描述相似度',
+          text: `描述相似度：${(descriptionObj.similarity * 100).toFixed(2)}%`,
+          highlight: false
+        });
+      }
+
+      // 当前视频准确率 - 顶层 current_accuracy 字段
+      if (data.current_accuracy !== undefined) {
+        entries.push({
+          label: '当前准确率',
+          text: `当前准确率：${(data.current_accuracy * 100).toFixed(2)}%`,
+          highlight: true
+        });
+      }
+
+      return entries;
+    },
+    buildBiasDetailEntries(data) {
+      const entries = [];
+      const biasResult = data.bias_result || {};
+
+      if (biasResult.instruction_scene) {
+        entries.push({
+          label: '指令场景',
+          text: `指令场景：${biasResult.instruction_scene}`,
+          highlight: false
+        });
+      }
+      if (biasResult.instruction_evidence) {
+        entries.push({
+          label: '指令证据',
+          text: `指令证据：${biasResult.instruction_evidence}`,
+          highlight: false
+        });
+      }
+      if (biasResult.image_scene) {
+        entries.push({
+          label: '图片场景',
+          text: `图片场景：${biasResult.image_scene}`,
+          highlight: false
+        });
+      }
+      if (biasResult.is_consistent !== undefined) {
+        const isConsistent = biasResult.is_consistent;
+        const status = isConsistent ? '一致' : '不一致';
+        const reason = biasResult.reason || '';
+        entries.push({
+          label: '偏差结果',
+          text: `偏差结果：${status}`,
+          highlight: true,
+          isConsistent: isConsistent
+        });
+        if (reason) {
+          entries.push({
+            label: '判断原因',
+            text: `判断原因：${reason}`,
+            highlight: false,
+            isConsistent: isConsistent
+          });
+        }
+      }
+      if (biasResult.image_evidence) {
+        entries.push({
+          label: '图片证据',
+          text: `图片证据：${biasResult.image_evidence}`,
+          highlight: false
+        });
+      }
+
+      return entries;
+    },
+    startAccuracyTimer(delay) {
+      if (this.accuracyTimeout) clearTimeout(this.accuracyTimeout);
+      this.accuracyTimeout = setTimeout(() => {
+        this.handleBiasAccuracyTimerComplete();
+      }, delay);
+    },
+    /** 与 DecisionMaking.vue handleTimerComplete */
+    handleBiasAccuracyTimerComplete() {
+      console.log('[DecisionMakingV2] 决策认知偏差检测 准确率计时结束');
+      this.isBiasDetecting = false;
+      this.accuracyTimeout = null;
+      this.showAccuracy = true;
+      localStorage.setItem('biasDetectionCompleted', 'true');
+      localStorage.removeItem('biasStartTime');
+      this.applyDeviationDetectionAccuracyFromCache();
+      if (this.fullResult) {
+        localStorage.setItem('fullResult', JSON.stringify(this.fullResult));
+      }
+      localStorage.setItem('showAccuracy', 'true');
+      localStorage.setItem('isBiasDetecting', 'false');
+      this.saveAllStateToCache();
+    },
+    clearBiasTimeouts() {
+      if (this.biasTypingTimeout) {
+        clearTimeout(this.biasTypingTimeout);
+        this.biasTypingTimeout = null;
+      }
+      if (this.accuracyTimeout) {
+        clearTimeout(this.accuracyTimeout);
+        this.accuracyTimeout = null;
+      }
+    },
+    resetBiasTyping() {
+      if (this.biasTypingInterval) {
+        clearInterval(this.biasTypingInterval);
+        this.biasTypingInterval = null;
+      }
+      this.biasDisplayTexts = this.biasDetailEntries.map(() => '');
+      this.isBiasTyping = false;
+    },
+    startBiasTypingSequence(index) {
+      if (index >= this.biasDetailEntries.length) {
+        this.isBiasTyping = false;
+        this.biasTypingInterval = null;
+        return;
+      }
+      const entry = this.biasDetailEntries[index];
+      let charIndex = 0;
+      this.biasTypingInterval = setInterval(() => {
+        this.$set(this.biasDisplayTexts, index, entry.text.slice(0, charIndex + 1));
+        charIndex += 1;
+        if (charIndex >= entry.text.length) {
+          clearInterval(this.biasTypingInterval);
+          this.biasTypingInterval = null;
+          this.startBiasTypingSequence(index + 1);
+        }
+      }, this.typingSpeed);
+    },
+    stripFileExtension(filename) {
+      if (filename == null) return '';
+      const s = String(filename).trim();
+      if (!s) return '';
+      return s.replace(/\.(mp4|webm|mov|avi|mkv|m4v|flv|wmv|jpg|jpeg|png|webp|gif|bmp)$/i, '');
+    },
+    parseStaticFileList(raw) {
+      if (raw == null) return [];
+      let v = raw;
+      if (typeof v === 'string') {
+        const t = v.trim();
+        if (t.startsWith('<') || t.startsWith('<!')) {
+          return [];
+        }
+        try {
+          v = JSON.parse(t);
+        } catch (e) {
+          return [];
+        }
+      }
+      if (Array.isArray(v)) return v.filter(Boolean).map(x => String(x).trim()).filter(Boolean);
+      if (v && Array.isArray(v.files)) return v.files.filter(Boolean).map(x => String(x).trim()).filter(Boolean);
+      if (v && Array.isArray(v.list)) return v.list.filter(Boolean).map(x => String(x).trim()).filter(Boolean);
+      if (v && Array.isArray(v.data)) return v.data.filter(Boolean).map(x => String(x).trim()).filter(Boolean);
+      return [];
+    },
+    /** 与 DecisionMaking.vue：static/Image_input + static/Vedio_input/files.json */
+    async loadSourceMediaList() {
+      let imageFiles = [];
+      let videoFiles = [];
+      try {
+        const imageCtx = require.context('../../static/Image_input', true, /\.(png|jpe?g|webp|gif)$/i);
+        imageCtx.keys().forEach((key) => {
+          const normalized = key.replace(/^\.\//, '');
+          const fileName = normalized.split('/').filter(Boolean).pop() || normalized;
+          const path = `image:${normalized}`;
+          imageFiles.push({
+            id: path,
+            name: fileName,
+            path,
+            type: 'image'
+          });
+        });
+        imageFiles.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+      } catch (error) {
+        console.error('[DecisionMakingV2] 加载 static/Image_input 列表失败:', error);
+        imageFiles = [];
+      }
+
+      try {
+        const response = await axios.get('/static/Vedio_input/files.json');
+        const videoNameList = this.parseStaticFileList(response && response.data);
+        videoFiles = videoNameList.map((name) => {
+          const path = `video:${name}`;
+          return {
+            id: path,
+            name,
+            path,
+            type: 'video'
+          };
+        });
+        videoFiles.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+      } catch (error) {
+        console.error('[DecisionMakingV2] 加载 static/Vedio_input/files.json 失败:', error);
+        videoFiles = [];
+      }
+
+      this.imageList = imageFiles;
+      this.videoList = videoFiles;
+      console.log('[DecisionMakingV2] 数据源列表已加载', {
+        images: imageFiles.length,
+        videos: videoFiles.length
+      });
+    },
+    revokeOriginalMediaBlob() {
+      if (this.originalVideoURL && String(this.originalVideoURL).startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(this.originalVideoURL);
+        } catch (e) {
+          // ignore
+        }
+      }
+    },
+    /** 与 DecisionMaking.vue loadSourceInfo：/load-image、/load-video */
+    async loadMediaFromSourceApi(item) {
+      if (!item || !item.name || !item.type) return;
+      const filename = String(item.name).trim();
+      if (!filename) return;
+      const filenameNoExt = this.stripFileExtension(filename);
+      const endpoint = item.type === 'video' ? '/load-video' : '/load-image';
+      const fullUrl = `${SOURCE_API_BASE_URL}${endpoint}`;
+      const logTag = '[DecisionMakingV2][loadMediaFromSourceApi]';
+      try {
+        console.log(`${logTag} 请求`, { fullUrl, filename: filenameNoExt, item });
+        const response = await axios.get(fullUrl, {
+          params: { filename: filenameNoExt },
+          responseType: 'blob'
+        });
+        const ct = response && response.headers && (response.headers['content-type'] || response.headers['Content-Type']);
+        const payload = response && response.data !== undefined ? response.data : null;
+        if (payload == null || payload === '') {
+          console.warn(`${logTag} 后端未返回有效媒体内容`);
+          this.revokeOriginalMediaBlob();
+          this.originalVideoURL = null;
+          return;
+        }
+        this.revokeOriginalMediaBlob();
+        const blobType = (payload && payload.type) || ct || (item.type === 'video' ? 'video/mp4' : 'image/jpeg');
+        const mediaBlob = payload instanceof Blob ? payload : new Blob([payload], { type: blobType });
+        this.originalVideoURL = URL.createObjectURL(mediaBlob);
+        localStorage.setItem('originalVideoURL', this.originalVideoURL);
+        console.log(`${logTag} 预览 URL 已设置`, this.originalVideoURL);
+      } catch (error) {
+        console.error(`${logTag} 失败`, error);
+        this.revokeOriginalMediaBlob();
+        this.originalVideoURL = null;
+      }
+    },
+    async switchMediaType(type) {
+      if (this.selectedMediaType === type) return;
+      this.selectedMediaType = type;
+      localStorage.setItem('selectedMediaType', type);
+      this.selectedVideo = null;
+      this.clearAllCache();
+      this.resetResultState();
+      this.revokeOriginalMediaBlob();
+      this.originalVideoURL = null;
+      this.clearOrdersRefineDisplayTimer();
+      this.clearTrackDisplayTimer();
+      this.isOrdersLoading = false;
+      this.ordersCommand = '';
+      this.ordersNegotiation = '';
+
+      if (!this.imageList.length && !this.videoList.length) {
+        await this.loadSourceMediaList();
+      }
+      this.mediaList = type === 'image' ? this.imageList : this.videoList;
+    },
+    async fetchImageList() {
+      await this.loadSourceMediaList();
+      this.mediaList = this.imageList;
+    },
+    async fetchVideoListFromAPI() {
+      await this.loadSourceMediaList();
+      this.mediaList = this.videoList;
+    },
+    async fetchVideoList() {
+      await this.fetchImageList();
+    },
+    async selectMedia(item) {
+      if (!item || !item.path) return;
+      const isSameItem = this.selectedVideo && this.selectedVideo.path === item.path;
+
+      // 只有选择不同的文件时才清理相关缓存
+      if (!isSameItem) {
+        this.selectedVideo = item;
+        localStorage.setItem('selectedVideo', JSON.stringify({
+          id: item.id,
+          path: item.path,
+          name: item.name,
+          mediaType: this.selectedMediaType
+        }));
+        // 清除目标检测相关缓存（保留偏差检测计时状态）
+        this.clearTargetDetectionCache();
+        // 保留偏差检测计时状态，只重置目标检测相关UI
+        this.resetResultState({ preserveBiasTimer: true });
+        // 额外保留一些状态
+        this.showBiasDetails = this.hasStartedBiasDetection;
+        if (this.hasStartedBiasDetection && this.biasDetailEntries.length > 0) {
+          this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+        }
+        console.log("选择新" + (this.selectedMediaType === 'image' ? '图片' : '视频') + "，状态已重置。");
+      } else {
+        // 选择相同文件时，也保存 originalVideoURL 到 localStorage
+        localStorage.setItem('selectedVideo', JSON.stringify({
+          id: item.id,
+          path: item.path,
+          name: item.name,
+          mediaType: this.selectedMediaType
+        }));
+        localStorage.setItem('originalVideoURL', this.originalVideoURL || '');
+      }
+
+      const filenameNoExt = this.stripFileExtension(item.name);
+      await Promise.all([
+        this.loadMediaFromSourceApi(item),
+        this.fetchMachineRefineCommand(filenameNoExt, item.path)
+      ]);
+      console.log('已选择:', this.selectedMediaType === 'image' ? '图片' : '视频', item.name);
+    },
+    selectVideo(video) {
+      this.selectMedia(video);
+    },
+    async startDetection() {
+      if (!this.canStartTrackRecognition) return;
+      if (!this.selectedVideo || !this.selectedVideo.name) {
+        alert('请先选择' + (this.selectedMediaType === 'image' ? '图片' : '视频') + '并等待指令信息加载完成');
+        return;
+      }
+
+      const selectedPath = this.selectedVideo.path;
+      const trackCtx = this.buildTrackRecognitionContext(this.selectedVideo);
+      const sourceFilename = trackCtx.sourceFilename;
+      const trackedFilename = trackCtx.trackedFilename;
+      const trackedFilenameNoExt = trackCtx.trackedFilenameNoExt;
+      const logTag = '[DecisionMakingV2][load-track-artifact]';
+      const requestParams = trackCtx.requestParams;
+      const requestUrlWithQuery = this.buildTrackArtifactUrl(trackedFilename);
+      const requestInfo = {
+        url: TRACK_ARTIFACT_API_URL,
+        fullUrl: requestUrlWithQuery,
+        params: requestParams,
+        paramsFilenameNoExt: trackedFilenameNoExt,
+        sourceFilename,
+        trackedFilename,
+        selectedPath,
+        selectedMediaType: this.selectedMediaType,
+        selectedItem: this.selectedVideo
+      };
+      this.trackRecognitionContext = trackCtx;
+      localStorage.setItem('trackRecognitionContext', JSON.stringify(trackCtx));
+
+      this.clearTrackDisplayTimer();
+      this.revokeProcessedMediaBlob();
+      this.processedVideoURL = null;
+      this.isLoading = true;
+      this.hasStartedDetection = false;
+      this.resultMessage = '正在加载轨迹识别结果...';
+      this.progressMessage = '正在加载轨迹识别结果...';
+
+      console.group(`${logTag} 点击「目标与轨迹识别」`);
+      console.log('列表选中文件名 sourceFilename:', sourceFilename);
+      console.log('生成 tracked 文件名 trackedFilename:', trackedFilename);
+      console.log('实际传递 params（query）:', requestParams);
+      console.log('完整请求 URL:', requestUrlWithQuery);
+      console.log('请求详情 requestInfo:', requestInfo);
+      console.groupEnd();
+
+      const requestStartedAt = Date.now();
+      let mediaBlob = null;
+      let blobType = this.selectedMediaType === 'video' ? 'video/mp4' : 'image/jpeg';
+      let fetchFailed = false;
+      let fetchErrorDetail = '';
+
+      try {
+        // 统一 axios 拉取（避免 <video src="跨域直链"> 触发 MEDIA_ERR_SRC_NOT_SUPPORTED）
+        console.log(`${logTag} axios.get 调用`, {
+          url: TRACK_ARTIFACT_API_URL,
+          params: requestParams,
+          responseType: 'blob'
+        });
+        const response = await axios.get(TRACK_ARTIFACT_API_URL, {
+          params: requestParams,
+          responseType: 'blob'
+        });
+        const ct = response && response.headers && (response.headers['content-type'] || response.headers['Content-Type']);
+        const payload = response && response.data !== undefined ? response.data : null;
+
+        console.log(`${logTag} 原始响应`, {
+          status: response && response.status,
+          contentType: ct,
+          dataType: payload && payload.constructor ? payload.constructor.name : typeof payload,
+          dataSize: payload && payload.size
+        });
+
+        if (payload == null || payload === '' || this.isBlobLikelyErrorResponse(payload, ct)) {
+          fetchFailed = true;
+          fetchErrorDetail = this.selectedMediaType === 'video'
+            ? `请确认轨迹文件 ${trackedFilename} 已生成（接口需 filename 带扩展名）`
+            : `轨迹图片不可用（${trackedFilename}）`;
+          console.warn(`${logTag} 后端未返回有效轨迹媒体`, requestInfo);
+        } else {
+          mediaBlob = this.buildProcessedMediaBlob(payload, ct, this.selectedMediaType);
+          blobType = mediaBlob.type || blobType;
+        }
+      } catch (error) {
+        fetchFailed = true;
+        fetchErrorDetail = error && error.message;
+        const errRes = error && error.response;
+        console.error(`${logTag} 请求失败`, {
+          request: requestInfo,
+          message: error && error.message,
+          status: errRes && errRes.status,
+          contentType: errRes && errRes.headers && (errRes.headers['content-type'] || errRes.headers['Content-Type']),
+          responseData: errRes && errRes.data
+        });
+      }
+
+      const elapsed = Date.now() - requestStartedAt;
+      const delayMs = Math.max(0, TRACK_DISPLAY_DELAY_MS - elapsed);
+
+      this.trackDisplayTimer = setTimeout(async () => {
+        this.trackDisplayTimer = null;
+
+        if (!this.selectedVideo || this.selectedVideo.path !== selectedPath) {
+          console.log(`${logTag} 延迟展示取消：选中项已变更`, {
+            requestSelectedPath: selectedPath,
+            currentSelectedPath: this.selectedVideo && this.selectedVideo.path
+          });
+          this.isLoading = false;
+          return;
+        }
+
+        this.isLoading = false;
+
+        if (fetchFailed || !mediaBlob) {
+          this.revokeProcessedMediaBlob();
+          this.processedVideoURL = null;
+          this.hasStartedDetection = false;
+          this.resultMessage = fetchErrorDetail
+            ? `轨迹识别结果加载失败：${fetchErrorDetail}`
+            : '轨迹识别结果加载失败';
+          this.progressMessage = '加载失败';
+          return;
+        }
+
+        this.revokeProcessedMediaBlob();
+        this.processedVideoURL = URL.createObjectURL(mediaBlob);
+        this.hasStartedDetection = true;
+        this.fullResult = this.fullResult || {};
+        this.fullResult.key_frame_detection = { tracked_artifact: trackedFilename };
+        const detectedCodec = await this.applyProcessedVideoCodecPolicy(mediaBlob, trackedFilename);
+        if (this.fullResult.key_frame_detection) {
+          this.fullResult.key_frame_detection.video_codec = detectedCodec;
+        }
+        this.fullResult.video_info = {
+          name: sourceFilename,
+          id: this.selectedVideo.id,
+          tracked_filename: trackedFilename
+        };
+        this.taskId = trackedFilename;
+
+        localStorage.setItem('processedVideoURL', this.processedVideoURL);
+
+        try {
+          const module1Res = {
+            video_path: this.processedVideoURL,
+            key_frame_path: this.processedVideoURL,
+            originalVideoPath: this.originalVideoURL,
+            instruction: this.ordersText,
+            task_id: this.taskId,
+            selectedMediaType: this.selectedMediaType,
+            tracked_filename: trackedFilename,
+            source_filename: sourceFilename
+          };
+          localStorage.setItem('module1Res', JSON.stringify(module1Res));
+        } catch (e) {
+          console.error(`${logTag} 保存 module1Res 失败`, e);
+        }
+
+        const registerResult = await this.registerTrackArtifactForAnalyze(trackCtx);
+        console.log(`${logTag} 轨迹展示后 extract 登记结果:`, registerResult);
+        if (!registerResult.ok) {
+          console.warn(
+            `${logTag} extract 未成功，后续「决策认知偏差检测」可能报 404：`,
+            registerResult.detail
+          );
+        }
+
+        if (!this.processedVideoCodecWarning) {
+          this.resultMessage = '轨迹识别结果已更新';
+        }
+        this.progressMessage = '加载完成';
+        this.saveAllStateToCache();
+
+        console.log(`${logTag} 轨迹结果已展示`, {
+          request: requestInfo,
+          delayMs: TRACK_DISPLAY_DELAY_MS,
+          processedVideoURL: this.processedVideoURL,
+          mode: 'blob',
+          blobType,
+          blobSize: mediaBlob && mediaBlob.size
+        });
+      }, delayMs);
+
+      console.log(`${logTag} 已收到响应，等待延迟展示`, {
+        request: requestInfo,
+        delayMs,
+        elapsedSinceRequestStart: elapsed
+      });
+    },
+    /** 与 DecisionMaking.vue exportData：GET /export/output */
+    async exportData() {
+      if (!this.hasStartedBiasDetection) {
+        alert('请先点击「决策认知偏差检测」后再导出结果。');
+        return;
+      }
+      const logTag = '[DecisionMakingV2][export/output]';
+      this.isExporting = true;
+      try {
+        console.log(`${logTag} GET`, EXPORT_OUTPUT_API_URL);
+        const response = await axios.get(EXPORT_OUTPUT_API_URL, {
+          responseType: 'blob',
+          timeout: 60000
+        });
+        const blob = new Blob([response.data], { type: 'application/zip' });
+        const contentDisposition = response.headers && (response.headers['content-disposition'] || response.headers['Content-Disposition']);
+        let filename = `output_files_${new Date().toISOString().slice(0, 19).replace(/:/g, '')}.zip`;
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1].replace(/['"]/g, '');
+            if (filename.startsWith("UTF-8''")) {
+              filename = decodeURIComponent(filename.replace(/^UTF-8''/, ''));
+            }
+          }
+        }
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+        console.log(`${logTag} 导出成功`, filename);
+      } catch (error) {
+        console.error(`${logTag} 导出失败`, error);
+        alert('导出失败，请重试。错误信息：' + ((error && error.message) || '未知错误'));
+      } finally {
+        this.isExporting = false;
+      }
+    }
+  }
+};
+</script>
+
+<style lang="scss" scoped>
+/* 字体定义 */
+@font-face {
+  font-family: 'DOUYUFont';
+  src: url('~@/assets/douyuFont-2.otf') format('opentype');
+}
+
+@font-face {
+  font-family: 'DINAlternate-Bold';
+  src: url('~@/assets/douyuFont-2.otf') format('opentype');
+  font-weight: 700;
+}
+
+/* 1. 全局和背景 */
+.section {
+  width: 100%;
+  min-height: 100vh;
+  color: #fff;
+  font-family: "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  z-index: 2;
+  padding: 10px;
+  margin: 0;
+  background-color: transparent;
+  display: flex;
+  flex-direction: column;
+}
+
+.img_box {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('~@/assets/images/step1/-s-图层 0.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center top;
+  opacity: 1;
+  z-index: -1;
+}
+
+/* 2. 顶部标题栏 */
+.header-bar {
+  width: 100%;
+  flex-shrink: 0;
+  padding: 0 20px;
+  height: 60px;
+}
+
+.newTitle {
+  width: 524px;
+  height: 40px;
+  font-family: 'DOUYUFont', sans-serif;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 31px;
+  font-style: normal;
+  text-decoration: none;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(191, 245, 255, 1) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+  line-height: 40px;
+}
+
+.header-btn {
+  font-family: 'DOUYUFont', sans-serif;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 14px;
+  font-style: normal;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 120px;
+  height: 40px;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  margin: 0 5px;
+}
+
+.btn-home {
+  background-image: url('~@/assets/images/step4/首页按键.png');
+}
+
+.btn-back {
+  background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png');
+}
+
+.btn-next {
+  background-image: url('~@/assets/images/step1/-s-按钮-蓝色-1.png');
+}
+
+/* 3. 核心内容区 */
+.content-row {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+}
+
+/* 三列通用高度 */
+.left-column,
+.middle-column,
+.right-column {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px);
+  min-height: 0;
+  padding: 0 !important;
+  justify-content: flex-start !important;
+  gap: 10px;
+}
+
+/* 左侧列面板容器 */
+.left-panels-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  gap: 10px;
+}
+
+/* 作战指令面板 */
+.panel-orders {
+  flex: 0 0 180px;
+  min-height: 180px;
+}
+
+/* 数据源区域：高度固定由 flex 分配，列表内部滚动 */
+.data-source-section {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.data-source-section .panel-left {
+  flex: 1 1 0;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.data-source-section .panel-content {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.data-source-section .media-type-selector {
+  flex-shrink: 0;
+}
+
+.panel-left {
+  flex-grow: 1;
+  height: auto;
+  min-height: 200px;
+}
+
+.panel-right-top {
+  flex: 1;
+  min-height: 0;
+  flex-shrink: 0;
+  margin-bottom: 0;
+  width: 400px;
+  height: 570px;
+}
+
+.panel-right-bottom {
+  flex-grow: 0;
+  height: 100px !important;
+  min-height: 100px;
+}
+
+.panel-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 标题样式 */
+.panel-header {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  padding: 0 !important;
+  margin: 0 auto 10px auto !important; 
+  box-sizing: border-box !important; 
+  padding-top: 5px !important;
+  
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  
+  font-family: 'DOUYUFont', sans-serif !important;
+  color: #FFFFFF !important;
+  font-weight: 400 !important;
+  font-size: 18px !important;
+}
+
+.header-select-data {
+  border: none !important; 
+  border-image: none !important;
+  width: 400px !important;
+  height: 40px !important;
+  background-image: url('~@/assets/images/step1/-s-二级标题.png') !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100% !important;
+}
+
+.panel-header.header-results {
+  box-shadow: none !important;
+  width: 400px !important;
+  height: 50px !important; 
+  background-image: url('~@/assets/images/step1/-s-二级标题.png') !important;
+}
+
+.clean-header {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 左侧面板容器 */
+.left-panels-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 8px;
+}
+
+/* 作战指令面板 */
+.panel-orders {
+  background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  width: 100%;
+  min-height: 250px;
+  padding: 15px;
+}
+
+/* 数据源区域容器（高度由父级 flex 约束，不随列表项增多撑开） */
+.data-source-section {
+  gap: 8px;
+}
+
+/* 媒体类型切换按钮 */
+.media-type-selector {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.media-type-btn {
+  padding: 8px 25px;
+  font-size: 14px;
+  font-family: 'DOUYUFont', sans-serif;
+  color: #fff;
+  background-color: rgba(0, 100, 150, 0.3);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.media-type-btn:hover {
+  background-color: rgba(0, 150, 200, 0.4);
+  border-color: #00e5ff;
+}
+
+.media-type-btn.active {
+  background-color: rgba(0, 229, 255, 0.4);
+  border-color: #00e5ff;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+}
+
+.orders-text-box {
+  width: 100%;
+  height: 100%;
+  min-height: 225px;
+  max-height: 225px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 4px;
+  color: #eee;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  padding: 12px 15px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  box-sizing: border-box;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #00e5ff;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* 作战指令：与 DecisionMaking.vue 一致的分区展示，区域尺寸不变 */
+.panel-orders .orders-panel-content {
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.panel-orders .orders-info-box {
+  width: 100%;
+  height: 100%;
+  min-height: 225px;
+  max-height: 225px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #00e5ff;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
+.panel-orders .orders-empty-hint,
+.panel-orders .orders-loading-hint {
+  margin: 0;
+  padding: 12px 4px;
+  color: rgba(238, 238, 238, 0.75);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.panel-orders .orders-loading-hint {
+  color: #00e5ff;
+  line-height: 1.6;
+  padding-top: 96px;
+}
+
+.panel-orders .result-section {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-orders .result-section:last-child {
+  margin-bottom: 0;
+}
+
+.panel-orders .section-header {
+  color: #00e5ff;
+  font-weight: bold;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.panel-orders .section-content {
+  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid #00e0ff;
+  border-radius: 5px;
+  padding: 10px 12px;
+  overflow-y: auto;
+  position: relative;
+}
+
+.panel-orders .section-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel-orders .section-content::-webkit-scrollbar-thumb {
+  background: #00e5ff;
+  border-radius: 3px;
+}
+
+.panel-orders .section-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.panel-orders .left-info-section.small-section .section-content {
+  min-height: 70px;
+  max-height: 70px;
+}
+
+.panel-orders .left-info-section.orders-command-only .section-content {
+  min-height: 175px;
+  max-height: 175px;
+}
+
+.panel-orders .left-info-section.consensus-section .section-content {
+  min-height: 95px;
+  max-height: 95px;
+}
+
+.panel-orders .result-text {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0;
+  color: #eee;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 选择数据面板 */
+.panel-left {
+  background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  width: 100%;
+  min-height: 300px;
+  padding: 15px;
+}
+
+.server-video-list {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 10px;
+  box-sizing: border-box;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #00e5ff;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
+.data-source-section .server-video-list {
+  /* 列表区域尺寸固定，仅内部出现滚动条 */
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.video-item {
+  padding: 8px 10px;
+  margin-bottom: 5px;
+  background-color: rgba(0, 100, 150, 0.2);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.video-item.selected {
+  background-color: rgba(0, 229, 255, 0.4);
+  border-color: #00e5ff;
+}
+
+.selector-circle {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #00e5ff;
+  border-radius: 50%;
+  background-color: transparent;
+  flex-shrink: 0;
+  margin-left: 10px;
+}
+
+.video-item.selected .selector-circle {
+  background-color: #00e5ff;
+}
+
+.empty-list-text {
+  text-align: center;
+  color: #88a;
+  padding: 20px;
+  font-size: 0.9rem;
+}
+
+.action-buttons {
+  margin-top: auto;
+  flex-shrink: 0;
+  padding-top: 15px;
+  text-align: center;
+}
+
+/* 通用按钮容器设置 */
+.btn-start-detect,
+.btn-start-bias,
+.btn-export-result {
+  position: relative !important; 
+  display: block !important;    
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  justify-content: initial;
+  align-items: initial;
+  color: #fff;
+}
+
+.btn-start-detect {
+  width: 280px;
+  height: 100px;
+  font-size: 16px; 
+  background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  display: inline-block; 
+  margin: 0 auto;
+}
+
+.btn-start-detect:disabled {
+  filter: grayscale(80%);
+  cursor: not-allowed;
+}
+
+/* 5. 中间列 */
+.middle-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch;
+  align-items: center;
+  gap: 8px;
+  height: calc(100vh - 60px);
+  overflow: hidden;
+}
+
+.video-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 0;
+  flex: 1;
+  min-height: 150px;
+  /* 注释掉底部文本框后，视频模块撑满剩余空间 */
+  flex-grow: 1;
+}
+
+.video-section:first-of-type .video-frame {
+  max-width: 800px;
+}
+
+.video-section:nth-of-type(2) .video-frame {
+  max-width: 800px;
+}
+
+.video-display {
+  width: 90%;
+  height: 90%;
+  transform: scale(0.9);
+  transform-origin: center center;
+}
+
+.codec-unsupported-box {
+  width: 90%;
+  max-width: 720px;
+  padding: 16px 20px;
+  text-align: left;
+  color: #e8f4ff;
+  background: rgba(0, 40, 80, 0.55);
+  border: 1px solid rgba(100, 180, 255, 0.35);
+  border-radius: 6px;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.codec-unsupported-text {
+  margin: 0 0 12px;
+}
+
+.codec-download-link {
+  color: #7ec8ff;
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.codec-download-link:hover {
+  color: #b8e4ff;
+}
+
+.video-label {
+  width: 100%;
+  max-width: 800px;
+  height: 40px;
+  background-image: url('~@/assets/images/step1/-s-二级标题.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  color: #fff;
+  font-family: 'DOUYUFont', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  font-style: normal;
+  margin-bottom: 2px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  box-sizing: border-box; 
+  padding-top: 5px !important;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('~@/assets/images/step1/-s-二级标题.png');
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    z-index: -1;
+  }
+
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(191, 245, 255, 1) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.label-processed {
+  font-size: 14px;
+}
+
+.video-frame {
+  width: 100%;
+  max-width: 600px;
+  height: 100%;
+  min-height: 100px;
+  flex: 1;
+  background-image: url('~@/assets/images/step1/-s-框-小视频.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  padding: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.video-display {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.placeholder-text {
+  color: #88a;
+  font-size: 1rem;
+}
+
+.summary-box-middle {
+  width: 800px;
+  height: 300px;
+  background-image: url('~@/assets/images/step1/-s-框-小视频.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+.summary-content {
+  width: 100%;
+  height: 100%;
+  font-size: 1.2rem;
+  line-height: 1.4;
+  color: #eee;
+  white-space: pre-wrap;
+  overflow: auto;
+  text-align: left;
+  padding: 15px;
+}
+
+.summary-content {
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #00e5ff;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* 6. 右侧列 */
+.panel-right-top {
+  background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
+}
+
+.bias-button-container {
+  min-height: 70px;
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 5px;
+  padding: 8px 0;
+}
+
+.description-box {
+  flex-grow: 1;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  color: #eee;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  padding: 10px !important;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #00e5ff;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+  }
+}
+
+.description-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: #eee;
+}
+
+.btn-start-bias {
+  width: 250px;
+  height: 100px;
+  background-image: url('~@/assets/images/step1/偏差检测按键.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  font-family: 'DOUYUFont', sans-serif;
+  font-size: 16px;
+  display: block;
+  margin: 0 auto;
+}
+
+.btn-start-bias:disabled {
+  filter: grayscale(80%);
+  cursor: not-allowed;
+}
+
+.typing-text {
+  /* 1. 解决缩进问题 */
+  white-space: pre-line;       /* 关键：保留换行符(\n)，但会自动合并代码里的缩进空格，从而消除首行缩进 */
+  text-indent: 0 !important;   /* 强制设置为0，防止被其他样式覆盖 */
+  padding-left: 0;             /* 确保左侧没有内边距 */
+  
+  /* 2. 增加行间距 */
+  line-height: 2.0;            /* 行高：数字越大间距越大（推荐 1.8 到 2.2） */
+  margin-bottom: 15px;         /* 段落之间的间距（每段文字之间的距离） */
+  
+  /* 其他保持不变 */
+  display: block;              /* 确保独占一行 */
+  text-align: left;            /* 左对齐 */
+  word-break: break-all;       /* 防止长英文单词撑破布局 */
+}
+
+.hint-text {
+  color: #9fc5ff;
+  margin-bottom: 6px;
+}
+
+.behavior-analysis-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.ba-section {
+  background: linear-gradient(135deg, rgba(0, 48, 96, 0.55) 0%, rgba(0, 24, 48, 0.75) 100%);
+  border: 1px solid rgba(0, 229, 255, 0.28);
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 0 12px rgba(0, 120, 200, 0.12);
+}
+
+.ba-section--behavior {
+  border-left: 3px solid #00e5ff;
+}
+
+.ba-section--consensus {
+  border-left: 3px solid #5dffb8;
+}
+
+.ba-section--divergence {
+  border-left: 3px solid #ffb84d;
+}
+
+.ba-section--predicted,
+.ba-section--ground_truth {
+  border-left: 3px solid #b8a0ff;
+}
+
+.ba-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ba-section-icon {
+  color: #00e5ff;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.ba-section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #b8e8ff;
+  letter-spacing: 0.05em;
+}
+
+.ba-section-body {
+  font-size: 0.88rem;
+  line-height: 1.75;
+  color: #e8f4ff;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
+}
+
+.ba-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ba-metric-chip {
+  display: inline-flex;
+  flex-direction: column;
+  min-width: 120px;
+  padding: 8px 12px;
+  background: rgba(0, 80, 140, 0.45);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  border-radius: 6px;
+}
+
+.ba-metric-label {
+  font-size: 0.75rem;
+  color: #8ec8ff;
+  margin-bottom: 4px;
+}
+
+.ba-metric-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.behavior-analysis-error {
+  padding: 12px 14px;
+  background: rgba(80, 20, 20, 0.45);
+  border: 1px solid rgba(255, 120, 100, 0.45);
+  border-radius: 8px;
+  text-align: left;
+}
+
+.ba-error-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #ffb4a8;
+  margin-bottom: 8px;
+}
+
+.ba-error-text {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: #ffe8e4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.small-text {
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.text-red {
+  color: #ff4d4d;
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+
+.panel-right-bottom {
+  background-image: url('~@/assets/images/step4/准确率框.png');
+  width: 400px;
+  height: 120px;
+  position: relative;
+  overflow: visible;
+}
+
+.panel-right-bottom .panel-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.accuracy-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0 15px;
+  position: relative;
+}
+
+/* 公式提示图标 */
+.formula-hint-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  background-color: rgba(0, 229, 255, 0.3);
+  border: 1px solid #00e5ff;
+  border-radius: 50%;
+  font-size: 10px;
+  color: #00e5ff;
+  margin-left: 5px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+/* 公式悬浮提示框 */
+.formula-tooltip {
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  transform: translateY(-50%);
+  z-index: 9999;
+  background-color: rgba(0, 20, 40, 0.95);
+  border: 2px solid #00e5ff;
+  border-radius: 8px;
+  padding: 25px 10px 10px;
+  box-shadow: 0 4px 20px rgba(0, 229, 255, 0.3);
+  margin-right: 10px;
+  min-width: 200px;
+  overflow: visible;
+}
+
+.formula-close {
+  position: absolute;
+  top: 2px;
+  right: 8px;
+  color: #00e5ff;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.formula-image {
+  max-width: 350px;
+  max-height: 120px;
+  display: block;
+}
+
+/* 公式 tooltip 样式 - 鼠标悬停时字体增大 */
+::v-deep .accuracy-content .tooltip .tooltip-inner {
+  font-size: 32px !important;
+}
+
+.accuracy-label {
+  color: #fff;
+  font-family: 'DOUYUFont';
+  font-weight: 400;
+  font-size: 16px;
+  font-style: normal;
+  text-decoration: none;
+  margin-bottom: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: -1em;
+}
+
+.accuracy-value {
+  font-size: 34px;
+  font-weight: 700;
+  color: #00e5ff;
+  text-shadow: 0 0 10px #00e5ff, 0 0 20px rgba(0, 229, 255, 0.5);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  margin-top: 5px;
+  margin-left: 5px;
+}
+
+.action-buttons-right {
+  flex-shrink: 0;
+  text-align: right;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 5px !important;
+  padding-top: 0 !important;
+  padding-bottom: 10px;
+}
+
+.btn-export-result {
+  width: 250px;
+  height: 100px;
+  background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  font-family: 'DOUYUFont', sans-serif;
+  font-size: 23px;
+  display: block;
+  margin: 0 auto;
+}
+
+.btn-export-result:disabled {
+  filter: grayscale(80%);
+  cursor: not-allowed;
+}
+
+.btn-text-pos {
+  position: absolute;
+  top: 60%;
+  left: 60%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font-family: 'DOUYUFont', sans-serif;
+  color: #FFFFFF;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.btn-spinner-pos {
+  position: absolute;
+  left: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+/* 7. 响应式调整 */
+@media (max-width: 1400px) {
+  .video-frame {
+    height: 280px;
+  }
+
+  .video-section:first-of-type .video-frame {
+    height: 300px;
+  }
+
+  .video-section:nth-of-type(2) .video-frame {
+    height: 280px;
+  }
+
+  .summary-box-middle {
+    min-height: 120px;
+    max-height: 180px;
+  }
+
+  .metric-box {
+    font-size: 1.8rem;
+  }
+
+  [class^="panel-"] {
+    padding: 20px;
+  }
+
+  .panel-header {
+    height: 35px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .left-column,
+  .middle-column,
+  .right-column {
+    height: auto;
+    margin-bottom: 20px;
+  }
+
+  .content-row {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .left-column,
+  .right-column {
+    width: 80% !important;
+    max-width: 80% !important;
+  }
+
+  .middle-column {
+    width: 90% !important;
+    max-width: 90% !important;
+  }
+
+  .right-column {
+    min-height: 600px;
+  }
+
+  .panel-left {
+    min-height: 400px;
+  }
+
+  .panel-right-top {
+    min-height: 250px;
+    height: auto;
+  }
+
+  .panel-right-bottom {
+    flex-grow: 1;
+    height: 30%;
+    min-height: 120px;
+  }
+}
+</style>
+
+<style lang="scss">
+/* 全局样式 - 需求1：去掉背景色，只保留红色字体 */
+.text-highlight {
+  color: #ff4d4d !important;
+  font-weight: bold;
+}
+
+.text-green {
+  color: #00ff00 !important;
+  font-weight: bold;
+}
+
+.loading-overlay {
+  position: relative;
+  filter: grayscale(80%) brightness(0.6);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.loading-text {
+  color: #aaa !important;
+  font-style: italic;
+}
+</style>
