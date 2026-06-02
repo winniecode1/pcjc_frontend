@@ -86,7 +86,7 @@
           <div class="video-label label-original">{{ selectedMediaType === 'image' ? '认知传播图片' : '认知传播视频' }}</div>
           <div class="video-frame">
             <img v-if="originalVideoURL && selectedMediaType === 'image'" :src="originalVideoURL" class="video-display" alt="原始图片" @error="handleImageError" />
-            <video v-else-if="originalVideoURL && selectedMediaType === 'video'" :src="originalVideoURL" class="video-display" controls @error="handleOriginalVideoError"></video>
+            <video v-else-if="originalVideoURL && selectedMediaType === 'video'" :src="originalVideoURL" class="video-display" controls :key="'orig-' + originalVideoURL" @error="handleOriginalVideoError"></video>
             <div v-else class="placeholder-text">请选择{{ selectedMediaType === 'image' ? '图片' : '视频' }}</div>
           </div>
         </div>
@@ -223,6 +223,8 @@ const EXPORT_OUTPUT_API_URL = `${SOURCE_API_BASE_URL}/export/output`;
 const ORDERS_DISPLAY_DELAY_MS = 5000;
 /** 轨迹识别结果：接口返回后延迟展示时长（ms） */
 const TRACK_DISPLAY_DELAY_MS = 3000;
+/** 认知传播视频列表与静态预览目录（Drane 素材多为 mp4v，浏览器可能无法内嵌播放） */
+const DRANE_VIDEO_STATIC_BASE = '/static/Drane_Vedio_input';
 
 function getFilenameFromPath(fullPath) {
   if (!fullPath || typeof fullPath !== 'string') return null;
@@ -288,6 +290,8 @@ export default {
       hasStartedBiasDetection: false,
       trackDisplayTimer: null,
       showFormulaTooltip: false,
+      /** 认知传播视频是否已回退为 static/Drane_Vedio_input 直链 */
+      originalVideoUsedStatic: false,
       /** 轨迹 MP4 为 mp4v 等浏览器不支持的编码时展示说明（仍可下载、可做偏差检测） */
       processedVideoCodecWarning: null,
       processedVideoDownloadName: '',
@@ -299,14 +303,9 @@ export default {
     canStartBiasDetection() {
       return this.hasStartedDetection && !!this.processedVideoURL && !this.isLoading;
     },
-    /** 指令信息展示完成后才可点击「目标与轨迹识别」 */
+    /** 已选择媒体且未在轨迹识别加载中即可点击「目标与轨迹识别」（不要求作战指令已生成） */
     canStartTrackRecognition() {
-      return !!(
-        this.selectedVideo &&
-        !this.isOrdersLoading &&
-        this.ordersCommand &&
-        !this.isLoading
-      );
+      return !!(this.selectedVideo && !this.isLoading);
     },
     /** 兼容 module1Res 等仍使用合并 instruction 字段的场景 */
     ordersText() {
@@ -658,19 +657,37 @@ export default {
         : (ct.includes('image') ? (ct.split(';')[0] || 'image/jpeg') : (mediaType === 'video' ? 'video/mp4' : 'image/jpeg'));
       return payload instanceof Blob ? payload : new Blob([payload], { type: blobType });
     },
-    /** 扫描 MP4 容器内编码标识（moov 通常在文件后部，读取前 4MB） */
+    /** 扫描 MP4 容器内编码标识（moov 常在文件尾部，需读头+尾） */
     async inspectVideoBlobCodec(blob) {
       if (!blob || !blob.size) return 'unknown';
-      const slice = blob.slice(0, Math.min(blob.size, 4 * 1024 * 1024));
-      const buf = new Uint8Array(await slice.arrayBuffer());
-      let s = '';
-      for (let i = 0; i < buf.length; i += 1) {
-        s += String.fromCharCode(buf[i]);
-      }
+      const readSlice = async (start, length) => {
+        const slice = blob.slice(start, Math.min(start + length, blob.size));
+        const buf = new Uint8Array(await slice.arrayBuffer());
+        let s = '';
+        for (let i = 0; i < buf.length; i += 1) {
+          s += String.fromCharCode(buf[i]);
+        }
+        return s;
+      };
+      const head = await readSlice(0, 4 * 1024 * 1024);
+      const tailStart = Math.max(0, blob.size - 512 * 1024);
+      const tail = blob.size > 512 * 1024 ? await readSlice(tailStart, 512 * 1024) : '';
+      const s = head + tail;
       if (s.includes('avc1') || s.includes('avc3')) return 'h264';
       if (s.includes('mp4v')) return 'mp4v';
       if (s.includes('hvc1') || s.includes('hev1')) return 'hevc';
       return 'unknown';
+    },
+    buildDraneStaticVideoUrl(filename) {
+      return `${DRANE_VIDEO_STATIC_BASE}/${encodeURIComponent(String(filename || '').trim())}`;
+    },
+    applyOriginalVideoStaticFallback(filename, staticUrl, reason) {
+      console.log('[DecisionMakingV2] 认知传播视频改用静态路径', { filename, staticUrl, reason });
+      this.revokeOriginalMediaBlob();
+      this.originalVideoURL = staticUrl;
+      this.originalVideoUsedStatic = true;
+      localStorage.setItem('originalVideoURL', staticUrl);
+      this.resultMessage = null;
     },
     applyProcessedVideoCodecPolicy(mediaBlob, trackedFilename) {
       this.processedVideoCodecWarning = null;
@@ -813,7 +830,9 @@ export default {
       this.revokeOriginalMediaBlob();
       this.revokeProcessedMediaBlob();
       this.originalVideoURL = null;
+      this.originalVideoUsedStatic = false;
       this.processedVideoURL = null;
+      this.processedVideoCodecWarning = null;
       this.hasStartedDetection = false;
     },
     async loadInitialData() {
@@ -993,8 +1012,16 @@ export default {
     },
     handleOriginalVideoError(e) {
       const videoEl = e && e.target;
-      console.error('认知传播视频加载错误:', this.getVideoElementErrorMessage(videoEl), e);
-      this.resultMessage = '认知传播视频加载失败，请检查 /load-video 接口与文件是否存在。';
+      const errCode = this.getVideoElementErrorMessage(videoEl);
+      const name = this.selectedVideo && this.selectedVideo.name;
+      if (!name) return;
+      if (this.originalVideoUsedStatic) {
+        console.error('认知传播视频（静态）仍无法播放:', errCode, e);
+        this.resultMessage = `认知传播视频无法播放（${errCode}）。`;
+        return;
+      }
+      console.warn('load-video 预览失败，回退 static/Drane_Vedio_input', errCode);
+      this.applyOriginalVideoStaticFallback(name, this.buildDraneStaticVideoUrl(name), errCode);
     },
     handleProcessedVideoError(e) {
       const videoEl = e && e.target;
@@ -1812,7 +1839,7 @@ export default {
       if (v && Array.isArray(v.data)) return v.data.filter(Boolean).map(x => String(x).trim()).filter(Boolean);
       return [];
     },
-    /** 与 DecisionMaking.vue：static/Image_input + static/Vedio_input/files.json */
+    /** 与 DecisionMaking.vue：static/Image_input + static/Drane_Vedio_input/files.json */
     async loadSourceMediaList() {
       let imageFiles = [];
       let videoFiles = [];
@@ -1836,7 +1863,9 @@ export default {
       }
 
       try {
-        const response = await axios.get('/static/Vedio_input/files.json');
+        // 仅视频列表来自 Drane_Vedio_input；选中后作战指令、认知传播视频仍为
+        // fetchMachineRefineCommand + loadMediaFromSourceApi（/load-video），与改列表前一致
+        const response = await axios.get('/static/Drane_Vedio_input/files.json');
         const videoNameList = this.parseStaticFileList(response && response.data);
         videoFiles = videoNameList.map((name) => {
           const path = `video:${name}`;
@@ -1849,7 +1878,7 @@ export default {
         });
         videoFiles.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
       } catch (error) {
-        console.error('[DecisionMakingV2] 加载 static/Vedio_input/files.json 失败:', error);
+        console.error('[DecisionMakingV2] 加载 static/Drane_Vedio_input/files.json 失败:', error);
         videoFiles = [];
       }
 
@@ -1869,14 +1898,44 @@ export default {
         }
       }
     },
-    /** 与 DecisionMaking.vue loadSourceInfo：/load-image、/load-video */
+    /** 认知传播视频：先 /load-video，失败则 static/Drane_Vedio_input；图片仍走 /load-image */
+    async loadOriginalVideoFromApi(filename) {
+      const logTag = '[DecisionMakingV2][load-video]';
+      const staticUrl = this.buildDraneStaticVideoUrl(filename);
+      const filenameNoExt = this.stripFileExtension(filename);
+      this.revokeOriginalMediaBlob();
+      this.originalVideoUsedStatic = false;
+      try {
+        console.log(`${logTag} 请求`, { filename: filenameNoExt });
+        const response = await axios.get(`${SOURCE_API_BASE_URL}/load-video`, {
+          params: { filename: filenameNoExt },
+          responseType: 'blob'
+        });
+        const ct = response && response.headers && (response.headers['content-type'] || response.headers['Content-Type']);
+        const payload = response && response.data !== undefined ? response.data : null;
+        if (payload == null || payload === '' || this.isInvalidMediaBlob(payload, ct)) {
+          this.applyOriginalVideoStaticFallback(filename, staticUrl, '无效 load-video 响应');
+          return;
+        }
+        const mediaBlob = this.buildProcessedMediaBlob(payload, ct, 'video');
+        this.originalVideoURL = URL.createObjectURL(mediaBlob);
+        localStorage.setItem('originalVideoURL', this.originalVideoURL);
+        console.log(`${logTag} blob 预览已设置`);
+      } catch (error) {
+        console.warn(`${logTag} 请求失败，改用静态`, error);
+        this.applyOriginalVideoStaticFallback(filename, staticUrl, error);
+      }
+    },
     async loadMediaFromSourceApi(item) {
       if (!item || !item.name || !item.type) return;
       const filename = String(item.name).trim();
       if (!filename) return;
+      if (item.type === 'video') {
+        await this.loadOriginalVideoFromApi(filename);
+        return;
+      }
       const filenameNoExt = this.stripFileExtension(filename);
-      const endpoint = item.type === 'video' ? '/load-video' : '/load-image';
-      const fullUrl = `${SOURCE_API_BASE_URL}${endpoint}`;
+      const fullUrl = `${SOURCE_API_BASE_URL}/load-image`;
       const logTag = '[DecisionMakingV2][loadMediaFromSourceApi]';
       try {
         console.log(`${logTag} 请求`, { fullUrl, filename: filenameNoExt, item });
@@ -1893,7 +1952,7 @@ export default {
           return;
         }
         this.revokeOriginalMediaBlob();
-        const blobType = (payload && payload.type) || ct || (item.type === 'video' ? 'video/mp4' : 'image/jpeg');
+        const blobType = (payload && payload.type) || ct || 'image/jpeg';
         const mediaBlob = payload instanceof Blob ? payload : new Blob([payload], { type: blobType });
         this.originalVideoURL = URL.createObjectURL(mediaBlob);
         localStorage.setItem('originalVideoURL', this.originalVideoURL);
@@ -1913,6 +1972,7 @@ export default {
       this.resetResultState();
       this.revokeOriginalMediaBlob();
       this.originalVideoURL = null;
+      this.originalVideoUsedStatic = false;
       this.clearOrdersRefineDisplayTimer();
       this.clearTrackDisplayTimer();
       this.isOrdersLoading = false;
@@ -1982,7 +2042,7 @@ export default {
     async startDetection() {
       if (!this.canStartTrackRecognition) return;
       if (!this.selectedVideo || !this.selectedVideo.name) {
-        alert('请先选择' + (this.selectedMediaType === 'image' ? '图片' : '视频') + '并等待指令信息加载完成');
+        alert('请先选择' + (this.selectedMediaType === 'image' ? '图片' : '视频'));
         return;
       }
 
