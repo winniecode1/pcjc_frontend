@@ -86,7 +86,18 @@
           <div class="video-label label-original">{{ selectedMediaType === 'image' ? '认知传播图片' : '认知传播视频' }}</div>
           <div class="video-frame">
             <img v-if="originalVideoURL && selectedMediaType === 'image'" :src="originalVideoURL" class="video-display" alt="原始图片" @error="handleImageError" />
-            <video v-else-if="originalVideoURL && selectedMediaType === 'video'" :src="originalVideoURL" class="video-display" controls :key="'orig-' + originalVideoURL" @error="handleOriginalVideoError"></video>
+            <video
+              v-else-if="originalVideoURL && selectedMediaType === 'video'"
+              :src="originalVideoURL"
+              class="video-display"
+              controls
+              autoplay
+              muted
+              playsinline
+              loop
+              :key="'orig-' + originalVideoURL"
+              @error="handleOriginalVideoError"
+            ></video>
             <div v-else class="placeholder-text">请选择{{ selectedMediaType === 'image' ? '图片' : '视频' }}</div>
           </div>
         </div>
@@ -94,8 +105,20 @@
         <div class="video-section">
           <div class="video-label label-processed">多模态目标检测结果</div>
           <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
-            <img v-if="processedVideoURL && !isLoading && selectedMediaType === 'image'" :src="processedVideoURL" class="video-display" alt="检测结果" :key="'img-' + processedVideoURL" @error="handleImageError" />
-            <video v-else-if="processedVideoURL && !isLoading && selectedMediaType === 'video' && !processedVideoCodecWarning" :src="processedVideoURL" class="video-display" controls :key="'video-' + processedVideoURL" @error="handleProcessedVideoError"></video>
+            <img v-if="processedVideoURL && !isLoading && selectedMediaType === 'image'" :src="processedVideoURL" class="video-display" alt="检测结果" :key="'img-' + processedVideoURL" @load="handleProcessedTrackMediaReady" @error="handleImageError" />
+            <video
+              v-else-if="processedVideoURL && !isLoading && selectedMediaType === 'video' && !processedVideoCodecWarning"
+              :src="processedVideoURL"
+              class="video-display"
+              controls
+              autoplay
+              muted
+              playsinline
+              loop
+              :key="'video-' + processedVideoURL"
+              @loadeddata="handleProcessedTrackMediaReady"
+              @error="handleProcessedVideoError"
+            ></video>
             <div v-else-if="processedVideoURL && !isLoading && selectedMediaType === 'video' && processedVideoCodecWarning" class="codec-unsupported-box">
               <p class="codec-unsupported-text">{{ processedVideoCodecWarning }}</p>
               <a class="codec-download-link" :href="processedVideoURL" :download="processedVideoDownloadName">下载轨迹视频 ({{ processedVideoDownloadName }})</a>
@@ -136,23 +159,51 @@
             <div class="description-box p-2 overflow-auto"
               :class="{ 'loading-text': isBiasDetecting && !showBiasDetails }">
 
-              <div v-if="isLoading">检测中……</div>
-              <div v-else-if="isBiasDetecting && !showBiasDetails" class="text-left small-text">
+              <div v-if="isBiasDetecting && !showBiasDetails" class="text-left small-text">
                 计算中…
               </div>
-              <div v-else-if="!hasStartedBiasDetection" class="text-left small-text hint-text">
-                请点击"决策认知偏差检测"按钮
+              <div v-else-if="!showBiasDetails" class="text-left small-text hint-text">
+                请先进行目标与轨迹识别，再点击决策认知偏差检测按钮
               </div>
 
-              <div v-else-if="hasStartedBiasDetection && !isLoading && showBiasDetails">
-                <div v-for="(entry, index) in biasDetailEntries" :key="entry.label"
-                  class="typing-text text-left small-text" 
-                  :class="{ 
-                    'text-highlight': entry.label === '偏差结果' && !entry.isConsistent && !isBiasTyping,
-                    'text-green': entry.label === '偏差结果' && entry.isConsistent && !isBiasTyping
-                  }">
-                  {{ biasDisplayTexts[index] }}
+              <div v-else-if="showBiasDetails" class="bias-result-display">
+                <div v-if="behaviorAnalysisView" class="behavior-analysis-view">
+                  <div
+                    v-if="behaviorAnalysisView.tacticalBehavior"
+                    class="ba-section ba-section--tactical"
+                  >
+                    <div class="ba-section-head">
+                      <span class="ba-section-icon">▣</span>
+                      <span class="ba-section-title">战术行为</span>
+                    </div>
+                    <div class="ba-tactical-main">
+                      <span class="ba-tactical-value">{{ behaviorAnalysisView.tacticalBehavior }}</span>
+                    </div>
+                  </div>
+                  <div
+                    v-if="behaviorAnalysisView.auxiliaryMessage"
+                    class="ba-section ba-section--auxiliary"
+                  >
+                    <div class="ba-section-head">
+                      <span class="ba-section-icon">◈</span>
+                      <span class="ba-section-title">分析说明</span>
+                    </div>
+                    <p class="ba-section-body ba-auxiliary-body">{{ behaviorAnalysisView.auxiliaryMessage }}</p>
+                  </div>
                 </div>
+                <template v-else>
+                  <div
+                    v-for="(entry, index) in biasDetailEntries"
+                    :key="entry.label + '-' + index"
+                    class="typing-text text-left small-text"
+                    :class="{
+                      'text-highlight': entry.label === '偏差结果' && !entry.isConsistent && !isBiasTyping,
+                      'text-green': entry.label === '偏差结果' && entry.isConsistent && !isBiasTyping
+                    }"
+                  >
+                    {{ biasDisplayTexts[index] }}
+                  </div>
+                </template>
               </div>
             </div>
           </div>
@@ -209,7 +260,6 @@ const API_BASE_URL = 'http://10.109.253.71:5236';
 const SOURCE_API_BASE_URL = 'http://10.109.253.71:12358';
 const REFINE_COMMAND_API_URL = `${SOURCE_API_BASE_URL}/machine-refine-command`;
 const TRACK_ARTIFACT_API_URL = `${SOURCE_API_BASE_URL}/load-track-artifact`;
-const EXTRACT_TRACK_ARTIFACT_API_URL = `${SOURCE_API_BASE_URL}/extract-track-artifact`;
 const ANALYZE_VIDEO_BEHAVIOR_API_URL = `${SOURCE_API_BASE_URL}/analyze-video-behavior`;
 const FRONTEND_BASE_URL = 'http://10.109.253.71:8889';
 const IMAGE_API_URL = 'http://10.109.253.71:5237';
@@ -247,6 +297,8 @@ export default {
       ordersCommand: '',
       ordersNegotiation: '',
       isOrdersLoading: false,
+      /** 作战指令延迟展示结束后为 true（视频模式下才可点「目标与轨迹识别」） */
+      ordersDisplayReady: false,
       ordersRefineDisplayTimer: null,
       selectedMediaType: 'image',
       imageList: [],
@@ -266,6 +318,8 @@ export default {
         key_frame_detection: null
       },
       descriptionEntries: [],
+      /** analyze-video-behavior 结构化展示（战术行为 + 辅助说明） */
+      behaviorAnalysisView: null,
       biasDetailEntries: [],
       biasDisplayTexts: [],
       summaryTextOnly: '',
@@ -287,6 +341,8 @@ export default {
       isBiasDetecting: false,
       isExporting: false,
       hasStartedDetection: false,
+      /** 点击「目标与轨迹识别」且多模态检测结果区已展示完成后为 true */
+      trackResultDisplayReady: false,
       hasStartedBiasDetection: false,
       trackDisplayTimer: null,
       showFormulaTooltip: false,
@@ -301,11 +357,19 @@ export default {
   },
   computed: {
     canStartBiasDetection() {
-      return this.hasStartedDetection && !!this.processedVideoURL && !this.isLoading;
+      return (
+        this.trackResultDisplayReady &&
+        !!this.processedVideoURL &&
+        !this.isLoading
+      );
     },
-    /** 已选择媒体且未在轨迹识别加载中即可点击「目标与轨迹识别」（不要求作战指令已生成） */
+    /** 视频：选中且作战指令展示完成后才可点击；图片：选中且未在轨迹加载中 */
     canStartTrackRecognition() {
-      return !!(this.selectedVideo && !this.isLoading);
+      if (!this.selectedVideo || this.isLoading) return false;
+      if (this.selectedMediaType === 'video') {
+        return !this.isOrdersLoading && this.ordersDisplayReady;
+      }
+      return !this.isOrdersLoading;
     },
     /** 兼容 module1Res 等仍使用合并 instruction 字段的场景 */
     ordersText() {
@@ -447,34 +511,8 @@ export default {
         this.summaryTypingText = this.summaryFullText;
       }
 
-      // 恢复偏差检测状态
-      this.hasStartedBiasDetection = localStorage.getItem('hasStartedBiasDetection') === 'true';
-      const savedBiasDetailEntries = localStorage.getItem('biasDetailEntries');
-      if (savedBiasDetailEntries) {
-        try {
-          this.biasDetailEntries = JSON.parse(savedBiasDetailEntries);
-        } catch (e) {
-          console.error('恢复 biasDetailEntries 失败:', e);
-        }
-      }
-      const savedBiasDisplayTexts = localStorage.getItem('biasDisplayTexts');
-      if (savedBiasDisplayTexts) {
-        try {
-          this.biasDisplayTexts = JSON.parse(savedBiasDisplayTexts);
-        } catch (e) {
-          console.error('恢复 biasDisplayTexts 失败:', e);
-        }
-      } else {
-        // 如果没有保存的 displayTexts，使用完整的 biasDetailEntries 文字
-        this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
-      }
-      this.showBiasDetails = localStorage.getItem('showBiasDetails') === 'true';
-      this.showAccuracy = localStorage.getItem('showAccuracy') === 'true';
-      this.isBiasDetecting = localStorage.getItem('isBiasDetecting') === 'true';
-      const savedDeviationAccuracy = localStorage.getItem('deviationDetectionAccuracy');
-      if (savedDeviationAccuracy != null) {
-        this.deviationDetectionAccuracy = savedDeviationAccuracy;
-      }
+      // 偏差检测结果进入页不恢复，由 resetEnterPageMediaSelection + resetBiasResultPanel 重置
+
       const savedTrackCtx = localStorage.getItem('trackRecognitionContext');
       if (savedTrackCtx) {
         try {
@@ -488,17 +526,6 @@ export default {
       if (this.summaryTypingText === this.summaryFullText) {
         // 文字已完整显示，不需要打字机效果
         console.log('目标检测结果已完整显示');
-      }
-
-      // 恢复偏差检测打字状态
-      if (this.biasDisplayTexts.length > 0) {
-        const allTextsComplete = this.biasDetailEntries.every((entry, index) => {
-          return this.biasDisplayTexts[index] === entry.text;
-        });
-        if (allTextsComplete) {
-          console.log('偏差检测结果已完整显示');
-          this.isBiasTyping = false;
-        }
       }
 
       console.log('所有状态已从缓存恢复');
@@ -542,6 +569,7 @@ export default {
         clearTimeout(this.ordersRefineDisplayTimer);
         this.ordersRefineDisplayTimer = null;
       }
+      this.ordersDisplayReady = false;
     },
     clearTrackDisplayTimer() {
       if (this.trackDisplayTimer) {
@@ -585,60 +613,12 @@ export default {
         label: 'Target'
       };
     },
-    /** POST /analyze-video-behavior：仅 filename，与 load-track-artifact 的 params 完全一致 */
+    /** POST /analyze-video-behavior：传左侧选中视频名加 _tracked 后的文件名（如 MultiUAV-002_tracked.mp4） */
     buildAnalyzeVideoBehaviorBody(trackCtx) {
       const ctx = trackCtx || this.trackRecognitionContext || this.buildTrackRecognitionContext();
-      if (!ctx || !ctx.requestParams) return null;
-      return { ...ctx.requestParams };
-    },
-    /**
-     * 后端 analyze-video-behavior 要求 tracked 已通过 extract-track-artifact 登记；
-     * extract 使用原视频名（无扩展名），与 load-track-artifact 的 tracked 文件名不同。
-     */
-    async registerTrackArtifactForAnalyze(trackCtx) {
-      const ctx = trackCtx || this.trackRecognitionContext || this.buildTrackRecognitionContext();
-      const logTag = '[DecisionMakingV2][extract-track-artifact]';
-      if (!ctx) {
-        return { ok: false, detail: '无法构建轨迹上下文' };
-      }
-      const extractParams = {
-        filename: this.stripFileExtension(ctx.sourceFilename),
-        artifact_type: ctx.artifactType,
-        mode: ctx.trackMode || 'single',
-        force_rebuild: false
-      };
-      console.group(`${logTag} 登记 tracked（analyze 前置依赖）`);
-      console.log('原视频 sourceFilename:', ctx.sourceFilename);
-      console.log('load-track-artifact 使用 params:', ctx.requestParams);
-      console.log('extract GET params:', extractParams);
-      console.log('URL:', EXTRACT_TRACK_ARTIFACT_API_URL);
-      try {
-        const res = await axios.get(EXTRACT_TRACK_ARTIFACT_API_URL, {
-          params: extractParams,
-          timeout: 300000,
-          validateStatus: () => true
-        });
-        const data = res.data;
-        console.log('HTTP status:', res.status);
-        console.log('响应 data:', data);
-        console.log('响应 JSON:', JSON.stringify(data, null, 2));
-        console.groupEnd();
-        const detail = data && data.detail;
-        if (res.status >= 400 || (detail && typeof detail === 'string')) {
-          return { ok: false, detail: detail || `HTTP ${res.status}`, data };
-        }
-        return { ok: true, data };
-      } catch (error) {
-        const errRes = error && error.response;
-        const detail = this.extractAnalyzeVideoBehaviorError(error);
-        console.error(`${logTag} 请求异常`, {
-          message: error && error.message,
-          status: errRes && errRes.status,
-          responseData: errRes && errRes.data
-        });
-        console.groupEnd();
-        return { ok: false, detail, data: errRes && errRes.data };
-      }
+      const trackedFilename = ctx && ctx.trackedFilename;
+      if (!trackedFilename) return null;
+      return { filename: trackedFilename };
     },
     isBlobLikelyErrorResponse(blob, contentType) {
       const ct = String(contentType || (blob && blob.type) || '').toLowerCase();
@@ -681,8 +661,28 @@ export default {
     buildDraneStaticVideoUrl(filename) {
       return `${DRANE_VIDEO_STATIC_BASE}/${encodeURIComponent(String(filename || '').trim())}`;
     },
-    applyOriginalVideoStaticFallback(filename, staticUrl, reason) {
-      console.log('[DecisionMakingV2] 认知传播视频改用静态路径', { filename, staticUrl, reason });
+    /** 拼装 load-video 请求信息，便于控制台观察传参 */
+    buildLoadVideoRequestInfo(filenameWithExt) {
+      const filename = String(filenameWithExt || '').trim();
+      const params = { filename };
+      const baseUrl = `${SOURCE_API_BASE_URL}/load-video`;
+      const query = new URLSearchParams(params).toString();
+      return {
+        baseUrl,
+        params,
+        fullUrl: query ? `${baseUrl}?${query}` : baseUrl
+      };
+    },
+    logLoadVideoRequest(phase, extra) {
+      console.log(`[DecisionMakingV2][load-video] ${phase}`, extra || {});
+    },
+    applyOriginalVideoStaticFallback(filename, staticUrl, reason, loadVideoReq) {
+      this.logLoadVideoRequest('回退静态', {
+        reason: reason && (reason.message || String(reason)),
+        loadVideo: loadVideoReq || this.buildLoadVideoRequestInfo(filename),
+        staticUrl,
+        filename
+      });
       this.revokeOriginalMediaBlob();
       this.originalVideoURL = staticUrl;
       this.originalVideoUsedStatic = true;
@@ -733,6 +733,7 @@ export default {
 
       this.clearOrdersRefineDisplayTimer();
       this.isOrdersLoading = true;
+      this.ordersDisplayReady = false;
       this.ordersCommand = '';
       const requestStartedAt = Date.now();
 
@@ -804,12 +805,14 @@ export default {
 
         localStorage.setItem('ordersCommand', this.ordersCommand);
         localStorage.setItem('ordersNegotiation', this.ordersNegotiation);
+        this.ordersDisplayReady = true;
         console.log(`${logTag} 作战指令已更新`, {
           request: requestInfo,
           delayMs: ORDERS_DISPLAY_DELAY_MS,
           ordersCommand: this.ordersCommand,
           ordersNegotiation: this.ordersNegotiation,
-          commandPreview: command.slice(0, 120)
+          commandPreview: command.slice(0, 120),
+          ordersDisplayReady: true
         });
       }, delayMs);
 
@@ -825,6 +828,7 @@ export default {
       this.clearTrackDisplayTimer();
       this.selectedVideo = null;
       this.isOrdersLoading = false;
+      this.ordersDisplayReady = false;
       this.ordersCommand = '';
       this.ordersNegotiation = '';
       this.revokeOriginalMediaBlob();
@@ -834,15 +838,13 @@ export default {
       this.processedVideoURL = null;
       this.processedVideoCodecWarning = null;
       this.hasStartedDetection = false;
+      this.trackResultDisplayReady = false;
+      this.resetBiasResultPanel();
     },
     async loadInitialData() {
-      // 恢复偏差检测、目标检测文字等非媒体选中状态
       this.restoreAllStateFromCache();
-      // 进入页不恢复上次选中的图片/视频及预览，须用户点击列表项
+      // 进入页不恢复上次选中的图片/视频及预览，须用户点击列表项；偏差结果一并重置
       this.resetEnterPageMediaSelection();
-
-      // 检查偏差检测计时器状态（用于恢复未完成的计时）
-      this.checkBiasTimerState();
 
       // 根据选中类型加载对应列表
       if (this.selectedMediaType === 'image') {
@@ -1020,8 +1022,13 @@ export default {
         this.resultMessage = `认知传播视频无法播放（${errCode}）。`;
         return;
       }
-      console.warn('load-video 预览失败，回退 static/Drane_Vedio_input', errCode);
-      this.applyOriginalVideoStaticFallback(name, this.buildDraneStaticVideoUrl(name), errCode);
+      const loadVideoReq = this.buildLoadVideoRequestInfo(name);
+      this.logLoadVideoRequest('video 元素播放失败，回退静态', {
+        ...loadVideoReq,
+        mediaError: errCode,
+        previousSrc: videoEl && videoEl.src
+      });
+      this.applyOriginalVideoStaticFallback(name, this.buildDraneStaticVideoUrl(name), errCode, loadVideoReq);
     },
     handleProcessedVideoError(e) {
       const videoEl = e && e.target;
@@ -1037,6 +1044,12 @@ export default {
         ? `检测结果视频无法播放（${tracked}，${errHint}）。请确认轨迹 MP4 文件存在且编码为 H.264/AAC。`
         : `检测结果视频无法播放（${errHint}），请重新点击「目标与轨迹识别」。`;
       this.hasStartedDetection = false;
+      this.trackResultDisplayReady = false;
+    },
+    /** 多模态检测结果区媒体已可展示后，才允许「决策认知偏差检测」 */
+    handleProcessedTrackMediaReady() {
+      if (!this.processedVideoURL || this.isLoading) return;
+      this.trackResultDisplayReady = true;
     },
     handleImageError(e) {
       console.error("图片加载错误:", e);
@@ -1096,24 +1109,33 @@ export default {
       this.summaryFullText = '';
       this.summaryTypingText = '';
       this.hasStartedDetection = false;
+      this.trackResultDisplayReady = false;
 
       // 清理计时器
       this.clearTypingIntervals();
 
-      // 如果不保留偏差检测计时，则清除相关状态
       if (!preserveBiasTimer) {
-        this.biasDetailEntries = [];
-        this.biasDisplayTexts = [];
-        this.showBiasDetails = false;
-        this.showAccuracy = false;
-        this.isBiasDetecting = false;
-        this.hasStartedBiasDetection = false;
-
-        localStorage.removeItem('biasStartTime');
-        localStorage.removeItem('biasDetectionStarted');
-        localStorage.removeItem('biasDetectionCompleted');
-        localStorage.removeItem('biasDetailEntries');
+        this.resetBiasResultPanel();
       }
+    },
+    /** 偏差检测结果区回到「请先进行目标与轨迹识别」 */
+    resetBiasResultPanel() {
+      this.clearBiasTimeouts();
+      this.behaviorAnalysisView = null;
+      this.biasDetailEntries = [];
+      this.biasDisplayTexts = [];
+      this.showBiasDetails = false;
+      this.showAccuracy = false;
+      this.isBiasDetecting = false;
+      this.isBiasTyping = false;
+      this.hasStartedBiasDetection = false;
+      this.deviationDetectionAccuracy = 'N/A';
+      localStorage.removeItem('biasStartTime');
+      localStorage.removeItem('biasDetectionStarted');
+      localStorage.removeItem('biasDetectionCompleted');
+      localStorage.removeItem('biasDetailEntries');
+      localStorage.removeItem('behaviorAnalysisView');
+      localStorage.removeItem('showBiasDetails');
     },
     clearTypingIntervals() {
       if (this.summaryTypingInterval) {
@@ -1126,14 +1148,10 @@ export default {
       }
       this.clearBiasTimeouts();
     },
-    // 只清除目标检测相关缓存，保留偏差检测计时状态
+    /** 仅清除轨迹识别相关缓存，不影响右侧偏差检测结果 */
     clearTargetDetectionCache() {
-      localStorage.removeItem('module1Res');
-      localStorage.removeItem('biasDetailEntries');
-      localStorage.removeItem('biasDetectionCompleted');
       localStorage.removeItem('trackRecognitionContext');
       this.trackRecognitionContext = null;
-      // 保留 biasStartTime 和 biasDetectionStarted 以便继续计时
     },
     // 清除所有缓存
     clearAllCache() {
@@ -1357,6 +1375,26 @@ export default {
       }
       return String(value);
     },
+    /** 解析 analyze-video-behavior 新结构 { status, data: { tactical_behavior, auxiliary_message, ... } } */
+    parseBehaviorAnalysisResponse(payload) {
+      const envelope = payload && typeof payload === 'object' ? payload : {};
+      const root =
+        envelope.status === 'success' && envelope.data != null
+          ? envelope.data
+          : envelope.data != null
+            ? envelope.data
+            : envelope;
+      if (!root || typeof root !== 'object') return null;
+
+      const tacticalBehavior = this.pickBehaviorField(root, ['tactical_behavior', 'tacticalBehavior']);
+      const auxiliaryMessage = this.pickBehaviorField(root, ['auxiliary_message', 'auxiliaryMessage']);
+      if (!tacticalBehavior && !auxiliaryMessage) return null;
+
+      return {
+        tacticalBehavior,
+        auxiliaryMessage
+      };
+    },
     buildBehaviorAnalysisView(payload) {
       const root = payload && payload.data != null ? payload.data : payload;
       const data = root && typeof root === 'object' ? root : {};
@@ -1466,6 +1504,12 @@ export default {
       return (error && error.message) || '未知错误';
     },
     buildBiasDetailEntriesFromAnalyzeResponse(payload) {
+      const structured = this.parseBehaviorAnalysisResponse(payload);
+      if (structured) {
+        this.behaviorAnalysisView = structured;
+        return [];
+      }
+      this.behaviorAnalysisView = null;
       const view = this.buildBehaviorAnalysisView(payload);
       const entries = [];
       view.sections.forEach((section) => {
@@ -1522,23 +1566,14 @@ export default {
       console.group(`${logTag} 点击「决策认知偏差检测」`);
       console.log('选中媒体 selectedVideo:', this.selectedVideo);
       console.log('轨迹识别 load-track-artifact 曾用 params:', loadTrackArtifactParams);
-      console.log('analyze-video-behavior POST 传参（与 load-track 相同）:', requestBody);
+      console.log('analyze-video-behavior POST 传参 trackedFilename:', requestBody);
       console.log('传参 JSON:', JSON.stringify(requestBody, null, 2));
       console.log('接口 URL:', ANALYZE_VIDEO_BEHAVIOR_API_URL);
-      console.log('tracked 文件名（带后缀）:', trackCtx.trackedFilename);
+      console.log('trackedFilename:', trackCtx.trackedFilename);
       console.log('上下文来源:', this.trackRecognitionContext ? '目标与轨迹识别缓存' : '现场重建');
       console.groupEnd();
 
       try {
-        const registerResult = await this.registerTrackArtifactForAnalyze(trackCtx);
-        console.log(`${logTag} extract 登记结果:`, registerResult);
-        if (!registerResult.ok) {
-          throw new Error(
-            (registerResult.detail || 'extract-track-artifact 失败') +
-            '。analyze-video-behavior 需要服务端已登记 tracked 文件，请先重新点击「目标与轨迹识别」或联系后端修复轨迹生成。'
-          );
-        }
-
         console.log(`${logTag} axios.post 发起`, {
           url: ANALYZE_VIDEO_BEHAVIOR_API_URL,
           body: requestBody,
@@ -1559,12 +1594,21 @@ export default {
         console.log('原始响应 JSON:', JSON.stringify(data, null, 2));
         console.groupEnd();
 
-        if (response.status >= 400 || (data && data.detail && typeof data.detail === 'string' && !data.summary)) {
+        if (response.status >= 400) {
+          throw new Error((data && data.detail) || `HTTP ${response.status}`);
+        }
+        if (data && data.status && data.status !== 'success') {
+          const errMsg = (data && data.message) || (data && data.detail) || `接口状态: ${data.status}`;
+          console.error(`${logTag} 业务错误`, errMsg);
+          throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
+        }
+        if (data && data.detail && typeof data.detail === 'string' && !data.data) {
           console.error(`${logTag} 业务错误 detail:`, data.detail);
           throw new Error(data.detail);
         }
 
         this.fullResult.video_behavior = data;
+        this.behaviorAnalysisView = null;
         this.biasDetailEntries = this.buildBiasDetailEntriesFromAnalyzeResponse(data);
 
         console.group(`${logTag} 偏差检测结果整理`);
@@ -1577,6 +1621,11 @@ export default {
         const averageComprehensiveAccuracy = accuracyData && accuracyData.average_comprehensive_accuracy;
 
         localStorage.setItem('biasDetailEntries', JSON.stringify(this.biasDetailEntries));
+        if (this.behaviorAnalysisView) {
+          localStorage.setItem('behaviorAnalysisView', JSON.stringify(this.behaviorAnalysisView));
+        } else {
+          localStorage.removeItem('behaviorAnalysisView');
+        }
         localStorage.setItem('biasStartTime', Date.now().toString());
         localStorage.setItem('biasDetectionStarted', 'true');
         localStorage.removeItem('biasDetectionCompleted');
@@ -1605,8 +1654,13 @@ export default {
         this.startAccuracyTimer(BIAS_DETECTION_DELAY);
 
         this.showBiasDetails = true;
-        this.isBiasTyping = true;
-        this.startBiasTypingSequence(0);
+        if (this.behaviorAnalysisView) {
+          this.isBiasTyping = false;
+          this.biasDisplayTexts = [];
+        } else {
+          this.isBiasTyping = true;
+          this.startBiasTypingSequence(0);
+        }
         this.resultMessage = '决策认知偏差检测完成';
         this.saveAllStateToCache();
       } catch (error) {
@@ -1623,6 +1677,8 @@ export default {
         this.isBiasDetecting = false;
         this.showBiasDetails = true;
         this.hasStartedBiasDetection = true;
+        this.behaviorAnalysisView = null;
+        localStorage.removeItem('behaviorAnalysisView');
         const errText = this.extractAnalyzeVideoBehaviorError(error);
         this.biasDetailEntries = [{
           label: '检测失败',
@@ -1898,32 +1954,54 @@ export default {
         }
       }
     },
-    /** 认知传播视频：先 /load-video，失败则 static/Drane_Vedio_input；图片仍走 /load-image */
+    /** 认知传播视频：先 /load-video，失败则 static/Drane_Vedio_input；图片走 /load-image（filename 均带后缀） */
     async loadOriginalVideoFromApi(filename) {
-      const logTag = '[DecisionMakingV2][load-video]';
       const staticUrl = this.buildDraneStaticVideoUrl(filename);
-      const filenameNoExt = this.stripFileExtension(filename);
+      const filenameWithExt = String(filename || '').trim();
+      const loadVideoReq = this.buildLoadVideoRequestInfo(filenameWithExt);
       this.revokeOriginalMediaBlob();
       this.originalVideoUsedStatic = false;
+      this.logLoadVideoRequest('发起请求', {
+        ...loadVideoReq,
+        listItemName: filename,
+        staticFallbackUrl: staticUrl
+      });
       try {
-        console.log(`${logTag} 请求`, { filename: filenameNoExt });
-        const response = await axios.get(`${SOURCE_API_BASE_URL}/load-video`, {
-          params: { filename: filenameNoExt },
+        const response = await axios.get(loadVideoReq.baseUrl, {
+          params: loadVideoReq.params,
           responseType: 'blob'
         });
         const ct = response && response.headers && (response.headers['content-type'] || response.headers['Content-Type']);
         const payload = response && response.data !== undefined ? response.data : null;
-        if (payload == null || payload === '' || this.isInvalidMediaBlob(payload, ct)) {
-          this.applyOriginalVideoStaticFallback(filename, staticUrl, '无效 load-video 响应');
+        const payloadSize = payload && typeof payload.size === 'number' ? payload.size : null;
+        this.logLoadVideoRequest('响应', {
+          ...loadVideoReq,
+          httpStatus: response && response.status,
+          contentType: ct,
+          payloadSize,
+          payloadType: payload && payload.constructor ? payload.constructor.name : typeof payload
+        });
+        if (payload == null || payload === '' || this.isBlobLikelyErrorResponse(payload, ct)) {
+          this.applyOriginalVideoStaticFallback(filename, staticUrl, '无效 load-video 响应', loadVideoReq);
           return;
         }
         const mediaBlob = this.buildProcessedMediaBlob(payload, ct, 'video');
         this.originalVideoURL = URL.createObjectURL(mediaBlob);
         localStorage.setItem('originalVideoURL', this.originalVideoURL);
-        console.log(`${logTag} blob 预览已设置`);
+        this.logLoadVideoRequest('成功', {
+          ...loadVideoReq,
+          previewMode: 'blob',
+          originalVideoURL: this.originalVideoURL
+        });
       } catch (error) {
-        console.warn(`${logTag} 请求失败，改用静态`, error);
-        this.applyOriginalVideoStaticFallback(filename, staticUrl, error);
+        const errRes = error && error.response;
+        this.logLoadVideoRequest('请求失败', {
+          ...loadVideoReq,
+          message: error && error.message,
+          httpStatus: errRes && errRes.status,
+          responseData: errRes && errRes.data
+        });
+        this.applyOriginalVideoStaticFallback(filename, staticUrl, error, loadVideoReq);
       }
     },
     async loadMediaFromSourceApi(item) {
@@ -1931,16 +2009,20 @@ export default {
       const filename = String(item.name).trim();
       if (!filename) return;
       if (item.type === 'video') {
+        const loadVideoReq = this.buildLoadVideoRequestInfo(filename);
+        this.logLoadVideoRequest('选中视频', {
+          ...loadVideoReq,
+          item: { name: item.name, path: item.path, type: item.type }
+        });
         await this.loadOriginalVideoFromApi(filename);
         return;
       }
-      const filenameNoExt = this.stripFileExtension(filename);
       const fullUrl = `${SOURCE_API_BASE_URL}/load-image`;
-      const logTag = '[DecisionMakingV2][loadMediaFromSourceApi]';
+      const logTag = '[DecisionMakingV2][load-image]';
       try {
-        console.log(`${logTag} 请求`, { fullUrl, filename: filenameNoExt, item });
+        console.log(`${logTag} 请求`, { fullUrl, params: { filename }, item });
         const response = await axios.get(fullUrl, {
-          params: { filename: filenameNoExt },
+          params: { filename },
           responseType: 'blob'
         });
         const ct = response && response.headers && (response.headers['content-type'] || response.headers['Content-Type']);
@@ -1976,6 +2058,7 @@ export default {
       this.clearOrdersRefineDisplayTimer();
       this.clearTrackDisplayTimer();
       this.isOrdersLoading = false;
+      this.ordersDisplayReady = false;
       this.ordersCommand = '';
       this.ordersNegotiation = '';
 
@@ -2008,16 +2091,9 @@ export default {
           name: item.name,
           mediaType: this.selectedMediaType
         }));
-        // 清除目标检测相关缓存（保留偏差检测计时状态）
         this.clearTargetDetectionCache();
-        // 保留偏差检测计时状态，只重置目标检测相关UI
-        this.resetResultState({ preserveBiasTimer: true });
-        // 额外保留一些状态
-        this.showBiasDetails = this.hasStartedBiasDetection;
-        if (this.hasStartedBiasDetection && this.biasDetailEntries.length > 0) {
-          this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
-        }
-        console.log("选择新" + (this.selectedMediaType === 'image' ? '图片' : '视频') + "，状态已重置。");
+        this.resetResultState();
+        console.log("选择新" + (this.selectedMediaType === 'image' ? '图片' : '视频') + "，已更新认知传播预览并重置偏差检测结果。");
       } else {
         // 选择相同文件时，也保存 originalVideoURL 到 localStorage
         localStorage.setItem('selectedVideo', JSON.stringify({
@@ -2073,6 +2149,8 @@ export default {
       this.processedVideoURL = null;
       this.isLoading = true;
       this.hasStartedDetection = false;
+      this.trackResultDisplayReady = false;
+      this.resetBiasResultPanel();
       this.resultMessage = '正在加载轨迹识别结果...';
       this.progressMessage = '正在加载轨迹识别结果...';
 
@@ -2155,6 +2233,7 @@ export default {
           this.revokeProcessedMediaBlob();
           this.processedVideoURL = null;
           this.hasStartedDetection = false;
+          this.trackResultDisplayReady = false;
           this.resultMessage = fetchErrorDetail
             ? `轨迹识别结果加载失败：${fetchErrorDetail}`
             : '轨迹识别结果加载失败';
@@ -2165,9 +2244,15 @@ export default {
         this.revokeProcessedMediaBlob();
         this.processedVideoURL = URL.createObjectURL(mediaBlob);
         this.hasStartedDetection = true;
+        this.trackResultDisplayReady = false;
         this.fullResult = this.fullResult || {};
         this.fullResult.key_frame_detection = { tracked_artifact: trackedFilename };
         const detectedCodec = await this.applyProcessedVideoCodecPolicy(mediaBlob, trackedFilename);
+        if (this.selectedMediaType === 'image') {
+          this.$nextTick(() => this.handleProcessedTrackMediaReady());
+        } else if (this.processedVideoCodecWarning) {
+          this.trackResultDisplayReady = true;
+        }
         if (this.fullResult.key_frame_detection) {
           this.fullResult.key_frame_detection.video_codec = detectedCodec;
         }
@@ -2194,15 +2279,6 @@ export default {
           localStorage.setItem('module1Res', JSON.stringify(module1Res));
         } catch (e) {
           console.error(`${logTag} 保存 module1Res 失败`, e);
-        }
-
-        const registerResult = await this.registerTrackArtifactForAnalyze(trackCtx);
-        console.log(`${logTag} 轨迹展示后 extract 登记结果:`, registerResult);
-        if (!registerResult.ok) {
-          console.warn(
-            `${logTag} extract 未成功，后续「决策认知偏差检测」可能报 404：`,
-            registerResult.detail
-          );
         }
 
         if (!this.processedVideoCodecWarning) {
@@ -3097,8 +3173,43 @@ export default {
   box-shadow: 0 0 12px rgba(0, 120, 200, 0.12);
 }
 
-.ba-section--behavior {
+.ba-section--behavior,
+.ba-section--tactical {
   border-left: 3px solid #00e5ff;
+}
+
+.ba-section--auxiliary {
+  border-left: 3px solid #6eb8ff;
+  background: linear-gradient(135deg, rgba(0, 36, 72, 0.5) 0%, rgba(0, 18, 40, 0.82) 100%);
+}
+
+.ba-tactical-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 14px;
+  margin-bottom: 10px;
+}
+
+.ba-tactical-value {
+  font-family: 'DOUYUFont', 'Microsoft YaHei', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 0 12px rgba(0, 229, 255, 0.45);
+  letter-spacing: 0.08em;
+}
+
+.ba-auxiliary-body {
+  margin: 0;
+  text-indent: 0;
+  line-height: 1.85;
+  color: #d4eaff;
+}
+
+.bias-result-display {
+  width: 100%;
+  min-height: 0;
 }
 
 .ba-section--consensus {
