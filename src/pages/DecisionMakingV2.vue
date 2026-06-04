@@ -3186,18 +3186,20 @@ export default {
 .ba-tactical-main {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
+  justify-content: center;
   gap: 10px 14px;
   margin-bottom: 10px;
+  text-align: center;
 }
 
 .ba-tactical-value {
-  font-family: 'DOUYUFont', 'Microsoft YaHei', sans-serif;
-  font-size: 1.35rem;
-  font-weight: 600;
-  color: #fff;
-  text-shadow: 0 0 12px rgba(0, 229, 255, 0.45);
-  letter-spacing: 0.08em;
+  font-size: 0.88rem;
+  line-height: 1.85;
+  color: #d4eaff;
+  text-align: center;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .ba-auxiliary-body {

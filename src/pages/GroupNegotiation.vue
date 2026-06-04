@@ -21,19 +21,19 @@
       <!-- 左侧视频和按钮区域 -->
       <div class="design-left-column">
         <div class="design-module video-module">
-          <div class="panel-header">先验知识传播结果</div>
+          <div class="panel-header title-one-line">指令传播结果</div>
           <div class="design-module-content video-content-wrapper">
             <!-- compare 文件列表 -> 图片详情（左上角返回） -->
             <button
-              v-if="compareView === 'detail'"
+              v-if="compareView === 'detail' && orderInstructionText"
               class="compare-back-btn"
               @click="backToCompareList"
             >
               返回
             </button>
 
-            <!-- 列表视图 -->
-            <div v-if="compareView === 'list'" class="compare-list-wrapper">
+            <!-- 列表视图（无 instruction 时即使已选图/视频也继续展示） -->
+            <div v-if="compareView === 'list' || !orderInstructionText" class="compare-list-wrapper">
               <!-- 采用 TargetDetection 中 server-video-list/video-item 的列表样式；分区小标题区分图片与视频 -->
               <div
                 class="server-video-list overflow-auto"
@@ -149,16 +149,24 @@
               <p class="text-content text-muted" v-else>{{ sourceListMessage }}</p>
             </div>
 
-            <!-- 图片详情视图（指令集合 / 图片分组：instruction + 三张图） -->
+            <!-- 详情视图：指令集合 instruction 文案 -->
+            <div v-else-if="compareView === 'detail' && orderInstructionText" class="propagation-detail-wrapper">
+              <p class="order-instruction-display">{{ orderInstructionText }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="design-module text-module-left fixed-left-text">
+          <div class="panel-header title-one-line">传播信息</div>
+          <div class="design-module-content text-scrollable">
+            <!-- 图片详情视图（图片分组三张图 / 视频详情） -->
             <div
-              v-else
+              v-if="compareView === 'detail'"
               class="compare-detail-wrapper"
               :class="{
-                'compare-detail-group': selectedDetailType === 'compare' && selectedGroupImageFiles.length > 0,
-                'compare-detail-with-instruction': !!orderInstructionText
+                'compare-detail-group': selectedDetailType === 'compare' && selectedGroupImageFiles.length > 0
               }"
             >
-              <p v-if="orderInstructionText" class="order-instruction-display">{{ orderInstructionText }}</p>
               <template
                 v-if="selectedDetailType === 'compare' && selectedCompareFile && selectedGroupImageFiles.length > 0"
               >
@@ -185,24 +193,7 @@
               />
               <p v-else class="text-content text-muted">{{ sourceListMessage }}</p>
             </div>
-          </div>
-        </div>
-
-        <div class="design-module text-module-left fixed-left-text">
-          <div class="panel-header title-one-line">先验知识认知传播信息</div>
-          <div class="design-module-content text-scrollable">
-            <div class="description-box attribute-content">
-              <ul class="info-list" v-if="attributeInfoList && attributeInfoList.length > 0">
-                <li 
-                  v-for="(item, idx) in attributeInfoList" 
-                  :key="'attr-' + idx"
-                  :class="{ 'first-item': item.includes('小类信息') }"
-                >
-                  {{ item }}
-                </li>
-              </ul>
-              <p class="text-content text-muted" v-else>暂无属性信息</p>
-            </div>
+            <p v-else class="text-content text-muted">暂无展示内容</p>
           </div>
         </div>
 
@@ -2257,14 +2248,9 @@ export default {
   height: 22px;
 }
 
-/* 左侧“先验知识传播结果”区域标题更长：保留你之前设置的宽度 */
-.video-module .panel-header.title-one-line {
-  width: 200px !important;
-}
-
-/* 左侧“先验知识认知传播信息”标题：单独加宽，避免截断 */
-.text-module-left .panel-header.title-one-line {
-  width: 220px !important;
+/* 左侧设计模块标题：与中间列「一轮/二轮群体协商」一致 */
+.design-left-column .design-module .panel-header.title-one-line {
+  width: 160px !important;
 }
 
 /* 中间“一轮/二轮群体协商”标题：单独加宽，避免截断 */
@@ -2356,23 +2342,14 @@ export default {
   overflow: hidden;
 }
 
-/* 视频模块样式 */
+/* 视频模块样式：列表 + 指令文案，略小于下方媒体展示区 */
 .video-module {
-  flex: 0 1 40%;
+  flex: 0 1 36%;
   min-height: 0; /* 关键：允许在 flex 列布局里收缩，否则滚动容器无法生效 */
 }
 
 .video-module .design-module-content {
   min-height: 0;
-}
-
-/* 左侧视频(现为compare)区域标题：强制单行显示 */
-.video-module .panel-header {
-  width: 200px; /* 原本全局是 94px，中文标题容易换行 */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: clip;
-  line-height: 24px;
 }
 
 .video-content-wrapper {
@@ -2420,6 +2397,69 @@ export default {
   min-height: 0; /* 关键：否则在 flex 布局下可能不触发滚动条 */
   padding: 10px 20px 20px 20px;
   box-sizing: border-box;
+}
+
+/* 先验知识传播结果：详情态 instruction 文案区（垂直居中） */
+.propagation-detail-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 44px 20px 20px 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.propagation-detail-wrapper .order-instruction-display {
+  margin: 0;
+  width: 100%;
+  max-width: 94%;
+  padding: 16px 18px 14px;
+  font-family: "DingTalk-JinBuTi", sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.8;
+  letter-spacing: 0.6px;
+  color: #ffffff;
+  text-align: center;
+  word-break: break-word;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 229, 255, 0.42);
+  background: linear-gradient(
+    160deg,
+    rgba(0, 55, 90, 0.52) 0%,
+    rgba(0, 28, 55, 0.68) 100%
+  );
+  box-shadow:
+    0 0 14px rgba(0, 229, 255, 0.1),
+    inset 0 1px 0 rgba(0, 229, 255, 0.18);
+  position: relative;
+}
+
+.propagation-detail-wrapper .order-instruction-display::before {
+  content: '任务指令';
+  display: block;
+  margin-bottom: 10px;
+  font-family: "DOUYUFont", sans-serif;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 3px;
+  color: #00e5ff;
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.35);
+}
+
+.propagation-detail-wrapper .order-instruction-display::after {
+  content: '';
+  display: block;
+  width: 72%;
+  height: 2px;
+  margin: 12px auto 0;
+  background-image: url('~@/assets/images/step2/blueline.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  opacity: 0.9;
 }
 
 .source-list-section + .source-list-section {
@@ -2757,9 +2797,10 @@ export default {
   background-color: #00e5ff;
 }
 
-/* 文本模块样式 */
+/* 文本模块样式：图片/视频展示为主，占左侧剩余高度 */
 .text-module-left {
-  flex-basis: 45%;
+  flex: 1 1 54%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -2767,8 +2808,9 @@ export default {
 .fixed-left-text {
   position: relative;
   width: 100%;
-  height: 480px;
-  align-self: flex-start;
+  flex: 1;
+  min-height: 0;
+  align-self: stretch;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2788,6 +2830,11 @@ export default {
   max-height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.text-module-left .text-scrollable .compare-detail-wrapper {
+  flex: 1;
+  min-height: 0;
 }
 
 .text-scrollable::-webkit-scrollbar {
