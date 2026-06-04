@@ -24,35 +24,21 @@
     <div class="data-source-section">
       <div class="panel-left">
         <div class="panel-content">
-          <div class="media-type-selector">
-            <button 
-              class="media-type-btn" 
-              :class="{ 'active': selectedMediaType === 'image' }"
-              @click="switchMediaType('image')">
-              图片
-            </button>
-            <button 
-              class="media-type-btn" 
-              :class="{ 'active': selectedMediaType === 'video' }"
-              @click="switchMediaType('video')">
-              视频
-            </button>
-          </div>
           <div class="server-video-list overflow-auto">
             <div v-for="item in mediaList" :key="item.id" class="video-item" @click="selectMedia(item)"
               :class="{ 'selected': selectedVideo && selectedVideo.id === item.id }">
-              <span>{{ item.name }}</span>
+              <span>{{ item.name.replace(/\.(jpg|jpeg|png|mp4|avi|mov)$/i, '') }}</span>
               <span class="selector-circle"></span>
             </div>
             <div v-if="mediaList.length === 0" class="empty-list-text">
-              暂无{{ selectedMediaType === 'image' ? '图片' : '视频' }}数据
+              暂无数据
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="panel-header header-select-data clean-header">作战指令</div>
+    <div class="panel-header header-select-data clean-header">加载作战指令</div>
 
     <div class="panel-orders">
       <div class="panel-content">
@@ -452,21 +438,18 @@ export default {
       // 检查偏差检测计时器状态（用于恢复未完成的计时）
       this.checkBiasTimerState();
 
-      // 根据选中类型加载对应列表
-      if (this.selectedMediaType === 'image') {
-        await this.fetchImageList();
-      } else {
-        await this.fetchVideoListFromAPI();
-      }
+      // 合并加载图片和视频列表，图片在前100，视频在后
+      await this.fetchImageList();
+      await this.fetchVideoListFromAPI();
 
       // 恢复选中的视频状态
       const savedSelectedVideo = localStorage.getItem('selectedVideo');
       if (savedSelectedVideo) {
         try {
           const videoInfo = JSON.parse(savedSelectedVideo);
-          // 检查是否在当前列表中且媒体类型匹配
+          // 检查是否在当前合并列表中
           const found = this.mediaList.find(item => item.id === videoInfo.id);
-          if (found && videoInfo.mediaType === this.selectedMediaType) {
+          if (found) {
             this.selectedVideo = found;
           }
         } catch (e) {
@@ -1199,7 +1182,7 @@ export default {
         });
       }
 
-      // 4. 目标详情（使用 target_details 数组）
+      // 4. 信息类别（使用 target_details 数组）
       if (biasResult.target_details && biasResult.target_details.length > 0) {
         const targetList = biasResult.target_details;
         for (let i = 0; i < targetList.length; i++) {
@@ -1211,13 +1194,13 @@ export default {
           
           if (i === 0) {
             entries.push({
-              label: '目标详情',
-              text: `目标详情：\n${targetId}号目标：${targetName}；置信度：${confidence}`,
+              label: '信息类别',
+              text: `信息类别：\n${targetId}号目标：${targetName}；置信度：${confidence}`,
               highlight: false
             });
           } else {
             entries.push({
-              label: '目标详情' + i,
+              label: '信息类别' + i,
               text: `${targetId}号目标：${targetName}；置信度：${confidence}`,
               highlight: false
             });
@@ -1233,13 +1216,13 @@ export default {
             : (70 + Math.random() * 25).toFixed(0) + '%';
           if (i === 0) {
             entries.push({
-              label: '目标详情',
-              text: `目标详情：\n${i + 1}号目标：${targetName}；置信度：${confidence}`,
+              label: '信息类别',
+              text: `信息类别：\n${i + 1}号目标：${targetName}；置信度：${confidence}`,
               highlight: false
             });
           } else {
             entries.push({
-              label: '目标详情' + i,
+              label: '信息类别' + i,
               text: `${i + 1}号目标：${targetName}；置信度：${confidence}`,
               highlight: false
             });
@@ -1349,13 +1332,13 @@ export default {
             path: img.image_path,
             imageUrl: img.image_url
           }));
-          this.mediaList = this.imageList;
+          // 合并列表：图片在前100个
+          this.mediaList = [...this.imageList.slice(0, 100), ...this.videoList];
           console.log("图片列表获取成功", this.mediaList);
         }
       } catch (error) {
         console.error("获取图片列表失败", error);
         this.imageList = [];
-        this.mediaList = [];
       }
     },
     async fetchVideoListFromAPI() {
@@ -1368,13 +1351,14 @@ export default {
             path: vid.video_path,
             videoUrl: vid.video_url
           }));
-          this.mediaList = this.videoList;
+          // 合并列表：图片在前100个
+          this.mediaList = [...this.imageList.slice(0, 100), ...this.videoList];
           console.log("视频列表获取成功", this.mediaList);
         }
       } catch (error) {
         console.error("获取视频列表失败", error);
         this.videoList = [];
-        this.mediaList = [];
+        this.mediaList = [...this.imageList];
       }
     },
     async fetchVideoList() {
@@ -1382,6 +1366,10 @@ export default {
     },
     async selectMedia(item) {
       const isSameItem = this.selectedVideo && this.selectedVideo.id === item.id;
+
+      // 根据文件名后缀判断媒体类型
+      const mediaType = /\.(jpg|jpeg|png)$/i.test(item.name) ? 'image' : 'video';
+      this.selectedMediaType = mediaType;
 
       // 只有选择不同的文件时才清理相关缓存
       if (!isSameItem) {
@@ -1444,8 +1432,9 @@ export default {
             }
           }
 
-          if (data.directive) {
-            this.ordersText = data.directive;
+          // 尝试获取作战指令，支持多种字段名
+          if (data.directive || data.instruction || data.text || data.orders) {
+            this.ordersText = data.directive || data.instruction || data.text || data.orders || '';
             console.log("作战指令:", this.ordersText);
           }
         }
