@@ -8,7 +8,7 @@
         <button class="header-btn btn-back" @click="navigateHome">上个页面</button>
       </b-col>
       <b-col cols="6" class="text-center">
-        <!-- <h1 class="newTitle">多模态信息认知偏差检测模型</h1> -->
+        <h1 class="newTitle">决策选择认知偏差检测模型</h1>
       </b-col>
       <b-col cols="3" class="text-right">
         <button class="header-btn btn-next" @click="navigateNextPage">下个页面</button>
