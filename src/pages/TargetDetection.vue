@@ -19,7 +19,7 @@
 
       <b-col cols="3" class="left-column px-2">
     <div class="left-panels-container">
-    <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
+    <div class="panel-header header-select-data clean-header">加载作战指令</div>
 
     <div class="data-source-section">
       <div class="panel-left">
@@ -38,7 +38,7 @@
       </div>
     </div>
 
-    <div class="panel-header header-select-data clean-header">加载作战指令</div>
+    <div class="panel-header header-select-data clean-header">作战指令</div>
 
     <div class="panel-orders">
       <div class="panel-content">
