@@ -2370,7 +2370,7 @@ export default {
   z-index: 2;
   padding: 10px;
   margin: 0;
-  background-color: transparent;
+  background-color: #051525;
   display: flex;
   flex-direction: column;
 }
@@ -2384,7 +2384,8 @@ export default {
   background-image: url('~@/assets/images/step1/-s-图层 0.png');
   background-size: cover;
   background-repeat: no-repeat;
-  background-position: center top;
+  /* 背景图顶部 baked 了旧标题，上移裁切后仅保留 h1.newTitle 展示新标题 */
+  background-position: center -78px;
   opacity: 1;
   z-index: -1;
 }
@@ -2395,6 +2396,8 @@ export default {
   flex-shrink: 0;
   padding: 0 20px;
   height: 60px;
+  position: relative;
+  z-index: 1;
 }
 
 .newTitle {
