@@ -72,22 +72,16 @@
       </div>
     </div>
 
-    <div class="action-buttons">
-      <button @click="startDetection" :disabled="!canStartTrackRecognition" class="btn-start-detect">
-        <span class="btn-text-pos">目标与轨迹识别</span>
-      </button>
-    </div>
-
   </div>
 </b-col>
 
       <b-col cols="5" class="middle-column mx-2 px-1">
-        <div class="video-section">
+        <div class="video-section video-section--original">
           <div class="video-label label-original">{{ selectedMediaType === 'image' ? '认知传播图片' : '认知传播视频' }}</div>
           <div class="video-frame">
-            <img v-if="originalVideoURL && selectedMediaType === 'image'" :src="originalVideoURL" class="video-display" alt="原始图片" @error="handleImageError" />
+            <img v-if="originalMediaDisplayReady && originalVideoURL && selectedMediaType === 'image'" :src="originalVideoURL" class="video-display" alt="原始图片" @error="handleImageError" />
             <video
-              v-else-if="originalVideoURL && selectedMediaType === 'video'"
+              v-else-if="originalMediaDisplayReady && originalVideoURL && selectedMediaType === 'video'"
               :src="originalVideoURL"
               class="video-display"
               controls
@@ -98,11 +92,18 @@
               :key="'orig-' + originalVideoURL"
               @error="handleOriginalVideoError"
             ></video>
+            <div v-else-if="selectedVideo" class="placeholder-text loading-text">加载中…</div>
             <div v-else class="placeholder-text">请选择{{ selectedMediaType === 'image' ? '图片' : '视频' }}</div>
           </div>
         </div>
 
-        <div class="video-section">
+        <div class="action-buttons-middle">
+          <button @click="startDetection" :disabled="!canStartTrackRecognition" class="btn-start-detect">
+            <span class="btn-text-pos">目标与轨迹识别</span>
+          </button>
+        </div>
+
+        <div class="video-section video-section--processed">
           <div class="video-label label-processed">多模态目标检测结果</div>
           <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
             <img v-if="processedVideoURL && !isLoading && selectedMediaType === 'image'" :src="processedVideoURL" class="video-display" alt="检测结果" :key="'img-' + processedVideoURL" @load="handleProcessedTrackMediaReady" @error="handleImageError" />
@@ -144,6 +145,7 @@
       </b-col>
 
       <b-col cols="3" class="right-column px-2">
+        <div class="right-panels-container">
 
         <div class="bias-button-container">
           <button class="btn-start-bias" @click="handleStartBiasDetection"
@@ -169,15 +171,33 @@
               <div v-else-if="showBiasDetails" class="bias-result-display">
                 <div v-if="behaviorAnalysisView" class="behavior-analysis-view">
                   <div
-                    v-if="behaviorAnalysisView.tacticalBehavior"
+                    v-if="behaviorAnalysisView.tacticalIntentRanking && behaviorAnalysisView.tacticalIntentRanking.length"
                     class="ba-section ba-section--tactical"
                   >
                     <div class="ba-section-head">
                       <span class="ba-section-icon">▣</span>
-                      <span class="ba-section-title">战术行为</span>
+                      <span class="ba-section-title">战术意图</span>
                     </div>
-                    <div class="ba-tactical-main">
-                      <span class="ba-tactical-value">{{ behaviorAnalysisView.tacticalBehavior }}</span>
+                    <div class="ba-intent-list">
+                      <button
+                        v-for="(item, idx) in behaviorAnalysisView.tacticalIntentRanking"
+                        :key="'intent-' + idx + '-' + item.intent"
+                        type="button"
+                        class="ba-intent-btn"
+                        :class="{ 'ba-intent-btn--selected': selectedTacticalIntentIndex === idx }"
+                        @click="selectTacticalIntent(idx)"
+                      >
+                        <span class="ba-intent-name">{{ item.intent }}</span>
+                        <span class="ba-intent-confidence">
+                          <span class="ba-intent-confidence-bar-wrap">
+                            <span
+                              class="ba-intent-confidence-bar"
+                              :style="{ width: formatIntentConfidenceWidth(item.confidence) }"
+                            ></span>
+                          </span>
+                          <span class="ba-intent-confidence-text">{{ formatIntentConfidenceText(item.confidence) }}</span>
+                        </span>
+                      </button>
                     </div>
                   </div>
                   <div
@@ -245,6 +265,7 @@
           </button>
         </div>
 
+        </div>
       </b-col>
     </b-row>
   </div>
@@ -271,6 +292,8 @@ const STATISTICS_ACCURACY_API_URL = `${SOURCE_API_BASE_URL}/statistics/accuracy`
 const EXPORT_OUTPUT_API_URL = `${SOURCE_API_BASE_URL}/export/output`;
 /** 作战指令：选中媒体后至少延迟展示时长（ms） */
 const ORDERS_DISPLAY_DELAY_MS = 5000;
+/** 作战指令展示完成后，再延迟展示认知传播图片/视频（ms，3–5 秒） */
+const ORIGINAL_MEDIA_DISPLAY_DELAY_MS = 4000;
 /** 轨迹识别结果：接口返回后延迟展示时长（ms） */
 const TRACK_DISPLAY_DELAY_MS = 3000;
 /** 认知传播视频列表与静态预览目录（Drane 素材多为 mp4v，浏览器可能无法内嵌播放） */
@@ -297,9 +320,12 @@ export default {
       ordersCommand: '',
       ordersNegotiation: '',
       isOrdersLoading: false,
-      /** 作战指令延迟展示结束后为 true（视频模式下才可点「目标与轨迹识别」） */
+      /** 作战指令延迟展示结束后为 true */
       ordersDisplayReady: false,
       ordersRefineDisplayTimer: null,
+      /** 作战指令展示后再延迟展示认知传播图片/视频，展示完成后为 true */
+      originalMediaDisplayReady: false,
+      originalMediaDisplayTimer: null,
       selectedMediaType: 'image',
       imageList: [],
       videoList: [],
@@ -318,8 +344,10 @@ export default {
         key_frame_detection: null
       },
       descriptionEntries: [],
-      /** analyze-video-behavior 结构化展示（战术行为 + 辅助说明） */
+      /** analyze-video-behavior 结构化展示（战术意图排名 + 辅助说明） */
       behaviorAnalysisView: null,
+      /** 战术行为区当前选中的意图按钮索引（单选） */
+      selectedTacticalIntentIndex: null,
       biasDetailEntries: [],
       biasDisplayTexts: [],
       summaryTextOnly: '',
@@ -363,13 +391,15 @@ export default {
         !this.isLoading
       );
     },
-    /** 视频：选中且作战指令展示完成后才可点击；图片：选中且未在轨迹加载中 */
+    /** 作战指令与认知传播媒体均展示完成后才可点击 */
     canStartTrackRecognition() {
       if (!this.selectedVideo || this.isLoading) return false;
-      if (this.selectedMediaType === 'video') {
-        return !this.isOrdersLoading && this.ordersDisplayReady;
-      }
-      return !this.isOrdersLoading;
+      return (
+        !this.isOrdersLoading &&
+        this.ordersDisplayReady &&
+        this.originalMediaDisplayReady &&
+        !!this.originalVideoURL
+      );
     },
     /** 兼容 module1Res 等仍使用合并 instruction 字段的场景 */
     ordersText() {
@@ -395,6 +425,7 @@ export default {
     window.removeEventListener('resize', this.handleResize);
     this.clearTypingIntervals();
     this.clearOrdersRefineDisplayTimer();
+    this.clearOriginalMediaDisplayTimer();
     this.clearTrackDisplayTimer();
     this.revokeOriginalMediaBlob();
     this.revokeProcessedMediaBlob();
@@ -571,6 +602,47 @@ export default {
       }
       this.ordersDisplayReady = false;
     },
+    clearOriginalMediaDisplayTimer() {
+      if (this.originalMediaDisplayTimer) {
+        clearTimeout(this.originalMediaDisplayTimer);
+        this.originalMediaDisplayTimer = null;
+      }
+    },
+    resetOriginalMediaDisplay() {
+      this.clearOriginalMediaDisplayTimer();
+      this.originalMediaDisplayReady = false;
+      this.revokeOriginalMediaBlob();
+      this.originalVideoURL = null;
+      this.originalVideoUsedStatic = false;
+    },
+    /** 作战指令展示完成后，延迟加载认知传播图片/视频 */
+    scheduleOriginalMediaDisplay(item, selectedPath) {
+      this.clearOriginalMediaDisplayTimer();
+      this.originalMediaDisplayReady = false;
+      this.revokeOriginalMediaBlob();
+      this.originalVideoURL = null;
+      console.log(
+        '[DecisionMakingV2] 作战指令已展示，',
+        ORIGINAL_MEDIA_DISPLAY_DELAY_MS,
+        'ms 后加载认知传播',
+        this.selectedMediaType === 'image' ? '图片' : '视频'
+      );
+      this.originalMediaDisplayTimer = setTimeout(async () => {
+        this.originalMediaDisplayTimer = null;
+        if (selectedPath && (!this.selectedVideo || this.selectedVideo.path !== selectedPath)) {
+          console.log('[DecisionMakingV2] 认知传播媒体延迟展示取消：选中项已变更');
+          return;
+        }
+        await this.loadMediaFromSourceApi(item);
+        if (selectedPath && (!this.selectedVideo || this.selectedVideo.path !== selectedPath)) {
+          return;
+        }
+        if (this.originalVideoURL) {
+          this.originalMediaDisplayReady = true;
+          console.log('[DecisionMakingV2] 认知传播媒体已展示，可点击「目标与轨迹识别」');
+        }
+      }, ORIGINAL_MEDIA_DISPLAY_DELAY_MS);
+    },
     clearTrackDisplayTimer() {
       if (this.trackDisplayTimer) {
         clearTimeout(this.trackDisplayTimer);
@@ -719,7 +791,7 @@ export default {
       }
     },
     /** 选中媒体后拉取作战指令（与 DecisionMaking.vue 一致） */
-    async fetchMachineRefineCommand(nameNoExt, selectedPath) {
+    async fetchMachineRefineCommand(nameNoExt, selectedPath, mediaItem = null) {
       const cleanName = String(nameNoExt || '').trim();
       if (!cleanName) return;
       const logTag = '[DecisionMakingV2][machine-refine-command]';
@@ -814,6 +886,9 @@ export default {
           commandPreview: command.slice(0, 120),
           ordersDisplayReady: true
         });
+        if (mediaItem && selectedPath) {
+          this.scheduleOriginalMediaDisplay(mediaItem, selectedPath);
+        }
       }, delayMs);
 
       console.log(`${logTag} 已获取数据，等待延迟展示`, {
@@ -826,15 +901,13 @@ export default {
     resetEnterPageMediaSelection() {
       this.clearOrdersRefineDisplayTimer();
       this.clearTrackDisplayTimer();
+      this.resetOriginalMediaDisplay();
       this.selectedVideo = null;
       this.isOrdersLoading = false;
       this.ordersDisplayReady = false;
       this.ordersCommand = '';
       this.ordersNegotiation = '';
-      this.revokeOriginalMediaBlob();
       this.revokeProcessedMediaBlob();
-      this.originalVideoURL = null;
-      this.originalVideoUsedStatic = false;
       this.processedVideoURL = null;
       this.processedVideoCodecWarning = null;
       this.hasStartedDetection = false;
@@ -912,15 +985,39 @@ export default {
         display: flex !important;
         flex-direction: column !important;
         height: calc(100vh - 60px) !important;
+        overflow: hidden !important;
+      }
+      .right-panels-container {
+        height: 100% !important;
+        min-height: 0 !important;
+        flex: 1 1 0 !important;
+      }
+      .panel-right-top {
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: hidden !important;
+      }
+      .panel-right-top .panel-content {
+        min-height: 0 !important;
+        overflow: hidden !important;
+      }
+      .panel-right-top .description-box {
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
       }
       .panel-right-bottom {
         flex-grow: 0 !important;
+        flex-shrink: 0 !important;
         height: 100px !important;
         min-height: 100px !important;
       }
       .action-buttons-right {
-        margin-top: auto !important;
-        padding-top: 15px !important;
+        flex-shrink: 0 !important;
+        margin-top: 0 !important;
+        padding-top: 0 !important;
       }
     `;
       document.head.appendChild(style);
@@ -1122,6 +1219,7 @@ export default {
     resetBiasResultPanel() {
       this.clearBiasTimeouts();
       this.behaviorAnalysisView = null;
+      this.selectedTacticalIntentIndex = null;
       this.biasDetailEntries = [];
       this.biasDisplayTexts = [];
       this.showBiasDetails = false;
@@ -1365,6 +1463,52 @@ export default {
       }
       return '';
     },
+    normalizeIntentConfidence(confidence) {
+      let v = confidence;
+      if (v == null || v === '') return 0;
+      if (typeof v === 'string') v = parseFloat(String(v).replace(/%$/, ''));
+      if (isNaN(v)) return 0;
+      if (v <= 1) v = v * 100;
+      return Math.min(100, Math.max(0, v));
+    },
+    formatIntentConfidenceText(confidence) {
+      return `${Math.round(this.normalizeIntentConfidence(confidence))}%`;
+    },
+    formatIntentConfidenceWidth(confidence) {
+      return `${this.normalizeIntentConfidence(confidence)}%`;
+    },
+    selectTacticalIntent(index) {
+      if (
+        !this.behaviorAnalysisView ||
+        !Array.isArray(this.behaviorAnalysisView.tacticalIntentRanking)
+      ) {
+        return;
+      }
+      if (index < 0 || index >= this.behaviorAnalysisView.tacticalIntentRanking.length) {
+        return;
+      }
+      this.selectedTacticalIntentIndex = index;
+    },
+    parseTacticalIntentRanking(root) {
+      if (!root || typeof root !== 'object') return [];
+      const raw =
+        root.tactical_intent_ranking != null
+          ? root.tactical_intent_ranking
+          : root.tacticalIntentRanking;
+      if (!Array.isArray(raw)) return [];
+      return raw
+        .slice(0, 5)
+        .map((item) => {
+          if (!item || typeof item !== 'object') return null;
+          const intent = item.intent != null ? String(item.intent).trim() : '';
+          if (!intent) return null;
+          return {
+            intent,
+            confidence: this.normalizeIntentConfidence(item.confidence)
+          };
+        })
+        .filter(Boolean);
+    },
     formatBehaviorMetricValue(key, value) {
       if (value == null || value === '') return 'N/A';
       if (typeof value === 'number') {
@@ -1375,7 +1519,7 @@ export default {
       }
       return String(value);
     },
-    /** 解析 analyze-video-behavior 新结构 { status, data: { tactical_behavior, auxiliary_message, ... } } */
+    /** 解析 analyze-video-behavior 新结构 { status, data: { tactical_intent_ranking, auxiliary_message, ... } } */
     parseBehaviorAnalysisResponse(payload) {
       const envelope = payload && typeof payload === 'object' ? payload : {};
       const root =
@@ -1386,12 +1530,12 @@ export default {
             : envelope;
       if (!root || typeof root !== 'object') return null;
 
-      const tacticalBehavior = this.pickBehaviorField(root, ['tactical_behavior', 'tacticalBehavior']);
+      const tacticalIntentRanking = this.parseTacticalIntentRanking(root);
       const auxiliaryMessage = this.pickBehaviorField(root, ['auxiliary_message', 'auxiliaryMessage']);
-      if (!tacticalBehavior && !auxiliaryMessage) return null;
+      if (!tacticalIntentRanking.length && !auxiliaryMessage) return null;
 
       return {
-        tacticalBehavior,
+        tacticalIntentRanking,
         auxiliaryMessage
       };
     },
@@ -1507,9 +1651,11 @@ export default {
       const structured = this.parseBehaviorAnalysisResponse(payload);
       if (structured) {
         this.behaviorAnalysisView = structured;
+        this.selectedTacticalIntentIndex = null;
         return [];
       }
       this.behaviorAnalysisView = null;
+      this.selectedTacticalIntentIndex = null;
       const view = this.buildBehaviorAnalysisView(payload);
       const entries = [];
       view.sections.forEach((section) => {
@@ -1678,6 +1824,7 @@ export default {
         this.showBiasDetails = true;
         this.hasStartedBiasDetection = true;
         this.behaviorAnalysisView = null;
+        this.selectedTacticalIntentIndex = null;
         localStorage.removeItem('behaviorAnalysisView');
         const errText = this.extractAnalyzeVideoBehaviorError(error);
         this.biasDetailEntries = [{
@@ -2052,9 +2199,7 @@ export default {
       this.selectedVideo = null;
       this.clearAllCache();
       this.resetResultState();
-      this.revokeOriginalMediaBlob();
-      this.originalVideoURL = null;
-      this.originalVideoUsedStatic = false;
+      this.resetOriginalMediaDisplay();
       this.clearOrdersRefineDisplayTimer();
       this.clearTrackDisplayTimer();
       this.isOrdersLoading = false;
@@ -2093,7 +2238,9 @@ export default {
         }));
         this.clearTargetDetectionCache();
         this.resetResultState();
-        console.log("选择新" + (this.selectedMediaType === 'image' ? '图片' : '视频') + "，已更新认知传播预览并重置偏差检测结果。");
+        this.resetOriginalMediaDisplay();
+        this.clearOrdersRefineDisplayTimer();
+        console.log("选择新" + (this.selectedMediaType === 'image' ? '图片' : '视频') + "，已重置预览并重置偏差检测结果。");
       } else {
         // 选择相同文件时，也保存 originalVideoURL 到 localStorage
         localStorage.setItem('selectedVideo', JSON.stringify({
@@ -2106,10 +2253,7 @@ export default {
       }
 
       const filenameNoExt = this.stripFileExtension(item.name);
-      await Promise.all([
-        this.loadMediaFromSourceApi(item),
-        this.fetchMachineRefineCommand(filenameNoExt, item.path)
-      ]);
+      await this.fetchMachineRefineCommand(filenameNoExt, item.path, item);
       console.log('已选择:', this.selectedMediaType === 'image' ? '图片' : '视频', item.name);
     },
     selectVideo(video) {
@@ -2465,6 +2609,7 @@ export default {
   padding: 0 !important;
   justify-content: flex-start !important;
   gap: 10px;
+  overflow: hidden;
 }
 
 /* 左侧列面板容器 */
@@ -2475,6 +2620,18 @@ export default {
   min-height: 0;
   overflow: hidden;
   gap: 10px;
+}
+
+/* 右侧列面板容器：与左侧同高，内部 flex 分配 */
+.right-panels-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  gap: 10px;
+  width: 100%;
+  align-items: center;
 }
 
 /* 作战指令面板 */
@@ -2520,16 +2677,38 @@ export default {
 }
 
 .panel-right-top {
-  flex: 1;
+  flex: 1 1 0;
   min-height: 0;
-  flex-shrink: 0;
+  max-height: none;
+  height: auto;
+  flex-shrink: 1;
   margin-bottom: 0;
   width: 400px;
-  height: 570px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.panel-right-top .panel-content {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.right-panels-container .panel-header {
+  flex-shrink: 0;
+}
+
+.right-panels-container .panel-right-bottom {
+  flex-shrink: 0;
 }
 
 .panel-right-bottom {
   flex-grow: 0;
+  flex-shrink: 0;
   height: 100px !important;
   min-height: 100px;
 }
@@ -2858,11 +3037,15 @@ export default {
   font-size: 0.9rem;
 }
 
-.action-buttons {
-  margin-top: auto;
+.action-buttons-middle {
+  flex: 0 0 auto;
   flex-shrink: 0;
-  padding-top: 15px;
-  text-align: center;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0;
+  min-height: 100px;
 }
 
 /* 通用按钮容器设置 */
@@ -2902,8 +3085,9 @@ export default {
   flex-direction: column;
   justify-content: stretch;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   height: calc(100vh - 60px);
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -2913,17 +3097,17 @@ export default {
   flex-direction: column;
   align-items: center;
   margin-bottom: 0;
-  flex: 1;
-  min-height: 150px;
-  /* 注释掉底部文本框后，视频模块撑满剩余空间 */
-  flex-grow: 1;
+  flex: 1 1 0;
+  min-height: 120px;
 }
 
+.video-section--original .video-frame,
 .video-section:first-of-type .video-frame {
   max-width: 800px;
 }
 
-.video-section:nth-of-type(2) .video-frame {
+.video-section--processed .video-frame,
+.video-section:last-of-type .video-frame {
   max-width: 800px;
 }
 
@@ -3078,24 +3262,29 @@ export default {
 }
 
 .bias-button-container {
+  flex-shrink: 0;
   min-height: 70px;
   height: auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 5px;
+  margin-bottom: 0;
   padding: 8px 0;
+  width: 100%;
 }
 
 .description-box {
-  flex-grow: 1;
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: 100%;
   background-color: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(0, 229, 255, 0.3);
   color: #eee;
   font-size: 0.9rem;
   line-height: 1.6;
   padding: 10px !important;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
 
@@ -3186,23 +3375,128 @@ export default {
   background: linear-gradient(135deg, rgba(0, 36, 72, 0.5) 0%, rgba(0, 18, 40, 0.82) 100%);
 }
 
-.ba-tactical-main {
+.ba-intent-list {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 10px 14px;
-  margin-bottom: 10px;
-  text-align: center;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.ba-tactical-value {
-  font-size: 0.88rem;
-  line-height: 1.85;
+.ba-intent-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px 8px 14px;
+  border: 2px solid rgba(0, 229, 255, 0.22);
+  border-radius: 6px;
+  background: rgba(0, 40, 70, 0.35);
   color: #d4eaff;
-  text-align: center;
-  white-space: pre-wrap;
-  word-break: break-word;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+  text-align: left;
+  font-family: inherit;
+  outline: none;
+}
+
+.ba-intent-btn::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: linear-gradient(180deg, #5dffb8 0%, #00e5ff 100%);
+  transition: width 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ba-intent-btn:hover {
+  border-color: rgba(0, 229, 255, 0.45);
+  background: rgba(0, 55, 90, 0.45);
+}
+
+.ba-intent-btn--selected {
+  border-color: #00e5ff;
+  background: linear-gradient(90deg, rgba(0, 229, 255, 0.32) 0%, rgba(0, 100, 160, 0.24) 100%);
+  box-shadow:
+    0 0 0 1px rgba(93, 255, 184, 0.35),
+    0 0 24px rgba(0, 229, 255, 0.55),
+    inset 0 0 28px rgba(0, 229, 255, 0.14);
+  transform: translateX(3px);
+}
+
+.ba-intent-btn--selected::before {
+  width: 5px;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.9);
+}
+
+.ba-intent-btn--selected .ba-intent-name {
+  color: #ffffff;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.65);
+}
+
+.ba-intent-name {
+  flex: 0 0 auto;
+  min-width: 4.5em;
+  font-size: 0.88rem;
+  color: #e8fdff;
+  white-space: nowrap;
+}
+
+.ba-intent-confidence {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ba-intent-confidence-bar-wrap {
+  flex: 1 1 auto;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  overflow: hidden;
+}
+
+.ba-intent-confidence-bar {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(0, 180, 255, 0.55) 0%, #00e5ff 100%);
+  transition: width 0.3s ease;
+}
+
+.ba-intent-btn--selected .ba-intent-confidence-bar-wrap {
+  border-color: rgba(0, 229, 255, 0.65);
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+}
+
+.ba-intent-btn--selected .ba-intent-confidence-bar {
+  background: linear-gradient(90deg, #00c8ff 0%, #5dffb8 100%);
+  box-shadow: 0 0 8px rgba(93, 255, 184, 0.55);
+}
+
+.ba-intent-confidence-text {
+  flex: 0 0 42px;
+  font-size: 0.82rem;
+  color: #b8e8ff;
+  text-align: right;
+}
+
+.ba-intent-btn--selected .ba-intent-confidence-text {
+  color: #5dffb8;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(93, 255, 184, 0.5);
 }
 
 .ba-auxiliary-body {
@@ -3327,6 +3621,7 @@ export default {
   background-image: url('~@/assets/images/step4/准确率框.png');
   width: 400px;
   height: 120px;
+  flex-shrink: 0;
   position: relative;
   overflow: visible;
 }
@@ -3436,9 +3731,10 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 5px !important;
+  margin-top: 0 !important;
   padding-top: 0 !important;
-  padding-bottom: 10px;
+  padding-bottom: 0;
+  width: 100%;
 }
 
 .btn-export-result {
@@ -3484,11 +3780,13 @@ export default {
     height: 280px;
   }
 
+  .video-section--original .video-frame,
   .video-section:first-of-type .video-frame {
     height: 300px;
   }
 
-  .video-section:nth-of-type(2) .video-frame {
+  .video-section--processed .video-frame,
+  .video-section:last-of-type .video-frame {
     height: 280px;
   }
 
