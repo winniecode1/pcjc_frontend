@@ -1,44 +1,54 @@
 {
   "categories": [
     {
-      "category": "农田道路装甲机动",
-      "groups": ["group_000", "group_001", "group_002"],
-      "instruction": "沿农田道路侦察装甲集群，标定坦克与战车机动路线"
+      "category": "重车集结",
+      "groups": ["group_001", "group_013"],
+      "instruction": "无人机回传重车密集数据，优先级：坦克>重型车辆>战壕。"
     },
     {
-      "category": "林地山地装甲隐蔽",
-      "groups": ["group_003", "group_006", "group_009", "group_016"],
-      "instruction": "沿林地山地搜索隐蔽装甲，记录烟尘、土路与停驻位置"
+      "category": "重车防御",
+      "groups": ["group_004", "group_010"],
+      "instruction": "无人机发现重车靠近防御区，优先级：重型车辆>坦克>战壕。"
     },
     {
-      "category": "村镇建筑周边车辆",
-      "groups": ["group_007", "group_008", "group_014"],
-      "instruction": "监视村镇建筑周边车辆，区分军卡、坦克与装甲战车"
+      "category": "坦克推进",
+      "groups": ["group_002", "group_017"],
+      "instruction": "无人机采集坦克集群迹象，优先级：坦克>重型车辆>战壕。"
     },
     {
-      "category": "沙漠开阔坦克集群",
-      "groups": ["group_005", "group_017"],
-      "instruction": "巡查沙漠开阔地坦克集结，评估数量、间距和推进方向"
+      "category": "装甲混编",
+      "groups": ["group_011", "group_014"],
+      "instruction": "无人机识别装甲混编目标，优先级：坦克>装甲车辆>重型车辆。"
     },
     {
-      "category": "雪地沙尘重装目标",
-      "groups": ["group_004", "group_013"],
-      "instruction": "在雪地或沙尘低能见度下复核重装车辆与异常火点"
+      "category": "卡车补给",
+      "groups": ["group_003", "group_008"],
+      "instruction": "无人机回传卡车补给活动，优先级：坦克>军用卡车>战壕。"
     },
     {
-      "category": "废墟战场装甲活动",
-      "groups": ["group_011"],
-      "instruction": "侦察废墟战场装甲活动，标注烟雾、残骸与交战区域"
+      "category": "卡车机动",
+      "groups": ["group_015", "group_018"],
+      "instruction": "无人机发现卡车机动线索，优先级：坦克>军用卡车>战壕。"
     },
     {
-      "category": "植被覆盖沟渠阵地",
-      "groups": ["group_010", "group_012", "group_015"],
-      "instruction": "搜索植被覆盖沟渠阵地，定位连续工事与隐蔽出入口"
+      "category": "战壕纵深",
+      "groups": ["group_005", "group_009"],
+      "instruction": "无人机采集战壕纵深分布，优先级：坦克>军用卡车>战壕。"
     },
     {
-      "category": "烟雾附近战壕阵地",
-      "groups": ["group_018"],
-      "instruction": "侦察烟雾附近战壕阵地，锁定爆点、火源与防御线走向"
+      "category": "战壕火点",
+      "groups": ["group_012"],
+      "instruction": "无人机发现战壕伴随火点，优先级：装甲车辆>卡车>战壕。"
+    },
+    {
+      "category": "混合威胁",
+      "groups": ["group_000", "group_006"],
+      "instruction": "无人机回传多类目标混布，优先级：装甲车辆>军用卡车>战壕。"
+    },
+    {
+      "category": "重装节点",
+      "groups": ["group_007", "group_016"],
+      "instruction": "无人机识别重装防御节点，优先级：重型车辆>装甲车辆>战壕。"
     }
   ]
 }

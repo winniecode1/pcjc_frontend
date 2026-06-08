@@ -276,20 +276,24 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentABNegotiation === 'object' && agentABNegotiation !== null" class="agent-result">
-                    <template v-if="abBfTriple">
-                      <span class="result-line">推理结果：</span>
-                      <span class="result-line result-line-nested">场景描述：{{ displayBfField(abBfTriple.detailed_description) }}</span>
-                      <span class="result-line result-line-nested">目标类别：{{ displayBfField(abBfTriple.target_class) }}</span>
-                      <span class="result-line result-line-nested">目标数量：{{ displayBfField(abBfTriple.target_count) }}</span>
+                    <template v-if="selectedDetailType === 'compare'">
+                      <span class="result-line">优先级排序：{{ displayRound2NegotiationField(agentABNegotiation, 'priority_ordering') }}</span>
+                      <span class="result-line">优先级依据：{{ displayRound2NegotiationField(agentABNegotiation, 'priority_rationale') }}</span>
+                      <span class="result-line">推理共识：{{ displayRound2NegotiationField(agentABNegotiation, 'consensus') }}</span>
+                      <span class="result-line">推理分歧：{{ displayRound2NegotiationField(agentABNegotiation, 'deviation') }}</span>
                     </template>
                     <template v-else>
-                      <span class="result-line">推理结果：{{ agentABNegotiation.battlefield_analysis || agentABNegotiation.final_model_name || '***' }}</span>
-                    </template>
-                    <span class="result-line">推理共识：{{ agentABNegotiation.negotiation_basis || '***' }}</span>
-                    <span class="result-line">推理分歧：{{ agentABNegotiation.deviation || '***' }}</span>
-                    <template v-if="selectedDetailType === 'compare'">
-                      <span class="result-line">优先级评估：{{ displayRound2Assessment(agentABNegotiation, 'priority_assessment') }}</span>
-                      <span class="result-line">重要性评估：{{ displayRound2Assessment(agentABNegotiation, 'importance_assessment') }}</span>
+                      <template v-if="abBfTriple">
+                        <span class="result-line">推理结果：</span>
+                        <span class="result-line result-line-nested">场景描述：{{ displayBfField(abBfTriple.detailed_description) }}</span>
+                        <span class="result-line result-line-nested">目标类别：{{ displayBfField(abBfTriple.target_class) }}</span>
+                        <span class="result-line result-line-nested">目标数量：{{ displayBfField(abBfTriple.target_count) }}</span>
+                      </template>
+                      <template v-else>
+                        <span class="result-line">推理结果：{{ agentABNegotiation.battlefield_analysis || agentABNegotiation.final_model_name || '***' }}</span>
+                      </template>
+                      <span class="result-line">推理共识：{{ agentABNegotiation.negotiation_basis || '***' }}</span>
+                      <span class="result-line">推理分歧：{{ agentABNegotiation.deviation || '***' }}</span>
                     </template>
                   </p>
                   <p v-else class="agent-result">{{ agentABNegotiation || '推理结果：***\n推理共识：***\n推理分歧：***' }}</p>
@@ -307,20 +311,24 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentBCNegotiation === 'object' && agentBCNegotiation !== null" class="agent-result">
-                    <template v-if="bcBfTriple">
-                      <span class="result-line">推理结果：</span>
-                      <span class="result-line result-line-nested">场景描述：{{ displayBfField(bcBfTriple.detailed_description) }}</span>
-                      <span class="result-line result-line-nested">目标类别：{{ displayBfField(bcBfTriple.target_class) }}</span>
-                      <span class="result-line result-line-nested">目标数量：{{ displayBfField(bcBfTriple.target_count) }}</span>
+                    <template v-if="selectedDetailType === 'compare'">
+                      <span class="result-line">优先级排序：{{ displayRound2NegotiationField(agentBCNegotiation, 'priority_ordering') }}</span>
+                      <span class="result-line">优先级依据：{{ displayRound2NegotiationField(agentBCNegotiation, 'priority_rationale') }}</span>
+                      <span class="result-line">推理共识：{{ displayRound2NegotiationField(agentBCNegotiation, 'consensus') }}</span>
+                      <span class="result-line">推理分歧：{{ displayRound2NegotiationField(agentBCNegotiation, 'deviation') }}</span>
                     </template>
                     <template v-else>
-                      <span class="result-line">推理结果：{{ agentBCNegotiation.battlefield_analysis || agentBCNegotiation.final_model_name || '***' }}</span>
-                    </template>
-                    <span class="result-line">推理共识：{{ agentBCNegotiation.negotiation_basis || '***' }}</span>
-                    <span class="result-line">推理分歧：{{ agentBCNegotiation.deviation || '***' }}</span>
-                    <template v-if="selectedDetailType === 'compare'">
-                      <span class="result-line">优先级评估：{{ displayRound2Assessment(agentBCNegotiation, 'priority_assessment') }}</span>
-                      <span class="result-line">重要性评估：{{ displayRound2Assessment(agentBCNegotiation, 'importance_assessment') }}</span>
+                      <template v-if="bcBfTriple">
+                        <span class="result-line">推理结果：</span>
+                        <span class="result-line result-line-nested">场景描述：{{ displayBfField(bcBfTriple.detailed_description) }}</span>
+                        <span class="result-line result-line-nested">目标类别：{{ displayBfField(bcBfTriple.target_class) }}</span>
+                        <span class="result-line result-line-nested">目标数量：{{ displayBfField(bcBfTriple.target_count) }}</span>
+                      </template>
+                      <template v-else>
+                        <span class="result-line">推理结果：{{ agentBCNegotiation.battlefield_analysis || agentBCNegotiation.final_model_name || '***' }}</span>
+                      </template>
+                      <span class="result-line">推理共识：{{ agentBCNegotiation.negotiation_basis || '***' }}</span>
+                      <span class="result-line">推理分歧：{{ agentBCNegotiation.deviation || '***' }}</span>
                     </template>
                   </p>
                   <p v-else class="agent-result">{{ agentBCNegotiation || '推理结果：***\n推理共识：***\n推理分歧：***' }}</p>
@@ -338,20 +346,24 @@
                 <div class="agent-content">
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentCANegotiation === 'object' && agentCANegotiation !== null" class="agent-result">
-                    <template v-if="caBfTriple">
-                      <span class="result-line">推理结果：</span>
-                      <span class="result-line result-line-nested">场景描述：{{ displayBfField(caBfTriple.detailed_description) }}</span>
-                      <span class="result-line result-line-nested">目标类别：{{ displayBfField(caBfTriple.target_class) }}</span>
-                      <span class="result-line result-line-nested">目标数量：{{ displayBfField(caBfTriple.target_count) }}</span>
+                    <template v-if="selectedDetailType === 'compare'">
+                      <span class="result-line">优先级排序：{{ displayRound2NegotiationField(agentCANegotiation, 'priority_ordering') }}</span>
+                      <span class="result-line">优先级依据：{{ displayRound2NegotiationField(agentCANegotiation, 'priority_rationale') }}</span>
+                      <span class="result-line">推理共识：{{ displayRound2NegotiationField(agentCANegotiation, 'consensus') }}</span>
+                      <span class="result-line">推理分歧：{{ displayRound2NegotiationField(agentCANegotiation, 'deviation') }}</span>
                     </template>
                     <template v-else>
-                      <span class="result-line">推理结果：{{ agentCANegotiation.battlefield_analysis || agentCANegotiation.final_model_name || '***' }}</span>
-                    </template>
-                    <span class="result-line">推理共识：{{ agentCANegotiation.negotiation_basis || '***' }}</span>
-                    <span class="result-line">推理分歧：{{ agentCANegotiation.deviation || '***' }}</span>
-                    <template v-if="selectedDetailType === 'compare'">
-                      <span class="result-line">优先级评估：{{ displayRound2Assessment(agentCANegotiation, 'priority_assessment') }}</span>
-                      <span class="result-line">重要性评估：{{ displayRound2Assessment(agentCANegotiation, 'importance_assessment') }}</span>
+                      <template v-if="caBfTriple">
+                        <span class="result-line">推理结果：</span>
+                        <span class="result-line result-line-nested">场景描述：{{ displayBfField(caBfTriple.detailed_description) }}</span>
+                        <span class="result-line result-line-nested">目标类别：{{ displayBfField(caBfTriple.target_class) }}</span>
+                        <span class="result-line result-line-nested">目标数量：{{ displayBfField(caBfTriple.target_count) }}</span>
+                      </template>
+                      <template v-else>
+                        <span class="result-line">推理结果：{{ agentCANegotiation.battlefield_analysis || agentCANegotiation.final_model_name || '***' }}</span>
+                      </template>
+                      <span class="result-line">推理共识：{{ agentCANegotiation.negotiation_basis || '***' }}</span>
+                      <span class="result-line">推理分歧：{{ agentCANegotiation.deviation || '***' }}</span>
                     </template>
                   </p>
                   <p v-else class="agent-result">{{ agentCANegotiation || '推理结果：***\n推理共识：***\n推理分歧：***' }}</p>
@@ -382,28 +394,35 @@
             <template v-else>
               <div class="result-section result-section-main">
                 <div class="section-content unified-scroll">
-                  <div class="section-sub">共识摘要：</div>
-                  <p class="result-text" v-html="formattedConsensusSummary || '***'"></p>
-                  <div class="unified-divider"></div>
-                  <div class="section-sub">分歧点：</div>
-                  <template v-if="deviationAnalysisText || deviationReportText">
-                    <div v-if="deviationAnalysisText">
-                      <div class="section-sub">分歧分析</div>
-                      <p class="result-text" style="white-space: pre-wrap;">{{ deviationAnalysisText }}</p>
-                    </div>
-                    <div v-if="deviationReportText" :style="deviationAnalysisText ? { marginTop: '10px' } : {}">
-                      <div class="section-sub">偏差报告</div>
-                      <p class="result-text" style="white-space: pre-wrap;">{{ deviationReportText }}</p>
-                    </div>
-                  </template>
-                  <p v-else class="result-text">***</p>
                   <template v-if="selectedDetailType === 'compare'">
+                    <div class="section-sub">最终优先级排序：</div>
+                    <p class="result-text">{{ formattedFinalPriorityOrdering || '***' }}</p>
                     <div class="unified-divider"></div>
-                    <div class="section-sub">优先级重要性评估：</div>
-                    <div class="section-sub">优先级评估</div>
-                    <p class="result-text" style="white-space: pre-wrap;">{{ finalPriorityAssessment || '***' }}</p>
-                    <div class="section-sub" style="margin-top: 10px;">重要性影响</div>
-                    <p class="result-text" style="white-space: pre-wrap;">{{ finalImportanceImpact || '***' }}</p>
+                    <div class="section-sub">共识摘要：</div>
+                    <p class="result-text" style="white-space: pre-wrap;">{{ toDisplayString(consensusSummary) || '***' }}</p>
+                    <div class="unified-divider"></div>
+                    <div class="section-sub">分歧点：</div>
+                    <p class="result-text" style="white-space: pre-wrap;">{{ compareDeviationDisagreementPoints }}</p>
+                    <div class="unified-divider"></div>
+                    <div class="section-sub">分歧分析及原因：</div>
+                    <p class="result-text" style="white-space: pre-wrap;">{{ compareDeviationDifferentReason }}</p>
+                  </template>
+                  <template v-else>
+                    <div class="section-sub">共识摘要：</div>
+                    <p class="result-text" v-html="formattedConsensusSummary || '***'"></p>
+                    <div class="unified-divider"></div>
+                    <div class="section-sub">分歧点：</div>
+                    <template v-if="deviationAnalysisText || deviationReportText">
+                      <div v-if="deviationAnalysisText">
+                        <div class="section-sub">分歧分析</div>
+                        <p class="result-text" style="white-space: pre-wrap;">{{ deviationAnalysisText }}</p>
+                      </div>
+                      <div v-if="deviationReportText" :style="deviationAnalysisText ? { marginTop: '10px' } : {}">
+                        <div class="section-sub">偏差报告</div>
+                        <p class="result-text" style="white-space: pre-wrap;">{{ deviationReportText }}</p>
+                      </div>
+                    </template>
+                    <p v-else class="result-text">***</p>
                   </template>
                 </div>
               </div>
@@ -418,10 +437,11 @@
               <div class="final-result-section">
                 <div class="final-result-title">协商结果</div>
                 <div class="final-model-display">
-                  <template v-if="selectedDetailType === 'compare' && finalBattlefieldTriple">
-                    <p class="final-model-text">场景描述：{{ displayBfField(finalBattlefieldTriple.detailed_description) }}</p>
-                    <p class="final-model-text">目标类别：{{ displayBfField(finalBattlefieldTriple.target_class) }}</p>
-                    <p class="final-model-text">目标数量：{{ displayBfField(finalBattlefieldTriple.target_count) }}</p>
+                  <template v-if="selectedDetailType === 'compare'">
+                    <p
+                      class="final-model-text"
+                      style="white-space: pre-wrap;"
+                    >{{ deviationReportText || '请完成「开始群体协商」并点击「群体协商偏差检测」后查看' }}</p>
                   </template>
                   <p
                     v-else
@@ -555,6 +575,8 @@ export default {
       ground_truth: '',
       isApiLoaded: false, // 新增：接口加载状态，控制按钮禁用
       consensusSummary: "",
+      /** 图片模式：后端 final_priority_ordering */
+      finalPriorityOrdering: null,
       /** final_review，分项展示，避免与对象类型 .replace 冲突 */
       deviationAnalysis: '',
       deviationReport: '',
@@ -593,6 +615,7 @@ export default {
       videoModule3RequestPayload: null,
       /**
        * 图片模式一轮展示：{ a,b,c } 各为 { model_name: '-', reason: raw_response }；
+       * 来自 grouped_dataset/{folder}/{folder}_view_A/B/C_composite.json；
        * 接口仍用 module3 返回填二轮；仅 round1 展示走静态 JSON。
        */
       imageModeRound1FromStatic: null,
@@ -739,6 +762,35 @@ export default {
     deviationReportText() {
       return this.toDisplayString(this.deviationReport);
     },
+    /** 图片模式偏差检测：final_priority_ordering */
+    formattedFinalPriorityOrdering() {
+      const v = this.finalPriorityOrdering;
+      if (v == null || v === '') return '';
+      if (Array.isArray(v)) {
+        const items = v.map(x => String(x).trim()).filter(Boolean);
+        return items.length ? items.join('、') : '';
+      }
+      const s = this.toDisplayString(v).trim();
+      return s !== '' ? s : '';
+    },
+    /** 图片模式偏差检测：final_review.deviation_analysis.disagreement_points */
+    compareDeviationDisagreementPoints() {
+      const v = this.deviationAnalysis;
+      if (v && typeof v === 'object' && v.disagreement_points != null) {
+        const s = this.toDisplayString(v.disagreement_points).trim();
+        return s !== '' ? s : '***';
+      }
+      return '***';
+    },
+    /** 图片模式偏差检测：final_review.deviation_analysis.different_analysis_and_reason */
+    compareDeviationDifferentReason() {
+      const v = this.deviationAnalysis;
+      if (v && typeof v === 'object' && v.different_analysis_and_reason != null) {
+        const s = this.toDisplayString(v.different_analysis_and_reason).trim();
+        return s !== '' ? s : '***';
+      }
+      return '***';
+    },
     /** 图片分组模式：二轮 battlefield_analysis 可解析为对象时供模板展开为三行 */
     abBfTriple() {
       if (this.selectedDetailType !== 'compare') return null;
@@ -797,6 +849,7 @@ export default {
       this.agentBCNegotiation = '';
       this.agentCANegotiation = '';
       this.consensusSummary = '';
+      this.finalPriorityOrdering = null;
       this.deviationAnalysis = '';
       this.deviationReport = '';
       this.disagreementPoints = '';
@@ -848,6 +901,7 @@ export default {
         raw.negotiation_results ||
         raw.negotiation_details ||
         raw.final_review ||
+        raw.final_priority_ordering ||
         raw.final_battlefield_analysis;
       if (hasDirectPayload) return raw;
       if (raw.data && typeof raw.data === 'object') return this.normalizeModule3Payload(raw.data);
@@ -880,12 +934,17 @@ export default {
       const s = String(v).trim();
       return s !== '' ? s : '***';
     },
-    /** 图片模式二轮：展示 priority_assessment / importance_assessment */
-    displayRound2Assessment(negot, field) {
+    /** 图片模式二轮：展示 negotiation_results 中 priority_ordering / priority_rationale / consensus / deviation */
+    displayRound2NegotiationField(negot, field) {
       if (!negot || typeof negot !== 'object') return '***';
       const v = negot[field];
       if (v == null || v === '') return '***';
-      return this.toDisplayString(v);
+      if (Array.isArray(v)) {
+        const items = v.map(x => String(x).trim()).filter(Boolean);
+        return items.length ? items.join('、') : '***';
+      }
+      const s = this.toDisplayString(v).trim();
+      return s !== '' ? s : '***';
     },
     /** 将 battlefield_analysis 规范为普通对象（支持 JSON 字符串） */
     parseBattlefieldAnalysisObject(ba) {
@@ -963,8 +1022,15 @@ export default {
       if (o.review) {
         const fr = data.final_review;
         this.consensusSummary = fr && fr.consensus_summary != null ? fr.consensus_summary : '';
+        this.finalPriorityOrdering =
+          data.final_priority_ordering != null ? data.final_priority_ordering : null;
         this.deviationAnalysis = fr && fr.deviation_analysis != null ? fr.deviation_analysis : '';
-        this.deviationReport = fr && fr.deviation_analysis_report != null ? fr.deviation_analysis_report : '';
+        this.deviationReport =
+          fr && fr.deviation_analysis_report != null
+            ? fr.deviation_analysis_report
+            : data.deviation_analysis_report != null
+              ? data.deviation_analysis_report
+              : '';
         this.differentModelAndReason =
           fr &&
           fr.deviation_analysis &&
@@ -1439,62 +1505,79 @@ export default {
         'folder:',
         folder
       );
-      const tryAnalysis = stem => {
-        const url = `/static/grouped_dataset/${folder}/${stem}_analysis.json`;
-        return axios
-          .get(url)
-          .then(res => {
-            const status = res && res.status;
-            const raw = res && res.data;
-            if (typeof raw === 'string' && /^\s*</.test(raw)) {
-              console.warn(
-                '[GroupNegotiation] _analysis.json 响应体为 HTML（常为 404 被 SPA 兜底），视为失败:',
-                url,
-                'HTTP',
-                status
-              );
-              return null;
-            }
-            const data = raw && typeof raw === 'object' ? raw : {};
-            const ar = data.analysis_result;
-            const lines = [];
-            if (ar && typeof ar === 'object') {
-              if (ar.detailed_description) lines.push(`场景描述：${ar.detailed_description}`);
-              if (ar.target_class != null && String(ar.target_class).trim() !== '') {
-                lines.push(`目标类别：${ar.target_class}`);
-              }
-              if (ar.target_count != null && String(ar.target_count).trim() !== '') {
-                lines.push(`目标数量：${ar.target_count}`);
-              }
-            }
-            if (lines.length > 0) {
-              console.log(
-                '[GroupNegotiation] _analysis.json 请求成功且已解析展示字段:',
-                url,
-                'HTTP',
-                status,
-                '条数:',
-                lines.length
-              );
-              return lines;
-            }
+      const parseAnalysisLines = data => {
+        const ar = data && data.analysis_result;
+        const lines = [];
+        if (ar && typeof ar === 'object') {
+          if (ar.detailed_description) lines.push(`场景描述：${ar.detailed_description}`);
+          if (ar.raw_response != null && String(ar.raw_response).trim() !== '') {
+            lines.push(`检测结果：${String(ar.raw_response).trim()}`);
+          }
+          if (ar.target_class != null && String(ar.target_class).trim() !== '') {
+            lines.push(`目标类别：${ar.target_class}`);
+          }
+          if (ar.target_count != null && String(ar.target_count).trim() !== '') {
+            lines.push(`目标数量：${ar.target_count}`);
+          }
+        }
+        return lines;
+      };
+
+      const fetchAnalysisJson = url =>
+        axios.get(url).then(res => {
+          const status = res && res.status;
+          const raw = res && res.data;
+          if (typeof raw === 'string' && /^\s*</.test(raw)) {
             console.warn(
-              '[GroupNegotiation] _analysis.json HTTP 成功但无可展示内容（检查 analysis_result）:',
+              '[GroupNegotiation] 分析 JSON 响应体为 HTML（常为 404 被 SPA 兜底），视为失败:',
               url,
               'HTTP',
               status
             );
             return null;
-          })
-          .catch(err => {
+          }
+          const data = raw && typeof raw === 'object' ? raw : {};
+          const lines = parseAnalysisLines(data);
+          if (lines.length > 0) {
+            console.log(
+              '[GroupNegotiation] 分析 JSON 请求成功且已解析展示字段:',
+              url,
+              'HTTP',
+              status,
+              '条数:',
+              lines.length
+            );
+            return lines;
+          }
+          console.warn(
+            '[GroupNegotiation] 分析 JSON HTTP 成功但无可展示内容（检查 analysis_result）:',
+            url,
+            'HTTP',
+            status
+          );
+          return null;
+        });
+
+      const tryAnalysis = async stem => {
+        const candidates = [
+          `/static/grouped_dataset/${folder}/${stem}_analysis.json`,
+          `/static/grouped_dataset/${folder}/${stem}.json`
+        ];
+        for (let i = 0; i < candidates.length; i++) {
+          const url = candidates[i];
+          try {
+            const lines = await fetchAnalysisJson(url);
+            if (lines && lines.length) return lines;
+          } catch (err) {
             const st = err.response && err.response.status;
             console.warn(
-              '[GroupNegotiation] _analysis.json 请求失败:',
+              '[GroupNegotiation] 分析 JSON 请求失败:',
               url,
               st != null ? `HTTP ${st}` : String(err.message || err)
             );
-            return null;
-          });
+          }
+        }
+        return null;
       };
 
       const tryTxt = stem =>
@@ -1533,50 +1616,50 @@ export default {
       return run();
     },
     /**
-     * 图片分组一轮展示：按分组内排序后的第 1/2/3 张图主文件名，分别请求
-     * `{stem}_Agent_A.json`、`_Agent_B.json`、`_Agent_C.json`，取 analysis_result.raw_response；
+     * 图片分组一轮展示：智能体 A/B/C 分别读取
+     * `{folder}_view_A/B/C_composite.json` 的 analysis_result.raw_response；
      * 推理型号固定为「-」（与模板 model_name 字段对应）。
      */
     async loadCompareRound1StaticAgents(folder, sortedJpgs) {
-      const stems = (sortedJpgs || []).map(fn => String(fn).replace(/\.[^/.]+$/, ''));
       const specs = [
-        { key: 'a', fileSuffix: 'Agent_A', stemIdx: 0 },
-        { key: 'b', fileSuffix: 'Agent_B', stemIdx: 1 },
-        { key: 'c', fileSuffix: 'Agent_C', stemIdx: 2 }
+        { key: 'a', view: 'A' },
+        { key: 'b', view: 'B' },
+        { key: 'c', view: 'C' }
       ];
       const out = { a: null, b: null, c: null };
-      if (!folder || stems.length === 0) {
+      if (!folder) {
         return null;
       }
-      const fetchOne = async (stem, fileSuffix) => {
-        if (!stem) {
-          return { model_name: '-', reason: '***' };
-        }
-        const url = `/static/grouped_dataset/${folder}/${stem}_${fileSuffix}.json`;
+      const fetchCompositeRawResponse = async view => {
+        const url = `/static/grouped_dataset/${folder}/${folder}_view_${view}_composite.json`;
         try {
           const res = await axios.get(url);
           const raw = res && res.data;
           if (typeof raw === 'string' && /^\s*</.test(raw)) {
-            console.warn('[GroupNegotiation] Agent JSON 响应为 HTML，视为失败:', url);
+            console.warn('[GroupNegotiation] composite JSON 响应为 HTML，视为失败:', url);
             return { model_name: '-', reason: '***' };
           }
           const ar = raw && typeof raw === 'object' ? raw.analysis_result : null;
           const rr =
             ar && ar.raw_response != null && String(ar.raw_response).trim() !== ''
-              ? String(ar.raw_response)
+              ? String(ar.raw_response).trim()
               : '***';
           return { model_name: '-', reason: rr };
         } catch (e) {
-          console.warn('[GroupNegotiation] 加载一轮 Agent 静态 JSON 失败:', url, e);
+          console.warn('[GroupNegotiation] 加载一轮 composite JSON 失败:', url, e);
           return { model_name: '-', reason: '***' };
         }
       };
       for (let i = 0; i < specs.length; i++) {
-        const { key, fileSuffix, stemIdx } = specs[i];
-        const stem = stems[stemIdx];
-        out[key] = await fetchOne(stem, fileSuffix);
+        const { key, view } = specs[i];
+        out[key] = await fetchCompositeRawResponse(view);
       }
-      console.log('[GroupNegotiation] 图片模式一轮静态推理已组装:', folder, out);
+      console.log(
+        '[GroupNegotiation] 图片模式一轮静态推理已组装（composite.json raw_response）:',
+        folder,
+        sortedJpgs,
+        out
+      );
       return out;
     },
     // 返回列表
@@ -2551,13 +2634,15 @@ export default {
 .compare-detail-images-row {
   flex: 1 1 auto;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   flex-wrap: nowrap;
   gap: 8px;
   align-items: center;
   justify-content: center;
   min-height: 0;
   width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .compare-detail-with-instruction.compare-detail-group .compare-detail-images-row {
@@ -2566,9 +2651,13 @@ export default {
 
 .compare-detail-with-instruction .compare-detail-images-row .group-triple-img {
   flex: 1 1 0;
-  min-width: 0;
+  min-height: 0;
+  width: auto;
+  max-width: 100%;
+  height: 100%;
   max-height: 100%;
   object-fit: contain;
+  object-position: center;
 }
 
 /* 列表分区标题：渐变条 + 钉铛体，与同列 video-item 区分层级 */
@@ -2662,7 +2751,7 @@ export default {
 
 .compare-detail-wrapper.compare-detail-group .compare-detail-images-row {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   flex-wrap: nowrap;
   gap: 8px;
   width: 100%;
@@ -2671,15 +2760,18 @@ export default {
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .compare-detail-wrapper .group-triple-img {
   flex: 1 1 0;
-  min-width: 0;
+  min-height: 0;
   width: auto;
-  height: auto;
+  max-width: 100%;
+  height: 100%;
   max-height: 100%;
   object-fit: contain;
+  object-position: center;
 }
 
 .compare-detail-wrapper .group-triple-img-clickable {
