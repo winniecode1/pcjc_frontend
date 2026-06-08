@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_1353.jpg",
-    "source_detection_json": "firc_junshi_1353.json",
-    "analysis_result": {
-        "raw_response": "在一片开阔的野外环境中，有两辆装甲战斗车辆被检测到，背景中可见一些房屋和树木。",
-        "status": "parse_failed"
-    }
-}

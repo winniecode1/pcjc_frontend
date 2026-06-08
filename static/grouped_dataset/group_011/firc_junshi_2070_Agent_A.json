@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_2070.jpg",
-    "source_detection_json": "firc_junshi_2070.json",
-    "analysis_result": {
-        "raw_response": "在一片植被与废墟交错的战场环境中，检测到一辆装甲战斗车辆和四辆坦克，其中部分坦克位于爆炸烟尘附近，显示出激烈的战斗场景。",
-        "status": "parse_failed"
-    }
-}

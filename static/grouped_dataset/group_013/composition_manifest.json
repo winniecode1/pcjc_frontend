@@ -1,0 +1,121 @@
+{
+  "group": "group_013",
+  "required_families": [
+    "multi_rocket_launcher/tank/armored_fighting_vehicle",
+    "heavy_vehicle/military_truck",
+    "trench"
+  ],
+  "source_groups": [
+    "group_001",
+    "group_013",
+    "group_012"
+  ],
+  "label_note": "YOLO labels are transformed from the available source group labels. The original dataset appears to provide one label file per group, so labels are reused for all three synthesized views.",
+  "views": [
+    {
+      "view": "A",
+      "image": "group_013_view_A_composite.jpg",
+      "label": "group_013_view_A_composite.txt",
+      "sources": [
+        {
+          "panel": 0,
+          "family": "armored_family",
+          "group": "group_001",
+          "image": "firc_junshi_240.jpg",
+          "classes": [
+            0,
+            6
+          ]
+        },
+        {
+          "panel": 1,
+          "family": "vehicle_family",
+          "group": "group_013",
+          "image": "firc_junshi_3005.jpg",
+          "classes": [
+            2
+          ]
+        },
+        {
+          "panel": 2,
+          "family": "trench_family",
+          "group": "group_012",
+          "image": "firc_junshi_2507.jpg",
+          "classes": [
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "view": "B",
+      "image": "group_013_view_B_composite.jpg",
+      "label": "group_013_view_B_composite.txt",
+      "sources": [
+        {
+          "panel": 0,
+          "family": "armored_family",
+          "group": "group_001",
+          "image": "firc_junshi_243.jpg",
+          "classes": [
+            0,
+            6
+          ]
+        },
+        {
+          "panel": 1,
+          "family": "vehicle_family",
+          "group": "group_013",
+          "image": "firc_junshi_3016.jpg",
+          "classes": [
+            2
+          ]
+        },
+        {
+          "panel": 2,
+          "family": "trench_family",
+          "group": "group_012",
+          "image": "firc_junshi_2510.jpg",
+          "classes": [
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "view": "C",
+      "image": "group_013_view_C_composite.jpg",
+      "label": "group_013_view_C_composite.txt",
+      "sources": [
+        {
+          "panel": 0,
+          "family": "armored_family",
+          "group": "group_001",
+          "image": "firc_junshi_255.jpg",
+          "classes": [
+            0,
+            6
+          ]
+        },
+        {
+          "panel": 1,
+          "family": "vehicle_family",
+          "group": "group_013",
+          "image": "firc_junshi_3037.jpg",
+          "classes": [
+            2
+          ]
+        },
+        {
+          "panel": 2,
+          "family": "trench_family",
+          "group": "group_012",
+          "image": "firc_junshi_2513.jpg",
+          "classes": [
+            7
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_3525.jpg",
-    "source_detection_json": "firc_junshi_3525.json",
-    "analysis_result": {
-        "raw_response": "这张图中在户外草地上，没有检测到具体的目标。",
-        "status": "parse_failed"
-    }
-}

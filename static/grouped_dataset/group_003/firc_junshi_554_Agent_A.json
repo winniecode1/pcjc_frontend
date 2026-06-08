@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_554.jpg",
-    "source_detection_json": "firc_junshi_554.json",
-    "analysis_result": {
-        "raw_response": "在野外草地上，有两辆坦克被检测到，周围环境为树林和土路。",
-        "status": "parse_failed"
-    }
-}

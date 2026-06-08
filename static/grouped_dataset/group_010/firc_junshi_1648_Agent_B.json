@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_1648.jpg",
-    "source_detection_json": "firc_junshi_1648.json",
-    "analysis_result": {
-        "raw_response": "在一片植被环绕的土地区域中，检测到两个沟渠目标，其中一个置信度较高，另一个置信度较低。",
-        "status": "parse_failed"
-    }
-}

@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_243.jpg",
-    "source_detection_json": "firc_junshi_243.json",
-    "analysis_result": {
-        "raw_response": "在一片绿色农田与树林交错的环境中，检测到一辆坦克正在道路上行驶并扬起尘土。",
-        "status": "parse_failed"
-    }
-}

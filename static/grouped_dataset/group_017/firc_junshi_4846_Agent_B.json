@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_4846.jpg",
-    "source_detection_json": "firc_junshi_4846.json",
-    "analysis_result": {
-        "raw_response": "在沙漠地带的开阔地形中，检测到11个坦克目标，分布在沙地与丘陵边缘区域。",
-        "status": "parse_failed"
-    }
-}

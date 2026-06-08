@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_4996.jpg",
-    "source_detection_json": "firc_junshi_4996.json",
-    "analysis_result": {
-        "raw_response": "在一片林地与土路交错的野外环境中，检测到四个战壕目标，它们分布在燃烧区域附近，周围有浓烟升起。",
-        "status": "parse_failed"
-    }
-}

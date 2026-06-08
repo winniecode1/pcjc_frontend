@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_2083.jpg",
-    "source_detection_json": "firc_junshi_2083.json",
-    "analysis_result": {
-        "raw_response": "在一片被破坏的建筑和植被混合的环境中，检测到两辆坦克和一辆装甲战斗车辆。",
-        "status": "parse_failed"
-    }
-}

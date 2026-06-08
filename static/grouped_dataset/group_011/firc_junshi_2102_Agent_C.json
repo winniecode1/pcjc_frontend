@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_2102.jpg",
-    "source_detection_json": "firc_junshi_2102.json",
-    "analysis_result": {
-        "raw_response": "在一条被植被环绕的土路上，有多个装甲战斗车辆和坦克目标，其中包含4辆坦克和2辆装甲战斗车辆，周围环境显示有烟雾和部分建筑物残骸。",
-        "status": "parse_failed"
-    }
-}

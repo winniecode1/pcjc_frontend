@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_1573.jpg",
-    "source_detection_json": "firc_junshi_1573.json",
-    "analysis_result": {
-        "raw_response": "这张图中在树林和干草丛的环境下，未检测到任何目标。",
-        "status": "parse_failed"
-    }
-}

@@ -1,0 +1,9 @@
+{
+    "group_name": "group_005",
+    "source_image": "group_005_view_A_composite.jpg",
+    "analysis_result": {
+        "detailed_description": "检测到11个目标，其中坦克3个，战壕7个，重型车辆1个。",
+        "target_class": "",
+        "target_count": ""
+    }
+}

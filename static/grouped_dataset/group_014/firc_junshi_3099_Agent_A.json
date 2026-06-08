@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_3099.jpg",
-    "source_detection_json": "firc_junshi_3099.json",
-    "analysis_result": {
-        "raw_response": "在一片被破坏的居民区环境中，检测到两辆坦克目标。",
-        "status": "parse_failed"
-    }
-}

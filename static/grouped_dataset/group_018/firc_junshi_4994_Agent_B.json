@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_4994.jpg",
-    "source_detection_json": "firc_junshi_4994.json",
-    "analysis_result": {
-        "raw_response": "在野外土地区域，有六个战壕目标被检测到，其中部分战壕位于爆炸烟雾附近，环境中有明显烟尘和植被。",
-        "status": "parse_failed"
-    }
-}

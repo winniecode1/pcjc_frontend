@@ -1,8 +1,0 @@
-{
-    "source_image": "firc_junshi_335.jpg",
-    "source_detection_json": "firc_junshi_335.json",
-    "analysis_result": {
-        "raw_response": "在一条穿过绿色田野和树林的道路上，检测到三辆坦克，它们正沿着道路行驶。",
-        "status": "parse_failed"
-    }
-}
