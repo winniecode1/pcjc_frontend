@@ -1,9 +1,0 @@
-{
-    "group_name": "group_000",
-    "source_image": "group_000_view_B_composite.jpg",
-    "analysis_result": {
-        "detailed_description": "检测到9个目标，其中军用卡车2个，坦克1个，战壕4个，装甲战斗车辆2个。",
-        "target_class": "",
-        "target_count": ""
-    }
-}

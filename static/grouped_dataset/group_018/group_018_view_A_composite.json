@@ -1,6 +1,6 @@
 {
     "source_image": "group_018_view_A_composite.jpg",
     "analysis_result": {
-        "raw_response": "检测到9个目标，其中军用卡车2个，坦克3个，战壕4个。"
+        "raw_response": "第一张图片检测到3个坦克目标；第二张图片检测到3个军用卡车目标；第三张图片检测到5个战壕目标。"
     }
 }

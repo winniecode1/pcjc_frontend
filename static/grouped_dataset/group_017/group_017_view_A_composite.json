@@ -1,6 +1,6 @@
 {
     "source_image": "group_017_view_A_composite.jpg",
     "analysis_result": {
-        "raw_response": "检测到16个目标，其中坦克8个，战壕7个，重型车辆1个。"
+        "raw_response": "第一张图片检测到4个坦克目标；第二张图片检测到1个坦克目标、5个装甲战斗车辆目标；第三张图片检测到8个战壕目标。"
     }
 }
