@@ -48,11 +48,7 @@
       </div>
     </div>
 
-    <div class="action-buttons">
-      <button @click="startDetection" :disabled="isLoading" class="btn-start-detect">
-        <span class="btn-text-pos">目标信息类别识别</span>
-      </button>
-    </div>
+    <!-- 左下角目标识别按钮已移除，功能转移到中间下方标题处 -->
 
   </div>
 </b-col>
@@ -63,16 +59,34 @@
           <div class="video-frame">
             <img v-if="originalVideoURL && selectedMediaType === 'image'" :src="originalVideoURL" class="video-display" alt="原始图片" @error="handleImageError" />
             <video v-else-if="originalVideoURL && selectedMediaType === 'video'" :src="originalVideoURL" class="video-display" autoplay loop muted controls @error="handleVideoError"></video>
-            <div v-else class="placeholder-text">请选择{{ selectedMediaType === 'image' ? '图片' : '视频' }}</div>
+            <!-- 加载进度条 - 显示在图片位置的中间 -->
+            <div v-if="isImageLoading" class="loading-progress-overlay">
+              <div class="loading-progress-bar">
+                <div class="loading-progress-fill"></div>
+              </div>
+              <div class="loading-progress-text">图片加载中...</div>
+            </div>
+            <div v-else-if="!originalVideoURL" class="placeholder-text">请选择{{ selectedMediaType === 'image' ? '图片' : '视频' }}</div>
           </div>
         </div>
 
         <div class="video-section">
-          <div class="video-label label-processed">多模态目标检测结果</div>
+          <!-- 标题支持点击功能，点击后开始目标检测 -->
+          <div class="video-label label-processed clickable-label"
+            :class="{ 'label-clickable': canClickToDetect, 'label-detecting': isLoading }"
+            @click="handleLabelClick">
+            {{ detectionLabelText }}
+          </div>
           <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
             <img v-if="processedVideoURL && !isLoading && selectedMediaType === 'image'" :src="processedVideoURL" class="video-display" alt="检测结果" :key="'img-' + processedVideoURL" @error="handleImageError" />
             <video v-else-if="processedVideoURL && !isLoading && selectedMediaType === 'video'" :src="processedVideoURL" class="video-display" autoplay loop muted controls :key="'video-' + processedVideoURL" @error="handleVideoError"></video>
-            <div v-if="isLoading" class="placeholder-text loading-text">检测中……</div>
+            <!-- 检测进度条 - 显示在图片位置的中间 -->
+            <div v-if="isLoading" class="loading-progress-overlay">
+              <div class="loading-progress-bar">
+                <div class="loading-progress-fill"></div>
+              </div>
+              <div class="loading-progress-text">检测中...</div>
+            </div>
             <div v-else-if="!processedVideoURL" class="placeholder-text">检测结果将在这里显示</div>
           </div>
         </div>
@@ -210,6 +224,8 @@ export default {
       processedVideoURL: null,
       taskId: null,
       isLoading: false,
+      isImageLoading: false,
+      progressKey: 0,
       progressMessage: null,
       resultMessage: null,
       fullResult: {
@@ -239,7 +255,8 @@ export default {
       isExporting: false,
       hasStartedDetection: false,
       hasStartedBiasDetection: false,
-      showFormulaTooltip: false
+      showFormulaTooltip: false,
+      selectedVideoHasOrders: false  // 新增：标记是否已选择视频并加载了作战指令
     };
   },
   computed: {
@@ -247,9 +264,29 @@ export default {
       // 需要先完成目标识别（fullResult 有检测结果）且不在加载中
       // 视频：需要 key_frame_detection 或 detection_result
       // 图片：需要 key_frame_detection
-      return this.fullResult && 
-             (this.fullResult.key_frame_detection || this.fullResult.detection_result) && 
+      return this.fullResult &&
+             (this.fullResult.key_frame_detection || this.fullResult.detection_result) &&
              !this.isLoading;
+    },
+    // 检测标签文本，根据状态显示不同内容
+    detectionLabelText() {
+      if (this.isLoading) {
+        return '目标类别识别进行中......';
+      }
+      if (this.hasStartedDetection && this.processedVideoURL) {
+        return '目标信息类别识别结果';
+      }
+      if (this.selectedVideo && this.selectedVideoHasOrders) {
+        return '开始目标信息类别识别';
+      }
+      return '多模态目标检测结果';
+    },
+    // 是否可以点击开始检测
+    canClickToDetect() {
+      return this.selectedVideo &&
+             this.selectedVideoHasOrders &&
+             !this.isLoading &&
+             !this.hasStartedDetection;
     }
   },
   mounted() {
@@ -700,6 +737,12 @@ export default {
     handleFormulaImageError(e) {
       console.warn("公式图片加载失败:", e);
     },
+    // 处理标题点击事件，点击后开始目标检测
+    handleLabelClick() {
+      if (this.canClickToDetect) {
+        this.startDetection();
+      }
+    },
     getMainObject() {
       if (!this.fullResult.key_frame_detection || !this.fullResult.key_frame_detection.detections || !this.fullResult.key_frame_detection.detections.length) {
         return 'N/A';
@@ -744,6 +787,7 @@ export default {
       this.summaryFullText = '';
       this.summaryTypingText = '';
       this.hasStartedDetection = false;
+      this.selectedVideoHasOrders = false;
 
       // 清理计时器
       this.clearTypingIntervals();
@@ -1380,16 +1424,21 @@ export default {
           name: item.name,
           mediaType: this.selectedMediaType
         }));
+        // 立即清空上一个图片显示
+        this.originalVideoURL = null;
         // 清除目标检测相关缓存（保留偏差检测计时状态）
         this.clearTargetDetectionCache();
-        // 保留偏差检测计时状态，只重置目标检测相关UI
+        // 重置结果状态（保留偏差检测计时状态）
         this.resetResultState({ preserveBiasTimer: true });
-        // 额外保留一些状态
-        this.showBiasDetails = this.hasStartedBiasDetection;
-        if (this.hasStartedBiasDetection && this.biasDetailEntries.length > 0) {
-          this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
-        }
-        console.log("选择新" + (this.selectedMediaType === 'image' ? '图片' : '视频') + "，状态已重置。");
+
+        // 切换作战指令后，清空右侧的偏差检测结果和准确度
+        this.biasDetailEntries = [];
+        this.biasDisplayTexts = [];
+        this.showBiasDetails = false;
+        this.showAccuracy = false;
+        this.hasStartedBiasDetection = false;
+
+        console.log("选择新" + (this.selectedMediaType === 'image' ? '图片' : '视频') + "，状态已重置，偏差检测结果已清空。");
       } else {
         // 选择相同文件时，也保存 originalVideoURL 到 localStorage
         localStorage.setItem('selectedVideo', JSON.stringify({
@@ -1399,6 +1448,10 @@ export default {
         }));
         localStorage.setItem('originalVideoURL', this.originalVideoURL || '');
       }
+
+      // 开始加载，显示进度条
+      this.isImageLoading = true;
+      this.progressKey++;
 
       try {
         let videoUrl = null;
@@ -1417,6 +1470,7 @@ export default {
 
           if (data.instruction) {
             this.ordersText = data.instruction;
+            this.selectedVideoHasOrders = true;
             console.log("作战指令:", this.ordersText);
           }
         } else {
@@ -1435,6 +1489,7 @@ export default {
           // 尝试获取作战指令，支持多种字段名
           if (data.directive || data.instruction || data.text || data.orders) {
             this.ordersText = data.directive || data.instruction || data.text || data.orders || '';
+            this.selectedVideoHasOrders = true;
             console.log("作战指令:", this.ordersText);
           }
         }
@@ -1447,10 +1502,15 @@ export default {
             if (this.originalVideoURL) {
               localStorage.setItem('originalVideoURL', this.originalVideoURL);
             }
+            // 图片加载完成后隐藏进度条
+            this.isImageLoading = false;
           }, 2000);
+        } else {
+          this.isImageLoading = false;
         }
       } catch (error) {
         console.error("获取样本信息失败:", error);
+        this.isImageLoading = false;
         // 备用方案
         try {
           let videoUrl = null;
@@ -1513,6 +1573,7 @@ export default {
       }
 
       this.isLoading = true;
+      this.progressKey++;
       this.resetResultState({ preserveMessages: true });
       this.hasStartedDetection = true;
       this.resultMessage = "正在启动分析...";
@@ -2176,6 +2237,36 @@ export default {
   font-size: 14px;
 }
 
+/* 可点击的标题样式 */
+.clickable-label {
+  cursor: default;
+  transition: all 0.3s ease;
+}
+
+.label-clickable {
+  cursor: pointer;
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+.label-clickable:hover {
+  filter: brightness(1.2);
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+}
+
+.label-detecting {
+  cursor: wait;
+  animation: none;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    text-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+  }
+}
+
 .video-frame {
   width: 100%;
   max-width: 600px;
@@ -2189,6 +2280,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
 }
 
 .video-display {
@@ -2200,6 +2292,69 @@ export default {
 .placeholder-text {
   color: #88a;
   font-size: 1rem;
+}
+
+/* 加载进度条样式 - 外层容器 */
+.loading-progress-container {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px 0;
+  gap: 10px;
+}
+
+/* 加载进度条样式 - 覆盖在图片位置中间 */
+.loading-progress-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.loading-progress-bar {
+  width: 80%;
+  height: 8px;
+  background-color: rgba(0, 229, 255, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 229, 255, 0.4);
+}
+
+.loading-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00e5ff, #00ff00);
+  border-radius: 4px;
+  animation: progress-animation 2s ease-in-out forwards;
+}
+
+@keyframes progress-animation {
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 70%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+.loading-progress-text {
+  color: #00e5ff;
+  font-size: 14px;
+  font-family: 'DOUYUFont', sans-serif;
+  text-shadow: 0 0 5px rgba(0, 229, 255, 0.5);
 }
 
 .summary-box-middle {
