@@ -277,7 +277,7 @@
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentABNegotiation === 'object' && agentABNegotiation !== null" class="agent-result">
                     <template v-if="selectedDetailType === 'compare'">
-                      <span class="result-line">优先级排序：{{ displayRound2NegotiationField(agentABNegotiation, 'priority_ordering') }}</span>
+                      <span class="result-line">优先级排序：{{ displayRound2PriorityOrdering(agentABNegotiation) }}</span>
                       <span class="result-line">优先级依据：{{ displayRound2NegotiationField(agentABNegotiation, 'priority_rationale') }}</span>
                       <span class="result-line">推理共识：{{ displayRound2NegotiationField(agentABNegotiation, 'consensus') }}</span>
                       <span class="result-line">推理分歧：{{ displayRound2NegotiationField(agentABNegotiation, 'deviation') }}</span>
@@ -312,7 +312,7 @@
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentBCNegotiation === 'object' && agentBCNegotiation !== null" class="agent-result">
                     <template v-if="selectedDetailType === 'compare'">
-                      <span class="result-line">优先级排序：{{ displayRound2NegotiationField(agentBCNegotiation, 'priority_ordering') }}</span>
+                      <span class="result-line">优先级排序：{{ displayRound2PriorityOrdering(agentBCNegotiation) }}</span>
                       <span class="result-line">优先级依据：{{ displayRound2NegotiationField(agentBCNegotiation, 'priority_rationale') }}</span>
                       <span class="result-line">推理共识：{{ displayRound2NegotiationField(agentBCNegotiation, 'consensus') }}</span>
                       <span class="result-line">推理分歧：{{ displayRound2NegotiationField(agentBCNegotiation, 'deviation') }}</span>
@@ -347,7 +347,7 @@
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentCANegotiation === 'object' && agentCANegotiation !== null" class="agent-result">
                     <template v-if="selectedDetailType === 'compare'">
-                      <span class="result-line">优先级排序：{{ displayRound2NegotiationField(agentCANegotiation, 'priority_ordering') }}</span>
+                      <span class="result-line">优先级排序：{{ displayRound2PriorityOrdering(agentCANegotiation) }}</span>
                       <span class="result-line">优先级依据：{{ displayRound2NegotiationField(agentCANegotiation, 'priority_rationale') }}</span>
                       <span class="result-line">推理共识：{{ displayRound2NegotiationField(agentCANegotiation, 'consensus') }}</span>
                       <span class="result-line">推理分歧：{{ displayRound2NegotiationField(agentCANegotiation, 'deviation') }}</span>
@@ -756,13 +756,12 @@ export default {
     deviationReportText() {
       return this.toDisplayString(this.deviationReport);
     },
-    /** 图片模式偏差检测：final_priority_ordering */
+    /** 图片模式偏差检测：final_priority_ordering → 名称(分数%)>… */
     formattedFinalPriorityOrdering() {
       const v = this.finalPriorityOrdering;
       if (v == null || v === '') return '';
       if (Array.isArray(v)) {
-        const items = v.map(x => String(x).trim()).filter(Boolean);
-        return items.length ? items.join('、') : '';
+        return this.formatPriorityOrderingArray(v);
       }
       const s = this.toDisplayString(v).trim();
       return s !== '' ? s : '';
@@ -928,7 +927,33 @@ export default {
       const s = String(v).trim();
       return s !== '' ? s : '***';
     },
-    /** 图片模式二轮：展示 negotiation_results 中 priority_ordering / priority_rationale / consensus / deviation */
+    /** priority_ordering / final_priority_ordering 数组 → 名称(分数%)>名称(分数%)… */
+    formatPriorityOrderingArray(v) {
+      if (!Array.isArray(v) || v.length === 0) return '';
+      const parts = v.map(item => {
+        if (item && typeof item === 'object') {
+          const name = item.name != null ? String(item.name).trim() : '';
+          const score = item.priority_score;
+          if (name && score != null && score !== '') {
+            const num = Number(score);
+            const pct = Number.isFinite(num)
+              ? (Number.isInteger(num) ? String(num) : String(num))
+              : String(score).trim();
+            return `${name}(${pct}%)`;
+          }
+          return name || '';
+        }
+        return item != null ? String(item).trim() : '';
+      }).filter(Boolean);
+      return parts.length ? parts.join('>') : '';
+    },
+    /** 图片模式二轮：priority_ordering 展示为 名称(分数%)>名称(分数%)… */
+    displayRound2PriorityOrdering(negot) {
+      if (!negot || typeof negot !== 'object') return '***';
+      const s = this.formatPriorityOrderingArray(negot.priority_ordering);
+      return s || '***';
+    },
+    /** 图片模式二轮：展示 negotiation_results 中 priority_rationale / consensus / deviation */
     displayRound2NegotiationField(negot, field) {
       if (!negot || typeof negot !== 'object') return '***';
       const v = negot[field];

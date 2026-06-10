@@ -184,7 +184,11 @@
                         :key="'intent-' + idx + '-' + item.intent"
                         type="button"
                         class="ba-intent-btn"
-                        :class="{ 'ba-intent-btn--selected': selectedTacticalIntentIndex === idx }"
+                        :class="{
+                          'ba-intent-btn--selected': selectedTacticalIntentIndex === idx,
+                          'ba-intent-btn--disabled': selectedTacticalIntentIndex !== null && selectedTacticalIntentIndex !== idx
+                        }"
+                        :disabled="selectedTacticalIntentIndex !== null"
                         @click="selectTacticalIntent(idx)"
                       >
                         <span class="ba-intent-name">{{ item.intent }}</span>
@@ -206,9 +210,23 @@
                   >
                     <div class="ba-section-head">
                       <span class="ba-section-icon">◈</span>
-                      <span class="ba-section-title">分析说明</span>
+                      <span class="ba-section-title">机器意图分析</span>
                     </div>
                     <p class="ba-section-body ba-auxiliary-body">{{ behaviorAnalysisView.auxiliaryMessage }}</p>
+                  </div>
+                  <div
+                    v-if="selectedTacticalIntentIndex !== null"
+                    class="ba-section ba-section--commander"
+                  >
+                    <div class="ba-section-head">
+                      <span class="ba-section-icon">◈</span>
+                      <span class="ba-section-title">指挥员意图分析</span>
+                    </div>
+                    <p v-if="isCommanderIntentLoading" class="ba-section-body ba-auxiliary-body">分析中…</p>
+                    <p v-else-if="commanderIntentAnalysisError" class="ba-section-body ba-auxiliary-body ba-commander-error">
+                      {{ commanderIntentAnalysisError }}
+                    </p>
+                    <p v-else class="ba-section-body ba-auxiliary-body">{{ commanderIntentAnalysis }}</p>
                   </div>
                 </div>
                 <template v-else>
@@ -282,6 +300,7 @@ const SOURCE_API_BASE_URL = 'http://10.109.253.71:12358';
 const REFINE_COMMAND_API_URL = `${SOURCE_API_BASE_URL}/machine-refine-command`;
 const TRACK_ARTIFACT_API_URL = `${SOURCE_API_BASE_URL}/load-track-artifact`;
 const ANALYZE_VIDEO_BEHAVIOR_API_URL = `${SOURCE_API_BASE_URL}/analyze-video-behavior`;
+const BEHAVIOR_REASON_API_URL = `${SOURCE_API_BASE_URL}/behavior-reason`;
 const FRONTEND_BASE_URL = 'http://10.109.253.71:8889';
 const IMAGE_API_URL = 'http://10.109.253.71:5237';
 const BASE_DIR = "/home/wuzhixuan/Project/PCJC/1";
@@ -346,8 +365,12 @@ export default {
       descriptionEntries: [],
       /** analyze-video-behavior 结构化展示（战术意图排名 + 辅助说明） */
       behaviorAnalysisView: null,
-      /** 战术行为区当前选中的意图按钮索引（单选） */
+      /** 战术行为区当前选中的意图按钮索引（单选，选中后不可再改） */
       selectedTacticalIntentIndex: null,
+      /** /behavior-reason 返回的指挥员意图分析文本 */
+      commanderIntentAnalysis: '',
+      commanderIntentAnalysisError: '',
+      isCommanderIntentLoading: false,
       biasDetailEntries: [],
       biasDisplayTexts: [],
       summaryTextOnly: '',
@@ -1220,6 +1243,9 @@ export default {
       this.clearBiasTimeouts();
       this.behaviorAnalysisView = null;
       this.selectedTacticalIntentIndex = null;
+      this.commanderIntentAnalysis = '';
+      this.commanderIntentAnalysisError = '';
+      this.isCommanderIntentLoading = false;
       this.biasDetailEntries = [];
       this.biasDisplayTexts = [];
       this.showBiasDetails = false;
@@ -1477,7 +1503,31 @@ export default {
     formatIntentConfidenceWidth(confidence) {
       return `${this.normalizeIntentConfidence(confidence)}%`;
     },
-    selectTacticalIntent(index) {
+    resetCommanderIntentAnalysis() {
+      this.commanderIntentAnalysis = '';
+      this.commanderIntentAnalysisError = '';
+      this.isCommanderIntentLoading = false;
+    },
+    parseBehaviorReasonResponse(payload) {
+      if (payload == null) return '';
+      if (typeof payload === 'string') return payload.trim();
+      const envelope = payload && typeof payload === 'object' ? payload : {};
+      const root =
+        envelope.status === 'success' && envelope.data != null
+          ? envelope.data
+          : envelope.data != null
+            ? envelope.data
+            : envelope;
+      if (typeof root === 'string') return root.trim();
+      if (!root || typeof root !== 'object') return '';
+      const text = this.pickBehaviorField(root, [
+        'reason', 'behavior_reason', 'analysis', 'message', 'content', 'description', 'result'
+      ]);
+      if (text) return text;
+      return JSON.stringify(root, null, 2);
+    },
+    async selectTacticalIntent(index) {
+      if (this.selectedTacticalIntentIndex !== null) return;
       if (
         !this.behaviorAnalysisView ||
         !Array.isArray(this.behaviorAnalysisView.tacticalIntentRanking)
@@ -1487,7 +1537,43 @@ export default {
       if (index < 0 || index >= this.behaviorAnalysisView.tacticalIntentRanking.length) {
         return;
       }
+      const item = this.behaviorAnalysisView.tacticalIntentRanking[index];
+      const intentName = item && item.intent ? String(item.intent).trim() : '';
+      if (!intentName) return;
+
       this.selectedTacticalIntentIndex = index;
+      this.resetCommanderIntentAnalysis();
+      this.isCommanderIntentLoading = true;
+
+      const logTag = '[DecisionMakingV2][behavior-reason]';
+
+      try {
+        console.log(`${logTag} GET`, { url: BEHAVIOR_REASON_API_URL, params: { name: intentName } });
+        const response = await axios.get(BEHAVIOR_REASON_API_URL, {
+          params: { name: intentName },
+          timeout: 600000
+        });
+        const data = response.data;
+        console.log(`${logTag} 响应`, data);
+
+        if (response.status >= 400) {
+          throw new Error((data && data.detail) || `HTTP ${response.status}`);
+        }
+        if (data && data.status && data.status !== 'success') {
+          const errMsg = (data && data.message) || (data && data.detail) || `接口状态: ${data.status}`;
+          throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
+        }
+
+        this.commanderIntentAnalysis = this.parseBehaviorReasonResponse(data);
+        if (!this.commanderIntentAnalysis) {
+          this.commanderIntentAnalysisError = '未获取到指挥员意图分析内容';
+        }
+      } catch (error) {
+        console.error(`${logTag} 请求失败`, error);
+        this.commanderIntentAnalysisError = this.extractAnalyzeVideoBehaviorError(error);
+      } finally {
+        this.isCommanderIntentLoading = false;
+      }
     },
     parseTacticalIntentRanking(root) {
       if (!root || typeof root !== 'object') return [];
@@ -1652,10 +1738,12 @@ export default {
       if (structured) {
         this.behaviorAnalysisView = structured;
         this.selectedTacticalIntentIndex = null;
+        this.resetCommanderIntentAnalysis();
         return [];
       }
       this.behaviorAnalysisView = null;
       this.selectedTacticalIntentIndex = null;
+      this.resetCommanderIntentAnalysis();
       const view = this.buildBehaviorAnalysisView(payload);
       const entries = [];
       view.sections.forEach((section) => {
@@ -1825,6 +1913,7 @@ export default {
         this.hasStartedBiasDetection = true;
         this.behaviorAnalysisView = null;
         this.selectedTacticalIntentIndex = null;
+        this.resetCommanderIntentAnalysis();
         localStorage.removeItem('behaviorAnalysisView');
         const errText = this.extractAnalyzeVideoBehaviorError(error);
         this.biasDetailEntries = [{
@@ -3374,6 +3463,15 @@ export default {
   background: linear-gradient(135deg, rgba(0, 36, 72, 0.5) 0%, rgba(0, 18, 40, 0.82) 100%);
 }
 
+.ba-section--commander {
+  border-left: 3px solid #5dffb8;
+  background: linear-gradient(135deg, rgba(0, 48, 56, 0.5) 0%, rgba(0, 24, 36, 0.82) 100%);
+}
+
+.ba-commander-error {
+  color: #ffb4b4;
+}
+
 .ba-intent-list {
   display: flex;
   flex-direction: column;
@@ -3433,6 +3531,20 @@ export default {
 .ba-intent-btn--selected::before {
   width: 5px;
   box-shadow: 0 0 10px rgba(0, 229, 255, 0.9);
+}
+
+.ba-intent-btn--disabled,
+.ba-intent-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+  box-shadow: none;
+}
+
+.ba-intent-btn--disabled:hover,
+.ba-intent-btn:disabled:hover {
+  border-color: rgba(0, 229, 255, 0.22);
+  background: rgba(0, 40, 70, 0.35);
 }
 
 .ba-intent-btn--selected .ba-intent-name {
