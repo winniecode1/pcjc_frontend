@@ -1465,19 +1465,16 @@ export default {
       let imageFiles = [];
       let videoFiles = [];
       try {
-        const imageCtx = require.context('../../static/Image_input', true, /\.(png|jpe?g|webp|gif)$/i);
-        imageCtx.keys().forEach((key) => {
-          const normalized = key.replace(/^\.\//, '');
-          const fileName = normalized.split('/').filter(Boolean).pop() || normalized;
-          imageFiles.push({
-            name: fileName,
-            path: `image:${normalized}`,
-            type: 'image'
-          });
-        });
+        const response = await axios.get('/static/Image_input/files.json');
+        const imageNameList = this.parseStaticFileList(response && response.data);
+        imageFiles = imageNameList.map((name) => ({
+          name,
+          path: `image:${name}`,
+          type: 'image'
+        }));
         imageFiles.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
       } catch (error) {
-        console.error('加载 static/Image_input 列表失败:', error);
+        console.error('加载 static/Image_input/files.json 失败:', error);
         imageFiles = [];
       }
 

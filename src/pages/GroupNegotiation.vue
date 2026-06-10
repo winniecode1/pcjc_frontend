@@ -395,11 +395,8 @@
               <div class="result-section result-section-main">
                 <div class="section-content unified-scroll">
                   <template v-if="selectedDetailType === 'compare'">
-                    <div class="section-sub">最终优先级排序：</div>
-                    <p class="result-text">{{ formattedFinalPriorityOrdering || '***' }}</p>
-                    <div class="unified-divider"></div>
                     <div class="section-sub">共识摘要：</div>
-                    <p class="result-text" style="white-space: pre-wrap;">{{ toDisplayString(consensusSummary) || '***' }}</p>
+                    <p class="result-text" style="white-space: pre-wrap;">{{ deviationReportText || '***' }}</p>
                     <div class="unified-divider"></div>
                     <div class="section-sub">分歧点：</div>
                     <p class="result-text" style="white-space: pre-wrap;">{{ compareDeviationDisagreementPoints }}</p>
@@ -438,10 +435,7 @@
                 <div class="final-result-title">协商结果</div>
                 <div class="final-model-display">
                   <template v-if="selectedDetailType === 'compare'">
-                    <p
-                      class="final-model-text"
-                      style="white-space: pre-wrap;"
-                    >{{ deviationReportText || '请完成「开始群体协商」并点击「群体协商偏差检测」后查看' }}</p>
+                    <p class="final-model-text">最终优先级排序：{{ formattedFinalPriorityOrdering || '***' }}</p>
                   </template>
                   <p
                     v-else

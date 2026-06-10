@@ -1,54 +1,119 @@
 {
   "categories": [
     {
-      "category": "重车集结",
-      "groups": ["group_001", "group_013"],
-      "instruction": "无人机回传重车密集数据，优先级：坦克>重型车辆>战壕。"
+      "category": "装甲补给混合",
+      "groups": ["group_000"],
+      "instruction": "无人机采集装甲、卡车、战壕图像，优先级：装甲车辆>卡车>战壕。"
     },
     {
-      "category": "重车防御",
-      "groups": ["group_004", "group_010"],
-      "instruction": "无人机发现重车靠近防御区，优先级：重型车辆>坦克>战壕。"
+      "category": "坦克战壕并存",
+      "groups": ["group_001"],
+      "instruction": "无人机发现坦克与战壕目标，优先级：坦克>战壕>卡车。"
     },
     {
-      "category": "坦克推进",
-      "groups": ["group_002", "group_017"],
-      "instruction": "无人机采集坦克集群迹象，优先级：坦克>重型车辆>战壕。"
+      "category": "卡车战壕密集",
+      "groups": ["group_002"],
+      "instruction": "无人机采集卡车和战壕图像，优先级：坦克>军用卡车>战壕。"
     },
     {
-      "category": "装甲混编",
-      "groups": ["group_011", "group_014"],
-      "instruction": "无人机识别装甲混编目标，优先级：坦克>装甲车辆>重型车辆。"
+      "category": "多类混合目标",
+      "groups": ["group_003"],
+      "instruction": "无人机回传多类混合目标，优先级：装甲车辆>战壕>卡车。"
     },
     {
-      "category": "卡车补给",
-      "groups": ["group_003", "group_008"],
-      "instruction": "无人机回传卡车补给活动，优先级：坦克>军用卡车>战壕。"
+      "category": "火炮装甲节点",
+      "groups": ["group_004"],
+      "instruction": "无人机发现火炮装甲目标，优先级：多管火炮>装甲车辆>卡车。"
     },
     {
-      "category": "卡车机动",
-      "groups": ["group_015", "group_018"],
-      "instruction": "无人机发现卡车机动线索，优先级：坦克>军用卡车>战壕。"
+      "category": "轻量战壕点",
+      "groups": ["group_005"],
+      "instruction": "无人机采集坦克、卡车、战壕图像，优先级：坦克>战壕>卡车。"
     },
     {
-      "category": "战壕纵深",
-      "groups": ["group_005", "group_009"],
-      "instruction": "无人机采集战壕纵深分布，优先级：坦克>军用卡车>战壕。"
+      "category": "装甲补给带",
+      "groups": ["group_006"],
+      "instruction": "无人机发现装甲与补给车辆，优先级：装甲车辆>军用卡车>战壕。"
     },
     {
-      "category": "战壕火点",
+      "category": "坦克机动线",
+      "groups": ["group_007"],
+      "instruction": "无人机采集坦克机动目标，优先级：坦克>卡车>战壕。"
+    },
+    {
+      "category": "坦克装甲混编",
+      "groups": ["group_008"],
+      "instruction": "无人机回传坦克装甲混编，优先级：坦克>装甲车辆>卡车。"
+    },
+    {
+      "category": "均衡监视点",
+      "groups": ["group_009"],
+      "instruction": "无人机采集均衡目标图像，优先级：装甲车辆>坦克>战壕。"
+    },
+    {
+      "category": "战壕防御线",
+      "groups": ["group_010"],
+      "instruction": "无人机发现连续战壕目标，优先级：战壕>坦克>卡车。"
+    },
+    {
+      "category": "战壕装甲线",
+      "groups": ["group_011"],
+      "instruction": "无人机采集战壕与装甲图像，优先级：坦克>战壕>装甲车辆。"
+    },
+    {
+      "category": "高密战壕区",
       "groups": ["group_012"],
-      "instruction": "无人机发现战壕伴随火点，优先级：装甲车辆>卡车>战壕。"
+      "instruction": "无人机发现高密度战壕，优先级：坦克>战壕>军用卡车。"
     },
     {
-      "category": "混合威胁",
-      "groups": ["group_000", "group_006"],
-      "instruction": "无人机回传多类目标混布，优先级：装甲车辆>军用卡车>战壕。"
+      "category": "战壕补给群",
+      "groups": ["group_013"],
+      "instruction": "无人机采集战壕和补给车辆，优先级：装甲车辆>战壕>军用卡车。"
     },
     {
-      "category": "重装节点",
-      "groups": ["group_007", "group_016"],
-      "instruction": "无人机识别重装防御节点，优先级：重型车辆>装甲车辆>战壕。"
+      "category": "坦克防御阵地",
+      "groups": ["group_014"],
+      "instruction": "无人机发现坦克伴随战壕，优先级：坦克>战壕>卡车。"
+    },
+    {
+      "category": "坦克装甲支援",
+      "groups": ["group_015"],
+      "instruction": "无人机采集坦克装甲支援图像，优先级：坦克>装甲车辆>战壕。"
+    },
+    {
+      "category": "卡车机动点",
+      "groups": ["group_016"],
+      "instruction": "无人机发现卡车机动目标，优先级：坦克>军用卡车>战壕。"
+    },
+    {
+      "category": "重车集结区",
+      "groups": ["group_017"],
+      "instruction": "无人机采集重型车辆集结，优先级：重型车辆>装甲车辆>卡车。"
+    },
+    {
+      "category": "火炮战壕区",
+      "groups": ["group_018"],
+      "instruction": "无人机发现火炮和战壕目标，优先级：多管火炮>战壕>卡车。"
+    },
+    {
+      "category": "装甲战壕混合",
+      "groups": ["group_019"],
+      "instruction": "无人机采集装甲、坦克、战壕，优先级：坦克>装甲车辆>战壕。"
+    },
+    {
+      "category": "稳定防御点",
+      "groups": ["group_020"],
+      "instruction": "无人机发现稳定战壕防御，优先级：坦克>战壕>卡车。"
+    },
+    {
+      "category": "坦克侦察点",
+      "groups": ["group_021"],
+      "instruction": "无人机采集坦克与轻量战壕，优先级：坦克>装甲车辆>战壕。"
+    },
+    {
+      "category": "战壕卡车线",
+      "groups": ["group_022"],
+      "instruction": "无人机发现战壕和卡车目标，优先级：战壕>军用卡车>坦克。"
     }
   ]
 }

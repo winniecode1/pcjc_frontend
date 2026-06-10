@@ -151,6 +151,38 @@
         "group_018_view_B_composite.jpg",
         "group_018_view_C_composite.jpg"
       ]
+    },
+    {
+      "folder": "group_019",
+      "images": [
+        "group_019_view_A_composite.jpg",
+        "group_019_view_B_composite.jpg",
+        "group_019_view_C_composite.jpg"
+      ]
+    },
+    {
+      "folder": "group_020",
+      "images": [
+        "group_020_view_A_composite.jpg",
+        "group_020_view_B_composite.jpg",
+        "group_020_view_C_composite.jpg"
+      ]
+    },
+    {
+      "folder": "group_021",
+      "images": [
+        "group_021_view_A_composite.jpg",
+        "group_021_view_B_composite.jpg",
+        "group_021_view_C_composite.jpg"
+      ]
+    },
+    {
+      "folder": "group_022",
+      "images": [
+        "group_022_view_A_composite.jpg",
+        "group_022_view_B_composite.jpg",
+        "group_022_view_C_composite.jpg"
+      ]
     }
   ]
 }

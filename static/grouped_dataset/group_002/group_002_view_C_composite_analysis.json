@@ -1,0 +1,9 @@
+{
+    "group_name": "group_002",
+    "source_image": "group_002_view_C_composite.jpg",
+    "analysis_result": {
+        "detailed_description": "第一张图片检测到1个坦克目标(置信度0.79)；第二张图片检测到6个军用卡车目标(置信度0.78、0.68、0.63、0.61、0.61、0.47)、1个坦克目标(置信度0.41)；第三张图片检测到4个战壕目标(置信度0.91、0.76、0.70、0.44)。",
+        "target_class": "",
+        "target_count": ""
+    }
+}
