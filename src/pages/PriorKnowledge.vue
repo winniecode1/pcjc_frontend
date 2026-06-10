@@ -25,26 +25,12 @@
           <div class="design-module-content video-content-wrapper">
             <!-- 数据选择列表状态 -->
             <div v-if="!isVideoSelected" class="video-select-list">
-              <div class="source-type-buttons">
-                <button 
-                  class="source-type-btn" 
-                  :class="{ active: currentSourceType === 'image' }"
-                  @click="switchSourceType('image')">
-                  图片
-                </button>
-                <button 
-                  class="source-type-btn" 
-                  :class="{ active: currentSourceType === 'video' }"
-                  @click="switchSourceType('video')">
-                  视频
-                </button>
-              </div>
               <div class="video-list-container">
                 <div v-for="video in videoList" :key="video.id" class="video-select-item"
                   @click="selectVideo(video)">
                   <div class="video-info">
                     <span class="video-name">{{ video.name }}</span>
-                    <span class="video-type">{{ video.type || '未知' }}</span>
+                    <span class="video-type">{{ video.type === 'image' ? '图片' : (video.type === 'video' ? '视频' : (video.type || '未知')) }}</span>
                   </div>
                   <span class="selector-circle"></span>
                 </div>
@@ -67,7 +53,7 @@
             <!-- 数据展示状态 -->
             <div class="video-display-container">
               <!-- 图片展示（可点击放大） -->
-              <img v-if="selectedVideo && isImageFile(selectedVideo.name || selectedVideo.image_path)"
+              <img v-if="selectedVideo && selectedVideo.type === 'image'"
                    :src="videoUrl" class="video-display clickable-image" @error="handleImageError" @click="openLightbox(videoUrl)" />
               <!-- 视频展示 -->
               <video v-else-if="videoUrl" :src="videoUrl" controls autoplay loop muted class="video-display" @error="handleVideoError"></video>
@@ -334,7 +320,7 @@ export default {
           videoList: [],
           selectedVideo: null,
           isVideoSelected: false,
-          // 当前数据源类型：'image' 或 'video'
+          // 当前选中数据的媒体类型：'image' 或 'video'，默认 'image'
           currentSourceType: 'image',
           // 视频列表数据（来自 video_list 接口）
           videoSourceList: [],
@@ -348,8 +334,8 @@ export default {
     window.addEventListener('resize', this.handleResize);
     // 获取作战指令（使用默认图片路径）
     this.fetchOrders(IMG_PATH_URL);
-    // 获取图片列表
-    this.fetchImageList();
+    // 获取图片和视频混合列表
+    this.fetchMediaList();
     // 页面加载时加载视频
     this.loadVideoFromStorage();
     // 页面加载时加载初始描述信息（场景、目标、行为、总结）
@@ -369,6 +355,8 @@ export default {
         });
       }
     });
+    // 恢复之前选择的类别状态
+    this.restoreSelectedMediaType();
     // this.downloadJsonData();
   },
   beforeDestroy() {
@@ -425,7 +413,16 @@ export default {
         this.renderGraph();
       });
     },
-    
+
+    // 恢复选中的媒体类型状态
+    restoreSelectedMediaType() {
+      const savedType = localStorage.getItem('selectedMediaType');
+      if (savedType && (savedType === 'image' || savedType === 'video')) {
+        this.currentSourceType = savedType;
+        console.log('已恢复媒体类型状态:', this.currentSourceType);
+      }
+    },
+
     // 判断是否是图片文件
     isImageFile(filename) {
       if (!filename) return false;
@@ -504,6 +501,59 @@ export default {
         this.videoList = [];
       }
     },
+    // 获取图片和视频混合列表
+    async fetchMediaList() {
+      try {
+        // 并行获取图片列表和视频列表
+        const [imageRes, videoRes] = await Promise.all([
+          axios.get('http://10.109.253.71:8001/image_list').catch(() => ({ data: {} })),
+          axios.get('http://10.109.253.71:8001/module2/get_video_list').catch(() => ({ data: {} }))
+        ]);
+        
+        const imageList = [];
+        const videoList = [];
+        
+        // 处理图片数据
+        let imageRawData = imageRes.data;
+        if (imageRawData && imageRawData.data) {
+          imageRawData = imageRawData.data;
+        }
+        const imagesArray = (imageRawData && imageRawData.images) || (imageRawData && imageRawData.data) || [];
+        if (Array.isArray(imagesArray)) {
+          imagesArray.forEach((item, index) => {
+            imageList.push({
+              id: item.id || `img_${index + 1}`,
+              name: item.name || `图片${index + 1}`,
+              path: item.path || '',
+              type: 'image'
+            });
+          });
+        }
+        
+        // 处理视频数据
+        const videoRawData = videoRes.data;
+        const videoArray = videoRawData.video_list || [];
+        if (Array.isArray(videoArray)) {
+          videoArray.forEach((item, index) => {
+            const fullPath = typeof item === 'string' ? item : item.path || item.url || '';
+            const fileName = fullPath.split('/').pop() || `视频${index + 1}`;
+            videoList.push({
+              id: `video_${index + 1}`,
+              name: fileName,
+              path: fullPath,
+              type: 'video'
+            });
+          });
+        }
+        
+        // 合并图片和视频列表
+        this.videoList = [...imageList, ...videoList];
+        console.log('媒体列表处理后（图片+视频）:', this.videoList);
+      } catch (error) {
+        console.warn("获取媒体列表失败", error);
+        this.videoList = [];
+      }
+    },
     // 获取视频列表（来自 video_list 接口）
     async fetchVideoSourceList() {
       try {
@@ -557,32 +607,37 @@ export default {
     selectVideo(video) {
       // 检查是否选择了不同的图片，如果是则重置所有模块信息
       const isDifferentImage = this.selectedVideo && (
-        this.selectedVideo.path !== video.path || 
+        this.selectedVideo.path !== video.path ||
         this.selectedVideo.id !== video.id
       );
-      
+
       if (isDifferentImage || !this.selectedVideo) {
         this.resetModuleData();
       }
-      
+
       this.selectedVideo = video;
       this.isVideoSelected = true;
+      // 保存选中项的媒体类型到 localStorage
+      this.currentSourceType = video.type || 'image';
+      localStorage.setItem('selectedMediaType', video.type || 'image');
 
       // 调用接口获取作战指令和媒体URL
       this.fetchSampleInfo(video);
-      
+
       console.log('选中数据:', JSON.parse(JSON.stringify(video)));
     },
     
     // 获取样本信息（作战指令和媒体URL）
     async fetchSampleInfo(item) {
       const IMAGE_API_URL = 'http://10.109.253.71:8001';
-      
+      // 使用选中项的媒体类型
+      const mediaType = item.type || this.currentSourceType || 'image';
+
       try {
         let mediaUrl = null;
         let ordersText = null;
-        
-        if (this.currentSourceType === 'image') {
+
+        if (mediaType === 'image') {
           // 图片接口
           const response = await axios.get(`${IMAGE_API_URL}/api/dataset/sample/${item.id}`);
           const data = response.data;
@@ -627,7 +682,7 @@ export default {
           id: item.id,
           name: item.name,
           path: item.path || item.name,
-          type: this.currentSourceType
+          type: mediaType
         }));
 
         // 图片/视频延时2秒显示
@@ -653,7 +708,8 @@ export default {
     
     // 备用方案：使用原有逻辑获取媒体URL
     useFallbackMediaUrl(video) {
-      if (this.currentSourceType === 'video') {
+      const mediaType = video.type || this.currentSourceType || 'image';
+      if (mediaType === 'video') {
         const videoPath = video.path || video.name || '';
         this.videoUrl = `http://10.109.253.71:8001/module2/get_video?video_path=${encodeURIComponent(videoPath)}`;
         this.videoMessage = '视频加载中...';
@@ -682,7 +738,7 @@ export default {
           type: video.type,
           name: video.name
         }));
-        
+
         // 延迟2秒显示
         const tempUrl = this.videoUrl;
         this.videoUrl = null;
@@ -991,8 +1047,9 @@ export default {
           if (selectedImageData.path) {
             imgPath = selectedImageData.path;
           }
-          if (selectedImageData.type && selectedImageData.type !== 'image' && selectedImageData.type !== '图片') {
-            imgType = selectedImageData.type;
+          // 如果是视频类型，使用 video；否则使用文件扩展名
+          if (selectedImageData.type === 'video') {
+            imgType = 'video';
           } else {
             imgType = imgPath.split('.').pop();
           }
@@ -1260,8 +1317,21 @@ export default {
     // 查询先验知识按钮
     queryPriorKnowledge() {
       if (!this.listResultData) {
-        console.warn('请先进行细粒度检测');
-        return;
+        // 如果本地缓存有数据，尝试恢复
+        const cacheStr = localStorage.getItem('module2Res');
+        if (cacheStr) {
+          try {
+            this.listResultData = JSON.parse(cacheStr);
+            console.log('从缓存恢复 listResultData 成功');
+          } catch (e) {
+            console.error('恢复缓存数据失败:', e);
+            alert('请先点击"目标信息类别识别"按钮获取数据');
+            return;
+          }
+        } else {
+          alert('请先点击"目标信息类别识别"按钮获取数据');
+          return;
+        }
       }
       
       this.isQueryingPriorKnowledge = true;
