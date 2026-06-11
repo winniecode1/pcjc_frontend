@@ -136,6 +136,10 @@
                   <div class="diagnosis-text">正在诊断中...</div>
                 </div>
               </div>
+              <div class="metric-group" v-if="module1ErrorType || module1ErrorJudgement">
+                <div class="metric-item">偏差类型: <span class="bias-yes-red">{{ module1ErrorType || '-' }}</span></div>
+                <div class="metric-item">偏差判断: <span class="bias-yes-red">{{ module1ErrorJudgement || '-' }}</span></div>
+              </div>
               <div class="metric-group">
                 <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module1InternalBias, 0) }}</span></div>
                 <div class="metric-item">认知传播偏差结果: <span>{{ formatPercent(module1PropagationBias, 0) }}</span></div>
@@ -154,6 +158,10 @@
                 <div v-if="isLoading && !module2Result" class="diagnosis-overlay">
                   <div class="loading-spinner-large"></div>
                 </div>
+              </div>
+              <div class="metric-group" v-if="module2ErrorType || module2ErrorJudgement">
+                <div class="metric-item">偏差类型: <span class="bias-yes-red">{{ module2ErrorType || '-' }}</span></div>
+                <div class="metric-item">偏差判断: <span class="bias-yes-red">{{ module2ErrorJudgement || '-' }}</span></div>
               </div>
               <div class="metric-group">
                 <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module2InternalBias, 0) }}</span></div>
@@ -174,6 +182,10 @@
                   <div class="loading-spinner-large"></div>
                 </div>
               </div>
+              <div class="metric-group" v-if="module3ErrorType || module3ErrorJudgement">
+                <div class="metric-item">偏差类型: <span class="bias-yes-red">{{ module3ErrorType || '-' }}</span></div>
+                <div class="metric-item">偏差判断: <span class="bias-yes-red">{{ module3ErrorJudgement || '-' }}</span></div>
+              </div>
               <div class="metric-group">
                 <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module3InternalBias, 0) }}</span></div>
                 <div class="metric-item">认知传播偏差结果: <span>{{ formatPercent(module3PropagationBias, 0) }}</span></div>
@@ -193,8 +205,13 @@
                   <div class="loading-spinner-large"></div>
                 </div>
               </div>
+              <div class="metric-group" v-if="module4ErrorType || module4ErrorJudgement">
+                <div class="metric-item">偏差类型: <span class="bias-yes-red">{{ module4ErrorType || '-' }}</span></div>
+                <div class="metric-item">偏差判断: <span class="bias-yes-red">{{ module4ErrorJudgement || '-' }}</span></div>
+              </div>
               <div class="metric-group">
                 <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module4InternalBias, 0) }}</span></div>
+                <div class="metric-item">认知传播偏差结果: <span>{{ formatPercent(module4PropagationBias, 0) }}</span></div>
                 <div class="metric-item">是否是偏差模块: <span :class="biasYesClass(module4IsBiasModule)">{{ formatYesNo(module4IsBiasModule) }}</span></div>
               </div>
             </div>
@@ -203,13 +220,7 @@
 
         <div class="bottom-content">
           <div class="metric-pair">
-            <div class="metric-half metric-half-left">
-              <div class="metric-card formula-card">
-                <div class="metric-title">计算公式</div>
-                <div ref="formulaRef" class="metric-value formula-text"></div>
-              </div>
-            </div>
-            <div class="metric-half metric-half-right">
+            <div class="metric-half metric-half-center">
               <div class="metric-card recall-card centered-metric">
                 <div class="metric-title">不一致根因召回率</div>
                 <div class="metric-value">
@@ -258,7 +269,8 @@ const FIELD_LABEL_MAP = {
 };
 
 const COMBINED_TIMER_KEY = 'pcjc_combined_timers_v2';
-const COMBINED_RECALL_DONE_VALUE = 0.92;
+// 老板要求：不一致根因召回率前端写死为 82%，在四个诊断框展示后一并显示
+const COMBINED_RECALL_DONE_VALUE = 0.82;
 const STAGE_LABEL_MAP = {
   Stage1: '多模态信息认知阶段',
   Stage2: '先验知识认知阶段',
@@ -278,7 +290,9 @@ export default {
       selectedImage: null,
       selectedVideo: null,
       isLoading: false,
-      showAlert: false, alertVariant: 'info', alertMessage: '',
+      showAlert: false,
+      alertVariant: 'info',
+      alertMessage: '',
       instruction: '',
       yoloDescription: '',
       detectedClasses: [],
@@ -302,14 +316,20 @@ export default {
       module1InternalBias: null,
       module1PropagationBias: null,
       module1IsBiasModule: null,
+      module1ErrorType: '',
+      module1ErrorJudgement: '',
       module2Result: '',
       module2InternalBias: null,
       module2PropagationBias: null,
       module2IsBiasModule: null,
+      module2ErrorType: '',
+      module2ErrorJudgement: '',
       module3Result: '',
       module3InternalBias: null,
       module3PropagationBias: null,
       module3IsBiasModule: null,
+      module3ErrorType: '',
+      module3ErrorJudgement: '',
       module4ShowDiagnosisOverlay: false,
       module4BiasTestResultPending: '',
       module4InternalBiasPending: null,
@@ -317,7 +337,10 @@ export default {
       module4DelayTimer: null,
       module4Result: '',
       module4InternalBias: null,
+      module4PropagationBias: null,
       module4IsBiasModule: null,
+      module4ErrorType: '',
+      module4ErrorJudgement: '',
       accuracy: null,
       recall: null,
       diagnosisConsistencyType: null,
@@ -342,20 +365,17 @@ export default {
     }
   },
   mounted() {
-    const isRouteNav = sessionStorage.getItem('pcjc_combined_nav');
-    sessionStorage.removeItem('pcjc_combined_nav');
-    if (!isRouteNav) {
-      this.clearTimerStateFromStorage();
-    }
-    this.fetchImageList().then(() => {
-      this.restoreFullStateFromStorage();
-    });
-    this.renderFormula();
-    this.clearResults({ resetPersistentMetric: false });
+    // 进入页面一律回到初始状态：清掉历史诊断倒计时与上次选择，等待用户重新选择数据
+    this.clearTimerStateFromStorage();
+    try {
+      sessionStorage.removeItem('pcjc_combined_nav');
+      sessionStorage.removeItem('pcjc_selected_source_context');
+    } catch (e) { /* ignore */ }
+    this.fetchImageList();
+    this.clearResults({ resetPersistentMetric: true });
     this.carouselItems = [];
   },
   beforeDestroy() {
-    sessionStorage.setItem('pcjc_combined_nav', '1');
     if (this.pollTimer) clearInterval(this.pollTimer);
     if (this.module1DelayTimer && this.module1DelayTimer !== 'done') clearTimeout(this.module1DelayTimer);
     if (this.module4DelayTimer && this.module4DelayTimer !== 'done') clearTimeout(this.module4DelayTimer);
@@ -363,65 +383,6 @@ export default {
     if (this.recallDisplayTimer) clearTimeout(this.recallDisplayTimer);
   },
   methods: {
-    renderFormula() {
-      // 动态加载 KaTeX；若加载失败则回退到纯文本公式，避免空白
-      if (!window.katex) {
-        const existingCss = document.querySelector('link[data-katex-css="1"]');
-        if (!existingCss) {
-          const link = document.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css';
-          link.setAttribute('data-katex-css', '1');
-          document.head.appendChild(link);
-        }
-
-        const existingScript = document.querySelector('script[data-katex-js="1"]');
-        if (existingScript) {
-          // 如果脚本已在加载中，先给兜底文本，等待加载完成后再渲染
-          this.renderFormulaFallback();
-          return;
-        }
-
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js';
-        script.setAttribute('data-katex-js', '1');
-        script.onload = () => {
-          this.doRender();
-        };
-        script.onerror = () => {
-          this.renderFormulaFallback();
-        };
-        document.head.appendChild(script);
-
-        // 防止脚本长时间无响应导致空白
-        setTimeout(() => {
-          if (!window.katex) {
-            this.renderFormulaFallback();
-          }
-        }, 2000);
-      } else {
-        this.doRender();
-      }
-    },
-    renderFormulaFallback() {
-      if (!this.$refs.formulaRef) return;
-      this.$refs.formulaRef.textContent =
-        'Recall = Σ|G_i ∩ Ĝ_i| / (Σ|G_i ∩ Ĝ_i| + Σ|G_i \\ Ĝ_i|)';
-    },
-    doRender() {
-      if (window.katex && this.$refs.formulaRef) {
-        try {
-          window.katex.render("\\small\\mathrm{Recall}=\\frac{\\sum_{i=1}^{N}\\left|G_i\\cap \\hat{G}_i\\right|}{\\sum_{i=1}^{N}\\left|G_i\\cap \\hat{G}_i\\right|+\\sum_{i=1}^{N}\\left|G_i\\setminus \\hat{G}_i\\right|}", this.$refs.formulaRef, {
-            throwOnError: false,
-            displayMode: false
-          });
-        } catch (e) {
-          this.renderFormulaFallback();
-        }
-      } else {
-        this.renderFormulaFallback();
-      }
-    },
     resolveConsistencyFolderType(source = {}) {
       const typeKey = String(source.type_key || '').trim().toLowerCase();
       if (typeKey === 'consistent') return 'live';
@@ -682,84 +643,11 @@ export default {
         this.recallDisplayTimer = null;
       }
     },
-    readTimerStateFromStorage() {
-      try {
-        const raw = localStorage.getItem(COMBINED_TIMER_KEY);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        return (parsed && typeof parsed === 'object') ? parsed : null;
-      } catch (e) {
-        return null;
-      }
-    },
-    persistTimerState(patch) {
-      try {
-        const current = this.readTimerStateFromStorage() || {};
-        const merged = { ...current, ...patch };
-        localStorage.setItem(COMBINED_TIMER_KEY, JSON.stringify(merged));
-      } catch (e) {
-        // ignore
-      }
-    },
     clearTimerStateFromStorage() {
       try {
         localStorage.removeItem(COMBINED_TIMER_KEY);
       } catch (e) {
         // ignore
-      }
-    },
-    restoreFullStateFromStorage() {
-      const state = this.readTimerStateFromStorage();
-      if (!state) return;
-
-      if (state.selectedSourceId) {
-        const target = this.imageList.find(v => v.source_id === state.selectedSourceId);
-        if (target) {
-          this.selectVideo(target, { preserveCurrentResult: true });
-        }
-      }
-
-      if (state.diagnosisData) {
-        this.cachedDiagnosisData = state.diagnosisData;
-      }
-
-      const now = Date.now();
-
-      if (state.contentRevealAt) {
-        const remaining = state.contentRevealAt - now;
-        if (remaining <= 0) {
-          if (this.cachedDiagnosisData) {
-            this.parseData(this.cachedDiagnosisData, true);
-          }
-        } else {
-          this.isLoading = true;
-          this.revealContentTimer = setTimeout(() => {
-            this.revealContentTimer = null;
-            if (this.cachedDiagnosisData) {
-              this.parseData(this.cachedDiagnosisData, true);
-            }
-            this.isLoading = false;
-            this.showMsg('success', '诊断完成！');
-          }, remaining);
-        }
-      }
-
-      if (state.recallStatus === 'done') {
-        const doneValue = Number(state.recallValue);
-        this.recall = Number.isFinite(doneValue) ? doneValue : COMBINED_RECALL_DONE_VALUE;
-        this.exportEnabled = true;
-      } else if (state.recallFireAt) {
-        const remaining = state.recallFireAt - now;
-        if (remaining <= 0) {
-          this.finishRecallTimer();
-        } else {
-          this.recall = null;
-          this.exportEnabled = false;
-          this.recallWaiting = true;
-          this.recallDisplayTimer = setTimeout(() => {
-            this.finishRecallTimer();
-          }, remaining);
-        }
       }
     },
     finishRecallTimer() {
@@ -769,11 +657,6 @@ export default {
       }
       this.recall = COMBINED_RECALL_DONE_VALUE;
       this.exportEnabled = true;
-      this.persistTimerState({
-        recallStatus: 'done',
-        recallValue: COMBINED_RECALL_DONE_VALUE,
-        recallFireAt: null
-      });
     },
     async startAnalysis() {
       if (!this.selectedImage) { this.showMsg('warning', '请先选择数据源！'); return; }
@@ -793,18 +676,8 @@ export default {
         this.cachedDiagnosisData = responseData;
 
         const contentDelayMs = Math.round(randomBetween(20000, 30000));
-        const recallDelayMs = Math.round(randomBetween(2.8 * 60 * 1000, 3.2 * 60 * 1000));
-        const now = Date.now();
-        const contentRevealAt = now + contentDelayMs;
-        const recallFireAt = now + recallDelayMs;
-
-        this.persistTimerState({
-          selectedSourceId: this.selectedImage.source_id,
-          diagnosisData: responseData,
-          contentRevealAt: contentRevealAt,
-          recallFireAt: recallFireAt,
-          recallStatus: 'running'
-        });
+        // 四个诊断框展示完成后，立即显示写死的召回率
+        const recallDelayMs = contentDelayMs;
 
         this.revealContentTimer = setTimeout(() => {
           this.revealContentTimer = null;
@@ -816,7 +689,6 @@ export default {
         this.recallDisplayTimer = setTimeout(() => {
           this.finishRecallTimer();
         }, recallDelayMs);
-
       } catch (error) {
         console.error("诊断接口调用失败", error);
         this.clearAnalysisTimers();
@@ -838,198 +710,75 @@ export default {
     },
     normalizeStageDiagnosisResponse(raw) {
       const result = this.safeGet(raw, 'result', {});
-      const stages = this.safeGet(result, 'stages', {});
       const consistencyType = String(
         this.safeGet(result, 'consistency_type', '') || this.safeGet(raw, 'stage1.type_key', '')
       ).trim().toLowerCase();
-      const useIsBias = consistencyType === 'inconsistent';
       const toNumberOrNull = (value) => {
         if (value === null || value === undefined) return null;
         const n = Number(value);
         return Number.isFinite(n) ? n : null;
       };
-
-      const stageView = (stageName) => {
-        const stage = stages && typeof stages === 'object' ? (stages[stageName] || {}) : {};
-        const similarity = stage && typeof stage === 'object' ? stage.similarity : null;
-        const internalPrediction = this.safeGet(stage, 'internal_prediction', {});
-        const internalPredictionObj = (internalPrediction && typeof internalPrediction === 'object' && !Array.isArray(internalPrediction))
-          ? internalPrediction
-          : {};
-        const internalOutputPrediction = this.safeGet(stage, 'internal_output.prediction', {});
-        const internalOutputPredictionObj = (internalOutputPrediction && typeof internalOutputPrediction === 'object' && !Array.isArray(internalOutputPrediction))
-          ? internalOutputPrediction
-          : {};
-        const modelOutputPrediction = this.safeGet(stage, 'model_output.prediction', {});
-        const modelOutputPredictionObj = (modelOutputPrediction && typeof modelOutputPrediction === 'object' && !Array.isArray(modelOutputPrediction))
-          ? modelOutputPrediction
-          : {};
-        const isBiasModuleRaw = this.safeGet(stage, 'is_bias_module', null);
-        const similarityNum = (similarity !== null && similarity !== undefined && !Number.isNaN(Number(similarity)))
-          ? Number(similarity)
-          : null;
-        const isBiasModule = (() => {
-          if (typeof isBiasModuleRaw === 'boolean') return isBiasModuleRaw;
-          if (!useIsBias && consistencyType === 'consistent') return false;
-          return null;
-        })();
-        let internalBiasRaw = this.safeGet(stage, 'internal_bias_score', null);
-        if (internalBiasRaw === null || internalBiasRaw === undefined) {
-          internalBiasRaw = this.safeGet(stage, 'internal_output.bias_score', null);
-        }
-        let propagationBiasRaw = this.safeGet(stage, 'propagation_bias_score', null);
-        if (propagationBiasRaw === null || propagationBiasRaw === undefined) {
-          propagationBiasRaw = this.safeGet(stage, 'propagation_output.bias_score', null);
-        }
-        if (propagationBiasRaw === null || propagationBiasRaw === undefined) {
-          propagationBiasRaw = this.safeGet(stage, 'propogation_output.bias_score', null);
-        }
-        const internalBias = toNumberOrNull(internalBiasRaw);
-        const propagationBias = toNumberOrNull(propagationBiasRaw);
-
-        return {
-          finalText: this.safeGet(stage, 'final_text', '') || this.safeGet(stage, 'output_text', '') || this.safeGet(stage, 'internal_text', ''),
-          internalText: this.safeGet(stage, 'internal_text', ''),
-          outputText: this.safeGet(stage, 'output_text', ''),
-          similarity: similarityNum,
-          internalPrediction: Object.keys(internalPredictionObj).length
-            ? internalPredictionObj
-            : (Object.keys(internalOutputPredictionObj).length ? internalOutputPredictionObj : modelOutputPredictionObj),
-          internalBias,
-          propagationBias,
-          isBiasModule
-        };
-      };
-
-      const s1 = stageView('Stage1');
-      const s2 = stageView('Stage2');
-      const s3 = stageView('Stage3');
-      const s4 = stageView('Stage4');
       const overallSimilarity = toNumberOrNull(this.safeGet(result, 'overall_similarity', null));
 
       return {
         running: false,
         status: 'completed',
         accuracy: overallSimilarity,
-        recall: overallSimilarity,
         consistency_type: consistencyType || null,
-        modules: {
-          module1: {
-            single_task_stage: {
-              prediction: {
-                caption: s1.finalText,
-                internal_text: s1.internalText,
-                model_output: s1.outputText
-              }
-            },
-            module_test_stage: { prediction: { cognitive_bias: s1.internalBias } },
-            analysis_task: { calculated_value: s1.propagationBias },
-            is_bias_module: s1.isBiasModule
-          },
-          module2: {
-            single_task_stage: {
-              prediction: {
-                ...(s2.internalPrediction && Object.keys(s2.internalPrediction).length
-                  ? s2.internalPrediction
-                  : {
-                    kind: '阶段二结果',
-                    summary: s2.finalText,
-                    internal_text: s2.internalText,
-                    model_output: s2.outputText
-                  })
-              }
-            },
-            module_test_stage: { prediction: { cognitive_bias: s2.internalBias } },
-            analysis_task: { calculated_value: s2.propagationBias },
-            is_bias_module: s2.isBiasModule
-          },
-          module3: {
-            single_task_stage: {
-              prediction: {
-                final_review: s3.finalText,
-                internal_text: s3.internalText,
-                model_output: s3.outputText
-              }
-            },
-            module_test_stage: { prediction: { cognitive_bias: s3.internalBias } },
-            analysis_task: { calculated_value: s3.propagationBias },
-            is_bias_module: s3.isBiasModule
-          },
-          module4: {
-            single_task_stage: {
-              prediction: {
-                summary: s4.finalText,
-                internal_text: s4.internalText,
-                model_output: s4.outputText
-              }
-            },
-            module_test_stage: { prediction: { cognitive_bias: s4.internalBias } },
-            is_bias_module: s4.isBiasModule
-          }
-        }
+        cards: this.extractStageDiagnosisCards(raw)
       };
     },
-    startPolling() {
-      if (this.pollTimer) clearInterval(this.pollTimer);
-      this.pollStatus();
-      this.pollTimer = setInterval(() => {
-        this.pollStatus();
-      }, 1000);
-    },
-    async pollStatus() {
-      try {
-        const data = await this.requestDiagnosisStatus();
-        if (!data || !data.modules) return;
-        const shouldShowImmediately = data && (data.running === false || data.status === 'completed');
-        this.parseData(data, shouldShowImmediately);
-        if (data.running === false || data.status === 'completed') {
-          if (this.pollTimer) clearInterval(this.pollTimer);
-          this.pollTimer = null;
-          this.isLoading = false;
-          this.showMsg('success', '诊断完成！');
+    // 将 stageDiagnosisCards（数组或对象）规整为 { Stage1..Stage4 } 映射
+    extractStageDiagnosisCards(raw) {
+      const rawCards = (raw && (raw.stageDiagnosisCards || raw.stageBoxes)) || [];
+      const map = {};
+      const putCard = (card, fallbackIndex) => {
+        if (!card || typeof card !== 'object') return;
+        const stageMatch = String(card.stage || '').match(/Stage\s*([1-4])/i);
+        const stageNo = stageMatch ? Number(stageMatch[1]) : fallbackIndex;
+        if (stageNo >= 1 && stageNo <= 4 && !map[`Stage${stageNo}`]) {
+          map[`Stage${stageNo}`] = card;
         }
-      } catch (e) {
-        if (this.pollTimer) clearInterval(this.pollTimer);
-        this.pollTimer = null;
-        this.isLoading = false;
-        console.warn("轮询失败", e);
+      };
+      if (Array.isArray(rawCards)) {
+        rawCards.forEach((card, idx) => putCard(card, idx + 1));
+      } else if (rawCards && typeof rawCards === 'object') {
+        Object.keys(rawCards).forEach((key) => {
+          const keyMatch = String(key).match(/Stage\s*([1-4])/i);
+          putCard(rawCards[key], keyMatch ? Number(keyMatch[1]) : 0);
+        });
       }
+      return map;
     },
-    async requestDiagnosisStatus() {
-      return this.requestDiagnosisResult(this.buildDiagnosisPayload());
-    },
-    parseData(data, fromCache = false) {
-      const modules = data.modules || {};
+    parseData(data) {
       this.diagnosisConsistencyType = this.safeGet(data, 'consistency_type', null);
-      this.parseModule1(modules.module1, fromCache);
-      this.parseModule2(modules.module2);
-      this.parseModule3(modules.module3);
-      this.parseModule4(modules.module4, fromCache);
+      const cards = (data && data.cards) || {};
+      this.applyCardToModule(1, cards.Stage1);
+      this.applyCardToModule(2, cards.Stage2);
+      this.applyCardToModule(3, cards.Stage3);
+      this.applyCardToModule(4, cards.Stage4);
       if (data.accuracy !== undefined && data.accuracy !== null) this.accuracy = data.accuracy;
     },
-    parseModule1(module1, fromCache = false) {
-      if (!module1) return;
+    applyCardToModule(moduleNo, card) {
+      const safeCard = (card && typeof card === 'object') ? card : {};
+      const toNumberOrNull = (value) => {
+        if (value === null || value === undefined) return null;
+        const n = Number(value);
+        return Number.isFinite(n) ? n : null;
+      };
+      // is_bias_module 缺失时按"否"处理
+      const isBiasModule = safeCard.is_bias_module === true;
+      // 内容为 Markdown 格式，去掉每行行首的 # 标记，只保留标题文字
+      const content = String(safeCard.content || '').replace(/^#+\s*/gm, '');
 
-      const singleTask = module1.single_task_stage;
-      const biasTestResult = singleTask ? this.safeGet(singleTask, 'prediction.caption', '') : '';
-
-      const moduleTestStage = module1.module_test_stage;
-      const internalBias = moduleTestStage ? this.safeGet(moduleTestStage, 'prediction.cognitive_bias', null) : null;
-
-      const analysisTask = module1.analysis_task;
-      const propagationBias = analysisTask ? this.safeGet(analysisTask, 'calculated_value', null) : null;
-
-      const isBiasModule = this.safeGet(module1, 'is_bias_module', null);
-      const focusedResult = this.pickTopBracketFieldsForBias(biasTestResult || '', isBiasModule);
-
-      this.module1Result = focusedResult;
-      this.module1InternalBias = internalBias;
-      this.module1PropagationBias = propagationBias;
-      this.module1IsBiasModule = isBiasModule;
-      this.module1ShowDiagnosisOverlay = false;
-    },
-    translateFieldKey(key) {
-      return FIELD_LABEL_MAP[key] || key;
+      this[`module${moduleNo}Result`] = this.pickTopBracketFieldsForBias(content, isBiasModule);
+      this[`module${moduleNo}InternalBias`] = toNumberOrNull(safeCard.intern_bias);
+      this[`module${moduleNo}PropagationBias`] = toNumberOrNull(safeCard.propogation_bias);
+      this[`module${moduleNo}IsBiasModule`] = isBiasModule;
+      this[`module${moduleNo}ErrorType`] = String(safeCard.error_type || '').trim();
+      this[`module${moduleNo}ErrorJudgement`] = String(safeCard.error_judgement || '').trim();
+      if (moduleNo === 1) this.module1ShowDiagnosisOverlay = false;
+      if (moduleNo === 4) this.module4ShowDiagnosisOverlay = false;
     },
     replaceAgentTerms(value) {
       if (value === null || value === undefined) return '';
@@ -1074,60 +823,6 @@ export default {
         if (imageDescLine) return imageDescLine.trim();
       }
       return this.translateTextContent(content);
-    },
-    parseModule2(module2) {
-      if (!module2) return;
-
-      const prediction = this.safeGet(module2, 'single_task_stage.prediction', null);
-      const isBiasModule = this.safeGet(module2, 'is_bias_module', null);
-      let rawModule2Result = '';
-      if (prediction && typeof prediction === 'object') {
-        const lines = [];
-        Object.keys(prediction).forEach((key) => {
-          if (key === 'cognitive_bias') return;
-          lines.push(`${this.translateFieldKey(key)}：${this.formatPredictionValue(prediction[key])}`);
-        });
-        rawModule2Result = lines.join('\n');
-      } else {
-        rawModule2Result = '';
-      }
-
-      this.module2Result = this.pickTopBracketFieldsForBias(rawModule2Result, isBiasModule);
-      this.module2InternalBias = this.safeGet(module2, 'module_test_stage.prediction.cognitive_bias', null);
-      this.module2PropagationBias = this.safeGet(module2, 'analysis_task.calculated_value', null);
-      this.module2IsBiasModule = isBiasModule;
-    },
-    formatPredictionValue(value) {
-      if (value === null || value === undefined) return '';
-      if (typeof value === 'string') return this.replaceAgentTerms(value);
-      if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-      try {
-        return this.replaceAgentTerms(JSON.stringify(value, null, 2));
-      } catch (e) {
-        return this.replaceAgentTerms(String(value));
-      }
-    },
-    parseModule3(module3) {
-      if (!module3) return;
-
-      const isBiasModule = this.safeGet(module3, 'is_bias_module', null);
-      const rawModule3Result = this.safeGet(module3, 'single_task_stage.prediction.final_review', '');
-      this.module3Result = this.pickTopBracketFieldsForBias(rawModule3Result, isBiasModule);
-      this.module3InternalBias = this.safeGet(module3, 'module_test_stage.prediction.cognitive_bias', null);
-      this.module3PropagationBias = this.safeGet(module3, 'analysis_task.calculated_value', null);
-      this.module3IsBiasModule = isBiasModule;
-    },
-    parseModule4(module4, fromCache = false) {
-      if (!module4) return;
-
-      const biasTestResult = this.safeGet(module4, 'single_task_stage.prediction.summary', '');
-      const internalBias = this.safeGet(module4, 'module_test_stage.prediction.cognitive_bias', null);
-      const isBiasModule = this.safeGet(module4, 'is_bias_module', null);
-
-      this.module4Result = this.pickTopBracketFieldsForBias(biasTestResult || '', isBiasModule);
-      this.module4InternalBias = internalBias;
-      this.module4IsBiasModule = isBiasModule;
-      this.module4ShowDiagnosisOverlay = false;
     },
     pickTopBracketFieldsForBias(text, isBiasModule) {
       const raw = String(text || '');
@@ -1204,7 +899,11 @@ export default {
       this.module1InternalBias = null; this.module1PropagationBias = null; this.module1IsBiasModule = null;
       this.module2InternalBias = null; this.module2PropagationBias = null; this.module2IsBiasModule = null;
       this.module3InternalBias = null; this.module3PropagationBias = null; this.module3IsBiasModule = null;
-      this.module4InternalBias = null; this.module4IsBiasModule = null;
+      this.module4InternalBias = null; this.module4PropagationBias = null; this.module4IsBiasModule = null;
+      this.module1ErrorType = ''; this.module1ErrorJudgement = '';
+      this.module2ErrorType = ''; this.module2ErrorJudgement = '';
+      this.module3ErrorType = ''; this.module3ErrorJudgement = '';
+      this.module4ErrorType = ''; this.module4ErrorJudgement = '';
       this.diagnosisConsistencyType = null;
       this.accuracy = null; this.recall = null;
       this.analysisStartedAt = null;
@@ -1274,8 +973,8 @@ export default {
 
 /* 提示信息 */
 .alert-container { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); z-index: 100; width: 40%; }
-.custom-alert { 
-  display: flex; align-items: center; padding: 12px 20px; border-radius: 4px; 
+.custom-alert {
+  display: flex; align-items: center; padding: 12px 20px; border-radius: 4px;
   background: rgba(10, 30, 60, 0.9); border: 2px solid #1a65a8; backdrop-filter: blur(5px);
 }
 .alert-success { border-color: #00e5ff; color: #00e5ff; }
@@ -1295,7 +994,7 @@ export default {
   display: flex; justify-content: center; align-items: center; margin-bottom: 5px;
 }
 
-.sidebar-scroll-area { 
+.sidebar-scroll-area {
   height: 35vh !important; padding: 10px;
   background-image: url('~@/assets/images/step1/-s-弹框-选择数据.png');
   background-size: 100% 100%; margin-bottom: 10px;
@@ -1517,37 +1216,12 @@ export default {
   display: flex;
   align-items: center;
 }
-.metric-half-left {
-  justify-content: flex-end;
-  padding-right: 12px;
-}
-.metric-half-right {
-  justify-content: flex-start;
-  padding-left: 12px;
+.metric-half-center {
+  justify-content: center;
 }
 .metric-card {
   background-image: url('~@/assets/images/step5/底部多主体和不一致的背景.png'); background-size: 100% 100%; width: 16vw; height: 7vh;
   display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0;
-}
-.formula-card {
-  width: 24vw;
-  min-width: 320px;
-  max-width: 520px;
-  padding: 0 10px;
-}
-.formula-text {
-  width: 100%;
-  font-size: 1.18rem !important;
-  line-height: 1.1;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  font-family: 'DingTalk-JinBuTi', 'Microsoft YaHei', sans-serif !important;
-  color: #FFFFFF;
-  letter-spacing: 0;
-}
-.formula-text /deep/ .katex {
-  font-size: 1.18em;
 }
 .metric-title { font-family: 'DOUYUFont'; font-size: 10px; padding-left: 40px; text-align: left; width: 100%; }
 .metric-value { font-size: 1.8rem; font-weight: bold; font-family: 'DingTalk-JinBuTi', sans-serif !important; }

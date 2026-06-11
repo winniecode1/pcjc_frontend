@@ -1790,7 +1790,8 @@ export default {
       try {
         // 创建隐藏的下载链接
         const link = document.createElement('a');
-        link.href = '/module3/export_batch';
+        link.href = '/static/batch_result.zip';
+        link.download = 'batch_result.zip';
         link.style.display = 'none';
         document.body.appendChild(link);
         link.click();

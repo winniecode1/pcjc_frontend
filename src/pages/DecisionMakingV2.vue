@@ -188,7 +188,7 @@
                           'ba-intent-btn--selected': selectedTacticalIntentIndex === idx,
                           'ba-intent-btn--disabled': selectedTacticalIntentIndex !== null && selectedTacticalIntentIndex !== idx
                         }"
-                        :disabled="selectedTacticalIntentIndex !== null"
+                        :disabled="selectedTacticalIntentIndex !== null && selectedTacticalIntentIndex !== idx"
                         @click="selectTacticalIntent(idx)"
                       >
                         <span class="ba-intent-name">{{ item.intent }}</span>
@@ -3527,6 +3527,8 @@ export default {
     0 0 24px rgba(0, 229, 255, 0.55),
     inset 0 0 28px rgba(0, 229, 255, 0.14);
   transform: translateX(3px);
+  opacity: 1;
+  cursor: default;
 }
 
 .ba-intent-btn--selected::before {
@@ -3535,7 +3537,7 @@ export default {
 }
 
 .ba-intent-btn--disabled,
-.ba-intent-btn:disabled {
+.ba-intent-btn:disabled:not(.ba-intent-btn--selected) {
   cursor: not-allowed;
   opacity: 0.45;
   transform: none;
