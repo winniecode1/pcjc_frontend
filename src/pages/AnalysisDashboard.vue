@@ -20,13 +20,30 @@
 
         <div class="sidebar-scroll-area">
           <div class="folder-group">
-            <div class="video-item folder-header-item">
+            <div class="video-item folder-header-item" @click="isLiveOpen = !isLiveOpen">
               <span class="folder-name-container">
-                <span class="folder-label">全部样本</span>
+                <span class="fold-arrow" :class="{ rotated: isLiveOpen }">▶</span>
+                <span class="folder-label">认知传播一致数据</span>
               </span>
             </div>
-            <div class="items-container">
-              <div v-for="video in videoList" :key="video.id" class="video-item" @click="selectVideo(video)"
+            <div v-show="isLiveOpen" class="items-container">
+              <div v-for="video in liveVideos" :key="video.id" class="video-item" @click="selectVideo(video)"
+                :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }">
+                <span class="video-name">{{ video.name }}</span>
+                <span class="selector-circle"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="folder-group">
+            <div class="video-item folder-header-item" @click="isDemoOpen = !isDemoOpen">
+              <span class="folder-name-container">
+                <span class="fold-arrow" :class="{ rotated: isDemoOpen }">▶</span>
+                <span class="folder-label">认知传播不一致数据</span>
+              </span>
+            </div>
+            <div v-show="isDemoOpen" class="items-container">
+              <div v-for="video in demoVideos" :key="video.id" class="video-item" @click="selectVideo(video)"
                 :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }">
                 <span class="video-name">{{ video.name }}</span>
                 <span class="selector-circle"></span>
@@ -43,7 +60,7 @@
               v-else
               id="analysis-preview-carousel"
               v-model="carouselSlide"
-              :interval="4000"
+              :interval="carouselInterval"
               controls
               indicators
               background="transparent"
@@ -110,10 +127,6 @@
 
         <!-- 底部指标 -->
         <div class="analysis-bottom-section">
-          <div class="metric-card-custom formula-card-custom">
-            <div class="m-title formula-title-custom">计算公式</div>
-            <div ref="formulaRef" class="m-value formula-text-custom"></div>
-          </div>
           <div class="metric-card-custom">
             <div class="m-title">增强前 多主体解析准确率</div>
             <div class="m-value">
@@ -148,8 +161,6 @@
 <script>
 import * as echarts from 'echarts';
 const API_BASE_URL = 'http://10.109.253.71:5235';
-const DATASET_API_BASE_URL = API_BASE_URL;
-const KNOWLEDGE_API_BASE_URL = 'http://10.109.253.71:8001';
 
 const FIELD_LABEL_MAP = {
   'ground_truth': '真实标签',
@@ -173,23 +184,51 @@ const FIELD_LABEL_MAP = {
   'internal_text': '内部文本',
   'model_output': '模型输出',
   'cognitive_bias': '认知偏差',
-  'caption': '图片描述'
+  'caption': '图片描述',
+  'firepower': '火力',
+  'power': '动力',
+  'size': '尺寸'
 };
 const ANALYSIS_ACCURACY_DONE_VALUE = 89;
 const ANALYSIS_TIMER_KEY = 'pcjc_analysis_timers_v1';
 const ANALYSIS_PRE_ACCURACY = 70;
 const ANALYSIS_POST_ACCURACY = 82;
+const CAROUSEL_DEFAULT_INTERVAL = 4000;
+const CAROUSEL_PAUSE_MS = 10000;
 const STAGE_LABEL_MAP = {
   Stage1: '多模态信息认知阶段',
   Stage2: '先验知识认知阶段',
   Stage3: '群体协商认知阶段',
   Stage4: '决策选择认知阶段'
 };
-const STAGE_MODULE_NODE_MAP = {
-  Stage1: ['M1'],
-  Stage2: ['M2'],
-  Stage3: ['V_agent_input', 'M3', 'AgentA', 'AgentB', 'AgentC'],
-  Stage4: ['V_decision_input', 'M4']
+// 点击节点时"节点详细信息"的展示配置：name 为显示名称，field 为 stageBoxes 中的取值路径
+const NODE_DETAIL_CONFIG = {
+  CommanderInput: { name: 'global_instruction', fields: ['Stage1.global_instruction_full_text'] },
+  V2: { name: 'V_instr', fields: ['Stage1.instruction'] },
+  V_img: { name: 'V_img', fields: ['Stage1.image_id'] },
+  V4: { name: 'V_env', fields: ['Stage1.environment'] },
+  V3: { name: 'V_det', fields: ['Stage1.target_details'], formatter: 'targetDetails' },
+  M1: { name: '多模态认知偏差检测', fields: ['Stage1.content'] },
+  M2: { name: '先验知识认知偏差检测', fields: ['Stage2.content'] },
+  V6: { name: 'V_cand', fields: ['Stage2.stage2_result'], formatter: 'stage2Result' },
+  V_instr2: { name: 'V_instr', fields: ['Stage2.instruction'] },
+  M3: { name: '智能体协商认知偏差检测', fields: ['Stage3.content'] },
+  AgentA: { name: '智能体A', fields: ['Stage3.content'] },
+  AgentB: { name: '智能体B', fields: ['Stage3.content'] },
+  AgentC: { name: '智能体C', fields: ['Stage3.content'] },
+  V_instr3: { name: 'V_instr', fields: ['Stage3.instruction'] },
+  V7: { name: 'V_neo', fields: ['Stage3.stage3_fields'] },
+  M4: { name: '决策选择认知偏差检测', fields: ['Stage4.content', 'Stage4.stage4_fields'] },
+  CommanderDecision: { name: 'V_intent', fields: ['Stage4.stage4_fields'] },
+  V8: { name: 'V_intent', fields: ['Stage4.stage4_fields'] },
+  V_instr4: { name: 'V_instr', fields: ['Stage4.instruction'] }
+};
+// 点击后不产生任何效果的节点
+const NODE_CLICK_DISABLED = ['V_input', 'V5', 'V_decision_input'];
+// 点击其一需要同时亮起的节点组
+const NODE_HIGHLIGHT_GROUPS = {
+  CommanderDecision: ['CommanderDecision', 'V8'],
+  V8: ['CommanderDecision', 'V8']
 };
 const COMMANDER_ICON = 'path://M24 5a7 7 0 1 1 0 14 7 7 0 0 1 0-14M11 42c1.2-8.5 6.1-14 13-14s11.8 5.5 13 14H11zM7 20h34l-4 8H11l-4-8z';
 const AGENT_ICON = 'path://M24 4l16 9v18l-16 9-16-9V13l16-9zM17 18h14v4H17v-4zM17 26h14v4H17v-4zM12 22h4v4h-4v-4zM32 22h4v4h-4v-4z';
@@ -241,25 +280,29 @@ export default {
     return {
       videoList: [],
       selectedVideo: null,
+      isLiveOpen: true,
+      isDemoOpen: false,
       isSelectingFile: false,
       selectedFileContext: null,
       selectedInstructionText: '',
       carouselSlide: 0,
       carouselItems: [],
+      carouselInterval: CAROUSEL_DEFAULT_INTERVAL,
+      carouselResumeTimer: null,
+      suppressCarouselSync: false,
       isLoading: false,
       isGraphParsing: false,
       analysisHighlightRunId: 0,
       rootCauseAccuracy: null,
-      myChart: null,
       graphBaseData: [],
       graphBaseLinks: [],
       graphInitialData: [],
       graphInitialLinks: [],
       selectedNode: null,
+      stageBoxesData: {},
       revealContentTimer: null,
       metricsDisplayTimer: null,
       cachedAnalysisData: null,
-      cachedAnalysisExternal: null,
       metricsVisible: false,
       exportEnabled: false,
       metricsWaiting: false,
@@ -267,24 +310,35 @@ export default {
       postAccuracy: ANALYSIS_POST_ACCURACY
     };
   },
-  async mounted() {
-    const isRouteNav = sessionStorage.getItem('pcjc_analysis_nav');
-    sessionStorage.removeItem('pcjc_analysis_nav');
-    if (!isRouteNav) {
-      this.clearTimerState();
+  computed: {
+    liveVideos() {
+      const list = Array.isArray(this.videoList) ? this.videoList : [];
+      return list.filter(v => v && v.type === 'live');
+    },
+    demoVideos() {
+      const list = Array.isArray(this.videoList) ? this.videoList : [];
+      return list.filter(v => v && v.type === 'demo');
     }
-    await this.fetchVideoList();
+  },
+  created() {
+    // ECharts 实例不放进 data，避免被 Vue 响应式代理后破坏 zrender 的点击命中测试
+    this.myChart = null;
+  },
+  async mounted() {
+    // 进入页面一律回到初始状态：清掉历史解析倒计时与上次选择，等待用户重新选择数据
+    this.clearTimerState();
+    try {
+      sessionStorage.removeItem('pcjc_analysis_nav');
+      sessionStorage.removeItem('pcjc_selected_source_context');
+    } catch (e) { /* ignore */ }
     this.initChart();
-    this.renderFormula();
-    this.restoreFullStateFromStorage();
-    this.$nextTick(() => {
-      this.syncCarouselStageHighlight();
-    });
+    await this.fetchVideoList();
   },
   beforeDestroy() {
-    sessionStorage.setItem('pcjc_analysis_nav', '1');
     if (this.revealContentTimer) clearTimeout(this.revealContentTimer);
     if (this.metricsDisplayTimer) clearTimeout(this.metricsDisplayTimer);
+    if (this.carouselResumeTimer) clearTimeout(this.carouselResumeTimer);
+    if (this.myChart) { this.myChart.dispose(); this.myChart = null; }
   },
   watch: {
     carouselSlide() {
@@ -299,29 +353,12 @@ export default {
     }
   },
   methods: {
-    renderFormula() {
-      if (!window.katex) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css';
-        document.head.appendChild(link);
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js';
-        script.onload = () => { this.doRender(); };
-        document.head.appendChild(script);
-      } else {
-        this.doRender();
-      }
-    },
-    doRender() {
-      if (window.katex && this.$refs.formulaRef) {
-        window.katex.render("\\mathrm{Acc}=\\frac{\\sum_i\\left[\\sum_j w_j\\cdot\\operatorname{Sim}(\\hat{y}_{i,j},y_{i,j})>T\\right]}{N}", this.$refs.formulaRef, {
-          throwOnError: false, displayMode: false
-        });
-      }
-    },
     initChart() {
       const chartDom = document.getElementById('myDiagramDiv');
+      if (!chartDom) return;
+      // 防止热更新/重复进入时同一 DOM 上残留旧实例，导致点击事件绑定到失效画布
+      const existing = echarts.getInstanceByDom(chartDom);
+      if (existing) existing.dispose();
       this.myChart = echarts.init(chartDom);
       const moduleStyle = {
         color: new echarts.graphic.LinearGradient(0, 0, 1, 1, [
@@ -414,22 +451,25 @@ export default {
               { name: 'V2', value: 'V_instr', x: 355, y: 62, symbol: 'roundRect', symbolSize: [96, 36], itemStyle: dataStyle, label: dataLabel, desc: "指挥员下达的初始指令文本。" },
               { name: 'V_img', value: 'V_img', x: 355, y: 118, symbol: 'roundRect', symbolSize: [86, 36], itemStyle: dataStyle, label: dataLabel, desc: "输入图像数据。" },
               { name: 'M1', value: '多模态认知偏差检测', x: 535, y: 88, symbol: 'roundRect', symbolSize: [150, 58], itemStyle: moduleStyle, label: { fontSize: 12, fontWeight: 'bold', formatter: '多模态认知偏差检测' }, desc: "该模块负责处理图像、指令等多模态输入，识别初步的认知偏差迹象。", status: "检测中" },
-              { name: 'V4', value: 'V_desc', x: 710, y: 62, symbol: 'roundRect', symbolSize: [86, 36], itemStyle: dataStyle, label: dataLabel, desc: "场景语义描述特征向量。" },
+              { name: 'V4', value: 'V_env', x: 710, y: 62, symbol: 'roundRect', symbolSize: [86, 36], itemStyle: dataStyle, label: dataLabel, desc: "战场环境描述。" },
               { name: 'V3', value: 'V_det', x: 710, y: 118, symbol: 'roundRect', symbolSize: [86, 36], itemStyle: dataStyle, label: dataLabel, desc: "目标检测识别结果。" },
               { name: 'V_input', value: 'V_input', x: 760, y: 222, symbol: 'roundRect', symbolSize: [96, 36], itemStyle: dataStyle, label: dataLabel, desc: "先验知识阶段输入信息。" },
               { name: 'V5', value: 'V_know', x: 760, y: 278, symbol: 'roundRect', symbolSize: [86, 36], itemStyle: dataStyle, label: dataLabel, desc: "外部先验知识库条目。" },
+              { name: 'V_instr2', value: 'V_instr', x: 885, y: 250, symbol: 'roundRect', symbolSize: [96, 36], itemStyle: dataStyle, label: dataLabel, desc: "先验知识认知检测阶段指令。" },
               { name: 'M2', value: '先验知识认知偏差检测', x: 565, y: 250, symbol: 'roundRect', symbolSize: [176, 58], itemStyle: moduleStyle, label: { fontSize: 12, fontWeight: 'bold', formatter: '先验知识认知偏差检测' }, desc: "结合专家知识库，对初步检测结果进行先验逻辑验证。", status: "待启动" },
               { name: 'V6', value: 'V_cand', x: 365, y: 250, symbol: 'roundRect', symbolSize: [86, 36], itemStyle: { ...dataStyle, color: 'rgba(207, 234, 204, 0.9)', borderColor: '#83bd8b', shadowColor: '#a5dfac' }, label: dataLabel, desc: "候选偏差原因集合。" },
+              { name: 'V_instr3', value: 'V_instr', x: 185, y: 410, symbol: 'roundRect', symbolSize: [90, 36], itemStyle: dataStyle, label: dataLabel, desc: "群体协商认知检测阶段指令。" },
               { name: 'V_agent_input', value: 'V_input', x: 305, y: 410, symbol: 'roundRect', symbolSize: [96, 36], itemStyle: dataStyle, label: dataLabel, desc: "智能体协商阶段输入信息。" },
               { name: 'M3', value: '智能体协商认知偏差检测', x: 535, y: 410, symbol: 'roundRect', symbolSize: [260, 82], itemStyle: shellStyle, label: { color: '#315f9e', fontSize: 12, fontWeight: 'bold', position: 'top', distance: -22, formatter: '' }, desc: "通过多个智能体的协商，进一步精细化偏差定位。", status: "待启动" },
               { name: 'AgentA', value: '智能体A', x: 455, y: 412, symbol: AGENT_ICON, symbolSize: [38, 38], itemStyle: iconStyle, label: iconLabel, desc: "智能体协商子节点 A。" },
               { name: 'AgentB', value: '智能体B', x: 535, y: 412, symbol: AGENT_ICON, symbolSize: [38, 38], itemStyle: iconStyle, label: iconLabel, desc: "智能体协商子节点 B。" },
               { name: 'AgentC', value: '智能体C', x: 615, y: 412, symbol: AGENT_ICON, symbolSize: [38, 38], itemStyle: iconStyle, label: iconLabel, desc: "智能体协商子节点 C。" },
-              { name: 'V7', value: 'V_class', x: 850, y: 410, symbol: 'roundRect', symbolSize: [100, 38], itemStyle: dataStyle, label: dataLabel, desc: "偏差所属的分类等级。" },
+              { name: 'V7', value: 'V_neo', x: 850, y: 410, symbol: 'roundRect', symbolSize: [100, 38], itemStyle: dataStyle, label: dataLabel, desc: "群体协商最终复核结果。" },
               { name: 'V_decision_input', value: 'V_input', x: 760, y: 570, symbol: 'roundRect', symbolSize: [96, 36], itemStyle: dataStyle, label: dataLabel, desc: "决策选择阶段输入信息。" },
+              { name: 'V_instr4', value: 'V_instr', x: 885, y: 570, symbol: 'roundRect', symbolSize: [96, 36], itemStyle: dataStyle, label: dataLabel, desc: "决策选择认知偏差检测阶段指令。" },
               { name: 'M4', value: '决策选择认知偏差检测', x: 545, y: 570, symbol: 'roundRect', symbolSize: [176, 58], itemStyle: moduleStyle, label: { fontSize: 12, fontWeight: 'bold', formatter: '决策选择认知偏差检测' }, desc: "在决策层面上分析认知偏差对最终行动方案的影响。", status: "待启动" },
               { name: 'CommanderDecision', value: '指挥员', x: 350, y: 542, symbol: COMMANDER_ICON, symbolSize: [42, 42], itemStyle: iconStyle, label: iconLabel, desc: "接收决策选择认知偏差检测结果的指挥员节点。" },
-              { name: 'V8', value: 'V_hazard', x: 350, y: 598, symbol: 'roundRect', symbolSize: [100, 38], itemStyle: dataStyle, label: dataLabel, desc: "最终评估的冲突危害等级。" }
+              { name: 'V8', value: 'V_intent', x: 350, y: 598, symbol: 'roundRect', symbolSize: [100, 38], itemStyle: dataStyle, label: dataLabel, desc: "编队与战术意图分析结果。" }
             ],
             links: [
               { source: 'CommanderInput', target: 'V2' },
@@ -441,8 +481,10 @@ export default {
               { source: 'V3', target: 'V_input', lineStyle: { type: 'dashed' } },
               { source: 'V_input', target: 'M2' },
               { source: 'V5', target: 'M2' },
+              { source: 'V_instr2', target: 'M2' },
               { source: 'M2', target: 'V6' },
               { source: 'V6', target: 'V_agent_input' },
+              { source: 'V_instr3', target: 'V_agent_input' },
               { source: 'V_agent_input', target: 'M3' },
               { source: 'M3', target: 'AgentA' },
               { source: 'AgentA', target: 'AgentB' },
@@ -451,6 +493,7 @@ export default {
               { source: 'AgentC', target: 'AgentB' },
               { source: 'AgentC', target: 'V7' },
               { source: 'V7', target: 'V_decision_input' },
+              { source: 'V_instr4', target: 'V_decision_input' },
               { source: 'V_decision_input', target: 'M4' },
               { source: 'M4', target: 'CommanderDecision' },
               { source: 'M4', target: 'V8' }
@@ -461,19 +504,111 @@ export default {
       };
       this.myChart.setOption(option);
       this.cacheGraphBaseStyles();
-      this.myChart.on('click', (params) => {
-        if (params.dataType === 'node') {
-          const nodeName = params.data.name;
-          const isModule = typeof nodeName === 'string' && /^M\d+$/i.test(nodeName);
-          this.selectedNode = {
-            text: params.data.value,
-            category: isModule ? 'Module' : 'Variable',
-            desc: params.data.desc,
-            value: params.data.status
-          };
-        }
+      // 统一用像素坐标判定点中的节点，不依赖 echarts 内部命中检测（规避缩放/命中错位等问题）
+      this.myChart.getZr().on('click', (event) => {
+        const nodeName = this.findGraphNodeAtPixel(event.offsetX, event.offsetY);
+        if (nodeName) this.handleGraphNodeClick(nodeName);
       });
       window.addEventListener('resize', () => { this.myChart && this.myChart.resize(); });
+      // 栅格容器尺寸常在初始化后才稳定，补一次 resize，避免画布坐标与视觉错位导致点不中节点
+      this.$nextTick(() => { this.myChart && this.myChart.resize(); });
+    },
+    findGraphNodeAtPixel(px, py) {
+      if (!this.myChart) return '';
+      const nodes = this.graphInitialData.length ? this.graphInitialData : this.graphBaseData;
+      // 倒序遍历，保证后绘制（视觉上层）的节点优先命中
+      for (let i = nodes.length - 1; i >= 0; i -= 1) {
+        const node = nodes[i];
+        if (!node || node.metaType === 'decor' || node.silent) continue;
+        let center = null;
+        try {
+          center = this.myChart.convertToPixel({ seriesIndex: 0 }, [node.x, node.y]);
+        } catch (e) { center = null; }
+        if (!center) continue;
+        const rawSize = node.symbolSize;
+        const w = Array.isArray(rawSize) ? rawSize[0] : (rawSize || 50);
+        const h = Array.isArray(rawSize) ? rawSize[1] : (rawSize || 50);
+        if (Math.abs(px - center[0]) <= w / 2 + 3 && Math.abs(py - center[1]) <= h / 2 + 3) {
+          return node.name;
+        }
+      }
+      return '';
+    },
+    handleGraphNodeClick(nodeName) {
+      if (!nodeName || NODE_CLICK_DISABLED.includes(nodeName)) return;
+      const config = NODE_DETAIL_CONFIG[nodeName];
+      if (!config) return;
+      const groupNodes = NODE_HIGHLIGHT_GROUPS[nodeName] || [nodeName];
+      this.highlightGraphByNodeSet(groupNodes);
+      this.selectedNode = this.buildNodeDetail(nodeName);
+      const idx = this.findCarouselIndexForNode(nodeName);
+      // 有对应轮播项则跳转过去并暂停约10秒；没有对应项则仅暂停联动10秒，保持当前节点的高亮与详情
+      this.pauseCarouselSync(idx);
+    },
+    buildNodeDetail(nodeName) {
+      const config = NODE_DETAIL_CONFIG[nodeName];
+      if (!config) return null;
+      let desc = '';
+      const fields = Array.isArray(config.fields) ? config.fields : [];
+      for (let i = 0; i < fields.length; i += 1) {
+        const value = safeReadPath(this.stageBoxesData, fields[i], '');
+        const text = this.formatNodeDetailValue(value, config.formatter);
+        if (text) { desc = text; break; }
+      }
+      if (!desc) {
+        // 尚未解析（stageBoxes 为空）时，回退展示节点静态说明
+        const node = this.graphBaseData.find(item => item.name === nodeName);
+        desc = (node && node.desc) || '';
+      }
+      return {
+        text: config.name,
+        category: 'Module',
+        desc,
+        value: ''
+      };
+    },
+    formatNodeDetailValue(value, formatter) {
+      if (value === null || value === undefined) return '';
+      if (formatter === 'targetDetails' && Array.isArray(value)) {
+        const lines = value
+          .filter(item => item && typeof item === 'object')
+          .map((item, idx) => {
+            const name = this.firstNonEmpty(item.name);
+            const conf = this.firstNonEmpty(item.confidence);
+            return `目标${idx + 1}：${name || '-'}${conf ? `（置信度 ${conf}）` : ''}`;
+          });
+        if (lines.length) return lines.join('\n');
+      }
+      if (formatter === 'stage2Result') {
+        const obj = this.firstResultObject(value);
+        if (obj && Object.keys(obj).length) {
+          return Object.keys(obj)
+            .map((key) => `${FIELD_LABEL_MAP[key] || key}：${this.toCompactText(obj[key])}`)
+            .join('\n');
+        }
+      }
+      // 内容为 Markdown 格式时去掉每行行首的 # 标记，只保留标题文字
+      if (typeof value === 'string') return this.replaceAgentTerms(value.trim().replace(/^#+\s*/gm, ''));
+      return this.toCompactText(value);
+    },
+    normalizeStageBoxes(raw) {
+      const rawBoxes = (raw && (raw.stageBoxes || raw.stageDiagnosisCards)) || {};
+      const map = {};
+      const putBox = (box, fallbackNo) => {
+        if (!box || typeof box !== 'object') return;
+        const m = String(box.stage || '').match(/Stage\s*([1-4])/i);
+        const no = m ? Number(m[1]) : fallbackNo;
+        if (no >= 1 && no <= 4 && !map[`Stage${no}`]) map[`Stage${no}`] = box;
+      };
+      if (Array.isArray(rawBoxes)) {
+        rawBoxes.forEach((box, idx) => putBox(box, idx + 1));
+      } else if (rawBoxes && typeof rawBoxes === 'object') {
+        Object.keys(rawBoxes).forEach((key) => {
+          const m = String(key).match(/Stage\s*([1-4])/i);
+          putBox(rawBoxes[key], m ? Number(m[1]) : 0);
+        });
+      }
+      return map;
     },
     cacheGraphBaseStyles() {
       if (!this.myChart) return;
@@ -530,7 +665,7 @@ export default {
       this.clearAllTimers();
       this.clearTimerState();
       this.cachedAnalysisData = null;
-      this.cachedAnalysisExternal = null;
+      this.stageBoxesData = {};
       this.selectedNode = null;
       this.isLoading = false;
       this.isGraphParsing = false;
@@ -566,7 +701,7 @@ export default {
     },
     async fetchVideoList() {
       try {
-        const response = await this.$ajax.get(`${API_BASE_URL}/module5/api/data-sources`);
+        const response = await this.$ajax.get(`${API_BASE_URL}/module5/api/instr/data-sources`);
         const sources = this.safeGet(response, 'data.data_sources', []);
         if (Array.isArray(sources)) {
           this.videoList = sources.map((src, idx) => ({
@@ -596,6 +731,12 @@ export default {
     },
     async handleFileSelection(video) {
       this.isSelectingFile = true;
+      if (this.carouselResumeTimer) {
+        clearTimeout(this.carouselResumeTimer);
+        this.carouselResumeTimer = null;
+      }
+      this.suppressCarouselSync = false;
+      this.carouselInterval = CAROUSEL_DEFAULT_INTERVAL;
       this.carouselSlide = 0;
       this.carouselItems = [];
       this.selectedFileContext = null;
@@ -614,7 +755,7 @@ export default {
     },
     async requestFileSelection(video) {
       const res = await this.$ajaxJ.post(
-        `${API_BASE_URL}/module5/api/file-selection`,
+        `${API_BASE_URL}/module5/api/instr/file-selection`,
         {
           source_id: video.source_id,
           path: video.path
@@ -690,64 +831,165 @@ export default {
       const cleanedTitle = String(title || '').replace(new RegExp(`^${stageLabel}\\s*[·•\\-—:]?\\s*`), '');
       return cleanedTitle ? `${stageLabel} ${cleanedTitle}` : stageLabel;
     },
-    getStageKeyFromCarouselItem(item = {}) {
-      const rawStage = String(item.stage || '').trim();
-      const match = rawStage.match(/^Stage([1-4])$/i);
-      if (match) return `Stage${match[1]}`;
-      const stageIndex = Number(item.stage_index);
-      if (Number.isInteger(stageIndex) && stageIndex >= 1 && stageIndex <= 4) {
-        return `Stage${stageIndex}`;
+    // 根据轮播项标题匹配对应的有向图节点（无匹配返回空字符串）
+    resolveNodeForCarouselItem(item = {}) {
+      if (!item || item.type !== 'text') return '';
+      const title = this.replaceAgentTerms(String(item.title || '').trim());
+      if (!title) return '';
+      const stageIdx = Number.isFinite(item.stage_index)
+        ? item.stage_index
+        : this.parseStageIndex(item.stage);
+
+      // 各阶段专属内容（标题关键词唯一，可直接判定）
+      if (/智能体[_\s]?A/i.test(title)) return 'AgentA';
+      if (/智能体[_\s]?B/i.test(title)) return 'AgentB';
+      if (/智能体[_\s]?C/i.test(title)) return 'AgentC';
+      if (/最终复核/.test(title)) return 'V7';
+      if (/编队与战术意图/.test(title)) return 'V8';
+      if (/目标属性/.test(title)) return 'V6';
+
+      // “指令”类标题：优先按标题中的阶段名分层，其次按 stage_index 兜底
+      if (/指令/.test(title)) {
+        if (/多模态/.test(title)) return 'V2';
+        if (/先验知识/.test(title)) return 'V_instr2';
+        if (/群体协商/.test(title)) return 'V_instr3';
+        if (/决策选择/.test(title)) return 'V_instr4';
+        if (stageIdx === 1) return 'V2';
+        if (stageIdx === 2) return 'V_instr2';
+        if (stageIdx === 3) return 'V_instr3';
+        if (stageIdx === 4) return 'V_instr4';
+        return '';
       }
+      if (/环境/.test(title)) return 'V4';
+      if (/目标/.test(title)) return 'V3';
       return '';
     },
+    // 根据图节点反查对应的轮播项下标（无匹配返回 -1）
+    findCarouselIndexForNode(nodeName) {
+      if (!Array.isArray(this.carouselItems) || !this.carouselItems.length) return -1;
+      const groupNodes = NODE_HIGHLIGHT_GROUPS[nodeName] || [nodeName];
+      if (nodeName === 'V_img') {
+        return this.carouselItems.findIndex(item => item && item.type === 'image');
+      }
+      return this.carouselItems.findIndex((item) => {
+        const matched = this.resolveNodeForCarouselItem(item);
+        return matched && groupNodes.includes(matched);
+      });
+    },
+    // 点击节点后：跳到对应轮播项（如有）并暂停联动约10秒，再恢复自动轮播联动
+    pauseCarouselSync(targetSlideIndex = -1) {
+      if (this.carouselResumeTimer) {
+        clearTimeout(this.carouselResumeTimer);
+        this.carouselResumeTimer = null;
+      }
+      this.suppressCarouselSync = true;
+      this.carouselInterval = 0;
+      if (targetSlideIndex >= 0 && targetSlideIndex !== this.carouselSlide) {
+        this.carouselSlide = targetSlideIndex;
+      }
+      this.carouselResumeTimer = setTimeout(() => {
+        this.carouselResumeTimer = null;
+        this.suppressCarouselSync = false;
+        this.carouselInterval = CAROUSEL_DEFAULT_INTERVAL;
+        this.$nextTick(() => {
+          this.syncCarouselStageHighlight();
+        });
+      }, CAROUSEL_PAUSE_MS);
+    },
     syncCarouselStageHighlight() {
+      if (this.suppressCarouselSync) return;
       if (!this.myChart || !Array.isArray(this.carouselItems) || this.carouselItems.length === 0) {
         return;
       }
       const currentItem = this.carouselItems[this.carouselSlide] || this.carouselItems[0];
-      const currentTitle = String(currentItem.title || '').trim();
-      const isInstructionSlide = currentTitle.includes('作战指令');
-      const isSecondMediaSlide = this.carouselSlide === 1 && ['image', 'video'].includes(currentItem.type);
-      const targetNode = isInstructionSlide
-        ? 'V2'
-        : (isSecondMediaSlide ? 'V_img' : '');
-      if (targetNode) {
-        this.highlightGraphByNodeSet([targetNode]);
-        const node = this.graphBaseData.find(item => item.name === targetNode);
-        if (node) {
-          this.selectedNode = {
-            text: node.value,
-            category: 'Variable',
-            desc: node.desc,
-            value: node.status
-          };
-        }
-        return;
-      }
-      const stageKey = this.getStageKeyFromCarouselItem(currentItem);
-      const moduleNodes = STAGE_MODULE_NODE_MAP[stageKey] || [];
-      if (!moduleNodes.length) {
+      const targetNode = this.resolveNodeForCarouselItem(currentItem);
+      if (!targetNode) {
+        // 图片等无对应块块的轮播项：不亮任何块块
         this.resetGraphHighlight();
         return;
       }
-      this.highlightGraphByNodeSet(moduleNodes);
-      const node = this.graphBaseData.find(item => item.name === moduleNodes[0]);
-      if (node) {
-        this.selectedNode = {
-          text: node.value,
-          category: 'Module',
-          desc: node.desc,
-          value: node.status
-        };
+      const groupNodes = NODE_HIGHLIGHT_GROUPS[targetNode] || [targetNode];
+      this.highlightGraphByNodeSet(groupNodes);
+      const detail = this.buildNodeDetail(targetNode);
+      if (detail) this.selectedNode = detail;
+    },
+    // 后端 carouselItems 缺少“智能体A/B/C 初始分析、协商结论”6项，从 sample_data.Stage3 补全
+    buildAgentCarouselItems(res) {
+      const internalOutput = this.asDict(this.safeGet(res, 'sample_data.Stage3.internal_output', null));
+      const initialAnalyses = this.asDict(internalOutput.initial_analyses);
+      const negotiationResults = this.asDict(internalOutput.negotiation_results);
+      const pickAgent = (dict, letter) => (
+        this.asDict(dict[`智能体_${letter}`] || dict[`Agent_${letter}`] || dict[`智能体${letter}`])
+      );
+      const stageName = '群体协商认知检测阶段';
+      const items = [];
+      ['A', 'B', 'C'].forEach((letter) => {
+        const analysis = pickAgent(initialAnalyses, letter);
+        if (Object.keys(analysis).length) {
+          const parts = [];
+          if (analysis.model_name) parts.push(`【模型名称】\n${analysis.model_name}`);
+          if (analysis.reason) parts.push(`【分析理由】\n${analysis.reason}`);
+          if (parts.length) {
+            items.push({
+              type: 'text',
+              stage: stageName,
+              stage_index: 3,
+              title: `${stageName} 智能体${letter} 初始分析`,
+              content: parts.join('\n\n')
+            });
+          }
+        }
+      });
+      ['A', 'B', 'C'].forEach((letter) => {
+        const negotiation = pickAgent(negotiationResults, letter);
+        if (Object.keys(negotiation).length) {
+          const parts = [];
+          if (Array.isArray(negotiation.priority_ordering) && negotiation.priority_ordering.length) {
+            parts.push(`【优先级排序】\n${negotiation.priority_ordering.join(' > ')}`);
+          }
+          if (negotiation.priority_rationale) parts.push(`【排序依据】\n${negotiation.priority_rationale}`);
+          if (negotiation.consensus) parts.push(`【共识】\n${negotiation.consensus}`);
+          if (negotiation.deviation) parts.push(`【分歧/偏差】\n${negotiation.deviation}`);
+          if (parts.length) {
+            items.push({
+              type: 'text',
+              stage: stageName,
+              stage_index: 3,
+              title: `${stageName} 智能体${letter} 协商结论`,
+              content: parts.join('\n\n')
+            });
+          }
+        }
+      });
+      return items;
+    },
+    // 将智能体6项插入到“群体协商 最终复核”之前（无该项时插到最后一个群体协商项之后）
+    mergeAgentItemsIntoCarousel(carouselItems, agentItems) {
+      if (!agentItems.length) return carouselItems;
+      const hasAgentItem = carouselItems.some(item => /智能体/.test(String((item || {}).title || '')));
+      if (hasAgentItem) return carouselItems;
+      const result = [...carouselItems];
+      let insertAt = result.findIndex(item => /最终复核/.test(String((item || {}).title || '')));
+      if (insertAt < 0) {
+        let lastStage3 = -1;
+        result.forEach((item, idx) => {
+          if (/群体协商/.test(String((item || {}).title || item.stage || ''))) lastStage3 = idx;
+        });
+        insertAt = lastStage3 >= 0 ? lastStage3 + 1 : result.length;
       }
+      result.splice(insertAt, 0, ...agentItems);
+      return result;
     },
     applyFileSelectionResult(response, video) {
       const res = response || {};
       let carouselItems = this.normalizeCarouselItems(res.carouselItems);
-      const instructionText = String(res.instruction_text || '').trim();
       if (carouselItems.length === 0) {
         carouselItems = this.buildItemsFromStagePreviews(res.stagePreviews);
       }
+      carouselItems = this.mergeAgentItemsIntoCarousel(
+        carouselItems,
+        this.normalizeCarouselItems(this.buildAgentCarouselItems(res))
+      );
       if (carouselItems.length === 0) {
         carouselItems = [{
           type: 'text',
@@ -758,7 +1000,7 @@ export default {
       }
 
       this.selectedFileContext = res.stage1 || { source_id: video.source_id || video.name, path: video.path };
-      this.selectedInstructionText = instructionText;
+      this.selectedInstructionText = String(res.instruction_text || '').trim();
       if (!this.selectedFileContext.type) {
         this.selectedFileContext = {
           ...this.selectedFileContext,
@@ -766,74 +1008,35 @@ export default {
         };
       }
 
-      const hasVideoItem = carouselItems.some(item => item && item.type === 'video');
-      if (!hasVideoItem) {
-        const sampleId = resolveSampleId(
+      // 本界面要求：轮播图第二张为对应样本图片（来自 image-set 接口）
+      const sampleId = resolveSampleId(
+        {
+          source_id: this.firstNonEmpty(this.selectedFileContext.source_id, video.source_id, video.name),
+          path: this.firstNonEmpty(this.selectedFileContext.path, video.path)
+        },
+        {},
+        {},
+        ''
+      );
+      if (sampleId) {
+        let imageSrc = String(res.image_set_image_url || '').trim();
+        if (!imageSrc) {
+          imageSrc = `${API_BASE_URL}/module5/api/image-set/${encodeURIComponent(sampleId)}`;
+        }
+        const imageItem = this.normalizeCarouselItems([
           {
-            source_id: this.firstNonEmpty(this.selectedFileContext.source_id, video.source_id, video.name),
-            path: this.firstNonEmpty(this.selectedFileContext.path, video.path)
-          },
-          {},
-          {},
-          ''
-        );
-        if (sampleId) {
-          let imageSrc = String(res.image_set_image_url || '').trim();
-          if (!imageSrc) {
-            imageSrc = `${API_BASE_URL}/module5/api/image-set/${encodeURIComponent(sampleId)}`;
-          }
-          const firstImageItem = this.normalizeCarouselItems([
-            {
-              type: 'image',
-              src: imageSrc,
-              title: '原始样本图片',
-              stage: 'Stage1',
-              stage_index: 1,
-              file_name: `${sampleId}.jpg`
-            }
-          ])[0];
-          const dedupItems = carouselItems.filter(item => !(item && item.src === imageSrc));
-          const instructionItem = instructionText
-            ? this.normalizeCarouselItems([{
-              type: 'text',
-              stage: 'Stage1',
-              stage_index: 1,
-              title: '作战指令',
-              content: instructionText
-            }])[0]
-            : null;
-          carouselItems = instructionItem
-            ? [instructionItem, firstImageItem, ...dedupItems]
-            : [firstImageItem, ...dedupItems];
-        } else if (instructionText) {
-          const instructionItem = this.normalizeCarouselItems([{
-            type: 'text',
+            type: 'image',
+            src: imageSrc,
+            title: '原始样本图片',
             stage: 'Stage1',
             stage_index: 1,
-            title: '作战指令',
-            content: instructionText
-          }])[0];
-          const dedupItems = carouselItems.filter((item) => !(
-            item &&
-            item.type === 'text' &&
-            String(item.content || '').trim() === instructionText
-          ));
-          carouselItems = [instructionItem, ...dedupItems];
-        }
-      } else if (instructionText) {
-        const instructionItem = this.normalizeCarouselItems([{
-          type: 'text',
-          stage: 'Stage1',
-          stage_index: 1,
-          title: '作战指令',
-          content: instructionText
-        }])[0];
-        const dedupItems = carouselItems.filter((item) => !(
-          item &&
-          item.type === 'text' &&
-          String(item.content || '').trim() === instructionText
-        ));
-        carouselItems = [instructionItem, ...dedupItems];
+            file_name: `${sampleId}.jpg`
+          }
+        ])[0];
+        const dedupItems = carouselItems.filter(item => !(item && (item.type === 'image' || item.src === imageSrc)));
+        carouselItems = dedupItems.length
+          ? [dedupItems[0], imageItem, ...dedupItems.slice(1)]
+          : [imageItem];
       }
 
       this.carouselSlide = 0;
@@ -843,79 +1046,22 @@ export default {
         this.syncCarouselStageHighlight();
       });
     },
-    readTimerState() {
-      try {
-        const raw = localStorage.getItem(ANALYSIS_TIMER_KEY);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        return (parsed && typeof parsed === 'object') ? parsed : null;
-      } catch (e) {
-        return null;
-      }
-    },
-    persistTimerState(patch) {
-      try {
-        const current = this.readTimerState() || {};
-        localStorage.setItem(ANALYSIS_TIMER_KEY, JSON.stringify({ ...current, ...patch }));
-      } catch (e) {
-        // ignore
-      }
-    },
     clearTimerState() {
       try { localStorage.removeItem(ANALYSIS_TIMER_KEY); } catch (e) { /* ignore */ }
     },
     clearAllTimers() {
       if (this.revealContentTimer) { clearTimeout(this.revealContentTimer); this.revealContentTimer = null; }
       if (this.metricsDisplayTimer) { clearTimeout(this.metricsDisplayTimer); this.metricsDisplayTimer = null; }
-    },
-    restoreFullStateFromStorage() {
-      const state = this.readTimerState();
-      if (!state) return;
-
-      if (state.selectedSourceId) {
-        const target = this.videoList.find(v => v.source_id === state.selectedSourceId);
-        if (target) {
-          this.selectVideo(target, { preserveCurrentResult: true });
-        }
-      }
-
-      if (state.analysisData) { this.cachedAnalysisData = state.analysisData; }
-      if (state.analysisExternal) { this.cachedAnalysisExternal = state.analysisExternal; }
-
-      const now = Date.now();
-
-      if (state.contentRevealAt) {
-        const remaining = state.contentRevealAt - now;
-        if (remaining <= 0) {
-          this.revealGraphResults();
-        } else {
-          this.isGraphParsing = true;
-          this.revealContentTimer = setTimeout(() => {
-            this.revealContentTimer = null;
-            this.revealGraphResults();
-          }, remaining);
-        }
-      }
-
-      if (state.metricsStatus === 'done') {
-        this.showMetricsDone();
-      } else if (state.metricsFireAt) {
-        const remaining = state.metricsFireAt - now;
-        if (remaining <= 0) {
-          this.showMetricsDone();
-        } else {
-          this.metricsVisible = false;
-          this.exportEnabled = false;
-          this.metricsWaiting = true;
-          this.metricsDisplayTimer = setTimeout(() => {
-            this.showMetricsDone();
-          }, remaining);
-        }
+      if (this.carouselResumeTimer) {
+        clearTimeout(this.carouselResumeTimer);
+        this.carouselResumeTimer = null;
+        this.suppressCarouselSync = false;
+        this.carouselInterval = CAROUSEL_DEFAULT_INTERVAL;
       }
     },
     revealGraphResults() {
-      if (this.cachedAnalysisData && this.cachedAnalysisExternal) {
-        this.applyDiagnosisToGraph(this.cachedAnalysisData, this.cachedAnalysisExternal);
+      if (this.cachedAnalysisData) {
+        this.applyDiagnosisToGraph(this.cachedAnalysisData);
       }
       this.isGraphParsing = false;
     },
@@ -926,7 +1072,6 @@ export default {
       this.rootCauseAccuracy = ANALYSIS_ACCURACY_DONE_VALUE;
       this.metricsVisible = true;
       this.exportEnabled = true;
-      this.persistTimerState({ metricsStatus: 'done' });
     },
     async startAnalysis() {
       if (!this.selectedVideo && !this.selectedFileContext) return;
@@ -940,7 +1085,6 @@ export default {
       this.exportEnabled = false;
       this.metricsWaiting = true;
       this.cachedAnalysisData = null;
-      this.cachedAnalysisExternal = null;
       this.selectedNode = null;
 
       const runId = (this.analysisHighlightRunId || 0) + 1;
@@ -950,30 +1094,14 @@ export default {
 
       try {
         const payload = this.buildDiagnosisPayload();
-        const sampleId = resolveSampleId({ source_id: payload.source_id, path: payload.path });
-        const [response, sampleData, detectionData, knowledgeData] = await Promise.all([
-          this.requestStageDiagnosisResult(payload),
-          sampleId ? this.requestSampleDataById(sampleId) : Promise.resolve({}),
-          sampleId ? this.requestSampleDetectionById(sampleId) : Promise.resolve({}),
-          this.requestKnowledgeGraphAll()
-        ]);
+        // 点击后结果立刻返回，前端延迟约20多秒再展示
+        const response = await this.requestStageDiagnosisResult(payload);
         if (runId !== this.analysisHighlightRunId) return;
 
         this.cachedAnalysisData = response || {};
-        this.cachedAnalysisExternal = { sampleId, sampleData, detectionData, knowledgeData };
 
         const contentDelayMs = Math.round(randomBetween(20000, 30000));
-        const metricsDelayMs = Math.round(randomBetween(2.8 * 60 * 1000, 3.2 * 60 * 1000));
-        const now = Date.now();
-
-        this.persistTimerState({
-          selectedSourceId: this.selectedVideo ? this.selectedVideo.source_id : '',
-          analysisData: this.cachedAnalysisData,
-          analysisExternal: this.cachedAnalysisExternal,
-          contentRevealAt: now + contentDelayMs,
-          metricsFireAt: now + metricsDelayMs,
-          metricsStatus: 'running'
-        });
+        const metricsDelayMs = contentDelayMs;
 
         this.revealContentTimer = setTimeout(() => {
           this.revealContentTimer = null;
@@ -1002,100 +1130,30 @@ export default {
     },
     async requestStageDiagnosisResult(payload) {
       const res = await this.$ajaxJ.post(
-        `${API_BASE_URL}/module5/api/stage-diagnosis-result`,
+        `${API_BASE_URL}/module5/api/instr/stage-diagnosis-result`,
         payload,
-        { timeout: 15000 }
+        { timeout: 30000 }
       );
       return res.data || {};
     },
-    async requestSampleDataById(sampleId) {
-      try {
-        const res = await this.$ajax.get(
-          `${DATASET_API_BASE_URL}/api/dataset/sample/${encodeURIComponent(sampleId)}`,
-          { timeout: 10000 }
-        );
-        return this.safeGet(res, 'data', {});
-      } catch (error) {
-        console.warn('获取 sample 基础信息失败', error);
-        return {};
-      }
-    },
-    async requestSampleDetectionById(sampleId) {
-      try {
-        const res = await this.$ajax.get(
-          `${DATASET_API_BASE_URL}/api/dataset/sample/${encodeURIComponent(sampleId)}/detection`,
-          { timeout: 10000 }
-        );
-        return this.safeGet(res, 'data', {});
-      } catch (error) {
-        console.warn('获取 sample 检测信息失败', error);
-        return {};
-      }
-    },
-    async requestKnowledgeGraphAll() {
-      const candidates = [
-        `${KNOWLEDGE_API_BASE_URL}/module2/knowledge/all`,
-        `${API_BASE_URL}/module2/knowledge/all`
-      ];
-      for (let i = 0; i < candidates.length; i += 1) {
-        const url = candidates[i];
-        try {
-          const res = await this.$ajax.get(url, { timeout: 10000 });
-          return this.safeGet(res, 'data', {});
-        } catch (error) {
-          if (i === candidates.length - 1) {
-            console.warn('获取知识图谱信息失败', error);
-          }
-        }
-      }
-      return {};
-    },
-    applyDiagnosisToGraph(raw, external = {}) {
+    applyDiagnosisToGraph(raw) {
       if (!this.myChart) return;
       if (!this.graphBaseData.length) this.cacheGraphBaseStyles();
 
-      const result = this.safeGet(raw, 'result', {});
-      const stages = this.safeGet(result, 'stages', {});
-      const getStage = (name) => (stages && typeof stages === 'object' ? (stages[name] || {}) : {});
-      const s1 = getStage('Stage1');
-      const s2 = getStage('Stage2');
-      const s3 = getStage('Stage3');
-      const s4 = getStage('Stage4');
+      // 解析 stageBoxes（兼容 stageDiagnosisCards），供节点点击详情与准确率展示使用
+      this.stageBoxesData = this.normalizeStageBoxes(raw);
 
       const fmtPercent = (v) => {
         if (v === null || v === undefined || Number.isNaN(Number(v))) return '-';
-        return `${(Number(v) * 100).toFixed(1)}%`;
-      };
-      const normalizeBiasRatio = (v) => {
-        if (v === null || v === undefined || Number.isNaN(Number(v))) return null;
         let n = Number(v);
-        // 兼容 0~100 的百分数输入。
         if (n > 1 && n <= 100) n = n / 100;
-        if (n < 0) n = 0;
-        if (n > 1) n = 1;
-        return n;
+        return `${(n * 100).toFixed(1)}%`;
       };
-      const parseAccuracyRatio = (stageData) => {
-        const p1 = this.safeGet(stageData, 'propagation_bias_score', null);
-        const p2 = this.safeGet(stageData, 'propagation_output.bias_score', null);
-        const p3 = this.safeGet(stageData, 'propogation_output.bias_score', null);
-        const i1 = this.safeGet(stageData, 'internal_bias_score', null);
-        const i2 = this.safeGet(stageData, 'internal_output.bias_score', null);
-
-        const propagationBias = normalizeBiasRatio(
-          p1 !== null && p1 !== undefined ? p1 : (p2 !== null && p2 !== undefined ? p2 : p3)
-        );
-        const internalBias = normalizeBiasRatio(i1 !== null && i1 !== undefined ? i1 : i2);
-
-        if (internalBias === null && propagationBias === null) return null;
-        if (internalBias === null) return 1 - propagationBias;
-        if (propagationBias === null) return 1 - internalBias;
-        return 1 - ((internalBias + propagationBias) / 2);
-      };
-      const short = (txt, max = 140) => {
-        const t = String(txt || '').trim();
-        if (!t) return '';
-        return t.length > max ? `${t.slice(0, max)}...` : t;
+      const getAccuracy = (stageKey) => {
+        const value = this.safeGet(this.stageBoxesData, `${stageKey}.accuracy`, null);
+        if (value === null || value === undefined || value === '') return null;
+        const n = Number(value);
+        return Number.isFinite(n) ? n : null;
       };
       const moduleLabelMap = {
         M1: '多模态\n认知偏差\n检测',
@@ -1108,112 +1166,29 @@ export default {
         return `${title}\n解析准确率\n${accuracyText}`;
       };
 
-      const sourceInfo = this.selectedFileContext || this.selectedVideo || {};
-      const sampleData = this.asDict(external.sampleData);
-      const detectionData = this.asDict(external.detectionData);
-      const knowledgeData = external.knowledgeData;
-      const sampleId = resolveSampleId(sourceInfo, sampleData, s1, external.sampleId);
-      const videoAddress = sampleId;
-      const instrText = this.extractInstructionText(s1, sampleData, sourceInfo);
-      const detectionText = this.extractDetectionText(s2, detectionData);
-      const sceneText = this.extractSceneDescription(s1, s3, detectionData);
-      const knowText = this.extractKnowledgeText(knowledgeData, s2, s3);
-      const candText = this.extractCandidateText(s2, s3);
-      const classText = this.extractClassText(s2, s3, s4);
-      const hazardLevel = this.extractHazardLevel(s4);
-
-      const m1Propagation = this.formatPropagationIntermediate('Stage1', s1);
-      const m2Propagation = this.formatPropagationIntermediate('Stage2', s2);
-      const m3Propagation = this.formatPropagationIntermediate('Stage3', s3);
-      const m4ModelResult = this.extractHazardText(s4) || this.safeGet(s4, 'final_text', '');
-      const m1Accuracy = parseAccuracyRatio(s1);
-      const m2Accuracy = parseAccuracyRatio(s2);
-      const m3Accuracy = parseAccuracyRatio(s3);
-      const m4Accuracy = parseAccuracyRatio(s4);
       const nodePatch = {
-        M1: {
-          desc: m1Propagation || this.safeGet(s1, 'final_text', ''),
-          status: `解析准确率 ${fmtPercent(m1Accuracy)}`,
-          labelFormatter: buildModuleLabelFormatter('M1', fmtPercent(m1Accuracy))
-        },
-        M2: {
-          desc: m2Propagation || this.safeGet(s2, 'final_text', ''),
-          status: `解析准确率 ${fmtPercent(m2Accuracy)}`,
-          labelFormatter: buildModuleLabelFormatter('M2', fmtPercent(m2Accuracy))
-        },
+        M1: { labelFormatter: buildModuleLabelFormatter('M1', fmtPercent(getAccuracy('Stage1'))) },
+        M2: { labelFormatter: buildModuleLabelFormatter('M2', fmtPercent(getAccuracy('Stage2'))) },
+        M4: { labelFormatter: buildModuleLabelFormatter('M4', fmtPercent(getAccuracy('Stage4'))) },
         M3: {
-          desc: m3Propagation || this.safeGet(s3, 'final_text', ''),
-          status: `解析准确率 ${fmtPercent(m3Accuracy)}`,
-          labelFormatter: buildModuleLabelFormatter('M3', fmtPercent(m3Accuracy))
-        },
-        AgentA: {
-          desc: m3Propagation || this.safeGet(s3, 'final_text', ''),
-          status: `解析准确率 ${fmtPercent(m3Accuracy)}`
-        },
-        AgentB: {
-          desc: m3Propagation || this.safeGet(s3, 'final_text', ''),
-          status: `解析准确率 ${fmtPercent(m3Accuracy)}`
-        },
-        AgentC: {
-          desc: m3Propagation || this.safeGet(s3, 'final_text', ''),
-          status: `解析准确率 ${fmtPercent(m3Accuracy)}`
-        },
-        M4: {
-          desc: m4ModelResult,
-          status: `解析准确率 ${fmtPercent(m4Accuracy)}`,
-          labelFormatter: buildModuleLabelFormatter('M4', fmtPercent(m4Accuracy))
-        },
-        CommanderInput: { desc: instrText || '-', status: short(instrText || '-', 36) },
-        CommanderDecision: { desc: m4ModelResult || '-', status: short(m4ModelResult || '-', 36) },
-        V_decision_input: { desc: classText || '-', status: short(classText || '-', 36) },
-        V_img: { desc: videoAddress || '-', status: short(videoAddress || '-', 36) },
-        V2: { desc: instrText || '-', status: short(instrText || '-', 36) },
-        V3: { desc: detectionText || '-', status: short(detectionText || '-', 36) },
-        V4: { desc: sceneText || '-', status: short(sceneText || '-', 36) },
-        V_input: {
-          desc: [sceneText, detectionText].filter(Boolean).join('\n') || '-',
-          status: short([sceneText, detectionText].filter(Boolean).join(' / ') || '-', 36)
-        },
-        V5: { desc: knowText || '-', status: short(knowText || '-', 36) },
-        V6: { desc: candText || '-', status: short(candText || '-', 36) },
-        V_agent_input: { desc: candText || '-', status: short(candText || '-', 36) },
-        V7: { desc: classText || '-', status: short(classText || '-', 36) },
-        V8: {
-          desc: hazardLevel || '-',
-          status: hazardLevel || '-'
+          labelFormatter: `智能体协商认知偏差检测  解析准确率 ${fmtPercent(getAccuracy('Stage3'))}`
         }
       };
 
       const mergedData = this.graphBaseData.map((node) => {
         const patch = nodePatch[node.name];
         if (!patch) return node;
-        const merged = { ...node, ...patch };
-        if (patch.labelFormatter) {
-          merged.label = {
-            ...(node.label || {}),
-            formatter: this.replaceAgentTerms(patch.labelFormatter),
-            fontSize: 11
-          };
-        }
-        merged.desc = this.replaceAgentTerms(merged.desc);
-        merged.status = this.replaceAgentTerms(merged.status);
+        const merged = { ...node };
+        merged.label = {
+          ...(node.label || {}),
+          formatter: patch.labelFormatter,
+          fontSize: 11
+        };
         return merged;
       });
       this.graphBaseData = mergedData;
       this.myChart.setOption({ series: [{ data: mergedData, links: this.graphBaseLinks }] });
 
-      if (this.selectedNode && this.selectedNode.text) {
-        const selected = mergedData.find((n) => n.value === this.selectedNode.text || n.name === this.selectedNode.text);
-        if (selected) {
-          const isModule = typeof selected.name === 'string' && /^M\d+$/i.test(selected.name);
-          this.selectedNode = {
-            text: selected.value,
-            category: isModule ? 'Module' : 'Variable',
-            desc: selected.desc,
-            value: selected.status
-          };
-        }
-      }
       this.$nextTick(() => {
         this.syncCarouselStageHighlight();
       });
@@ -1244,240 +1219,6 @@ export default {
         return this.replaceAgentTerms(String(value));
       }
     },
-    formatKVText(obj, orderedKeys = []) {
-      const map = this.asDict(obj);
-      const used = new Set();
-      const lines = [];
-      orderedKeys.forEach((key) => {
-        if (!(key in map)) return;
-        const value = this.toCompactText(map[key]);
-        if (!value) return;
-        lines.push(`${key}: ${value}`);
-        used.add(key);
-      });
-      Object.keys(map).forEach((key) => {
-        if (used.has(key)) return;
-        const value = this.toCompactText(map[key]);
-        if (!value) return;
-        lines.push(`${key}: ${value}`);
-      });
-      return lines.join('\n');
-    },
-    extractSampleId(sourceInfo = {}, sampleData = {}, s1 = {}, explicitSampleId = '') {
-      return resolveSampleId(sourceInfo, sampleData, s1, explicitSampleId);
-    },
-    extractInstructionText(s1, sampleData = {}, sourceInfo = {}) {
-      const fromSelection = this.firstNonEmpty(
-        this.selectedInstructionText,
-        this.safeGet(sourceInfo, 'instruction_text', '')
-      );
-      if (fromSelection) return fromSelection;
-      const instruction = this.firstNonEmpty(sampleData.instruction);
-      if (instruction) return instruction;
-      const out = this.asDict(this.safeGet(s1, 'model_output', {}));
-      const bias = this.asDict(out.bias_result);
-      const instructionScene = this.firstNonEmpty(out.instruction_scene, bias.instruction_scene);
-      const instructionEvidence = this.firstNonEmpty(bias.instruction_evidence);
-      const summary = this.firstNonEmpty(out.summary, bias.reason);
-      const lines = [];
-      if (instructionScene) lines.push(`作战指令场景: ${instructionScene}`);
-      if (instructionEvidence) lines.push(`指令依据: ${instructionEvidence}`);
-      if (summary) lines.push(`指令摘要: ${summary}`);
-      return lines.join('\n');
-    },
-    extractDetectionText(s2, detectionData = {}) {
-      const detectionObj = this.asDict(detectionData);
-      const yolo = this.asDict(detectionObj.yolo_result);
-      if (Object.keys(yolo).length > 0) {
-        const detectedClasses = Array.isArray(yolo.detected_classes) ? yolo.detected_classes : [];
-        const detections = Array.isArray(yolo.detections) ? yolo.detections : [];
-        const imageDescription = this.firstNonEmpty(detectionObj.description);
-        const lines = [];
-        lines.push(`detection_count: ${this.firstNonEmpty(yolo.detection_count, detections.length) || '0'}`);
-        if (imageDescription) {
-          lines.push(`图像描述: ${imageDescription}`);
-        }
-        if (detectedClasses.length) {
-          lines.push(`detected_classes: ${detectedClasses.join(', ')}`);
-        }
-        detections.slice(0, 5).forEach((det, idx) => {
-          const detObj = this.asDict(det);
-          const cls = this.firstNonEmpty(detObj.class_name, detObj.class_id);
-          const conf = this.firstNonEmpty(detObj.confidence);
-          const bbox = this.toCompactText(detObj.bbox);
-          lines.push(`det_${idx + 1}: class=${cls || '-'}, conf=${conf || '-'}, bbox=${bbox || '-'}`);
-        });
-        return lines.join('\n');
-      }
-      const out = this.asDict(this.safeGet(s2, 'model_output', {}));
-      const req = this.asDict(out.request_params);
-      const picked = {
-        ground_truth: this.firstNonEmpty(out.ground_truth, req.ground_truth),
-        model: this.firstNonEmpty(out.model, out.kind),
-        color: this.firstNonEmpty(out.color),
-        shape: this.firstNonEmpty(out.shape, out.outline),
-        scene: this.firstNonEmpty(out.scene),
-        img_type: this.firstNonEmpty(out.img_type, req.img_type),
-        error: this.firstNonEmpty(out._error, out.error)
-      };
-      return this.formatKVText(picked, ['ground_truth', 'model', 'color', 'shape', 'scene', 'img_type', 'error']);
-    },
-    extractSceneDescription(s1, s3, detectionData = {}) {
-      const detectionObj = this.asDict(detectionData);
-      const desc = this.firstNonEmpty(detectionObj.description);
-      const evidence = this.firstNonEmpty(detectionObj.image_evidence);
-      if (desc || evidence) {
-        const lines = [];
-        if (desc) lines.push(`场景描述: ${desc}`);
-        if (evidence) lines.push(`场景证据: ${evidence}`);
-        return lines.join('\n');
-      }
-      const s1Out = this.asDict(this.safeGet(s1, 'model_output', {}));
-      const s1Bias = this.asDict(s1Out.bias_result);
-      const s3Out = this.asDict(this.safeGet(s3, 'model_output', {}));
-      const lines = [];
-      const scene = this.firstNonEmpty(s1Out.image_scene, s1Bias.image_scene);
-      const stage1Evidence = this.firstNonEmpty(s1Bias.image_evidence);
-      const battlefield = this.firstNonEmpty(s3Out.final_battlefield_analysis, s3Out.summary);
-      if (scene) lines.push(`场景识别: ${scene}`);
-      if (stage1Evidence) lines.push(`场景证据: ${stage1Evidence}`);
-      if (battlefield) lines.push(`场景描述: ${battlefield}`);
-      return lines.join('\n');
-    },
-    truncateTextWithEllipsis(text, maxLen = 220) {
-      const value = String(text || '').trim();
-      if (!value) return '';
-      if (value.length <= maxLen) return value;
-      return `${value.slice(0, maxLen)}...`;
-    },
-    summarizeKnowledgeData(value, maxLines = 12) {
-      const lines = [];
-      const pushLine = (line) => {
-        if (lines.length >= maxLines) return;
-        const trimmed = this.truncateTextWithEllipsis(line, 220);
-        if (trimmed) lines.push(trimmed);
-      };
-
-      if (Array.isArray(value)) {
-        for (let i = 0; i < value.length && lines.length < maxLines; i += 1) {
-          const item = value[i];
-          if (item && typeof item === 'object' && !Array.isArray(item)) {
-            const keys = Object.keys(item);
-            const kv = keys.slice(0, 3).map((k) => `${k}: ${this.toCompactText(item[k])}`).join(', ');
-            pushLine(kv);
-          } else {
-            pushLine(this.toCompactText(item));
-          }
-        }
-      } else if (value && typeof value === 'object') {
-        const keys = Object.keys(value);
-        for (let i = 0; i < keys.length && lines.length < maxLines; i += 1) {
-          const k = keys[i];
-          const v = value[k];
-          if (v && typeof v === 'object') {
-            pushLine(`${k}: ${this.truncateTextWithEllipsis(this.toCompactText(v), 220)}`);
-          } else {
-            pushLine(`${k}: ${this.toCompactText(v)}`);
-          }
-        }
-      } else {
-        pushLine(this.toCompactText(value));
-      }
-      return lines;
-    },
-    extractKnowledgeText(knowledgeData, s2, s3) {
-      const knowledgeObj = knowledgeData && typeof knowledgeData === 'object' ? knowledgeData : null;
-      if (knowledgeObj) {
-        const body = Object.prototype.hasOwnProperty.call(knowledgeObj, 'data') ? knowledgeObj.data : knowledgeObj;
-        const lines = this.summarizeKnowledgeData(body, 12);
-        if (lines.length) {
-          return `${lines.join('\n')}\n...`;
-        }
-      }
-      const s2Out = this.asDict(this.safeGet(s2, 'model_output', {}));
-      const s2Req = this.asDict(s2Out.request_params);
-      const s3Out = this.asDict(this.safeGet(s3, 'model_output', {}));
-      const s3Req = this.asDict(s3Out.request_params);
-      const kv = {
-        ground_truth: this.firstNonEmpty(s3Req.ground_truth, s2Out.ground_truth),
-        kind: this.firstNonEmpty(s3Req.kind, s3Out.kind),
-        color: this.firstNonEmpty(s3Req.color, s3Out.color),
-        shape: this.firstNonEmpty(s3Req.shape, s3Out.shape),
-        img_type: this.firstNonEmpty(s2Out.img_type, s2Req.img_type)
-      };
-      return this.formatKVText(kv, ['ground_truth', 'kind', 'color', 'shape', 'img_type']);
-    },
-    extractCandidateText(s2, s3) {
-      const s2Out = this.asDict(this.safeGet(s2, 'model_output', {}));
-      const s2Req = this.asDict(s2Out.request_params);
-      const s3Out = this.asDict(this.safeGet(s3, 'model_output', {}));
-      const s3Req = this.asDict(s3Out.request_params);
-      const imagePath = this.firstNonEmpty(s2Out.image_path, s2Out.path, s2Req.img_path, s3Out.image_path, s3Req.image_path);
-      const kind = this.firstNonEmpty(s3Out.kind, s3Req.kind, s2Out.kind, s2Out.ground_truth);
-      return this.formatKVText({ image_path: imagePath, sub_class: kind }, ['image_path', 'sub_class']);
-    },
-    extractClassText(s2, s3, s4) {
-      const s2Out = this.asDict(this.safeGet(s2, 'model_output', {}));
-      const s2Req = this.asDict(s2Out.request_params);
-      const s3Out = this.asDict(this.safeGet(s3, 'model_output', {}));
-      const s3Req = this.asDict(s3Out.request_params);
-      const s4Out = this.asDict(this.safeGet(s4, 'model_output', {}));
-      const s4Req = this.asDict(s4Out.request_params);
-      return this.firstNonEmpty(
-        s4Out.weapon_model,
-        s4Req.weapon_model,
-        s2Out.model,
-        s2Out.label,
-        s2Out.ground_truth,
-        s2Req.ground_truth,
-        s3Req.ground_truth,
-        s3Out.model,
-        s3Out.ground_truth
-      );
-    },
-    extractHazardLevel(s4) {
-      const out = this.asDict(this.safeGet(s4, 'model_output', {}));
-      const prediction = this.asDict(out.prediction);
-      const err = this.asDict(out.error);
-      return this.firstNonEmpty(
-        prediction.risk_level,
-        prediction.decision,
-        out.risk_level,
-        out.danger_level,
-        err.danger_level,
-        out.decision,
-        out.model_analysis_danger_level,
-        out.local_txt_danger_level
-      );
-    },
-    extractHazardText(s4) {
-      const out = this.asDict(this.safeGet(s4, 'model_output', {}));
-      const prediction = this.asDict(out.prediction);
-      const err = this.asDict(out.error);
-      const lines = [];
-      const hazard = this.extractHazardLevel(s4);
-      const reason = this.firstNonEmpty(
-        prediction.summary,
-        prediction.reason,
-        out.summary,
-        out.reason,
-        err.message,
-        this.safeGet(s4, 'final_text', '')
-      );
-      const model = this.firstNonEmpty(
-        prediction.weapon_model,
-        out.weapon_model,
-        this.safeGet(s4, 'model_output.request_params.weapon_model', '')
-      );
-      const decision = this.firstNonEmpty(prediction.decision, out.decision);
-      const behavior = this.firstNonEmpty(prediction.behavior_status, out.behavior_status);
-      if (model) lines.push(`武器型号: ${model}`);
-      if (hazard) lines.push(`威胁等级: ${hazard}`);
-      if (decision) lines.push(`决策结论: ${decision}`);
-      if (behavior) lines.push(`行为状态: ${behavior}`);
-      if (reason) lines.push(`判断理由: ${reason}`);
-      return lines.join('\n');
-    },
     firstResultObject(value) {
       if (value && typeof value === 'object' && !Array.isArray(value)) return value;
       if (!Array.isArray(value)) return {};
@@ -1488,94 +1229,6 @@ export default {
         if (Array.isArray(item)) queue.push(...item);
       }
       return {};
-    },
-    clipText(value, max = 220) {
-      const txt = String(value || '').trim();
-      if (!txt) return '';
-      if (txt.length <= max) return txt;
-      return `${txt.slice(0, max)}...`;
-    },
-    summarizePropagationStage(stageKey, stagePayload) {
-      const key = String(stageKey || '').toLowerCase();
-      const data = this.asDict(stagePayload);
-      if (!Object.keys(data).length) return '';
-
-      if (key === 'stage2') {
-        const resultObj = this.firstResultObject(this.safeGet(data, 'result', null));
-        const labelObj = this.firstResultObject(this.safeGet(data, 'label_info', null));
-        const model = this.firstNonEmpty(resultObj.model, labelObj.model, resultObj.kind, labelObj.kind);
-        const kind = this.firstNonEmpty(resultObj.kind, labelObj.kind);
-        const scene = this.firstNonEmpty(resultObj.scene, labelObj.scene);
-        const accuracy = this.firstNonEmpty(data.accuracy, (Array.isArray(data.accuracy_list) ? data.accuracy_list[0] : ''));
-        const parts = [];
-        if (model) parts.push(`识别目标=${model}`);
-        if (kind) parts.push(`类型=${kind}`);
-        if (scene) parts.push(`场景=${scene}`);
-        if (accuracy) parts.push(`准确率=${accuracy}`);
-        return `Stage2 传播结果: ${parts.join('，') || this.clipText(this.toCompactText(data), 260)}`;
-      }
-
-      if (key === 'stage3') {
-        const summary = this.firstNonEmpty(
-          data.final_battlefield_analysis,
-          data.summary,
-          this.safeGet(data, 'final_review.consensus_summary', '')
-        );
-        if (summary) return `Stage3 传播结果: ${this.clipText(summary, 300)}`;
-        return `Stage3 传播结果: ${this.clipText(this.toCompactText(data), 260)}`;
-      }
-
-      if (key === 'stage4') {
-        const pred = this.asDict(this.safeGet(data, 'prediction', {}));
-        const model = this.firstNonEmpty(pred.weapon_model, data.weapon_model);
-        const level = this.firstNonEmpty(pred.risk_level, data.risk_level, data.decision);
-        const reason = this.firstNonEmpty(pred.summary, data.summary);
-        const parts = [];
-        if (model) parts.push(`型号=${model}`);
-        if (level) parts.push(`威胁等级=${level}`);
-        if (reason) parts.push(`结论=${this.clipText(reason, 180)}`);
-        return `Stage4 传播结果: ${parts.join('，') || this.clipText(this.toCompactText(data), 260)}`;
-      }
-
-      return `${stageKey} 传播结果: ${this.clipText(this.toCompactText(data), 260)}`;
-    },
-    formatPropagationIntermediate(stageName, stageData) {
-      const propagation = this.asDict(this.safeGet(stageData, 'propagation_output', {}));
-      if (!Object.keys(propagation).length) return '';
-
-      const upstream = this.toCompactText(this.safeGet(propagation, 'counterfactual_upstream_output', ''));
-      const downstreamObj = this.asDict(this.safeGet(propagation, 'downstream_results', {}));
-      const lines = [];
-      lines.push(`[${stageName}] 认知传播结果`);
-
-      if (upstream) {
-        lines.push(`上游替换结果: ${this.clipText(upstream, 240)}`);
-      }
-
-      // 新结构：propagation_output 直接含 Stage2/Stage3/Stage4
-      const directStageKeys = Object.keys(propagation)
-        .filter(k => /^stage[1-4]$/i.test(k))
-        .sort((a, b) => Number(a.replace(/[^0-9]/g, '')) - Number(b.replace(/[^0-9]/g, '')));
-      directStageKeys.forEach((k) => {
-        const text = this.summarizePropagationStage(k, propagation[k]);
-        if (text) lines.push(text);
-      });
-
-      // 兼容旧结构：downstream_results.stage2/3/4
-      const downstreamStageKeys = Object.keys(downstreamObj)
-        .filter(k => /^stage[1-4]$/i.test(k))
-        .sort((a, b) => Number(a.replace(/[^0-9]/g, '')) - Number(b.replace(/[^0-9]/g, '')));
-      downstreamStageKeys.forEach((k) => {
-        const text = this.summarizePropagationStage(k, downstreamObj[k]);
-        if (text) lines.push(text);
-      });
-
-      // 若还是没有有效内容，兜底展示 propagation_output 摘要。
-      if (lines.length === 1) {
-        lines.push(this.clipText(this.toCompactText(propagation), 320));
-      }
-
-      return lines.join('\n\n');
     },
     getPreviousSourceContext() {
       const query = (this.$route && this.$route.query) ? this.$route.query : {};
@@ -1599,25 +1252,6 @@ export default {
         return null;
       }
     },
-    async restorePreviousSelection() {
-      const previous = this.getPreviousSourceContext();
-      if (!previous) return;
-      let target = this.videoList.find((v) => (
-        (previous.source_id && v.source_id === previous.source_id) ||
-        (previous.path && v.path === previous.path)
-      ));
-      if (!target) {
-        target = {
-          id: this.videoList.length + 1,
-          source_id: previous.source_id || `source_${Date.now()}`,
-          name: previous.source_id || previous.path,
-          path: previous.path,
-          type: this.normalizeContextType(previous.type)
-        };
-        this.videoList = [target, ...this.videoList];
-      }
-      await this.selectVideo(target, { resetAccuracyTimer: false, preserveCurrentResult: true });
-    },
     persistSelectedSourceContext(ctx) {
       const source_id = String((ctx || {}).source_id || '').trim();
       const path = String((ctx || {}).path || '').trim();
@@ -1628,39 +1262,6 @@ export default {
       } catch (e) {
         // ignore
       }
-    },
-    // 固定高亮方式 1：亮 V_det，然后除了 Video、instr、desc，其他节点全亮
-    highlightPresetDetAllExceptVideoInstrDesc() {
-      const exclude = this.resolveNodeNames(['video', 'instr', 'desc', '多模态']);
-      const nodes = this.getAllNodeNames().filter(name => !exclude.includes(name));
-      this.highlightGraphByNodeSet(nodes);
-    },
-    // 固定高亮方式 2：亮 V_desc，然后除了 Video、instr、det，其他节点全亮
-    highlightPresetDescAllExceptVideoInstrDet() {
-      const exclude = this.resolveNodeNames(['video', 'instr', 'det', '多模态']);
-      const nodes = this.getAllNodeNames().filter(name => !exclude.includes(name));
-      this.highlightGraphByNodeSet(nodes);
-    },
-    // 固定高亮方式 3：亮 V_cand、智能体协商、class、决策选择、hazard
-    highlightPresetCandToHazard() {
-      const nodes = this.resolveNodeNames(['V_cand', '智能体协商', '智能体A', '智能体B', '智能体C', 'class', '决策选择', '指挥员决策', 'hazard']);
-      this.highlightGraphByNodeSet(nodes);
-    },
-    // 固定高亮方式 4：亮 class、决策选择、hazard
-    highlightPresetClassToHazard() {
-      const nodes = this.resolveNodeNames(['class', '决策选择', '指挥员决策', 'harzand']);
-      this.highlightGraphByNodeSet(nodes);
-    },
-    // 可选：统一入口，便于外部直接按模式名调用
-    applyFixedHighlightMode(mode) {
-      const handlerMap = {
-        det_all_except_video_instr_desc: this.highlightPresetDetAllExceptVideoInstrDesc,
-        desc_all_except_video_instr_det: this.highlightPresetDescAllExceptVideoInstrDet,
-        cand_to_hazard: this.highlightPresetCandToHazard,
-        class_to_hazard: this.highlightPresetClassToHazard
-      };
-      const handler = handlerMap[mode];
-      if (handler) handler.call(this);
     },
     highlightGraphByNodeSet(nodeNames) {
       const nodes = this.resolveNodeNames(nodeNames);
@@ -1718,14 +1319,20 @@ export default {
         v_decision_input: 'V_decision_input',
         det: 'V3',
         v_det: 'V3',
+        env: 'V4',
+        v_env: 'V4',
         desc: 'V4',
         v_desc: 'V4',
         know: 'V5',
         v_know: 'V5',
         cand: 'V6',
         v_cand: 'V6',
+        neo: 'V7',
+        v_neo: 'V7',
         class: 'V7',
         v_class: 'V7',
+        intent: 'V8',
+        v_intent: 'V8',
         hazard: 'V8',
         harzand: 'V8',
         v_hazard: 'V8'
