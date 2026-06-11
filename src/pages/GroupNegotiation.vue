@@ -515,6 +515,10 @@ const MODULE3_EXPORT_URL = MODULE3_BASE
 /** 图片分组偏差检测：偏差识别准确率固定值及延迟展示时长 */
 const MODULE3_IMAGE_FIXED_ACCURACY = 89.16;
 const MODULE3_BIAS_ACCURACY_DELAY = 2 * 60 * 1000;
+/** 图片分组一轮/二轮结果分步展示：随机 3–5 秒 */
+function randomRoundDisplayDelayMs() {
+  return 3000 + Math.floor(Math.random() * 2001);
+}
 /** 视频群体协商 POST：JSON 里绝对路径前缀换为 `..`，其余原样 */
 const MODULE3_VIDEO_IMAGE_PATH_PREFIX = '/home/wuzhixuan/Project/PCJC';
 function toModule3VideoImagePath(serverPath) {
@@ -629,7 +633,9 @@ export default {
       isRightLoadingResults: false,
       isRightLoadingAccuracy: false,
       pendingNegotiationResult: null, // 新增：暂存群体协商结果
-      accuracyTimer: null // 准确率计时器
+      accuracyTimer: null, // 准确率计时器
+      round1DisplayTimer: null,
+      round2DisplayTimer: null
     };
   },
   beforeDestroy() {
@@ -836,8 +842,19 @@ export default {
       }
       return String(val);
     },
+    clearRoundDisplayTimers() {
+      if (this.round1DisplayTimer) {
+        clearTimeout(this.round1DisplayTimer);
+        this.round1DisplayTimer = null;
+      }
+      if (this.round2DisplayTimer) {
+        clearTimeout(this.round2DisplayTimer);
+        this.round2DisplayTimer = null;
+      }
+    },
     /** 清空中间/右侧协商展示（不清理 localStorage；切换图片或发起新请求前调用） */
     clearNegotiationDisplay() {
+      this.clearRoundDisplayTimers();
       this.agentARound1Result = '';
       this.agentBRound1Result = '';
       this.agentCRound1Result = '';
@@ -1879,30 +1896,60 @@ export default {
           this.imageModeRound1FromStatic = null;
         }
 
-        // 只展示一轮/二轮；右侧结果需用户点击“群体协商偏差检测”后再展示
-        this.applyModule3Fields(data, {
-          round1: true,
-          round2: false,
-          review: false,
-          finalBlock: false,
-          accuracy: false
-        });
-        this.isLoadingRound1 = false;
-        this.isRound1Displayed = true;
+        localStorage.setItem('module3Res', JSON.stringify(data));
 
-        setTimeout(() => {
+        // 只展示一轮/二轮；右侧结果需用户点击“群体协商偏差检测”后再展示
+        if (this.selectedDetailType === 'compare') {
+          this.clearRoundDisplayTimers();
+          const round1Delay = randomRoundDisplayDelayMs();
+          const round2Delay = randomRoundDisplayDelayMs();
+          this.round1DisplayTimer = setTimeout(() => {
+            this.round1DisplayTimer = null;
+            this.applyModule3Fields(data, {
+              round1: true,
+              round2: false,
+              review: false,
+              finalBlock: false,
+              accuracy: false
+            });
+            this.isLoadingRound1 = false;
+            this.isRound1Displayed = true;
+            this.round2DisplayTimer = setTimeout(() => {
+              this.round2DisplayTimer = null;
+              this.applyModule3Fields(data, {
+                round1: false,
+                round2: true,
+                review: false,
+                finalBlock: false,
+                accuracy: false
+              });
+              this.isLoadingRound2 = false;
+              this.isRound2Displayed = true;
+            }, round2Delay);
+          }, round1Delay);
+        } else {
           this.applyModule3Fields(data, {
-            round1: false,
-            round2: true,
+            round1: true,
+            round2: false,
             review: false,
             finalBlock: false,
             accuracy: false
           });
-          this.isLoadingRound2 = false;
-          this.isRound2Displayed = true;
-        }, 3000);
+          this.isLoadingRound1 = false;
+          this.isRound1Displayed = true;
 
-        localStorage.setItem('module3Res', JSON.stringify(data));
+          setTimeout(() => {
+            this.applyModule3Fields(data, {
+              round1: false,
+              round2: true,
+              review: false,
+              finalBlock: false,
+              accuracy: false
+            });
+            this.isLoadingRound2 = false;
+            this.isRound2Displayed = true;
+          }, 3000);
+        }
         console.log('模块3返回值已存入localStorage');
         // 【新增】方便调试：打印 localStorage
           console.log("--- localStorage 已更新 (模块三) ---");
@@ -1910,6 +1957,7 @@ export default {
           console.log("---------------------------------");
       } catch (error) {
         console.error("推理请求失败:", error);
+        this.clearRoundDisplayTimers();
         this.isLoadingRound1 = false;
         this.isLoadingRound2 = false;
         const errMsg = (error.response && error.response.data && error.response.data.error) || error.message;
