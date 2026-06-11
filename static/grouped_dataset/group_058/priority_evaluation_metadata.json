@@ -1,0 +1,7 @@
+{
+    "truth_priority_ordering": "多管火炮>装甲战斗车辆>军用卡车",
+    "final_priority_ordering_plain": "多管火炮>装甲战斗车辆>军用卡车",
+    "pairwise_order_accuracy": 100.0,
+    "is_intentionally_wrong": false,
+    "is_correct_by_80_threshold": true
+}

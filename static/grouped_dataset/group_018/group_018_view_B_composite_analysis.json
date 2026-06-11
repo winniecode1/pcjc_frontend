@@ -1,9 +1,0 @@
-{
-    "group_name": "group_018",
-    "source_image": "group_018_view_B_composite.jpg",
-    "analysis_result": {
-        "detailed_description": "第一张图片检测到2个多管火炮目标(置信度0.50、0.46)；第二张图片检测到1个军用卡车目标(置信度0.67)；第三张图片检测到9个战壕目标(置信度0.87、0.85、0.83、0.83、0.82、0.80、0.78、0.58、0.48)。",
-        "target_class": "",
-        "target_count": ""
-    }
-}

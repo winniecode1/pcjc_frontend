@@ -3132,8 +3132,9 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 4px 0;
-  min-height: 100px;
+  padding: 0;
+  min-height: 90px;
+  margin-top: -10px;
 }
 
 /* 通用按钮容器设置 */
@@ -3152,13 +3153,13 @@ export default {
 }
 
 .btn-start-detect {
-  width: 280px;
+  width: 330px;
   height: 100px;
-  font-size: 16px; 
+  font-size: 16px;
   background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  display: inline-block; 
+  display: inline-block;
   margin: 0 auto;
 }
 

@@ -1,9 +1,0 @@
-{
-    "group_name": "group_011",
-    "source_image": "group_011_view_A_composite.jpg",
-    "analysis_result": {
-        "detailed_description": "第一张图片检测到1个坦克目标(置信度0.91)；第二张图片检测到1个军用卡车目标(置信度0.90)、1个装甲战斗车辆目标(置信度0.91)；第三张图片检测到3个战壕目标(置信度0.93、0.81、0.53)。",
-        "target_class": "",
-        "target_count": ""
-    }
-}

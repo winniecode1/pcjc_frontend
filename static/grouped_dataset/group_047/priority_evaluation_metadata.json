@@ -1,0 +1,7 @@
+{
+    "truth_priority_ordering": "战壕>坦克>多管火炮",
+    "final_priority_ordering_plain": "战壕>坦克>多管火炮",
+    "pairwise_order_accuracy": 100.0,
+    "is_intentionally_wrong": false,
+    "is_correct_by_80_threshold": true
+}

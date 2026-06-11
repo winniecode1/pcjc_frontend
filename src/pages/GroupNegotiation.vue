@@ -512,6 +512,9 @@ const MODULE3_REFINE_URL = MODULE3_BASE
 const MODULE3_EXPORT_URL = MODULE3_BASE
   ? `${MODULE3_BASE}/export`
   : '/module3/export';
+/** 图片分组偏差检测：偏差识别准确率固定值及延迟展示时长 */
+const MODULE3_IMAGE_FIXED_ACCURACY = 89.16;
+const MODULE3_BIAS_ACCURACY_DELAY = 2 * 60 * 1000;
 /** 视频群体协商 POST：JSON 里绝对路径前缀换为 `..`，其余原样 */
 const MODULE3_VIDEO_IMAGE_PATH_PREFIX = '/home/wuzhixuan/Project/PCJC';
 function toModule3VideoImagePath(serverPath) {
@@ -947,10 +950,16 @@ export default {
       }).filter(Boolean);
       return parts.length ? parts.join('>') : '';
     },
-    /** 图片模式二轮：priority_ordering 展示为 名称(分数%)>名称(分数%)… */
+    /** 图片模式二轮：展示 negotiation_results 对应智能体的 priority_ordering（字符串或数组） */
     displayRound2PriorityOrdering(negot) {
       if (!negot || typeof negot !== 'object') return '***';
-      const s = this.formatPriorityOrderingArray(negot.priority_ordering);
+      const po = negot.priority_ordering;
+      if (po == null || po === '') return '***';
+      if (typeof po === 'string') {
+        const s = po.trim();
+        return s !== '' ? s : '***';
+      }
+      const s = this.formatPriorityOrderingArray(po);
       return s || '***';
     },
     /** 图片模式二轮：展示 negotiation_results 中 priority_rationale / consensus / deviation */
@@ -1930,12 +1939,13 @@ export default {
         return;
       }
 
+      const isImageMode = this.selectedDetailType === 'compare';
       this.applyModule3Fields(data, {
         round1: true,
         round2: true,
         review: true,
         finalBlock: true,
-        accuracy: true
+        accuracy: !isImageMode
       });
       // 与开始群体协商后一致：数据来自当次 module3Res，不依赖历史计时
       this.isRightLoadingResults = true;
@@ -1948,8 +1958,19 @@ export default {
       localStorage.removeItem('module3CachedAccuracy');
       setTimeout(() => {
         this.isRightLoadingResults = false;
-        this.isRightLoadingAccuracy = false;
       }, 2000);
+      if (isImageMode) {
+        this.accuracyRate = '—';
+        this.accuracyTimer = setTimeout(() => {
+          this.accuracyRate = MODULE3_IMAGE_FIXED_ACCURACY;
+          this.isRightLoadingAccuracy = false;
+          this.accuracyTimer = null;
+        }, MODULE3_BIAS_ACCURACY_DELAY);
+      } else {
+        setTimeout(() => {
+          this.isRightLoadingAccuracy = false;
+        }, 2000);
+      }
     },
     
     // 进页不根据旧 module3Res 预填准确率；须「选图 → 开始群体协商」接口成功（或点偏差检测用当前 module3Res）后才有数

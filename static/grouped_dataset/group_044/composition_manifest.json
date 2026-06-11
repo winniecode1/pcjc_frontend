@@ -1,0 +1,79 @@
+{
+    "group": "group_044",
+    "cluster_set": "color_clusters_5",
+    "color_folder": "深绿色_01_RGB_63_66_63",
+    "views": [
+        {
+            "view": "A",
+            "image": "group_044_view_A_composite.jpg",
+            "sources": [
+                {
+                    "type": "type1",
+                    "view_source_index": 0,
+                    "source_image": "firc_junshi_2180.jpg",
+                    "source_path": "E:\\Code\\uav-detect\\output\\uav-det-yolo26_datav1_imgsz640\\color_clusters_5\\深绿色_01_RGB_63_66_63\\type1\\firc_junshi_2180.jpg"
+                },
+                {
+                    "type": "type2",
+                    "view_source_index": 0,
+                    "source_image": "firc_junshi_689.jpg",
+                    "source_path": "E:\\Code\\uav-detect\\output\\uav-det-yolo26_datav1_imgsz640\\color_clusters_5\\深绿色_01_RGB_63_66_63\\type2\\firc_junshi_689.jpg"
+                },
+                {
+                    "type": "type3",
+                    "view_source_index": 0,
+                    "source_image": "firc_junshi_677.jpg",
+                    "source_path": "E:\\Code\\uav-detect\\output\\uav-det-yolo26_datav1_imgsz640\\color_clusters_5\\深绿色_01_RGB_63_66_63\\type3\\firc_junshi_677.jpg"
+                }
+            ]
+        },
+        {
+            "view": "B",
+            "image": "group_044_view_B_composite.jpg",
+            "sources": [
+                {
+                    "type": "type1",
+                    "view_source_index": 1,
+                    "source_image": "firc_junshi_2181.jpg",
+                    "source_path": "E:\\Code\\uav-detect\\output\\uav-det-yolo26_datav1_imgsz640\\color_clusters_5\\深绿色_01_RGB_63_66_63\\type1\\firc_junshi_2181.jpg"
+                },
+                {
+                    "type": "type2",
+                    "view_source_index": 1,
+                    "source_image": "firc_junshi_690.jpg",
+                    "source_path": "E:\\Code\\uav-detect\\output\\uav-det-yolo26_datav1_imgsz640\\color_clusters_5\\深绿色_01_RGB_63_66_63\\type2\\firc_junshi_690.jpg"
+                },
+                {
+                    "type": "type3",
+                    "view_source_index": 1,
+                    "source_image": "firc_junshi_678.jpg",
+                    "source_path": "E:\\Code\\uav-detect\\output\\uav-det-yolo26_datav1_imgsz640\\color_clusters_5\\深绿色_01_RGB_63_66_63\\type3\\firc_junshi_678.jpg"
+                }
+            ]
+        },
+        {
+            "view": "C",
+            "image": "group_044_view_C_composite.jpg",
+            "sources": [
+                {
+                    "type": "type1",
+                    "view_source_index": 2,
+                    "source_image": "firc_junshi_2182.jpg",
+                    "source_path": "E:\\Code\\uav-detect\\output\\uav-det-yolo26_datav1_imgsz640\\color_clusters_5\\深绿色_01_RGB_63_66_63\\type1\\firc_junshi_2182.jpg"
+                },
+                {
+                    "type": "type2",
+                    "view_source_index": 2,
+                    "source_image": "firc_junshi_691.jpg",
+                    "source_path": "E:\\Code\\uav-detect\\output\\uav-det-yolo26_datav1_imgsz640\\color_clusters_5\\深绿色_01_RGB_63_66_63\\type2\\firc_junshi_691.jpg"
+                },
+                {
+                    "type": "type3",
+                    "view_source_index": 2,
+                    "source_image": "firc_junshi_679.jpg",
+                    "source_path": "E:\\Code\\uav-detect\\output\\uav-det-yolo26_datav1_imgsz640\\color_clusters_5\\深绿色_01_RGB_63_66_63\\type3\\firc_junshi_679.jpg"
+                }
+            ]
+        }
+    ]
+}

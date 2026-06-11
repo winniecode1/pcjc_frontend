@@ -1,0 +1,7 @@
+{
+    "truth_priority_ordering": "军用卡车>装甲战斗车辆>战壕",
+    "final_priority_ordering_plain": "军用卡车>装甲战斗车辆>战壕",
+    "pairwise_order_accuracy": 100.0,
+    "is_intentionally_wrong": false,
+    "is_correct_by_80_threshold": true
+}

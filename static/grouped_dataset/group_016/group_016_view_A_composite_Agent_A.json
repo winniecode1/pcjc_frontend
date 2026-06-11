@@ -1,6 +1,0 @@
-{
-    "source_image": "group_016_view_A_composite.jpg",
-    "analysis_result": {
-        "raw_response": "第一张图片检测到1个坦克目标(置信度0.82)；第二张图片检测到2个军用卡车目标(置信度0.96、0.66)；第三张图片检测到1个战壕目标(置信度0.91)。"
-    }
-}
