@@ -118,7 +118,7 @@
             <span>目标信息类别识别</span>
           </button>
           <button @click="queryPriorKnowledge" class="btn-start-detect" :disabled="isLoading || isQueryingPriorKnowledge">
-            <span>查询先验知识</span>
+            <span>加载先验知识</span>
           </button>
         </div>
       </div>
