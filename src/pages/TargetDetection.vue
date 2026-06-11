@@ -465,7 +465,7 @@ export default {
         console.log("作战指令获取成功", this.ordersText);
       } catch (error) {
         console.error("获取作战指令失败", error);
-        this.ordersText = '';
+        // 不清空 ordersText，保留缓存或之前已加载的值
       }
     },
     async loadInitialData() {
