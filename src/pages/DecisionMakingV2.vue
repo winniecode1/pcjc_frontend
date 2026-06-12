@@ -92,19 +92,24 @@
               :key="'orig-' + originalVideoURL"
               @error="handleOriginalVideoError"
             ></video>
-            <div v-else-if="selectedVideo" class="placeholder-text loading-text">加载中…</div>
-            <div v-else class="placeholder-text">请选择{{ selectedMediaType === 'image' ? '图片' : '视频' }}</div>
+            <div v-if="isImageLoading" class="loading-progress-overlay">
+              <div class="loading-progress-bar">
+                <div class="loading-progress-fill"></div>
+              </div>
+              <div class="loading-progress-text">{{ selectedMediaType === 'image' ? '图片加载中...' : '视频加载中...' }}</div>
+            </div>
+            <div v-else-if="!originalVideoURL" class="placeholder-text">请选择{{ selectedMediaType === 'image' ? '图片' : '视频' }}</div>
           </div>
         </div>
 
-        <div class="action-buttons-middle">
-          <button @click="startDetection" :disabled="!canStartTrackRecognition" class="btn-start-detect">
-            <span class="btn-text-pos">目标与轨迹识别</span>
-          </button>
-        </div>
-
         <div class="video-section video-section--processed">
-          <div class="video-label label-processed">多模态目标检测结果</div>
+          <div
+            class="video-label label-processed clickable-label"
+            :class="{ 'label-clickable': canClickToDetect, 'label-detecting': isLoading }"
+            @click="handleLabelClick"
+          >
+            {{ detectionLabelText }}
+          </div>
           <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
             <img v-if="processedVideoURL && !isLoading && selectedMediaType === 'image'" :src="processedVideoURL" class="video-display" alt="检测结果" :key="'img-' + processedVideoURL" @load="handleProcessedTrackMediaReady" @error="handleImageError" />
             <video
@@ -124,7 +129,12 @@
               <p class="codec-unsupported-text">{{ processedVideoCodecWarning }}</p>
               <a class="codec-download-link" :href="processedVideoURL" :download="processedVideoDownloadName">下载轨迹视频 ({{ processedVideoDownloadName }})</a>
             </div>
-            <div v-if="isLoading" class="placeholder-text loading-text">识别中……</div>
+            <div v-if="isLoading" class="loading-progress-overlay">
+              <div class="loading-progress-bar">
+                <div class="loading-progress-fill"></div>
+              </div>
+              <div class="loading-progress-text">目标检测进行中...</div>
+            </div>
             <div v-else-if="!processedVideoURL" class="placeholder-text">检测结果将在这里显示</div>
           </div>
         </div>
@@ -154,100 +164,135 @@
           </button>
         </div>
 
-        <div class="panel-header header-results clean-header">偏差检测结果</div>
-
         <div class="panel-right-top" :class="{ 'loading-overlay': isBiasDetecting && !showBiasDetails }">
           <div class="panel-content">
-            <div class="description-box p-2 overflow-auto"
-              :class="{ 'loading-text': isBiasDetecting && !showBiasDetails }">
+            <div class="panel-header header-results title-one-line dm-result-box-title">
+              <span>战术意图分析</span>
+            </div>
+            <div v-if="isBiasDetecting && !showBiasDetails" class="panel-overlay">计算中...</div>
+            <div class="result-section result-section-main">
+              <div
+                class="section-content unified-scroll bias-panel-scroll"
+                :class="{ 'loading-text': isBiasDetecting && !showBiasDetails }"
+              >
+                <p v-if="!showBiasDetails" class="result-text hint-text">请点击决策认知偏差检测</p>
 
-              <div v-if="isBiasDetecting && !showBiasDetails" class="text-left small-text">
-                计算中…
-              </div>
-              <div v-else-if="!showBiasDetails" class="text-left small-text hint-text">
-                请先进行目标与轨迹识别，再点击决策认知偏差检测按钮
-              </div>
-
-              <div v-else-if="showBiasDetails" class="bias-result-display">
-                <div v-if="behaviorAnalysisView" class="behavior-analysis-view">
-                  <div
-                    v-if="behaviorAnalysisView.tacticalIntentRanking && behaviorAnalysisView.tacticalIntentRanking.length"
-                    class="ba-section ba-section--tactical"
-                  >
-                    <div class="ba-section-head">
-                      <span class="ba-section-icon">▣</span>
-                      <span class="ba-section-title">战术意图</span>
-                    </div>
-                    <div class="ba-intent-list">
-                      <button
-                        v-for="(item, idx) in behaviorAnalysisView.tacticalIntentRanking"
-                        :key="'intent-' + idx + '-' + item.intent"
-                        type="button"
-                        class="ba-intent-btn"
-                        :class="{
-                          'ba-intent-btn--selected': selectedTacticalIntentIndex === idx,
-                          'ba-intent-btn--disabled': selectedTacticalIntentIndex !== null && selectedTacticalIntentIndex !== idx
-                        }"
-                        :disabled="selectedTacticalIntentIndex !== null && selectedTacticalIntentIndex !== idx"
-                        @click="selectTacticalIntent(idx)"
-                      >
-                        <span class="ba-intent-name">{{ item.intent }}</span>
-                        <span class="ba-intent-confidence">
-                          <span class="ba-intent-confidence-bar-wrap">
-                            <span
-                              class="ba-intent-confidence-bar"
-                              :style="{ width: formatIntentConfidenceWidth(item.confidence) }"
-                            ></span>
+                <div v-else-if="showBiasDetails" class="bias-result-display">
+                  <div v-if="behaviorAnalysisView" class="behavior-analysis-view">
+                    <div
+                      v-if="behaviorAnalysisView.tacticalIntentRanking && behaviorAnalysisView.tacticalIntentRanking.length"
+                      class="ba-section ba-section--tactical"
+                    >
+                      <div class="ba-intent-list">
+                        <button
+                          v-for="(item, idx) in behaviorAnalysisView.tacticalIntentRanking"
+                          :key="'intent-' + idx + '-' + item.intent"
+                          type="button"
+                          class="ba-intent-btn"
+                          :class="{
+                            'ba-intent-btn--selected': selectedTacticalIntentIndex === idx,
+                            'ba-intent-btn--disabled': selectedTacticalIntentIndex !== null && selectedTacticalIntentIndex !== idx
+                          }"
+                          :disabled="selectedTacticalIntentIndex !== null && selectedTacticalIntentIndex !== idx"
+                          @click="selectTacticalIntent(idx)"
+                        >
+                          <span class="ba-intent-name">{{ item.intent }}</span>
+                          <span class="ba-intent-confidence">
+                            <span class="ba-intent-confidence-bar-wrap">
+                              <span
+                                class="ba-intent-confidence-bar"
+                                :style="{ width: formatIntentConfidenceWidth(item.confidence) }"
+                              ></span>
+                            </span>
+                            <span class="ba-intent-confidence-text">{{ formatIntentConfidenceText(item.confidence) }}</span>
                           </span>
-                          <span class="ba-intent-confidence-text">{{ formatIntentConfidenceText(item.confidence) }}</span>
-                        </span>
-                      </button>
+                        </button>
+                      </div>
+                    </div>
+                    <div
+                      v-if="behaviorAnalysisView.auxiliaryMessage"
+                      class="ba-section ba-section--auxiliary"
+                    >
+                      <div class="ba-section-head">
+                        <span class="ba-section-icon">◈</span>
+                        <span class="ba-section-title">机器意图分析</span>
+                      </div>
+                      <p class="ba-section-body ba-auxiliary-body">{{ behaviorAnalysisView.auxiliaryMessage }}</p>
+                    </div>
+                    <div
+                      v-if="selectedTacticalIntentIndex !== null"
+                      class="ba-section ba-section--commander"
+                    >
+                      <div class="ba-section-head">
+                        <span class="ba-section-icon">◈</span>
+                        <span class="ba-section-title">指挥员意图分析</span>
+                      </div>
+                      <p v-if="isCommanderIntentLoading" class="ba-section-body ba-auxiliary-body">分析中…</p>
+                      <p v-else-if="commanderIntentAnalysisError" class="ba-section-body ba-auxiliary-body ba-commander-error">
+                        {{ commanderIntentAnalysisError }}
+                      </p>
+                      <p v-else class="ba-section-body ba-auxiliary-body">{{ commanderIntentAnalysis }}</p>
                     </div>
                   </div>
-                  <div
-                    v-if="behaviorAnalysisView.auxiliaryMessage"
-                    class="ba-section ba-section--auxiliary"
-                  >
-                    <div class="ba-section-head">
-                      <span class="ba-section-icon">◈</span>
-                      <span class="ba-section-title">机器意图分析</span>
+                  <template v-else>
+                    <div
+                      v-for="(entry, index) in biasDetailEntries"
+                      :key="entry.label + '-' + index"
+                      class="typing-text text-left small-text"
+                      :class="{
+                        'text-highlight': entry.label === '偏差结果' && !entry.isConsistent && !isBiasTyping,
+                        'text-green': entry.label === '偏差结果' && entry.isConsistent && !isBiasTyping
+                      }"
+                    >
+                      {{ biasDisplayTexts[index] }}
                     </div>
-                    <p class="ba-section-body ba-auxiliary-body">{{ behaviorAnalysisView.auxiliaryMessage }}</p>
-                  </div>
-                  <div
-                    v-if="selectedTacticalIntentIndex !== null"
-                    class="ba-section ba-section--commander"
-                  >
-                    <div class="ba-section-head">
-                      <span class="ba-section-icon">◈</span>
-                      <span class="ba-section-title">指挥员意图分析</span>
-                    </div>
-                    <p v-if="isCommanderIntentLoading" class="ba-section-body ba-auxiliary-body">分析中…</p>
-                    <p v-else-if="commanderIntentAnalysisError" class="ba-section-body ba-auxiliary-body ba-commander-error">
-                      {{ commanderIntentAnalysisError }}
-                    </p>
-                    <p v-else class="ba-section-body ba-auxiliary-body">{{ commanderIntentAnalysis }}</p>
-                  </div>
+                  </template>
                 </div>
-                <template v-else>
-                  <div
-                    v-for="(entry, index) in biasDetailEntries"
-                    :key="entry.label + '-' + index"
-                    class="typing-text text-left small-text"
-                    :class="{
-                      'text-highlight': entry.label === '偏差结果' && !entry.isConsistent && !isBiasTyping,
-                      'text-green': entry.label === '偏差结果' && entry.isConsistent && !isBiasTyping
-                    }"
-                  >
-                    {{ biasDisplayTexts[index] }}
-                  </div>
-                </template>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="panel-right-bottom" :class="{ 'loading-overlay': isBiasDetecting }">
+        <div class="panel-right-bottom dm-decision-panel">
+          <div class="panel-content">
+            <div class="panel-header header-results title-one-line dm-result-box-title">
+              <span>决策选择</span>
+            </div>
+            <div class="final-result-section">
+              <div class="final-model-display">
+                <p v-if="selectedTacticalIntentIndex === null" class="final-model-text hint-text">选择合适的战术意图</p>
+                <p v-else-if="!tacticalDecisionRankingDisplay.length" class="final-model-text hint-text">暂无决策选项</p>
+                <div v-else class="ba-intent-list">
+                  <button
+                    v-for="(item, idx) in tacticalDecisionRankingDisplay"
+                    :key="'decision-' + idx + '-' + item.decision"
+                    type="button"
+                    class="ba-intent-btn"
+                    :class="{
+                      'ba-intent-btn--selected': selectedTacticalDecisionIndex === idx,
+                      'ba-intent-btn--disabled': selectedTacticalDecisionIndex !== null && selectedTacticalDecisionIndex !== idx
+                    }"
+                    :disabled="selectedTacticalDecisionIndex !== null && selectedTacticalDecisionIndex !== idx"
+                    @click="selectTacticalDecision(idx)"
+                  >
+                    <span class="ba-intent-name">{{ item.decision }}</span>
+                    <span class="ba-intent-confidence">
+                      <span class="ba-intent-confidence-bar-wrap">
+                        <span
+                          class="ba-intent-confidence-bar"
+                          :style="{ width: formatIntentConfidenceWidth(item.confidence) }"
+                        ></span>
+                      </span>
+                      <span class="ba-intent-confidence-text">{{ formatIntentConfidenceText(item.confidence) }}</span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-right-accuracy">
           <div class="panel-content">
             <div class="accuracy-content">
               <span class="accuracy-label" @click="showFormulaTooltip = !showFormulaTooltip">
@@ -354,6 +399,7 @@ export default {
       processedVideoURL: null,
       taskId: null,
       isLoading: false,
+      isImageLoading: false,
       progressMessage: null,
       resultMessage: null,
       fullResult: {
@@ -367,6 +413,8 @@ export default {
       behaviorAnalysisView: null,
       /** 战术行为区当前选中的意图按钮索引（单选，选中后不可再改） */
       selectedTacticalIntentIndex: null,
+      /** 决策选择区当前选中的决策按钮索引（单选，选中后不可再改） */
+      selectedTacticalDecisionIndex: null,
       /** /behavior-reason 返回的指挥员意图分析文本 */
       commanderIntentAnalysis: '',
       commanderIntentAnalysisError: '',
@@ -424,6 +472,21 @@ export default {
         !!this.originalVideoURL
       );
     },
+    detectionLabelText() {
+      if (this.isLoading) {
+        return '目标检测进行中...';
+      }
+      if (this.hasStartedDetection && this.processedVideoURL) {
+        return '多模态目标检测结果';
+      }
+      if (this.canStartTrackRecognition) {
+        return '开始多模态目标检测';
+      }
+      return '多模态目标检测结果';
+    },
+    canClickToDetect() {
+      return this.canStartTrackRecognition && !this.hasStartedDetection;
+    },
     /** 兼容 module1Res 等仍使用合并 instruction 字段的场景 */
     ordersText() {
       const parts = [];
@@ -435,6 +498,23 @@ export default {
     ordersCommandForDisplay() {
       if (!this.selectedVideo) return '';
       return this.ordersCommand;
+    },
+    tacticalDecisionRankingDisplay() {
+      if (
+        this.selectedTacticalIntentIndex === null ||
+        !this.behaviorAnalysisView ||
+        !Array.isArray(this.behaviorAnalysisView.tacticalIntentRanking)
+      ) {
+        return [];
+      }
+      const intentItem = this.behaviorAnalysisView.tacticalIntentRanking[this.selectedTacticalIntentIndex];
+      if (intentItem && Array.isArray(intentItem.tacticalDecisionRanking) && intentItem.tacticalDecisionRanking.length) {
+        return intentItem.tacticalDecisionRanking;
+      }
+      if (Array.isArray(this.behaviorAnalysisView.tacticalDecisionRanking)) {
+        return this.behaviorAnalysisView.tacticalDecisionRanking;
+      }
+      return [];
     }
   },
   mounted() {
@@ -634,6 +714,7 @@ export default {
     resetOriginalMediaDisplay() {
       this.clearOriginalMediaDisplayTimer();
       this.originalMediaDisplayReady = false;
+      this.isImageLoading = false;
       this.revokeOriginalMediaBlob();
       this.originalVideoURL = null;
       this.originalVideoUsedStatic = false;
@@ -642,6 +723,7 @@ export default {
     scheduleOriginalMediaDisplay(item, selectedPath) {
       this.clearOriginalMediaDisplayTimer();
       this.originalMediaDisplayReady = false;
+      this.isImageLoading = true;
       this.revokeOriginalMediaBlob();
       this.originalVideoURL = null;
       console.log(
@@ -654,15 +736,20 @@ export default {
         this.originalMediaDisplayTimer = null;
         if (selectedPath && (!this.selectedVideo || this.selectedVideo.path !== selectedPath)) {
           console.log('[DecisionMakingV2] 认知传播媒体延迟展示取消：选中项已变更');
+          this.isImageLoading = false;
           return;
         }
-        await this.loadMediaFromSourceApi(item);
+        try {
+          await this.loadMediaFromSourceApi(item);
+        } finally {
+          this.isImageLoading = false;
+        }
         if (selectedPath && (!this.selectedVideo || this.selectedVideo.path !== selectedPath)) {
           return;
         }
         if (this.originalVideoURL) {
           this.originalMediaDisplayReady = true;
-          console.log('[DecisionMakingV2] 认知传播媒体已展示，可点击「目标与轨迹识别」');
+          console.log('[DecisionMakingV2] 认知传播媒体已展示，可点击「开始多模态目标检测」');
         }
       }, ORIGINAL_MEDIA_DISPLAY_DELAY_MS);
     },
@@ -1031,7 +1118,14 @@ export default {
         overflow-y: auto !important;
         overflow-x: hidden !important;
       }
-      .panel-right-bottom {
+      .panel-right-bottom.dm-decision-panel {
+        flex-grow: 0 !important;
+        flex-shrink: 0 !important;
+        height: 220px !important;
+        min-height: 220px !important;
+        max-height: 220px !important;
+      }
+      .panel-right-accuracy {
         flex-grow: 0 !important;
         flex-shrink: 0 !important;
         height: 100px !important;
@@ -1243,6 +1337,7 @@ export default {
       this.clearBiasTimeouts();
       this.behaviorAnalysisView = null;
       this.selectedTacticalIntentIndex = null;
+      this.selectedTacticalDecisionIndex = null;
       this.commanderIntentAnalysis = '';
       this.commanderIntentAnalysisError = '';
       this.isCommanderIntentLoading = false;
@@ -1542,6 +1637,7 @@ export default {
       if (!intentName) return;
 
       this.selectedTacticalIntentIndex = index;
+      this.selectedTacticalDecisionIndex = null;
       this.resetCommanderIntentAnalysis();
       this.isCommanderIntentLoading = true;
 
@@ -1575,6 +1671,38 @@ export default {
         this.isCommanderIntentLoading = false;
       }
     },
+    parseTacticalDecisionRanking(source) {
+      if (!source || typeof source !== 'object') return [];
+      const raw =
+        source.tactical_decision_ranking != null
+          ? source.tactical_decision_ranking
+          : source.tacticalDecisionRanking != null
+            ? source.tacticalDecisionRanking
+            : source.tactical_dexicion_ranking;
+      if (!Array.isArray(raw)) return [];
+      return raw
+        .slice(0, 5)
+        .map((item) => {
+          if (!item || typeof item !== 'object') return null;
+          const decisionRaw =
+            item.decision != null
+              ? item.decision
+              : item.option != null
+                ? item.option
+                : item.name != null
+                  ? item.name
+                  : item.choice != null
+                    ? item.choice
+                    : item.intent;
+          const decision = decisionRaw != null ? String(decisionRaw).trim() : '';
+          if (!decision) return null;
+          return {
+            decision,
+            confidence: this.normalizeIntentConfidence(item.confidence)
+          };
+        })
+        .filter(Boolean);
+    },
     parseTacticalIntentRanking(root) {
       if (!root || typeof root !== 'object') return [];
       const raw =
@@ -1588,12 +1716,23 @@ export default {
           if (!item || typeof item !== 'object') return null;
           const intent = item.intent != null ? String(item.intent).trim() : '';
           if (!intent) return null;
+          const tacticalDecisionRanking = this.parseTacticalDecisionRanking(item);
           return {
             intent,
-            confidence: this.normalizeIntentConfidence(item.confidence)
+            confidence: this.normalizeIntentConfidence(item.confidence),
+            tacticalDecisionRanking
           };
         })
         .filter(Boolean);
+    },
+    selectTacticalDecision(index) {
+      if (this.selectedTacticalDecisionIndex !== null) return;
+      if (!this.tacticalDecisionRankingDisplay.length) return;
+      if (index < 0 || index >= this.tacticalDecisionRankingDisplay.length) return;
+      const item = this.tacticalDecisionRankingDisplay[index];
+      const decisionName = item && item.decision ? String(item.decision).trim() : '';
+      if (!decisionName) return;
+      this.selectedTacticalDecisionIndex = index;
     },
     formatBehaviorMetricValue(key, value) {
       if (value == null || value === '') return 'N/A';
@@ -1617,11 +1756,13 @@ export default {
       if (!root || typeof root !== 'object') return null;
 
       const tacticalIntentRanking = this.parseTacticalIntentRanking(root);
+      const tacticalDecisionRanking = this.parseTacticalDecisionRanking(root);
       const auxiliaryMessage = this.pickBehaviorField(root, ['auxiliary_message', 'auxiliaryMessage']);
-      if (!tacticalIntentRanking.length && !auxiliaryMessage) return null;
+      if (!tacticalIntentRanking.length && !auxiliaryMessage && !tacticalDecisionRanking.length) return null;
 
       return {
         tacticalIntentRanking,
+        tacticalDecisionRanking,
         auxiliaryMessage
       };
     },
@@ -1738,11 +1879,13 @@ export default {
       if (structured) {
         this.behaviorAnalysisView = structured;
         this.selectedTacticalIntentIndex = null;
+        this.selectedTacticalDecisionIndex = null;
         this.resetCommanderIntentAnalysis();
         return [];
       }
       this.behaviorAnalysisView = null;
       this.selectedTacticalIntentIndex = null;
+      this.selectedTacticalDecisionIndex = null;
       this.resetCommanderIntentAnalysis();
       const view = this.buildBehaviorAnalysisView(payload);
       const entries = [];
@@ -1913,6 +2056,7 @@ export default {
         this.hasStartedBiasDetection = true;
         this.behaviorAnalysisView = null;
         this.selectedTacticalIntentIndex = null;
+        this.selectedTacticalDecisionIndex = null;
         this.resetCommanderIntentAnalysis();
         localStorage.removeItem('behaviorAnalysisView');
         const errText = this.extractAnalyzeVideoBehaviorError(error);
@@ -2346,6 +2490,11 @@ export default {
     },
     selectVideo(video) {
       this.selectMedia(video);
+    },
+    handleLabelClick() {
+      if (this.canClickToDetect) {
+        this.startDetection();
+      }
     },
     async startDetection() {
       if (!this.canStartTrackRecognition) return;
@@ -2794,11 +2943,41 @@ export default {
   flex-shrink: 0;
 }
 
-.panel-right-bottom {
-  flex-grow: 0;
-  flex-shrink: 0;
-  height: 100px !important;
+.panel-right-bottom.dm-decision-panel {
+  flex: 0 0 220px;
+  height: 220px;
+  min-height: 220px;
+  max-height: 220px;
+  width: 400px;
+  background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  padding: 10px 14px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin-top: -4px;
+}
+
+.panel-right-accuracy {
+  flex: 0 0 100px;
+  width: 400px;
+  background-image: url('~@/assets/images/step4/准确率框.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  margin-bottom: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 100px;
+  max-height: 100px;
+  box-sizing: border-box;
+  position: relative;
+  overflow: visible;
+  flex-shrink: 0;
 }
 
 .panel-content {
@@ -3278,6 +3457,35 @@ export default {
   font-size: 14px;
 }
 
+.clickable-label {
+  cursor: default;
+  transition: all 0.3s ease;
+}
+
+.label-clickable {
+  cursor: pointer;
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+.label-clickable:hover {
+  filter: brightness(1.2);
+  text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+}
+
+.label-detecting {
+  cursor: wait;
+  animation: none;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    text-shadow: 0 0 5px rgba(0, 229, 255, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 15px rgba(0, 229, 255, 0.6);
+  }
+}
+
 .video-frame {
   width: 100%;
   max-width: 600px;
@@ -3291,6 +3499,58 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
+}
+
+.loading-progress-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.loading-progress-bar {
+  width: 80%;
+  height: 8px;
+  background-color: rgba(0, 229, 255, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 229, 255, 0.4);
+}
+
+.loading-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00e5ff, #00ff00);
+  border-radius: 4px;
+  animation: progress-animation 2s ease-in-out forwards;
+}
+
+@keyframes progress-animation {
+  0% {
+    width: 0%;
+  }
+  50% {
+    width: 70%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+.loading-progress-text {
+  color: #00e5ff;
+  font-size: 14px;
+  font-family: 'DOUYUFont', sans-serif;
+  text-shadow: 0 0 5px rgba(0, 229, 255, 0.5);
 }
 
 .video-display {
@@ -3348,6 +3608,131 @@ export default {
 /* 6. 右侧列 */
 .panel-right-top {
   background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  padding: 4px 8px 8px 8px;
+  position: relative;
+}
+
+.panel-right-top .panel-content {
+  min-height: 0;
+}
+
+.panel-right-top .result-section-main {
+  background-color: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  padding-top: 4px;
+  padding-bottom: 6px;
+  margin-bottom: 0;
+  box-shadow: 0 2px 8px rgba(0, 229, 255, 0.08);
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-right-top .section-content.unified-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 10px;
+}
+
+.panel-right-top .section-content .result-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.65;
+}
+
+.title-one-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.dm-result-box-title {
+  width: 160px !important;
+  height: 24px !important;
+  font-size: 14px !important;
+  justify-content: flex-start !important;
+  padding-left: 15px !important;
+  margin: 0 0 6px 0 !important;
+  background-image: url('~@/assets/images/step1/-s-二级标题.png') !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100% !important;
+}
+
+.final-result-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-grow: 1;
+  min-height: 0;
+  height: 100%;
+}
+
+.final-result-title {
+  color: #4ED8FF;
+  font-family: 'DOUYUFont', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  text-align: left;
+  margin: 0;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.final-model-display {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 8px;
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 229, 255, 0.08);
+  padding: 10px 12px;
+  text-align: left;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.final-model-text {
+  color: #fff;
+  font-family: "DingTalk-JinBuTi", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  margin: 0;
+  width: 100%;
+  line-height: 1.6;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.panel-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  color: #00e5ff;
+  font-size: 14px;
+  z-index: 5;
+}
+
+.bias-panel-scroll {
+  background: transparent;
+  border: none;
 }
 
 .bias-button-container {
@@ -3731,16 +4116,17 @@ export default {
   font-size: 0.95rem;
 }
 
-.panel-right-bottom {
-  background-image: url('~@/assets/images/step4/准确率框.png');
-  width: 400px;
-  height: 120px;
-  flex-shrink: 0;
-  position: relative;
-  overflow: visible;
+.panel-right-bottom.dm-decision-panel .panel-content {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.panel-right-bottom .panel-content {
+.panel-right-accuracy .panel-content {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -3959,10 +4345,14 @@ export default {
     height: auto;
   }
 
-  .panel-right-bottom {
-    flex-grow: 1;
-    height: 30%;
-    min-height: 120px;
+  .panel-right-bottom.dm-decision-panel {
+    flex-grow: 0;
+    height: 220px;
+    min-height: 180px;
+  }
+
+  .panel-right-accuracy {
+    min-height: 100px;
   }
 }
 </style>
