@@ -277,7 +277,6 @@
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentABNegotiation === 'object' && agentABNegotiation !== null" class="agent-result">
                     <template v-if="selectedDetailType === 'compare'">
-                      <span class="result-line">优先级排序：{{ displayRound2PriorityOrdering(agentABNegotiation) }}</span>
                       <span class="result-line">优先级依据：{{ displayRound2NegotiationField(agentABNegotiation, 'priority_rationale') }}</span>
                       <span class="result-line">推理共识：{{ displayRound2NegotiationField(agentABNegotiation, 'consensus') }}</span>
                       <span class="result-line">推理分歧：{{ displayRound2NegotiationField(agentABNegotiation, 'deviation') }}</span>
@@ -312,7 +311,6 @@
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentBCNegotiation === 'object' && agentBCNegotiation !== null" class="agent-result">
                     <template v-if="selectedDetailType === 'compare'">
-                      <span class="result-line">优先级排序：{{ displayRound2PriorityOrdering(agentBCNegotiation) }}</span>
                       <span class="result-line">优先级依据：{{ displayRound2NegotiationField(agentBCNegotiation, 'priority_rationale') }}</span>
                       <span class="result-line">推理共识：{{ displayRound2NegotiationField(agentBCNegotiation, 'consensus') }}</span>
                       <span class="result-line">推理分歧：{{ displayRound2NegotiationField(agentBCNegotiation, 'deviation') }}</span>
@@ -347,7 +345,6 @@
                   <div v-if="isLoadingRound2" class="panel-overlay">等待一轮协商结果...</div>
                   <p v-if="typeof agentCANegotiation === 'object' && agentCANegotiation !== null" class="agent-result">
                     <template v-if="selectedDetailType === 'compare'">
-                      <span class="result-line">优先级排序：{{ displayRound2PriorityOrdering(agentCANegotiation) }}</span>
                       <span class="result-line">优先级依据：{{ displayRound2NegotiationField(agentCANegotiation, 'priority_rationale') }}</span>
                       <span class="result-line">推理共识：{{ displayRound2NegotiationField(agentCANegotiation, 'consensus') }}</span>
                       <span class="result-line">推理分歧：{{ displayRound2NegotiationField(agentCANegotiation, 'deviation') }}</span>
@@ -394,33 +391,14 @@
             <template v-else>
               <div class="result-section result-section-main">
                 <div class="section-content unified-scroll">
-                  <template v-if="selectedDetailType === 'compare'">
-                    <div class="section-sub">共识摘要：</div>
-                    <p class="result-text" style="white-space: pre-wrap;">{{ deviationReportText || '***' }}</p>
-                    <div class="unified-divider"></div>
-                    <div class="section-sub">分歧点：</div>
-                    <p class="result-text" style="white-space: pre-wrap;">{{ compareDeviationDisagreementPoints }}</p>
-                    <div class="unified-divider"></div>
-                    <div class="section-sub">分歧分析及原因：</div>
-                    <p class="result-text" style="white-space: pre-wrap;">{{ compareDeviationDifferentReason }}</p>
-                  </template>
-                  <template v-else>
-                    <div class="section-sub">共识摘要：</div>
-                    <p class="result-text" v-html="formattedConsensusSummary || '***'"></p>
-                    <div class="unified-divider"></div>
-                    <div class="section-sub">分歧点：</div>
-                    <template v-if="deviationAnalysisText || deviationReportText">
-                      <div v-if="deviationAnalysisText">
-                        <div class="section-sub">分歧分析</div>
-                        <p class="result-text" style="white-space: pre-wrap;">{{ deviationAnalysisText }}</p>
-                      </div>
-                      <div v-if="deviationReportText" :style="deviationAnalysisText ? { marginTop: '10px' } : {}">
-                        <div class="section-sub">偏差报告</div>
-                        <p class="result-text" style="white-space: pre-wrap;">{{ deviationReportText }}</p>
-                      </div>
-                    </template>
-                    <p v-else class="result-text">***</p>
-                  </template>
+                  <div class="section-sub">智能体A：</div>
+                  <p class="result-text">{{ isRightResultsDisplayed && selectedDetailType === 'compare' ? (displayRound2PriorityOrdering(agentABNegotiation) || '***') : '***' }}</p>
+                  <div class="unified-divider"></div>
+                  <div class="section-sub">智能体B：</div>
+                  <p class="result-text">{{ isRightResultsDisplayed && selectedDetailType === 'compare' ? (displayRound2PriorityOrdering(agentBCNegotiation) || '***') : '***' }}</p>
+                  <div class="unified-divider"></div>
+                  <div class="section-sub">智能体C：</div>
+                  <p class="result-text">{{ isRightResultsDisplayed && selectedDetailType === 'compare' ? (displayRound2PriorityOrdering(agentCANegotiation) || '***') : '***' }}</p>
                 </div>
               </div>
             </template>
@@ -631,6 +609,7 @@ export default {
       isRound2Displayed: false,
       // 右侧分步显示控制
       isRightLoadingResults: false,
+      isRightResultsDisplayed: false,
       isRightLoadingAccuracy: false,
       pendingNegotiationResult: null, // 新增：暂存群体协商结果
       accuracyTimer: null, // 准确率计时器
@@ -855,6 +834,14 @@ export default {
     /** 清空中间/右侧协商展示（不清理 localStorage；切换图片或发起新请求前调用） */
     clearNegotiationDisplay() {
       this.clearRoundDisplayTimers();
+      if (this.accuracyTimer) {
+        clearTimeout(this.accuracyTimer);
+        this.accuracyTimer = null;
+      }
+      this.isLoading = false;
+      this.isLoadingRound1 = false;
+      this.isLoadingRound2 = false;
+      this.isRightLoadingAccuracy = false;
       this.agentARound1Result = '';
       this.agentBRound1Result = '';
       this.agentCRound1Result = '';
@@ -872,6 +859,7 @@ export default {
       this.isRound1Displayed = false;
       this.isRound2Displayed = false;
       this.isRightLoadingResults = false;
+      this.isRightResultsDisplayed = false;
       this.accuracyRate = '—';
       this.imageModeRound1FromStatic = null;
       this.finalBattlefieldTriple = null;
@@ -1710,6 +1698,7 @@ export default {
     // 返回列表
     backToCompareList() {
       this.closeGroupImageLightbox();
+      this.clearNegotiationDisplay();
       this.compareView = 'list';
       this.selectedCompareFile = null;
       this.selectedGroupImageFiles = [];
@@ -1997,6 +1986,7 @@ export default {
         accuracy: !isImageMode
       });
       // 与开始群体协商后一致：数据来自当次 module3Res，不依赖历史计时
+      this.isRightResultsDisplayed = true;
       this.isRightLoadingResults = true;
       this.isRightLoadingAccuracy = true;
       if (this.accuracyTimer) {
