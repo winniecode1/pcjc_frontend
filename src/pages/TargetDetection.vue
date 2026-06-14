@@ -148,11 +148,12 @@
           </button>
         </div>
 
-        <div class="panel-header header-results clean-header">偏差检测结果</div>
+        <!-- 上：多模态信息认知结果（信息类别 + 战场环境简要描述） -->
+        <div class="panel-header header-results clean-header">多模态信息认知结果</div>
 
-        <div class="panel-right-top" :class="{ 'loading-overlay': isBiasDetecting && !showBiasDetails }">
+        <div class="panel-right-top cognition-box" :class="{ 'loading-overlay': isBiasDetecting && !showBiasDetails }">
           <div class="panel-content">
-            <div class="description-box p-2 overflow-auto"
+            <div class="description-box cognition-text overflow-auto"
               :class="{ 'loading-text': isBiasDetecting && !showBiasDetails }">
 
               <div v-if="isLoading">检测中……</div>
@@ -164,13 +165,48 @@
               </div>
 
               <div v-if="hasStartedBiasDetection && !isLoading && showBiasDetails">
-                <div v-for="(entry, index) in biasDetailEntries" :key="entry.label + '-' + index"
-                  class="typing-text text-left small-text" 
-                  :class="{ 
+                <div v-for="(entry, index) in cognitionEntries" :key="'cog-' + entry.label + '-' + index"
+                  class="typing-text text-left small-text">
+                  {{ cognitionDisplayTexts[index] }}
+                </div>
+                <div v-if="cognitionEntries.length === 0" class="text-left small-text hint-text">
+                  暂无认知结果
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 下：多模态信息认知偏差检测结果（其余四条） -->
+        <div class="panel-header header-results clean-header">多模态信息认知偏差检测结果</div>
+
+        <div class="panel-right-top biascheck-box" :class="{ 'loading-overlay': isBiasDetecting }">
+          <div class="panel-content">
+            <div class="description-box biascheck-text"
+              :class="{ 'loading-text': isBiasDetecting && !showBiasDetails }">
+
+              <div v-if="isLoading">检测中……</div>
+              <div v-else-if="isBiasDetecting && !showBiasDetails" class="text-left small-text">
+                计算中…
+              </div>
+              <div v-else-if="!hasStartedBiasDetection" class="text-left small-text hint-text">
+                请点击"多模态信息偏差检测"按钮
+              </div>
+              <div v-else-if="hasStartedBiasDetection && showBiasDetails && !biasCheckStarted" class="text-left small-text">
+                计算中…
+              </div>
+
+              <div v-if="hasStartedBiasDetection && !isLoading && showBiasDetails && biasCheckStarted">
+                <div v-for="(entry, index) in biasCheckEntries" :key="'bias-' + entry.label + '-' + index"
+                  class="typing-text text-left small-text"
+                  :class="{
                     'text-highlight': (entry.label === '偏差结果' || entry.label === '判定正确性') && !entry.isConsistent && !isBiasTyping,
                     'text-green': (entry.label === '偏差结果' || entry.label === '判定正确性') && entry.isConsistent && !isBiasTyping
                   }">
-                  {{ biasDisplayTexts[index] }}
+                  {{ biasCheckDisplayTexts[index] }}
+                </div>
+                <div v-if="biasCheckEntries.length === 0" class="text-left small-text hint-text">
+                  暂无偏差检测结果
                 </div>
               </div>
             </div>
@@ -274,6 +310,16 @@ export default {
       descriptionEntries: [],
       biasDetailEntries: [],
       biasDisplayTexts: [],
+      // 双框分别维护打字机进度，避免上下框串行打断
+      cognitionDisplayTexts: [],
+      biasCheckDisplayTexts: [],
+      // 偏差检测打字机阶段：'cognition' (上) → 'biasCheck' (下) → null
+      currentTypingGroup: null,
+      // 下框是否已开启动画（用于显示加载态）
+      biasCheckStarted: false,
+      // 上/下框的阶段间隔与起始延迟 (ms)
+      biasGroupDelay: 500,
+      biasGroupStartDelay: 3000,
       summaryTextOnly: '',
       summaryHighlight: false,
       biasTypingInterval: null,
@@ -297,6 +343,21 @@ export default {
     };
   },
   computed: {
+    // 把偏差检测条目按 label 拆分为两部分：
+    // 上框（多模态信息认知结果）：信息类别 + 战场环境简要描述
+    // 下框（多模态信息认知偏差检测结果）：其余四条
+    cognitionEntries() {
+      return (this.biasDetailEntries || []).filter(entry => {
+        const label = entry.label || '';
+        return label === '信息类别' || label.startsWith('信息类别') || label === '战场环境';
+      });
+    },
+    biasCheckEntries() {
+      return (this.biasDetailEntries || []).filter(entry => {
+        const label = entry.label || '';
+        return !(label === '信息类别' || label.startsWith('信息类别') || label === '战场环境');
+      });
+    },
     canStartBiasDetection() {
       // 需要先完成目标识别（fullResult 有检测结果）且不在加载中
       // 视频：需要 key_frame_detection 或 detection_result
@@ -476,6 +537,8 @@ export default {
         // 如果没有保存的 displayTexts，使用完整的 biasDetailEntries 文字
         this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
       }
+      // 同步把恢复后的文字分配到上下两个框
+      this.rebuildGroupDisplayTexts();
       this.showBiasDetails = localStorage.getItem('showBiasDetails') === 'true';
       this.showAccuracy = localStorage.getItem('showAccuracy') === 'true';
       this.isBiasDetecting = localStorage.getItem('isBiasDetecting') === 'true';
@@ -579,6 +642,10 @@ export default {
         }
         // 让文字直接显示，不需要打字机效果
         this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+        this.rebuildGroupDisplayTexts();
+        this.isBiasTyping = false;
+        this.currentTypingGroup = null;
+        this.biasCheckStarted = true;
 
         // 确保 fullResult 已恢复，并获取准确率
         if (this.fullResult) {
@@ -632,6 +699,10 @@ export default {
           // 文本直接显示，不需要打字机效果
           this.showBiasDetails = true;
           this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+          this.rebuildGroupDisplayTexts();
+          this.isBiasTyping = false;
+          this.currentTypingGroup = null;
+          this.biasCheckStarted = true;
 
           // 启动剩余时间的定时器
           this.startAccuracyTimer(remaining);
@@ -643,6 +714,10 @@ export default {
           this.showAccuracy = true;
           this.showBiasDetails = true;
           this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
+          this.rebuildGroupDisplayTexts();
+          this.isBiasTyping = false;
+          this.currentTypingGroup = null;
+          this.biasCheckStarted = true;
 
           // 确保 fullResult 已恢复，并获取准确率
           if (this.fullResult) {
@@ -851,6 +926,10 @@ export default {
       if (!preserveBiasTimer) {
         this.biasDetailEntries = [];
         this.biasDisplayTexts = [];
+        this.cognitionDisplayTexts = [];
+        this.biasCheckDisplayTexts = [];
+        this.currentTypingGroup = null;
+        this.biasCheckStarted = false;
         this.showBiasDetails = false;
         this.showAccuracy = false;
         this.isBiasDetecting = false;
@@ -956,6 +1035,10 @@ export default {
       if (resetBiasEntries) {
         this.biasDetailEntries = this.descriptionEntries.filter(entry => entry.label !== '总结');
         this.biasDisplayTexts = this.biasDetailEntries.map(() => '');
+        this.cognitionDisplayTexts = this.cognitionEntries.map(() => '');
+        this.biasCheckDisplayTexts = this.biasCheckEntries.map(() => '');
+        this.currentTypingGroup = null;
+        this.biasCheckStarted = false;
         this.showBiasDetails = false;
         this.showAccuracy = false;
       }
@@ -1100,12 +1183,8 @@ export default {
           localStorage.setItem('biasStartTime', Date.now().toString());
           localStorage.setItem('biasDetectionStarted', 'true');
 
-          // 延迟3秒后开始显示文字
-          setTimeout(() => {
-            this.showBiasDetails = true;
-            this.isBiasTyping = true;
-            this.startBiasTypingSequence(0);
-          }, 3000);
+          // 启动双框打字机流程：上框 → 下框
+          this.startBiasDetectionFlow();
 
           // 准确率延迟2分钟显示
           this.startAccuracyTimer(BIAS_DETECTION_DELAY);
@@ -1168,12 +1247,8 @@ export default {
           localStorage.setItem('biasStartTime', Date.now().toString());
           localStorage.setItem('biasDetectionStarted', 'true');
 
-          // 延迟3秒后开始显示文字
-          setTimeout(() => {
-            this.showBiasDetails = true;
-            this.isBiasTyping = true;
-            this.startBiasTypingSequence(0);
-          }, 3000);
+          // 启动双框打字机流程：上框 → 下框
+          this.startBiasDetectionFlow();
 
           // 保存当前状态到缓存
           this.saveAllStateToCache();
@@ -1382,29 +1457,95 @@ export default {
         this.accuracyTimeout = null;
       }
     },
+    // 根据当前的 biasDisplayTexts 把每条已打字文本分配到上下两个框
+    rebuildGroupDisplayTexts() {
+      this.cognitionDisplayTexts = this.cognitionEntries.map(entry => {
+        const idx = (this.biasDetailEntries || []).indexOf(entry);
+        return idx >= 0 ? (this.biasDisplayTexts[idx] || '') : '';
+      });
+      this.biasCheckDisplayTexts = this.biasCheckEntries.map(entry => {
+        const idx = (this.biasDetailEntries || []).indexOf(entry);
+        return idx >= 0 ? (this.biasDisplayTexts[idx] || '') : '';
+      });
+    },
     resetBiasTyping() {
+      this.clearBiasTypingTimers();
+      this.biasDisplayTexts = this.biasDetailEntries.map(() => '');
+      this.cognitionDisplayTexts = this.cognitionEntries.map(() => '');
+      this.biasCheckDisplayTexts = this.biasCheckEntries.map(() => '');
+      this.isBiasTyping = false;
+      this.currentTypingGroup = null;
+      this.biasCheckStarted = false;
+    },
+    clearBiasTypingTimers() {
       if (this.biasTypingInterval) {
         clearInterval(this.biasTypingInterval);
         this.biasTypingInterval = null;
       }
-      this.biasDisplayTexts = this.biasDetailEntries.map(() => '');
-      this.isBiasTyping = false;
+      if (this.biasTypingTimeout) {
+        clearTimeout(this.biasTypingTimeout);
+        this.biasTypingTimeout = null;
+      }
     },
-    startBiasTypingSequence(index) {
-      if (index >= this.biasDetailEntries.length) {
-        this.isBiasTyping = false;
+    // 启动整个双框打字机流程：上框 → 下框
+    startBiasDetectionFlow() {
+      this.cognitionDisplayTexts = this.cognitionEntries.map(() => '');
+      this.biasCheckDisplayTexts = this.biasCheckEntries.map(() => '');
+      this.currentTypingGroup = null;
+      this.biasCheckStarted = false;
+      this.isBiasTyping = true;
+      // 起始延迟：上框出现前 showBiasDetails 保持 false，UI 显示"计算中…"
+      this.biasTypingTimeout = setTimeout(() => {
+        // 阶段一开始：上框开始打字
+        this.startCognitionTyping(0);
+      }, this.biasGroupStartDelay);
+    },
+    // 阶段一：上框打字
+    startCognitionTyping(index) {
+      this.currentTypingGroup = 'cognition';
+      this.showBiasDetails = true;
+      this.typeEntryInGroup('cognition', index);
+    },
+    // 阶段二：下框打字
+    startBiasCheckTyping(index) {
+      this.currentTypingGroup = 'biasCheck';
+      this.biasCheckStarted = true;
+      this.typeEntryInGroup('biasCheck', index);
+    },
+    // 通用：按组逐条打字
+    typeEntryInGroup(group, index) {
+      const entries = group === 'cognition' ? this.cognitionEntries : this.biasCheckEntries;
+      const targetArray = group === 'cognition' ? this.cognitionDisplayTexts : this.biasCheckDisplayTexts;
+      if (index >= entries.length) {
+        // 当前阶段完成
         this.biasTypingInterval = null;
+        if (group === 'cognition') {
+          // 进入下框阶段
+          this.currentTypingGroup = null;
+          this.biasTypingTimeout = setTimeout(() => {
+            this.startBiasCheckTyping(0);
+          }, this.biasGroupDelay);
+        } else {
+          this.currentTypingGroup = null;
+          this.isBiasTyping = false;
+        }
         return;
       }
-      const entry = this.biasDetailEntries[index];
+      const entry = entries[index];
       let charIndex = 0;
       this.biasTypingInterval = setInterval(() => {
-        this.$set(this.biasDisplayTexts, index, entry.text.slice(0, charIndex + 1));
+        const partial = entry.text.slice(0, charIndex + 1);
+        this.$set(targetArray, index, partial);
+        // 同步写到旧数组，避免破坏 cache/restore 链路
+        const oldIdx = (this.biasDetailEntries || []).indexOf(entry);
+        if (oldIdx >= 0) {
+          this.$set(this.biasDisplayTexts, oldIdx, partial);
+        }
         charIndex += 1;
         if (charIndex >= entry.text.length) {
           clearInterval(this.biasTypingInterval);
           this.biasTypingInterval = null;
-          this.startBiasTypingSequence(index + 1);
+          this.typeEntryInGroup(group, index + 1);
         }
       }, this.typingSpeed);
     },
@@ -2049,12 +2190,32 @@ export default {
 }
 
 .panel-right-top {
+  width: 400px;
   flex: 1;
   min-height: 0;
   flex-shrink: 0;
   margin-bottom: 0;
-  width: 400px;
-  height: 570px;
+  display: flex;
+}
+
+/* 上框：多模态信息认知结果（信息类别 + 战场环境） */
+.panel-right-top.cognition-box {
+  flex: 0 0 280px;
+  height: 280px;
+}
+
+/* 下框：多模态信息认知偏差检测结果（其余四条，4 行尽量显示全） */
+.panel-right-top.biascheck-box {
+  flex: 0 0 260px;
+  height: 260px;
+}
+
+.cognition-box .description-box,
+.biascheck-box .description-box {
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+  padding: 10px !important;
 }
 
 .panel-right-bottom {
@@ -2870,8 +3031,13 @@ export default {
     min-height: 400px;
   }
 
-  .panel-right-top {
-    min-height: 250px;
+  .panel-right-top.cognition-box {
+    min-height: 200px;
+    height: auto;
+  }
+
+  .panel-right-top.biascheck-box {
+    min-height: 260px;
     height: auto;
   }
 
