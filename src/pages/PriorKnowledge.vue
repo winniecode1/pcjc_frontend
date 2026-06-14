@@ -456,6 +456,22 @@ export default {
     },
     
     // 获取作战指令
+    // 后端 type 字段 -> 后端 /module2/Inference 接口 img_type 参数的映射
+    // 约定：sar->sar, visible->vl, video->video
+    // 兜底：原样返回，文件后缀 -> 留空，让后端按默认处理
+    getInferenceImgType(dataType, mediaType) {
+      const map = {
+        sar: 'sar',
+        visible: 'vl',
+        video: 'video'
+      };
+      const key = (dataType || '').toLowerCase();
+      if (map[key]) return map[key];
+      // 媒体类型为视频时强制 video
+      if ((mediaType || '').toLowerCase() === 'video') return 'video';
+      // 兜底：返回后端原始 type（不区分大小写）
+      return (dataType || '').toLowerCase();
+    },
     async fetchOrders(sampleId) {
       if (!sampleId) {
         this.ordersText = '';
@@ -492,7 +508,10 @@ export default {
             id: item.id || index + 1,
             name: item.name || `图片${index + 1}`,
             path: item.path || '',
-            type: item.type || 'image'
+            // 媒体类型：后端 type 字段为数据类别（如 sar / visible / infrared），与媒体种类不同
+            // 这里将后端 type 存为 dataType，便于后续接口作为参数透传
+            dataType: item.type || '',
+            type: 'image'
           }));
           console.log('图片列表处理后:', this.videoList);
         }
@@ -525,6 +544,8 @@ export default {
               id: item.id || `img_${index + 1}`,
               name: item.name || `图片${index + 1}`,
               path: item.path || '',
+              // 后端 type 字段（如 sar / visible / infrared）作为数据类别保存
+              dataType: item.type || '',
               type: 'image'
             });
           });
@@ -682,7 +703,9 @@ export default {
           id: item.id,
           name: item.name,
           path: item.path || item.name,
-          type: mediaType
+          type: mediaType,
+          // 透传后端返回的数据类别（如 sar / visible / infrared），供后续接口使用
+          dataType: item.dataType || ''
         }));
 
         // 图片/视频延时2秒显示
@@ -709,6 +732,8 @@ export default {
     // 备用方案：使用原有逻辑获取媒体URL
     useFallbackMediaUrl(video) {
       const mediaType = video.type || this.currentSourceType || 'image';
+      // 数据类别（透传后端 type 字段，如 sar / visible / infrared）
+      const dataType = video.dataType || '';
       if (mediaType === 'video') {
         const videoPath = video.path || video.name || '';
         this.videoUrl = `http://10.109.253.71:8001/module2/get_video?video_path=${encodeURIComponent(videoPath)}`;
@@ -717,7 +742,8 @@ export default {
         localStorage.setItem('selectedImageData', JSON.stringify({
           path: videoPath,
           type: 'video',
-          name: video.name
+          name: video.name,
+          dataType
         }));
       } else {
         const imagePath = video.path || video.name || '';
@@ -736,7 +762,8 @@ export default {
         localStorage.setItem('selectedImageData', JSON.stringify({
           path: imagePath,
           type: video.type,
-          name: video.name
+          name: video.name,
+          dataType
         }));
 
         // 延迟2秒显示
@@ -1039,7 +1066,10 @@ export default {
 
       // 从 localStorage 获取选中的图片数据
       let imgPath = IMG_PATH_URL;
-      let imgType = IMG_PATH_URL.split('.').pop();
+      // img_type 含义：后端 image_list 接口返回的 type 字段，经映射表转换后传给 /Inference
+      // 约定：sar->sar, visible->vl, video->video
+      let imgType = '';
+      let mediaType = '';
       try {
         const selectedImageDataStr = localStorage.getItem('selectedImageData');
         if (selectedImageDataStr) {
@@ -1047,16 +1077,20 @@ export default {
           if (selectedImageData.path) {
             imgPath = selectedImageData.path;
           }
-          // 如果是视频类型，使用 video；否则使用文件扩展名
-          if (selectedImageData.type === 'video') {
-            imgType = 'video';
-          } else {
-            imgType = imgPath.split('.').pop();
-          }
+          mediaType = selectedImageData.type || '';
+          // 通过映射表得到后端 /Inference 接口的 img_type
+          imgType = this.getInferenceImgType(selectedImageData.dataType, selectedImageData.type);
         }
       } catch (e) {
         console.error('解析selectedImageData出错:', e);
       }
+
+      // 兜底：若未拿到任何类型，使用文件后缀
+      if (!imgType) {
+        imgType = imgPath.split('.').pop();
+      }
+
+      console.log('[Inference] 发送参数:', { img_path: imgPath, img_type: imgType, mediaType });
 
       axios.get('http://10.109.253.71:8001/module2/Inference', {
         params: {
@@ -1112,7 +1146,31 @@ export default {
         // 检测完成，恢复按钮可用状态
         this.isDetecting = false;
       }).catch(err => {
-        console.log(err);
+        // 详细错误日志：用于排查后端 500 / CORS / 中断问题
+        const errInfo = {
+          message: err && err.message,
+          name: err && err.name,
+          code: err && err.code,
+          stack: err && err.stack,
+          status: err && err.response && err.response.status,
+          statusText: err && err.response && err.response.statusText,
+          url: err && err.response && err.response.config && err.response.config.url,
+          method: err && err.response && err.response.config && err.response.config.method,
+          params: err && err.response && err.response.config && err.response.config.params,
+          responseData: err && err.response && err.response.data,
+          requestData: err && err.response && err.response.config && err.response.config.data
+        };
+        console.error('[Inference] 请求失败:', errInfo);
+        // 同时打印可读字符串，方便复制给后端排查
+        try {
+          console.error('[Inference] 摘要:',
+            errInfo.method, errInfo.url,
+            '| params:', JSON.stringify(errInfo.params),
+            '| status:', errInfo.status, errInfo.statusText,
+            '| body:', typeof errInfo.responseData === 'string'
+              ? errInfo.responseData
+              : JSON.stringify(errInfo.responseData));
+        } catch (_) { /* ignore stringify error */ }
         this.multimodalDetectionInfo = null;
         // 出错时也要重新渲染图谱
         this.$nextTick(() => {

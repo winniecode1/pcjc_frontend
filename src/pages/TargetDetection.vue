@@ -25,7 +25,7 @@
       <div class="panel-left">
         <div class="panel-content">
           <div class="server-video-list overflow-auto">
-            <div v-for="item in mediaList" :key="item.id" class="video-item" @click="selectMedia(item)"
+            <div v-for="item in mediaList" :key="item.id + (item.isInfrared ? '-ir' : '')" class="video-item" @click="selectMedia(item)"
               :class="{ 'selected': selectedVideo && selectedVideo.id === item.id }">
               <span>{{ item.name.replace(/\.(jpg|jpeg|png|mp4|avi|mov)$/i, '') }}</span>
               <span class="selector-circle"></span>
@@ -55,10 +55,28 @@
 
       <b-col cols="5" class="middle-column mx-2 px-1">
         <div class="video-section">
-          <div class="video-label label-original">{{ selectedMediaType === 'image' ? '认知传播图片' : '认知传播视频' }}</div>
-          <div class="video-frame">
-            <img v-if="originalVideoURL && selectedMediaType === 'image'" :src="originalVideoURL" class="video-display" alt="原始图片" @error="handleImageError" />
-            <video v-else-if="originalVideoURL && selectedMediaType === 'video'" :src="originalVideoURL" class="video-display" autoplay loop muted controls @error="handleVideoError"></video>
+          <div class="video-label label-original">{{ selectedMediaType === 'image' ? (isDualModal ? '环境光图 / 红外图' : '认知传播图片') : '认知传播视频' }}</div>
+          <div class="video-frame" :class="{ 'dual-frame': isDualModal && selectedMediaType === 'image' }">
+            <!-- 双模态：并排显示两张图 -->
+            <template v-if="isDualModal && selectedMediaType === 'image'">
+              <div class="dual-pane">
+                <div class="pane-tag">环境光图</div>
+                <img v-if="originalVideoURL" :src="originalVideoURL" class="video-display" alt="环境光原图" @error="handleImageError" />
+                <div v-else class="placeholder-text">请选择图片</div>
+              </div>
+              <div class="dual-pane">
+                <div class="pane-tag">红外图</div>
+                <img v-if="originalInfraredURL" :src="originalInfraredURL" class="video-display" alt="红外原图" @error="handleImageError" />
+                <div v-else-if="originalVideoURL" class="placeholder-text">红外图加载中...</div>
+                <div v-else class="placeholder-text">请选择图片</div>
+              </div>
+            </template>
+            <!-- 单图：保持原逻辑 -->
+            <template v-else>
+              <img v-if="originalVideoURL && selectedMediaType === 'image'" :src="originalVideoURL" class="video-display" alt="原始图片" @error="handleImageError" />
+              <video v-else-if="originalVideoURL && selectedMediaType === 'video'" :src="originalVideoURL" class="video-display" autoplay loop muted controls @error="handleVideoError"></video>
+              <div v-else class="placeholder-text">请选择{{ selectedMediaType === 'image' ? '图片' : '视频' }}</div>
+            </template>
             <!-- 加载进度条 - 显示在图片位置的中间 -->
             <div v-if="isImageLoading" class="loading-progress-overlay">
               <div class="loading-progress-bar">
@@ -66,7 +84,6 @@
               </div>
               <div class="loading-progress-text">图片加载中...</div>
             </div>
-            <div v-else-if="!originalVideoURL" class="placeholder-text">请选择{{ selectedMediaType === 'image' ? '图片' : '视频' }}</div>
           </div>
         </div>
 
@@ -77,9 +94,26 @@
             @click="handleLabelClick">
             {{ detectionLabelText }}
           </div>
-          <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
-            <img v-if="processedVideoURL && !isLoading && selectedMediaType === 'image'" :src="processedVideoURL" class="video-display" alt="检测结果" :key="'img-' + processedVideoURL" @error="handleImageError" />
-            <video v-else-if="processedVideoURL && !isLoading && selectedMediaType === 'video'" :src="processedVideoURL" class="video-display" autoplay loop muted controls :key="'video-' + processedVideoURL" @error="handleVideoError"></video>
+          <div class="video-frame" :class="{ 'loading-overlay': isLoading, 'dual-frame': isDualModal && selectedMediaType === 'image' }">
+            <!-- 双模态检测结果：并排显示两张画框图 -->
+            <template v-if="isDualModal && selectedMediaType === 'image'">
+              <div class="dual-pane">
+                <div class="pane-tag">环境光图检测结果</div>
+                <img v-if="processedVideoURL && !isLoading" :src="processedVideoURL" class="video-display" alt="环境光检测结果" :key="'img-' + processedVideoURL" @error="handleImageError" />
+                <div v-else class="placeholder-text">检测结果将在这里显示</div>
+              </div>
+              <div class="dual-pane">
+                <div class="pane-tag">红外图检测结果</div>
+                <img v-if="processedInfraredURL && !isLoading" :src="processedInfraredURL" class="video-display" alt="红外检测结果" :key="'img-ir-' + processedInfraredURL" @error="handleImageError" />
+                <div v-else class="placeholder-text">检测结果将在这里显示</div>
+              </div>
+            </template>
+            <!-- 单图检测结果 -->
+            <template v-else>
+              <img v-if="processedVideoURL && !isLoading && selectedMediaType === 'image'" :src="processedVideoURL" class="video-display" alt="检测结果" :key="'img-' + processedVideoURL" @error="handleImageError" />
+              <video v-else-if="processedVideoURL && !isLoading && selectedMediaType === 'video'" :src="processedVideoURL" class="video-display" autoplay loop muted controls :key="'video-' + processedVideoURL" @error="handleVideoError"></video>
+              <div v-else class="placeholder-text">检测结果将在这里显示</div>
+            </template>
             <!-- 检测进度条 - 显示在图片位置的中间 -->
             <div v-if="isLoading" class="loading-progress-overlay">
               <div class="loading-progress-bar">
@@ -87,7 +121,6 @@
               </div>
               <div class="loading-progress-text">检测中...</div>
             </div>
-            <div v-else-if="!processedVideoURL" class="placeholder-text">检测结果将在这里显示</div>
           </div>
         </div>
 
@@ -217,11 +250,15 @@ export default {
       ordersText: '',
       selectedMediaType: 'image',
       imageList: [],
+      dualModalImageList: [],
       videoList: [],
       mediaList: [],
       selectedVideo: null,
       originalVideoURL: null,
+      originalInfraredURL: null,
       processedVideoURL: null,
+      processedInfraredURL: null,
+      isDualModal: false,
       taskId: null,
       isLoading: false,
       isImageLoading: false,
@@ -321,8 +358,14 @@ export default {
       if (this.originalVideoURL) {
         localStorage.setItem('originalVideoURL', this.originalVideoURL);
       }
+      if (this.originalInfraredURL) {
+        localStorage.setItem('originalInfraredURL', this.originalInfraredURL);
+      }
       if (this.processedVideoURL) {
         localStorage.setItem('processedVideoURL', this.processedVideoURL);
+      }
+      if (this.processedInfraredURL) {
+        localStorage.setItem('processedInfraredURL', this.processedInfraredURL);
       }
 
       // 保存作战指令
@@ -379,9 +422,17 @@ export default {
       if (savedOriginalURL) {
         this.originalVideoURL = savedOriginalURL;
       }
+      const savedOriginalInfraredURL = localStorage.getItem('originalInfraredURL');
+      if (savedOriginalInfraredURL) {
+        this.originalInfraredURL = savedOriginalInfraredURL;
+      }
       const savedProcessedURL = localStorage.getItem('processedVideoURL');
       if (savedProcessedURL) {
         this.processedVideoURL = savedProcessedURL;
+      }
+      const savedProcessedInfraredURL = localStorage.getItem('processedInfraredURL');
+      if (savedProcessedInfraredURL) {
+        this.processedInfraredURL = savedProcessedInfraredURL;
       }
 
       // 恢复目标检测结果
@@ -488,6 +539,9 @@ export default {
           const found = this.mediaList.find(item => item.id === videoInfo.id);
           if (found) {
             this.selectedVideo = found;
+            this.isDualModal = !!found.isInfrared;
+          } else {
+            this.isDualModal = !!videoInfo.isInfrared;
           }
         } catch (e) {
           console.error("恢复选中视频失败:", e);
@@ -765,6 +819,7 @@ export default {
     resetResultState(options = {}) {
       const { preserveMessages = false, preserveBiasTimer = false } = options;
       this.processedVideoURL = null;
+      this.processedInfraredURL = null;
       this.taskId = null;
       this.fullResult = {
         video_description: null,
@@ -1030,6 +1085,10 @@ export default {
           // 保存偏差结果到 fullResult
           this.fullResult.bias_result = data.bias_result || {};
           this.fullResult.overall_accuracy = (data.overall_accuracy && data.overall_accuracy.accuracy) || 0;
+          // 双模态样本保存红外偏差结果
+          if (data.bias_result && data.bias_result.infrared_bias_result) {
+            this.fullResult.infrared_bias_result = data.bias_result.infrared_bias_result;
+          }
 
           // 构建偏差详情条目
           this.biasDetailEntries = this.buildBiasDetailEntries(data);
@@ -1359,6 +1418,9 @@ export default {
       this.clearAllCache();
       this.resetResultState();
       this.originalVideoURL = null;
+      this.originalInfraredURL = null;
+      this.processedInfraredURL = null;
+      this.isDualModal = false;
 
       if (type === 'image') {
         await this.fetchImageList();
@@ -1367,6 +1429,7 @@ export default {
       }
     },
     async fetchImageList() {
+      // 拉取普通图片列表
       try {
         const response = await axios.get(`${IMAGE_API_URL}/api/dataset/images`);
         if (response.data.images) {
@@ -1374,16 +1437,43 @@ export default {
             id: img.id,
             name: img.filename,
             path: img.image_path,
-            imageUrl: img.image_url
+            imageUrl: img.image_url,
+            isInfrared: false
           }));
-          // 合并列表：图片在前100个
-          this.mediaList = [...this.imageList.slice(0, 100), ...this.videoList];
-          console.log("图片列表获取成功", this.mediaList);
         }
       } catch (error) {
-        console.error("获取图片列表失败", error);
+        console.error("获取图片列表失败:", error);
         this.imageList = [];
       }
+
+      // 拉取双模态（红外）图片列表
+      try {
+        const dualResponse = await axios.get(`${IMAGE_API_URL}/api/dataset/dual_modal_images`);
+        if (dualResponse.data.images) {
+          this.dualModalImageList = dualResponse.data.images.map((img) => ({
+            id: img.id,
+            name: img.filename,
+            path: img.image_path,
+            imageUrl: img.image_url,
+            infraredPath: img.infrared_image ? img.infrared_image.image_path : null,
+            infraredImageUrl: img.infrared_image ? img.infrared_image.image_url : null,
+            isInfrared: true
+          }));
+        } else {
+          this.dualModalImageList = [];
+        }
+      } catch (error) {
+        console.warn("获取双模态图片列表失败（可能未启用红外数据集）:", error);
+        this.dualModalImageList = [];
+      }
+
+      // 合并列表：双模态（红外）在前，普通图片在后
+      this.mediaList = [
+        ...this.dualModalImageList,
+        ...this.imageList,
+        ...this.videoList
+      ];
+      console.log("图片列表合并完成，mediaList:", this.mediaList);
     },
     async fetchVideoListFromAPI() {
       try {
@@ -1393,16 +1483,21 @@ export default {
             id: vid.id,
             name: vid.filename,
             path: vid.video_path,
-            videoUrl: vid.video_url
+            videoUrl: vid.video_url,
+            isInfrared: false
           }));
-          // 合并列表：图片在前100个
-          this.mediaList = [...this.imageList.slice(0, 100), ...this.videoList];
+          // 合并列表：双模态（红外）图 + 普通图 + 视频
+          this.mediaList = [
+            ...this.dualModalImageList,
+            ...this.imageList,
+            ...this.videoList
+          ];
           console.log("视频列表获取成功", this.mediaList);
         }
       } catch (error) {
         console.error("获取视频列表失败", error);
         this.videoList = [];
-        this.mediaList = [...this.imageList];
+        this.mediaList = [...this.dualModalImageList, ...this.imageList];
       }
     },
     async fetchVideoList() {
@@ -1414,6 +1509,8 @@ export default {
       // 根据文件名后缀判断媒体类型
       const mediaType = /\.(jpg|jpeg|png)$/i.test(item.name) ? 'image' : 'video';
       this.selectedMediaType = mediaType;
+      // 是否为双模态（红外）样本
+      this.isDualModal = !!item.isInfrared;
 
       // 只有选择不同的文件时才清理相关缓存
       if (!isSameItem) {
@@ -1422,10 +1519,13 @@ export default {
         localStorage.setItem('selectedVideo', JSON.stringify({
           id: item.id,
           name: item.name,
-          mediaType: this.selectedMediaType
+          mediaType: this.selectedMediaType,
+          isInfrared: this.isDualModal
         }));
         // 立即清空上一个图片显示
         this.originalVideoURL = null;
+        this.originalInfraredURL = null;
+        this.processedInfraredURL = null;
         // 清除目标检测相关缓存（保留偏差检测计时状态）
         this.clearTargetDetectionCache();
         // 重置结果状态（保留偏差检测计时状态）
@@ -1438,13 +1538,15 @@ export default {
         this.showAccuracy = false;
         this.hasStartedBiasDetection = false;
 
-        console.log("选择新" + (this.selectedMediaType === 'image' ? '图片' : '视频') + "，状态已重置，偏差检测结果已清空。");
+        console.log("选择新" + (this.selectedMediaType === 'image' ? '图片' : '视频') +
+          (this.isDualModal ? '（双模态）' : '') + "，状态已重置，偏差检测结果已清空。");
       } else {
         // 选择相同文件时，也保存 originalVideoURL 到 localStorage
         localStorage.setItem('selectedVideo', JSON.stringify({
           id: item.id,
           name: item.name,
-          mediaType: this.selectedMediaType
+          mediaType: this.selectedMediaType,
+          isInfrared: this.isDualModal
         }));
         localStorage.setItem('originalVideoURL', this.originalVideoURL || '');
       }
@@ -1455,8 +1557,9 @@ export default {
 
       try {
         let videoUrl = null;
+        let infraredUrl = null;
         if (this.selectedMediaType === 'image') {
-          // 图片接口
+          // 图片接口（普通图片 / 双模态图片均走 sample 接口，红外样本会返回额外字段）
           const response = await axios.get(`${IMAGE_API_URL}/api/dataset/sample/${item.id}`);
           const data = response.data;
 
@@ -1465,6 +1568,19 @@ export default {
               videoUrl = data.image_url;
             } else {
               videoUrl = `${IMAGE_API_URL}${data.image_url}`;
+            }
+          }
+
+          // 双模态：额外获取红外图 URL
+          if (this.isDualModal) {
+            if (data.infrared_image_url) {
+              infraredUrl = data.infrared_image_url.startsWith('http')
+                ? data.infrared_image_url
+                : `${IMAGE_API_URL}${data.infrared_image_url}`;
+            } else if (item.infraredImageUrl) {
+              infraredUrl = item.infraredImageUrl.startsWith('http')
+                ? item.infraredImageUrl
+                : `${IMAGE_API_URL}${item.infraredImageUrl}`;
             }
           }
 
@@ -1498,9 +1614,15 @@ export default {
         if (videoUrl) {
           setTimeout(() => {
             this.originalVideoURL = videoUrl;
-            console.log("原图片/视频URL:", this.originalVideoURL);
+            this.originalInfraredURL = infraredUrl;
+            console.log("原图片/视频URL:", this.originalVideoURL, "红外图URL:", this.originalInfraredURL);
             if (this.originalVideoURL) {
               localStorage.setItem('originalVideoURL', this.originalVideoURL);
+            }
+            if (this.originalInfraredURL) {
+              localStorage.setItem('originalInfraredURL', this.originalInfraredURL);
+            } else {
+              localStorage.removeItem('originalInfraredURL');
             }
             // 图片加载完成后隐藏进度条
             this.isImageLoading = false;
@@ -1514,11 +1636,17 @@ export default {
         // 备用方案
         try {
           let videoUrl = null;
+          let infraredUrl = null;
           if (this.selectedMediaType === 'image') {
             if (item.imageUrl) {
               videoUrl = item.imageUrl.startsWith('http') ? item.imageUrl : `${IMAGE_API_URL}${item.imageUrl}`;
             } else if (item.path) {
               videoUrl = item.path.startsWith('http') ? item.path : `${IMAGE_API_URL}/api/dataset/image/${item.id}`;
+            }
+            if (item.infraredImageUrl) {
+              infraredUrl = item.infraredImageUrl.startsWith('http')
+                ? item.infraredImageUrl
+                : `${IMAGE_API_URL}${item.infraredImageUrl}`;
             }
           } else {
             if (item.videoUrl) {
@@ -1530,14 +1658,19 @@ export default {
           if (videoUrl) {
             setTimeout(() => {
               this.originalVideoURL = videoUrl;
+              this.originalInfraredURL = infraredUrl;
               if (this.originalVideoURL) {
                 localStorage.setItem('originalVideoURL', this.originalVideoURL);
+              }
+              if (this.originalInfraredURL) {
+                localStorage.setItem('originalInfraredURL', this.originalInfraredURL);
               }
             }, 2000);
           }
         } catch (fallbackError) {
           console.error("构造媒体URL失败:", fallbackError);
           this.originalVideoURL = null;
+          this.originalInfraredURL = null;
         }
       }
       console.log("已选择:", this.selectedMediaType === 'image' ? '图片' : '视频', item.name);
@@ -1614,14 +1747,34 @@ export default {
             detected_classes: detectedClasses,
             detections: detections
           };
+          // 保存双模态检测的描述（若有）
+          if (fullData.infrared_description) {
+            this.fullResult.infrared_description = fullData.infrared_description;
+          }
+          if (fullData.infrared_result) {
+            this.fullResult.infrared_result = fullData.infrared_result;
+          }
 
           // 设置检测结果图片 - 使用 YOLO 画框图接口
           const sampleId = this.selectedVideo.id || fullData.id;
           if (sampleId) {
+            // 普通图片使用 /api/result/yolo_image
             this.processedVideoURL = `${IMAGE_API_URL}/api/result/yolo_image/${sampleId}`;
-            console.log("Processed image URL:", this.processedVideoURL);
+            // 双模态样本额外设置红外画框图
+            if (this.isDualModal && fullData.annotated_infrared_image_url) {
+              this.processedInfraredURL = fullData.annotated_infrared_image_url.startsWith('http')
+                ? fullData.annotated_infrared_image_url
+                : `${IMAGE_API_URL}${fullData.annotated_infrared_image_url}`;
+            } else if (this.isDualModal) {
+              this.processedInfraredURL = `${IMAGE_API_URL}/api/result/yolo_image_infrared/${sampleId}`;
+            } else {
+              this.processedInfraredURL = null;
+            }
+            console.log("Processed image URL:", this.processedVideoURL,
+              "Processed infrared URL:", this.processedInfraredURL);
           } else {
             this.processedVideoURL = null;
+            this.processedInfraredURL = null;
           }
 
           // 如果没有检测结果内容，根据检测到的目标生成描述
@@ -2728,6 +2881,70 @@ export default {
     min-height: 120px;
   }
 }
+
+/* 8. 双模态图片布局（红外 + 环境光） */
+.dual-frame {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  justify-content: space-between !important;
+  gap: 10px;
+  padding: 10px !important;
+}
+
+.dual-pane {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  position: relative;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  border-radius: 6px;
+  padding: 6px;
+  overflow: hidden;
+}
+
+.dual-pane .video-display {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transform: none;
+}
+
+.pane-tag {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 2;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-family: 'DOUYUFont', sans-serif;
+  color: #00e5ff;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+/* 左侧列表中红外样本的标识（已不再使用，保留以防回滚） */
+/* .ir-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 11px;
+  color: #ff8a00;
+  background: rgba(255, 138, 0, 0.12);
+  border: 1px solid rgba(255, 138, 0, 0.4);
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  font-family: 'DOUYUFont', sans-serif;
+  flex-shrink: 0;
+} */
 </style>
 
 <style lang="scss">
