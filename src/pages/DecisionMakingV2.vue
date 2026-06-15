@@ -2921,6 +2921,8 @@ export default {
   flex-shrink: 1;
   margin-bottom: 0;
   width: 400px;
+  max-width: 400px;
+  min-width: 400px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2949,10 +2951,12 @@ export default {
   min-height: 220px;
   max-height: 220px;
   width: 400px;
+  max-width: 400px;
+  min-width: 400px;
   background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  padding: 10px 14px 14px 14px;
+  padding: 4px 8px 8px 8px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -3606,6 +3610,14 @@ export default {
 }
 
 /* 6. 右侧列 */
+.panel-right-top,
+.panel-right-bottom.dm-decision-panel {
+  width: 400px;
+  max-width: 400px;
+  min-width: 400px;
+  box-sizing: border-box;
+}
+
 .panel-right-top {
   background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
   background-repeat: no-repeat;
