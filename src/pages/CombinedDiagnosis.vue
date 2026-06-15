@@ -171,7 +171,30 @@
             </div>
           </div>
 
-          <!-- 模块 3 -->
+          <!-- 模块 4（调换到左下） -->
+          <div class="module-wrapper">
+            <div class="module-header">4.决策选择认知偏差诊断</div>
+            <div class="module-body">
+              <div class="result-section">
+                <div class="section-title">诊断与定位结果</div>
+                <div class="content-box scrollable" v-html="highlightBrackets(module4Result)"></div>
+                <div v-if="isLoading && !module4Result" class="diagnosis-overlay">
+                  <div class="loading-spinner-large"></div>
+                </div>
+              </div>
+              <div class="metric-group" v-if="module4ErrorType || module4ErrorJudgement">
+                <div class="metric-item">偏差类型: <span class="bias-yes-red">{{ module4ErrorType || '-' }}</span></div>
+                <div class="metric-item">偏差判断: <span class="bias-yes-red">{{ module4ErrorJudgement || '-' }}</span></div>
+              </div>
+              <div class="metric-group">
+                <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module4InternalBias, 0) }}</span></div>
+                <div class="metric-item">认知传播偏差结果: <span>{{ formatPercent(module4PropagationBias, 0) }}</span></div>
+                <div class="metric-item">是否是偏差模块: <span :class="biasYesClass(module4IsBiasModule)">{{ formatYesNo(module4IsBiasModule) }}</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 模块 3（调换到右下） -->
           <div class="module-wrapper">
             <div class="module-header">3.群体协商认知偏差诊断</div>
             <div class="module-body">
@@ -194,27 +217,20 @@
             </div>
           </div>
 
-          <!-- 模块 4 -->
-          <div class="module-wrapper">
-            <div class="module-header">4.决策选择认知偏差诊断</div>
-            <div class="module-body">
-              <div class="result-section">
-                <div class="section-title">诊断与定位结果</div>
-                <div class="content-box scrollable" v-html="highlightBrackets(module4Result)"></div>
-                <div v-if="isLoading && !module4Result" class="diagnosis-overlay">
-                  <div class="loading-spinner-large"></div>
-                </div>
-              </div>
-              <div class="metric-group" v-if="module4ErrorType || module4ErrorJudgement">
-                <div class="metric-item">偏差类型: <span class="bias-yes-red">{{ module4ErrorType || '-' }}</span></div>
-                <div class="metric-item">偏差判断: <span class="bias-yes-red">{{ module4ErrorJudgement || '-' }}</span></div>
-              </div>
-              <div class="metric-group">
-                <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module4InternalBias, 0) }}</span></div>
-                <div class="metric-item">认知传播偏差结果: <span>{{ formatPercent(module4PropagationBias, 0) }}</span></div>
-                <div class="metric-item">是否是偏差模块: <span :class="biasYesClass(module4IsBiasModule)">{{ formatYesNo(module4IsBiasModule) }}</span></div>
-              </div>
-            </div>
+          <!-- 箭头 1→2 向右 -->
+          <div class="grid-arrow grid-arrow-top">
+            <span class="arrow-line"></span>
+            <span class="arrow-head arrow-head-right"></span>
+          </div>
+          <!-- 箭头 2→3 向下 -->
+          <div class="grid-arrow grid-arrow-right">
+            <span class="arrow-line arrow-line-v"></span>
+            <span class="arrow-head arrow-head-down"></span>
+          </div>
+          <!-- 箭头 3→4 向左 -->
+          <div class="grid-arrow grid-arrow-bottom">
+            <span class="arrow-line"></span>
+            <span class="arrow-head arrow-head-left"></span>
           </div>
         </div>
 
@@ -1123,6 +1139,65 @@ export default {
   gap: 20px;
   flex: 1;
   min-height: 0;
+  position: relative;
+}
+.grid-arrow {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+.grid-arrow-top {
+  top: calc(25% - 2px);
+  left: calc(50% - 30px);
+  width: 60px;
+  flex-direction: row;
+}
+.grid-arrow-right {
+  top: calc(50% - 30px);
+  right: calc(25% - 2px);
+  height: 60px;
+  flex-direction: column;
+}
+.grid-arrow-bottom {
+  bottom: calc(25% - 2px);
+  left: calc(50% - 30px);
+  width: 60px;
+  flex-direction: row-reverse;
+}
+.arrow-line {
+  flex: 1;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(78,216,255,0.3), rgba(78,216,255,0.9));
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(78,216,255,0.6);
+}
+.arrow-line-v {
+  width: 3px;
+  height: auto;
+  background: linear-gradient(180deg, rgba(78,216,255,0.3), rgba(78,216,255,0.9));
+}
+.arrow-head-right {
+  width: 0; height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 12px solid rgba(78,216,255,0.9);
+  filter: drop-shadow(0 0 4px rgba(78,216,255,0.6));
+}
+.arrow-head-down {
+  width: 0; height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 12px solid rgba(78,216,255,0.9);
+  filter: drop-shadow(0 0 4px rgba(78,216,255,0.6));
+}
+.arrow-head-left {
+  width: 0; height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 12px solid rgba(78,216,255,0.9);
+  filter: drop-shadow(0 0 4px rgba(78,216,255,0.6));
 }
 .module-wrapper {
   display: flex;
