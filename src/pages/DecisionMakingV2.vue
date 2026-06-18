@@ -17,7 +17,7 @@
 
     <b-row class="justify-content-center content-row no-gutters">
 
-      <b-col cols="3" class="left-column px-2">
+      <b-col cols="3" class="left-column px-1">
     <div class="left-panels-container">
     <div class="panel-header header-select-data clean-header">选择认知传播数据源</div>
 
@@ -110,7 +110,7 @@
           >
             {{ detectionLabelText }}
           </div>
-          <div class="video-frame" :class="{ 'loading-overlay': isLoading }">
+          <div class="video-frame">
             <img v-if="processedVideoURL && !isLoading && selectedMediaType === 'image'" :src="processedVideoURL" class="video-display" alt="检测结果" :key="'img-' + processedVideoURL" @load="handleProcessedTrackMediaReady" @error="handleImageError" />
             <video
               v-else-if="processedVideoURL && !isLoading && selectedMediaType === 'video' && !processedVideoCodecWarning"
@@ -133,7 +133,7 @@
               <div class="loading-progress-bar">
                 <div class="loading-progress-fill"></div>
               </div>
-              <div class="loading-progress-text">目标检测进行中...</div>
+              <div class="loading-progress-text">分析中...</div>
             </div>
             <div v-else-if="!processedVideoURL" class="placeholder-text">检测结果将在这里显示</div>
           </div>
@@ -154,7 +154,7 @@
         -->
       </b-col>
 
-      <b-col cols="3" class="right-column px-2">
+      <b-col cols="3" class="right-column px-1">
         <div class="right-panels-container">
 
         <div class="bias-button-container">
@@ -189,10 +189,7 @@
                           :key="'intent-' + idx + '-' + item.intent"
                           type="button"
                           class="ba-intent-btn"
-                          :class="{
-                            'ba-intent-btn--selected': selectedTacticalIntentIndex === idx,
-                            'ba-intent-btn--disabled': selectedTacticalIntentIndex !== null && selectedTacticalIntentIndex !== idx
-                          }"
+                          :class="getRankingItemBiasClass(behaviorAnalysisView.tacticalIntentRanking, selectedTacticalIntentIndex, idx)"
                           :disabled="selectedTacticalIntentIndex !== null && selectedTacticalIntentIndex !== idx"
                           @click="selectTacticalIntent(idx)"
                         >
@@ -258,20 +255,17 @@
             <div class="panel-header header-results title-one-line dm-result-box-title">
               <span>决策选择</span>
             </div>
-            <div class="final-result-section">
-              <div class="final-model-display">
-                <p v-if="selectedTacticalIntentIndex === null" class="final-model-text hint-text">选择合适的战术意图</p>
-                <p v-else-if="!tacticalDecisionRankingDisplay.length" class="final-model-text hint-text">暂无决策选项</p>
+            <div class="result-section result-section-main">
+              <div class="section-content unified-scroll bias-panel-scroll">
+                <p v-if="selectedTacticalIntentIndex === null" class="result-text hint-text">选择合适的战术意图</p>
+                <p v-else-if="!tacticalDecisionRankingDisplay.length" class="result-text hint-text">暂无决策选项</p>
                 <div v-else class="ba-intent-list">
                   <button
                     v-for="(item, idx) in tacticalDecisionRankingDisplay"
                     :key="'decision-' + idx + '-' + item.decision"
                     type="button"
                     class="ba-intent-btn"
-                    :class="{
-                      'ba-intent-btn--selected': selectedTacticalDecisionIndex === idx,
-                      'ba-intent-btn--disabled': selectedTacticalDecisionIndex !== null && selectedTacticalDecisionIndex !== idx
-                    }"
+                    :class="getRankingItemBiasClass(tacticalDecisionRankingDisplay, selectedTacticalDecisionIndex, idx)"
                     :disabled="selectedTacticalDecisionIndex !== null && selectedTacticalDecisionIndex !== idx"
                     @click="selectTacticalDecision(idx)"
                   >
@@ -300,7 +294,7 @@
                 <span class="formula-hint-icon">?</span>
               </span>
               <span class="accuracy-value">
-                <template v-if="isBiasDetecting || deviationDetectionAccuracy === '计算中...'">
+                <template v-if="deviationDetectionAccuracy === '计算中...'">
                   计算中...
                 </template>
                 <template
@@ -350,8 +344,8 @@ const FRONTEND_BASE_URL = 'http://10.109.253.71:8889';
 const IMAGE_API_URL = 'http://10.109.253.71:5237';
 const BASE_DIR = "/home/wuzhixuan/Project/PCJC/1";
 const VIDEO_DIR = "/home/wuzhixuan/Project/PCJC/datasets/Vedio"
-// 偏差识别准确率延迟展示（与 DecisionMaking.vue 一致：1 分钟）
-const BIAS_DETECTION_DELAY = 1 * 60 * 1000;
+// 偏差识别准确率延迟展示：选择决策后约 30 秒出结果
+const BIAS_DETECTION_DELAY = 30 * 1000;
 const STATISTICS_ACCURACY_API_URL = `${SOURCE_API_BASE_URL}/statistics/accuracy`;
 const EXPORT_OUTPUT_API_URL = `${SOURCE_API_BASE_URL}/export/output`;
 /** 作战指令：选中媒体后至少延迟展示时长（ms） */
@@ -474,15 +468,12 @@ export default {
     },
     detectionLabelText() {
       if (this.isLoading) {
-        return '目标检测进行中...';
+        return '目标识别与轨迹分析中';
       }
       if (this.hasStartedDetection && this.processedVideoURL) {
-        return '多模态目标检测结果';
+        return '目标识别与轨迹分析结果';
       }
-      if (this.canStartTrackRecognition) {
-        return '开始多模态目标检测';
-      }
-      return '多模态目标检测结果';
+      return '开始目标识别与轨迹分析';
     },
     canClickToDetect() {
       return this.canStartTrackRecognition && !this.hasStartedDetection;
@@ -1598,6 +1589,36 @@ export default {
     formatIntentConfidenceWidth(confidence) {
       return `${this.normalizeIntentConfidence(confidence)}%`;
     },
+    findHighestConfidenceIndex(items) {
+      if (!Array.isArray(items) || !items.length) return -1;
+      let bestIdx = 0;
+      let bestVal = -1;
+      items.forEach((item, idx) => {
+        const value = this.normalizeIntentConfidence(item && item.confidence);
+        if (value > bestVal) {
+          bestVal = value;
+          bestIdx = idx;
+        }
+      });
+      return bestIdx;
+    },
+    getRankingItemBiasClass(items, selectedIndex, idx) {
+      const machineBestIndex = this.findHighestConfidenceIndex(items);
+      if (selectedIndex === null) {
+        return {
+          'ba-intent-btn--machine-best': machineBestIndex >= 0 && idx === machineBestIndex
+        };
+      }
+      if (selectedIndex !== idx) {
+        return { 'ba-intent-btn--disabled': true };
+      }
+      const isConsistent = machineBestIndex >= 0 && selectedIndex === machineBestIndex;
+      return {
+        'ba-intent-btn--selected': true,
+        'ba-intent-btn--bias-consistent': isConsistent,
+        'ba-intent-btn--bias-deviation': !isConsistent
+      };
+    },
     resetCommanderIntentAnalysis() {
       this.commanderIntentAnalysis = '';
       this.commanderIntentAnalysisError = '';
@@ -1638,6 +1659,7 @@ export default {
 
       this.selectedTacticalIntentIndex = index;
       this.selectedTacticalDecisionIndex = null;
+      this.resetDeviationAccuracyDisplay();
       this.resetCommanderIntentAnalysis();
       this.isCommanderIntentLoading = true;
 
@@ -1733,6 +1755,26 @@ export default {
       const decisionName = item && item.decision ? String(item.decision).trim() : '';
       if (!decisionName) return;
       this.selectedTacticalDecisionIndex = index;
+      this.startDeviationAccuracyCountdown();
+    },
+    resetDeviationAccuracyDisplay() {
+      if (this.accuracyTimeout) {
+        clearTimeout(this.accuracyTimeout);
+        this.accuracyTimeout = null;
+      }
+      this.showAccuracy = false;
+      this.deviationDetectionAccuracy = 'N/A';
+      localStorage.removeItem('biasStartTime');
+      localStorage.removeItem('biasDetectionCompleted');
+    },
+    startDeviationAccuracyCountdown() {
+      this.clearBiasTimeouts();
+      this.showAccuracy = false;
+      this.deviationDetectionAccuracy = '计算中...';
+      localStorage.setItem('biasStartTime', Date.now().toString());
+      localStorage.setItem('biasDetectionStarted', 'true');
+      localStorage.removeItem('biasDetectionCompleted');
+      this.startAccuracyTimer(BIAS_DETECTION_DELAY);
     },
     formatBehaviorMetricValue(key, value) {
       if (value == null || value === '') return 'N/A';
@@ -1933,7 +1975,7 @@ export default {
       this.clearBiasTimeouts();
       this.showBiasDetails = false;
       this.showAccuracy = false;
-      this.deviationDetectionAccuracy = '计算中...';
+      this.resetDeviationAccuracyDisplay();
       this.resetBiasTyping();
 
       const logTag = '[DecisionMakingV2][analyze-video-behavior]';
@@ -2003,9 +2045,6 @@ export default {
         } else {
           localStorage.removeItem('behaviorAnalysisView');
         }
-        localStorage.setItem('biasStartTime', Date.now().toString());
-        localStorage.setItem('biasDetectionStarted', 'true');
-        localStorage.removeItem('biasDetectionCompleted');
 
         try {
           localStorage.setItem('module1Res', JSON.stringify({
@@ -2024,11 +2063,6 @@ export default {
         } catch (e) {
           console.error(`${logTag} 保存 module1Res 失败`, e);
         }
-
-        console.log(`${logTag} 启动偏差识别准确率延迟展示`, BIAS_DETECTION_DELAY, 'ms', {
-          average_comprehensive_accuracy: averageComprehensiveAccuracy
-        });
-        this.startAccuracyTimer(BIAS_DETECTION_DELAY);
 
         this.showBiasDetails = true;
         if (this.behaviorAnalysisView) {
@@ -2749,7 +2783,7 @@ export default {
   color: #fff;
   font-family: "Helvetica Neue", "Microsoft YaHei", sans-serif;
   z-index: 2;
-  padding: 10px;
+  padding: 10px 4px;
   margin: 0;
   background-color: #051525;
   display: flex;
@@ -2775,7 +2809,7 @@ export default {
 .header-bar {
   width: 100%;
   flex-shrink: 0;
-  padding: 0 20px;
+  padding: 0 12px;
   height: 60px;
   position: relative;
   z-index: 1;
@@ -2835,6 +2869,12 @@ export default {
   margin: 0;
 }
 
+@media (min-width: 993px) {
+  .content-row {
+    flex-wrap: nowrap !important;
+  }
+}
+
 /* 三列通用高度 */
 .left-column,
 .middle-column,
@@ -2845,7 +2885,7 @@ export default {
   min-height: 0;
   padding: 0 !important;
   justify-content: flex-start !important;
-  gap: 10px;
+  gap: 8px;
   overflow: hidden;
 }
 
@@ -2866,9 +2906,9 @@ export default {
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  align-items: center;
+  align-items: stretch;
 }
 
 /* 作战指令面板 */
@@ -2920,9 +2960,9 @@ export default {
   height: auto;
   flex-shrink: 1;
   margin-bottom: 0;
-  width: 400px;
-  max-width: 400px;
-  min-width: 400px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2950,9 +2990,9 @@ export default {
   height: 220px;
   min-height: 220px;
   max-height: 220px;
-  width: 400px;
-  max-width: 400px;
-  min-width: 400px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -2967,7 +3007,9 @@ export default {
 
 .panel-right-accuracy {
   flex: 0 0 100px;
-  width: 400px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   background-image: url('~@/assets/images/step4/准确率框.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -3612,9 +3654,9 @@ export default {
 /* 6. 右侧列 */
 .panel-right-top,
 .panel-right-bottom.dm-decision-panel {
-  width: 400px;
-  max-width: 400px;
-  min-width: 400px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
 }
 
@@ -3626,11 +3668,17 @@ export default {
   position: relative;
 }
 
-.panel-right-top .panel-content {
+.panel-right-top .panel-content,
+.panel-right-bottom.dm-decision-panel .panel-content {
   min-height: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 
-.panel-right-top .result-section-main {
+.panel-right-top .result-section-main,
+.panel-right-bottom.dm-decision-panel .result-section-main {
   background-color: rgba(0, 0, 0, 0.25);
   border-radius: 8px;
   padding-top: 4px;
@@ -3643,7 +3691,8 @@ export default {
   flex-direction: column;
 }
 
-.panel-right-top .section-content.unified-scroll {
+.panel-right-top .section-content.unified-scroll,
+.panel-right-bottom.dm-decision-panel .section-content.unified-scroll {
   flex: 1 1 0;
   min-height: 0;
   overflow-y: auto;
@@ -3651,7 +3700,8 @@ export default {
   padding: 8px 10px;
 }
 
-.panel-right-top .section-content .result-text {
+.panel-right-top .section-content .result-text,
+.panel-right-bottom.dm-decision-panel .section-content .result-text {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
@@ -3664,16 +3714,38 @@ export default {
   text-overflow: clip;
 }
 
-.dm-result-box-title {
+.panel-right-top .dm-result-box-title,
+.panel-right-bottom.dm-decision-panel .dm-result-box-title {
   width: 160px !important;
+  min-width: 160px !important;
+  max-width: 160px !important;
   height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
   font-size: 14px !important;
+  font-family: 'DOUYUFont', sans-serif !important;
+  font-weight: 400 !important;
+  color: #ffffff !important;
   justify-content: flex-start !important;
-  padding-left: 15px !important;
+  align-items: center !important;
+  text-align: left !important;
+  align-self: flex-start !important;
+  padding: 0 0 0 15px !important;
   margin: 0 0 6px 0 !important;
   background-image: url('~@/assets/images/step1/-s-二级标题.png') !important;
   background-repeat: no-repeat !important;
   background-size: 100% 100% !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  flex-shrink: 0 !important;
+}
+
+.panel-right-top .dm-result-box-title span,
+.panel-right-bottom.dm-decision-panel .dm-result-box-title span {
+  display: block;
+  line-height: 1;
+  transform: translateY(0);
 }
 
 .final-result-section {
@@ -3917,20 +3989,58 @@ export default {
 }
 
 .ba-intent-btn--selected {
-  border-color: #00e5ff;
-  background: linear-gradient(90deg, rgba(0, 229, 255, 0.32) 0%, rgba(0, 100, 160, 0.24) 100%);
-  box-shadow:
-    0 0 0 1px rgba(93, 255, 184, 0.35),
-    0 0 24px rgba(0, 229, 255, 0.55),
-    inset 0 0 28px rgba(0, 229, 255, 0.14);
   transform: translateX(3px);
   opacity: 1;
   cursor: default;
 }
 
-.ba-intent-btn--selected::before {
+.ba-intent-btn--machine-best {
+  border-color: rgba(93, 255, 184, 0.55);
+  background: linear-gradient(90deg, rgba(93, 255, 184, 0.12) 0%, rgba(0, 100, 160, 0.18) 100%);
+  box-shadow:
+    0 0 0 1px rgba(93, 255, 184, 0.28),
+    0 0 14px rgba(93, 255, 184, 0.22);
+}
+
+.ba-intent-btn--machine-best::before {
+  width: 4px;
+  background: linear-gradient(180deg, #5dffb8 0%, #00e5ff 100%);
+  box-shadow: 0 0 8px rgba(93, 255, 184, 0.55);
+}
+
+.ba-intent-btn--machine-best .ba-intent-name {
+  color: #d8fff0;
+  font-weight: 600;
+}
+
+.ba-intent-btn--bias-consistent {
+  border-color: #5dffb8;
+  background: linear-gradient(90deg, rgba(93, 255, 184, 0.28) 0%, rgba(0, 120, 90, 0.22) 100%);
+  box-shadow:
+    0 0 0 1px rgba(93, 255, 184, 0.55),
+    0 0 24px rgba(93, 255, 184, 0.65),
+    inset 0 0 28px rgba(93, 255, 184, 0.12);
+}
+
+.ba-intent-btn--bias-consistent::before {
   width: 5px;
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.9);
+  background: linear-gradient(180deg, #5dffb8 0%, #3dff9a 100%);
+  box-shadow: 0 0 12px rgba(93, 255, 184, 0.9);
+}
+
+.ba-intent-btn--bias-deviation {
+  border-color: #ff6b6b;
+  background: linear-gradient(90deg, rgba(255, 107, 107, 0.28) 0%, rgba(120, 30, 30, 0.22) 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 107, 107, 0.55),
+    0 0 24px rgba(255, 77, 77, 0.65),
+    inset 0 0 28px rgba(255, 107, 107, 0.12);
+}
+
+.ba-intent-btn--bias-deviation::before {
+  width: 5px;
+  background: linear-gradient(180deg, #ff8a8a 0%, #ff4d4d 100%);
+  box-shadow: 0 0 12px rgba(255, 77, 77, 0.9);
 }
 
 .ba-intent-btn--disabled,
@@ -3950,7 +4060,14 @@ export default {
 .ba-intent-btn--selected .ba-intent-name {
   color: #ffffff;
   font-weight: 700;
-  text-shadow: 0 0 10px rgba(0, 229, 255, 0.65);
+}
+
+.ba-intent-btn--bias-consistent .ba-intent-name {
+  text-shadow: 0 0 10px rgba(93, 255, 184, 0.75);
+}
+
+.ba-intent-btn--bias-deviation .ba-intent-name {
+  text-shadow: 0 0 10px rgba(255, 107, 107, 0.75);
 }
 
 .ba-intent-name {
@@ -3992,9 +4109,29 @@ export default {
   box-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
 }
 
+.ba-intent-btn--bias-consistent .ba-intent-confidence-bar-wrap {
+  border-color: rgba(93, 255, 184, 0.65);
+  box-shadow: 0 0 8px rgba(93, 255, 184, 0.45);
+}
+
+.ba-intent-btn--bias-deviation .ba-intent-confidence-bar-wrap {
+  border-color: rgba(255, 107, 107, 0.65);
+  box-shadow: 0 0 8px rgba(255, 107, 107, 0.45);
+}
+
 .ba-intent-btn--selected .ba-intent-confidence-bar {
   background: linear-gradient(90deg, #00c8ff 0%, #5dffb8 100%);
   box-shadow: 0 0 8px rgba(93, 255, 184, 0.55);
+}
+
+.ba-intent-btn--bias-consistent .ba-intent-confidence-bar {
+  background: linear-gradient(90deg, #3dff9a 0%, #5dffb8 100%);
+  box-shadow: 0 0 8px rgba(93, 255, 184, 0.65);
+}
+
+.ba-intent-btn--bias-deviation .ba-intent-confidence-bar {
+  background: linear-gradient(90deg, #ff6b6b 0%, #ff4d4d 100%);
+  box-shadow: 0 0 8px rgba(255, 107, 107, 0.65);
 }
 
 .ba-intent-confidence-text {
@@ -4005,9 +4142,17 @@ export default {
 }
 
 .ba-intent-btn--selected .ba-intent-confidence-text {
-  color: #5dffb8;
   font-weight: 700;
-  text-shadow: 0 0 8px rgba(93, 255, 184, 0.5);
+}
+
+.ba-intent-btn--bias-consistent .ba-intent-confidence-text {
+  color: #5dffb8;
+  text-shadow: 0 0 8px rgba(93, 255, 184, 0.55);
+}
+
+.ba-intent-btn--bias-deviation .ba-intent-confidence-text {
+  color: #ff8a8a;
+  text-shadow: 0 0 8px rgba(255, 107, 107, 0.55);
 }
 
 .ba-auxiliary-body {
@@ -4129,12 +4274,8 @@ export default {
 }
 
 .panel-right-bottom.dm-decision-panel .panel-content {
-  display: flex;
-  flex-direction: column;
-  padding: 0;
   width: 100%;
   height: 100%;
-  min-height: 0;
   overflow: hidden;
 }
 
@@ -4320,7 +4461,7 @@ export default {
   }
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 992px) {
   .left-column,
   .middle-column,
   .right-column {
