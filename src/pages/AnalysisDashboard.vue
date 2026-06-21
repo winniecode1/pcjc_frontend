@@ -20,30 +20,14 @@
 
         <div class="sidebar-scroll-area">
           <div class="folder-group">
-            <div class="video-item folder-header-item" @click="isLiveOpen = !isLiveOpen">
+            <div class="video-item folder-header-item" @click="isDatasetOpen = !isDatasetOpen">
               <span class="folder-name-container">
-                <span class="fold-arrow" :class="{ rotated: isLiveOpen }">▶</span>
-                <span class="folder-label">认知传播一致数据</span>
+                <span class="fold-arrow" :class="{ rotated: isDatasetOpen }">▶</span>
+                <span class="folder-label">数据集</span>
               </span>
             </div>
-            <div v-show="isLiveOpen" class="items-container">
-              <div v-for="video in liveVideos" :key="video.id" class="video-item" @click="selectVideo(video)"
-                :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }">
-                <span class="video-name">{{ video.name }}</span>
-                <span class="selector-circle"></span>
-              </div>
-            </div>
-          </div>
-
-          <div class="folder-group">
-            <div class="video-item folder-header-item" @click="isDemoOpen = !isDemoOpen">
-              <span class="folder-name-container">
-                <span class="fold-arrow" :class="{ rotated: isDemoOpen }">▶</span>
-                <span class="folder-label">认知传播不一致数据</span>
-              </span>
-            </div>
-            <div v-show="isDemoOpen" class="items-container">
-              <div v-for="video in demoVideos" :key="video.id" class="video-item" @click="selectVideo(video)"
+            <div v-show="isDatasetOpen" class="items-container">
+              <div v-for="video in datasetVideos" :key="video.id" class="video-item" @click="selectVideo(video)"
                 :class="{ 'selected': selectedVideo && selectedVideo.id === video.id }">
                 <span class="video-name">{{ video.name }}</span>
                 <span class="selector-circle"></span>
@@ -280,8 +264,7 @@ export default {
     return {
       videoList: [],
       selectedVideo: null,
-      isLiveOpen: true,
-      isDemoOpen: false,
+      isDatasetOpen: true,
       isSelectingFile: false,
       selectedFileContext: null,
       selectedInstructionText: '',
@@ -311,13 +294,9 @@ export default {
     };
   },
   computed: {
-    liveVideos() {
+    datasetVideos() {
       const list = Array.isArray(this.videoList) ? this.videoList : [];
-      return list.filter(v => v && v.type === 'live');
-    },
-    demoVideos() {
-      const list = Array.isArray(this.videoList) ? this.videoList : [];
-      return list.filter(v => v && v.type === 'demo');
+      return list.filter(Boolean);
     }
   },
   created() {
