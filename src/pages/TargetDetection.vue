@@ -25,7 +25,7 @@
       <div class="panel-left">
         <div class="panel-content">
           <div class="server-video-list overflow-auto">
-            <div v-for="item in mediaList" :key="item.id + (item.isInfrared ? '-ir' : '')" class="video-item" @click="selectMedia(item)"
+            <div v-for="item in sortedMediaList" :key="item.id + (item.isInfrared ? '-ir' : '')" class="video-item" @click="selectMedia(item)"
               :class="{ 'selected': selectedVideo && selectedVideo.id === item.id }">
               <span>{{ item.name.replace(/\.(jpg|jpeg|png|mp4|avi|mov)$/i, '') }}</span>
               <span class="selector-circle"></span>
@@ -157,9 +157,6 @@
               :class="{ 'loading-text': isBiasDetecting && !showBiasDetails }">
 
               <div v-if="isLoading">检测中……</div>
-              <div v-else-if="isBiasDetecting && !showBiasDetails" class="text-left small-text">
-                计算中…
-              </div>
               <div v-else-if="!hasStartedBiasDetection" class="text-left small-text hint-text">
                 请点击"多模态信息偏差检测"按钮
               </div>
@@ -180,23 +177,20 @@
         <!-- 下：多模态信息认知偏差检测结果（其余四条） -->
         <div class="panel-header header-results clean-header">多模态信息认知偏差检测结果</div>
 
-        <div class="panel-right-top biascheck-box" :class="{ 'loading-overlay': isBiasDetecting }">
+        <div class="panel-right-top biascheck-box" :class="{ 'loading-overlay': isBiasTyping }">
           <div class="panel-content">
             <div class="description-box biascheck-text"
-              :class="{ 'loading-text': isBiasDetecting && !showBiasDetails }">
+              :class="{ 'loading-text': isBiasTyping }">
 
               <div v-if="isLoading">检测中……</div>
-              <div v-else-if="isBiasDetecting && !showBiasDetails" class="text-left small-text">
+              <div v-else-if="isBiasTyping" class="text-left small-text">
                 计算中…
               </div>
               <div v-else-if="!hasStartedBiasDetection" class="text-left small-text hint-text">
                 请点击"多模态信息偏差检测"按钮
               </div>
-              <div v-else-if="hasStartedBiasDetection && showBiasDetails && !biasCheckStarted" class="text-left small-text">
-                计算中…
-              </div>
 
-              <div v-if="hasStartedBiasDetection && !isLoading && showBiasDetails && biasCheckStarted">
+              <div v-if="hasStartedBiasDetection && !isLoading && showBiasDetails && !isBiasTyping">
                 <div v-for="(entry, index) in biasCheckEntries" :key="'bias-' + entry.label + '-' + index"
                   class="typing-text text-left small-text"
                   :class="{
@@ -320,6 +314,7 @@ export default {
       // 上/下框的阶段间隔与起始延迟 (ms)
       biasGroupDelay: 500,
       biasGroupStartDelay: 3000,
+      lowerBoxTypingComplete: false,
       summaryTextOnly: '',
       summaryHighlight: false,
       biasTypingInterval: null,
@@ -341,6 +336,8 @@ export default {
       showFormulaTooltip: false,
       selectedVideoHasOrders: false  // 新增：标记是否已选择视频并加载了作战指令
     };
+  },
+  watch: {
   },
   computed: {
     // 把偏差检测条目按 label 拆分为两部分：
@@ -385,6 +382,14 @@ export default {
              this.selectedVideoHasOrders &&
              !this.isLoading &&
              !this.hasStartedDetection;
+    },
+    // 排序后的媒体列表：00X 在前，200X 在后
+    sortedMediaList() {
+      return [...this.mediaList].sort((a, b) => {
+        const numA = parseInt(a.name, 10) || 0;
+        const numB = parseInt(b.name, 10) || 0;
+        return numA - numB;
+      });
     }
   },
   mounted() {
@@ -644,6 +649,7 @@ export default {
         this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
         this.rebuildGroupDisplayTexts();
         this.isBiasTyping = false;
+        this.lowerBoxTypingComplete = true;
         this.currentTypingGroup = null;
         this.biasCheckStarted = true;
 
@@ -701,6 +707,7 @@ export default {
           this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
           this.rebuildGroupDisplayTexts();
           this.isBiasTyping = false;
+          this.lowerBoxTypingComplete = true;
           this.currentTypingGroup = null;
           this.biasCheckStarted = true;
 
@@ -716,6 +723,7 @@ export default {
           this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
           this.rebuildGroupDisplayTexts();
           this.isBiasTyping = false;
+          this.lowerBoxTypingComplete = true;
           this.currentTypingGroup = null;
           this.biasCheckStarted = true;
 
@@ -1435,11 +1443,10 @@ export default {
       this.accuracyTimeout = setTimeout(() => {
         this.showAccuracy = true;
         this.isBiasDetecting = false;
+        this.lowerBoxTypingComplete = true;
         this.accuracyTimeout = null;
-        // 移除计时开始时间，但写入完成标记
         localStorage.removeItem('biasStartTime');
         localStorage.setItem('biasDetectionCompleted', 'true');
-        // 立即保存 fullResult（包含 overall_accuracy）到 localStorage
         if (this.fullResult) {
           localStorage.setItem('fullResult', JSON.stringify(this.fullResult));
         }
@@ -1474,6 +1481,7 @@ export default {
       this.cognitionDisplayTexts = this.cognitionEntries.map(() => '');
       this.biasCheckDisplayTexts = this.biasCheckEntries.map(() => '');
       this.isBiasTyping = false;
+      this.lowerBoxTypingComplete = false;
       this.currentTypingGroup = null;
       this.biasCheckStarted = false;
     },
@@ -1494,16 +1502,14 @@ export default {
       this.currentTypingGroup = null;
       this.biasCheckStarted = false;
       this.isBiasTyping = true;
-      // 起始延迟：上框出现前 showBiasDetails 保持 false，UI 显示"计算中…"
+      this.showBiasDetails = true;
       this.biasTypingTimeout = setTimeout(() => {
-        // 阶段一开始：上框开始打字
         this.startCognitionTyping(0);
       }, this.biasGroupStartDelay);
     },
     // 阶段一：上框打字
     startCognitionTyping(index) {
       this.currentTypingGroup = 'cognition';
-      this.showBiasDetails = true;
       this.typeEntryInGroup('cognition', index);
     },
     // 阶段二：下框打字
@@ -1608,11 +1614,11 @@ export default {
         this.dualModalImageList = [];
       }
 
-      // 合并列表：双模态（红外）在前，普通图片在后
+      // 合并列表：普通图片在前，200X（双模态/红外）在后
       this.mediaList = [
-        ...this.dualModalImageList,
         ...this.imageList,
-        ...this.videoList
+        ...this.videoList,
+        ...this.dualModalImageList
       ];
       console.log("图片列表合并完成，mediaList:", this.mediaList);
     },
@@ -1627,18 +1633,18 @@ export default {
             videoUrl: vid.video_url,
             isInfrared: false
           }));
-          // 合并列表：双模态（红外）图 + 普通图 + 视频
+          // 合并列表：普通图 + 视频在前，200X（双模态/红外）在后
           this.mediaList = [
-            ...this.dualModalImageList,
             ...this.imageList,
-            ...this.videoList
+            ...this.videoList,
+            ...this.dualModalImageList
           ];
           console.log("视频列表获取成功", this.mediaList);
         }
       } catch (error) {
         console.error("获取视频列表失败", error);
         this.videoList = [];
-        this.mediaList = [...this.dualModalImageList, ...this.imageList];
+        this.mediaList = [...this.imageList, ...this.dualModalImageList];
       }
     },
     async fetchVideoList() {

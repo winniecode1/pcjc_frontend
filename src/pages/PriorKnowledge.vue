@@ -167,19 +167,19 @@
           </div>
         </div> -->
 
-        <!-- 预测信息面板 -->
-        <div class="panel-right-predict">
+        <!-- 第一个方框：小类信息 + 属性信息 -->
+        <div class="panel-right-basic">
           <div class="panel-header">
             <span>先验知识认知偏差检测结果</span>
           </div>
           <div class="panel-content panel-content-right">
-            <div v-if="isQueryingPriorKnowledge" class="description-box predict-content">计算中...</div>
-            <div v-else-if="isLoading" class="description-box predict-content">加载中...</div>
-            <div v-else class="description-box predict-content">
+            <div v-if="isQueryingPriorKnowledge" class="description-box basic-content">计算中...</div>
+            <div v-else-if="isLoading" class="description-box basic-content">加载中...</div>
+            <div v-else class="description-box basic-content">
               <ul class="info-list">
                 <li
-                  v-for="(item, idx) in predictInfoList"
-                  :key="'pre-' + idx"
+                  v-for="(item, idx) in basicInfoList"
+                  :key="'basic-' + idx"
                   :class="{ 'first-item': (typeof item === 'object' ? item.label : item.toString()).includes('小类信息') }"
                 >
                   <span v-if="typeof item === 'object'">
@@ -189,11 +189,23 @@
                   <span v-else>{{ item }}</span>
                 </li>
               </ul>
-              <!-- 重要信息 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 第二个方框：重要信息 -->
+        <div class="panel-right-importance">
+          <div class="panel-header">
+            <span>重要信息</span>
+          </div>
+          <div class="panel-content panel-content-right">
+            <div v-if="isQueryingPriorKnowledge" class="description-box importance-content">计算中...</div>
+            <div v-else-if="isLoading" class="description-box importance-content">加载中...</div>
+            <div v-else class="description-box importance-content">
               <div v-if="importanceInfo" class="importance-info">
-                <span class="info-label">重要信息：</span>
                 <span class="info-value">{{ importanceInfo }}</span>
               </div>
+              <div v-else class="hint-text">暂无重要信息</div>
             </div>
           </div>
         </div>
@@ -330,6 +342,18 @@ export default {
           importanceInfo: ''
         };
       },
+  computed: {
+    // 第一个方框：小类信息 + 属性信息（火力/颜色/形状/尺寸/动力/轮廓）
+    basicInfoList() {
+      return (this.predictInfoList || []).filter(item => {
+        const label = typeof item === 'object' ? item.label : item;
+        return label.includes('小类信息') || label.includes('火力信息') ||
+               label.includes('颜色信息') || label.includes('形状信息') ||
+               label.includes('尺寸信息') || label.includes('动力信息') ||
+               label.includes('轮廓信息');
+      });
+    },
+  },
   mounted() {
     window.addEventListener('resize', this.handleResize);
     // 获取作战指令（使用默认图片路径）
@@ -1907,17 +1931,28 @@ text-decoration: none;
   width: 100%;
 }
 
-/* 右侧预测信息面板 */
-.panel-right-predict {
+/* 右侧基础信息面板：小类信息 + 属性信息 */
+.panel-right-basic {
   flex-shrink: 0;
   background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
-  margin-bottom: 8px;
   padding: 0;
   display: flex;
   flex-direction: column;
-  min-height: 530px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* 右侧重要信息面板 */
+.panel-right-importance {
+  flex-shrink: 0;
+  background-image: url('~@/assets/images/step1/弹框-偏差检测结果.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   margin-top: 8px;
 }
@@ -2547,7 +2582,9 @@ text-decoration: none;
 
 /* 标签信息和预测信息的内容框样式 - 无边框，占满父元素 */
 .tag-content,
-.predict-content {
+.predict-content,
+.basic-content,
+.importance-content {
   flex: 1;
   width: 100%;
   height: 100%;
@@ -2655,6 +2692,28 @@ text-decoration: none;
 .importance-info .info-value {
   color: #ffffff;
   margin-left: 5px;
+}
+
+/* 第一个方框：小类信息 + 属性信息，最大高度 + 滚动条 */
+.panel-right-basic .panel-content-right {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.basic-content {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+/* 第二个方框：重要信息，最大高度 + 滚动条 */
+.panel-right-importance .panel-content-right {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.importance-content {
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .text-red {
