@@ -385,7 +385,7 @@
         <div class="panel-right-top">
           <div class="panel-content">
             <div class="panel-header header-results title-one-line">
-              <span>群体协商认知偏差检测结果</span>
+              <span>群体协商认知结果</span>
             </div>
             <div v-if="isRightLoadingResults" class="panel-overlay">计算中...</div>
             <template v-else>
@@ -399,6 +399,15 @@
                   <div class="unified-divider"></div>
                   <div class="section-sub">智能体C：</div>
                   <p class="result-text">{{ isRightResultsDisplayed && selectedDetailType === 'compare' ? (displayRound2PriorityOrdering(agentCANegotiation) || '***') : '***' }}</p>
+                  <div class="unified-divider"></div>
+                  <div class="section-sub">群体协商结果：</div>
+                  <template v-if="selectedDetailType === 'compare'">
+                    <p class="result-text">{{ isRightResultsDisplayed ? (formattedFinalPriorityOrdering || '***') : '***' }}</p>
+                  </template>
+                  <p
+                    v-else
+                    class="result-text"
+                  >{{ isRightResultsDisplayed ? (finalResult || '***') : '***' }}</p>
                 </div>
               </div>
             </template>
@@ -410,10 +419,19 @@
             <div v-if="isRightLoadingResults" class="panel-overlay">计算中...</div>
             <template v-else>
               <div class="final-result-section">
-                <div class="final-result-title">协商结果</div>
+                <div class="final-result-title">群体协商认知偏差检测结果</div>
                 <div class="final-model-display">
                   <template v-if="selectedDetailType === 'compare'">
-                    <p class="final-model-text">最终优先级排序：{{ formattedFinalPriorityOrdering || '***' }}</p>
+                    <template v-if="isRightResultsDisplayed">
+                      <p
+                        class="final-model-text"
+                        :class="{
+                          'bias-result-correct': staticBiasDetectionResult === true,
+                          'bias-result-wrong': staticBiasDetectionResult === false
+                        }"
+                      >{{ staticBiasDetectionDisplayText }}</p>
+                    </template>
+                    <p v-else class="final-model-text" style="white-space: pre-wrap;">请完成「开始群体协商」并点击「群体协商偏差检测」后查看</p>
                   </template>
                   <p
                     v-else
@@ -491,7 +509,7 @@ const MODULE3_EXPORT_URL = MODULE3_BASE
   ? `${MODULE3_BASE}/export`
   : '/module3/export';
 /** 图片分组偏差检测：偏差识别准确率固定值及延迟展示时长 */
-const MODULE3_IMAGE_FIXED_ACCURACY = 89.16;
+const MODULE3_IMAGE_FIXED_ACCURACY = 90;
 const MODULE3_BIAS_ACCURACY_DELAY = 2 * 60 * 1000;
 /** 图片分组一轮/二轮结果分步展示：随机 3–5 秒 */
 function randomRoundDisplayDelayMs() {
@@ -614,7 +632,11 @@ export default {
       pendingNegotiationResult: null, // 新增：暂存群体协商结果
       accuracyTimer: null, // 准确率计时器
       round1DisplayTimer: null,
-      round2DisplayTimer: null
+      round2DisplayTimer: null,
+      /** static/priority_categories_new.json 解析结果 */
+      priorityCategoriesNewData: [],
+      /** 图片模式：点击偏差检测后从 JSON 读取的群体协商偏差检测结果 */
+      staticBiasDetectionResult: null
     };
   },
   beforeDestroy() {
@@ -744,6 +766,12 @@ export default {
     deviationReportText() {
       return this.toDisplayString(this.deviationReport);
     },
+    /** 下方面板：点击偏差检测后从 priority_categories_new.json 展示 */
+    staticBiasDetectionDisplayText() {
+      if (this.staticBiasDetectionResult === true) return '偏差检测结果:正确';
+      if (this.staticBiasDetectionResult === false) return '偏差检测结果:错误';
+      return '偏差检测结果:***';
+    },
     /** 图片模式偏差检测：final_priority_ordering → 名称(分数%)>… */
     formattedFinalPriorityOrdering() {
       const v = this.finalPriorityOrdering;
@@ -793,6 +821,7 @@ export default {
     this.loadCompareFiles();
     this.loadTargetDetectionVideos();
     this.loadOrderCategories();
+    this.loadPriorityCategoriesNew();
     
     // 从localStorage读取预测信息
     this.loadPredictInfoFromStorage();
@@ -865,6 +894,7 @@ export default {
       this.finalBattlefieldTriple = null;
       this.finalPriorityAssessment = '';
       this.finalImportanceImpact = '';
+      this.staticBiasDetectionResult = null;
     },
     /** 模块三返回的 accuracy_metrics.accuracy */
     getAccuracyFromModule3Data(data) {
@@ -1356,6 +1386,30 @@ export default {
         }
       }
       this.orderCategories = [];
+    },
+    async loadPriorityCategoriesNew() {
+      try {
+        const res = await fetch('/static/priority_categories_new.json', { cache: 'no-cache' });
+        if (!res.ok) {
+          console.warn('[GroupNegotiation] 加载 priority_categories_new.json 失败: HTTP', res.status);
+          this.priorityCategoriesNewData = [];
+          return;
+        }
+        const data = await res.json();
+        this.priorityCategoriesNewData =
+          data && Array.isArray(data.categories) ? data.categories : [];
+      } catch (e) {
+        console.warn('[GroupNegotiation] 加载 priority_categories_new.json 失败:', e);
+        this.priorityCategoriesNewData = [];
+      }
+    },
+    getStaticBiasDetectionForGroup(groupName) {
+      if (!groupName || !Array.isArray(this.priorityCategoriesNewData)) return null;
+      const entry = this.priorityCategoriesNewData.find(
+        cat => Array.isArray(cat.groups) && cat.groups.includes(groupName)
+      );
+      if (!entry || entry['群体协商偏差检测结果'] === undefined) return null;
+      return !!entry['群体协商偏差检测结果'];
     },
     toggleInstructionSet() {
       this.instructionSetExpanded = !this.instructionSetExpanded;
@@ -1987,6 +2041,11 @@ export default {
       });
       // 与开始群体协商后一致：数据来自当次 module3Res，不依赖历史计时
       this.isRightResultsDisplayed = true;
+      if (isImageMode) {
+        this.staticBiasDetectionResult = this.getStaticBiasDetectionForGroup(this.selectedCompareFile);
+      } else {
+        this.staticBiasDetectionResult = null;
+      }
       this.isRightLoadingResults = true;
       this.isRightLoadingAccuracy = true;
       if (this.accuracyTimer) {
@@ -3391,6 +3450,16 @@ export default {
   word-break: break-word;
   white-space: pre-wrap;
   // text-shadow: 0 0 5px #00e5ff;
+}
+
+.final-model-text.bias-result-correct {
+  color: #52c41a;
+  font-weight: 600;
+}
+
+.final-model-text.bias-result-wrong {
+  color: #ff4d4f;
+  font-weight: 600;
 }
 
 .metric-box {
