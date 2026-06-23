@@ -67,11 +67,13 @@
             <div v-if="carouselItems.length === 0" class="preview-placeholder">请选择数据源查看结果</div>
             <b-carousel
               v-else
+              ref="previewCarousel"
               id="result-carousel"
               v-model="carouselSlide"
-              :interval="4000"
+              :interval="carouselInterval"
               controls
               indicators
+              no-hover-pause
               background="transparent"
               class="w-100 h-100 custom-carousel"
             >
@@ -136,9 +138,9 @@
                   <div class="diagnosis-text">正在诊断中...</div>
                 </div>
               </div>
-              <div class="metric-group" v-if="module1ErrorType || module1ErrorJudgement">
-                <div class="metric-item">偏差类型: <span class="bias-yes-red">{{ module1ErrorType || '-' }}</span></div>
-                <div class="metric-item">偏差判断: <span class="bias-yes-red">{{ module1ErrorJudgement || '-' }}</span></div>
+              <div class="metric-group metric-group-error" v-if="module1ErrorType || module1ErrorJudgement">
+                <div class="metric-item" :title="'偏差类型: ' + (module1ErrorType || '-')">偏差类型: <span class="bias-yes-red">{{ module1ErrorType || '-' }}</span></div>
+                <div class="metric-item" :title="'偏差判断: ' + (module1ErrorJudgement || '-')">偏差判断: <span class="bias-yes-red">{{ module1ErrorJudgement || '-' }}</span></div>
               </div>
               <div class="metric-group">
                 <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module1InternalBias, 0) }}</span></div>
@@ -159,9 +161,9 @@
                   <div class="loading-spinner-large"></div>
                 </div>
               </div>
-              <div class="metric-group" v-if="module2ErrorType || module2ErrorJudgement">
-                <div class="metric-item">偏差类型: <span class="bias-yes-red">{{ module2ErrorType || '-' }}</span></div>
-                <div class="metric-item">偏差判断: <span class="bias-yes-red">{{ module2ErrorJudgement || '-' }}</span></div>
+              <div class="metric-group metric-group-error" v-if="module2ErrorType || module2ErrorJudgement">
+                <div class="metric-item" :title="'偏差类型: ' + (module2ErrorType || '-')">偏差类型: <span class="bias-yes-red">{{ module2ErrorType || '-' }}</span></div>
+                <div class="metric-item" :title="'偏差判断: ' + (module2ErrorJudgement || '-')">偏差判断: <span class="bias-yes-red">{{ module2ErrorJudgement || '-' }}</span></div>
               </div>
               <div class="metric-group">
                 <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module2InternalBias, 0) }}</span></div>
@@ -182,9 +184,9 @@
                   <div class="loading-spinner-large"></div>
                 </div>
               </div>
-              <div class="metric-group" v-if="module4ErrorType || module4ErrorJudgement">
-                <div class="metric-item">偏差类型: <span class="bias-yes-red">{{ module4ErrorType || '-' }}</span></div>
-                <div class="metric-item">偏差判断: <span class="bias-yes-red">{{ module4ErrorJudgement || '-' }}</span></div>
+              <div class="metric-group metric-group-error" v-if="module4ErrorType || module4ErrorJudgement">
+                <div class="metric-item" :title="'偏差类型: ' + (module4ErrorType || '-')">偏差类型: <span class="bias-yes-red">{{ module4ErrorType || '-' }}</span></div>
+                <div class="metric-item" :title="'偏差判断: ' + (module4ErrorJudgement || '-')">偏差判断: <span class="bias-yes-red">{{ module4ErrorJudgement || '-' }}</span></div>
               </div>
               <div class="metric-group">
                 <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module4InternalBias, 0) }}</span></div>
@@ -205,9 +207,9 @@
                   <div class="loading-spinner-large"></div>
                 </div>
               </div>
-              <div class="metric-group" v-if="module3ErrorType || module3ErrorJudgement">
-                <div class="metric-item">偏差类型: <span class="bias-yes-red">{{ module3ErrorType || '-' }}</span></div>
-                <div class="metric-item">偏差判断: <span class="bias-yes-red">{{ module3ErrorJudgement || '-' }}</span></div>
+              <div class="metric-group metric-group-error" v-if="module3ErrorType || module3ErrorJudgement">
+                <div class="metric-item" :title="'偏差类型: ' + (module3ErrorType || '-')">偏差类型: <span class="bias-yes-red">{{ module3ErrorType || '-' }}</span></div>
+                <div class="metric-item" :title="'偏差判断: ' + (module3ErrorJudgement || '-')">偏差判断: <span class="bias-yes-red">{{ module3ErrorJudgement || '-' }}</span></div>
               </div>
               <div class="metric-group">
                 <div class="metric-item">模型内部偏差结果: <span>{{ formatPercent(module3InternalBias, 0) }}</span></div>
@@ -319,6 +321,8 @@ export default {
       selectedFileContext: null,
       carouselSlide: 0,
       carouselItems: [],
+      carouselInterval: 4000,
+      carouselHovered: false,
       stagePreviews: {},
       previewSummary: null,
       // 诊断结果
@@ -380,6 +384,13 @@ export default {
       return list.filter(v => v && v.type === 'demo');
     }
   },
+  watch: {
+    carouselItems() {
+      this.$nextTick(() => {
+        if (!this._carouselEl) this._bindCarouselHover();
+      });
+    }
+  },
   mounted() {
     // 进入页面一律回到初始状态：清掉历史诊断倒计时与上次选择，等待用户重新选择数据
     this.clearTimerStateFromStorage();
@@ -390,6 +401,9 @@ export default {
     this.fetchImageList();
     this.clearResults({ resetPersistentMetric: true });
     this.carouselItems = [];
+    this.$nextTick(() => {
+      this._bindCarouselHover();
+    });
   },
   beforeDestroy() {
     if (this.pollTimer) clearInterval(this.pollTimer);
@@ -397,6 +411,7 @@ export default {
     if (this.module4DelayTimer && this.module4DelayTimer !== 'done') clearTimeout(this.module4DelayTimer);
     if (this.revealContentTimer) clearTimeout(this.revealContentTimer);
     if (this.recallDisplayTimer) clearTimeout(this.recallDisplayTimer);
+    this._unbindCarouselHover();
   },
   methods: {
     resolveConsistencyFolderType(source = {}) {
@@ -787,7 +802,7 @@ export default {
       // 内容为 Markdown 格式，去掉每行行首的 # 标记，只保留标题文字
       const content = String(safeCard.content || '').replace(/^#+\s*/gm, '');
 
-      this[`module${moduleNo}Result`] = this.pickTopBracketFieldsForBias(content, isBiasModule);
+      this[`module${moduleNo}Result`] = content;
       this[`module${moduleNo}InternalBias`] = toNumberOrNull(safeCard.intern_bias);
       this[`module${moduleNo}PropagationBias`] = toNumberOrNull(safeCard.propogation_bias);
       this[`module${moduleNo}IsBiasModule`] = isBiasModule;
@@ -967,6 +982,31 @@ export default {
     videoUrl(path) { return path ? `${API_BASE_URL}${path}` : ''; },
     imageUrl(path) {
       return path ? `${this.baseUrl}${path}` : require('@/assets/images/step1/-s-弹框-选择数据.png');
+    },
+    _bindCarouselHover() {
+      const el = document.getElementById('result-carousel');
+      if (!el) return;
+      this._carouselEl = el;
+      this._onCarouselEnter = () => {
+        this.carouselHovered = true;
+        this.carouselInterval = 0;
+        const c = this.$refs.previewCarousel;
+        if (c && typeof c.pause === 'function') c.pause();
+      };
+      this._onCarouselLeave = () => {
+        this.carouselHovered = false;
+        this.carouselInterval = 4000;
+        const c = this.$refs.previewCarousel;
+        if (c && typeof c.start === 'function') c.start();
+      };
+      el.addEventListener('mouseenter', this._onCarouselEnter);
+      el.addEventListener('mouseleave', this._onCarouselLeave);
+    },
+    _unbindCarouselHover() {
+      if (!this._carouselEl) return;
+      if (this._onCarouselEnter) this._carouselEl.removeEventListener('mouseenter', this._onCarouselEnter);
+      if (this._onCarouselLeave) this._carouselEl.removeEventListener('mouseleave', this._onCarouselLeave);
+      this._carouselEl = null;
     }
   }
 };
@@ -1212,13 +1252,14 @@ export default {
 .module-body {
   background-image: url('~@/assets/images/step5/每个模块背景.png'); background-size: 100% 100%; padding: 1.5vh 1.5vw;
   display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; position: relative;
+  overflow: hidden;
 }
 .result-section {
-  flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; position: relative; /* 为遮罩层定位 */
+  flex: 1 1 0; display: flex; flex-direction: column; min-height: 0; min-width: 0; position: relative; overflow: hidden;
 }
-.section-title { color: #00e5ff; font-family: 'PingFang SC', sans-serif !important; font-weight: bold; margin-bottom: 5px; }
+.section-title { color: #00e5ff; font-family: 'PingFang SC', sans-serif !important; font-weight: bold; margin-bottom: 5px; flex-shrink: 0; }
 .content-box {
-  flex: 1;
+  flex: 1 1 0;
   line-height: 1.6;
   color: #FFFFFF;
   font-size: 14px !important;
@@ -1229,6 +1270,7 @@ export default {
   word-wrap: break-word;
   overflow-wrap: anywhere;
   min-width: 0;
+  min-height: 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(58, 173, 218, 0.75) rgba(8, 30, 54, 0.5);
 }
@@ -1253,10 +1295,21 @@ export default {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 .metric-item { font-size: 14px; color: #8bd3f9; }
 .metric-item span { font-weight: bold; color: #c6f4ff; font-size: 16px; margin-left: 0.5em; font-family: 'DingTalk-JinBuTi', sans-serif !important; }
 .metric-item span.bias-yes-red { color: #ff4d4f !important; }
+.metric-group-error {
+  flex-wrap: nowrap;
+}
+.metric-group-error .metric-item {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
 
 /* 遮罩层逻辑 */
 .diagnosis-overlay {

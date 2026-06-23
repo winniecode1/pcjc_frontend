@@ -42,11 +42,13 @@
             <div v-if="carouselItems.length === 0" class="preview-placeholder">请选择数据源查看预览</div>
             <b-carousel
               v-else
+              ref="previewCarousel"
               id="analysis-preview-carousel"
               v-model="carouselSlide"
               :interval="carouselInterval"
               controls
               indicators
+              no-hover-pause
               background="transparent"
               class="w-100 h-100 custom-carousel"
             >
@@ -290,7 +292,8 @@ export default {
       exportEnabled: false,
       metricsWaiting: false,
       preAccuracy: ANALYSIS_PRE_ACCURACY,
-      postAccuracy: ANALYSIS_POST_ACCURACY
+      postAccuracy: ANALYSIS_POST_ACCURACY,
+      carouselHovered: false
     };
   },
   computed: {
@@ -304,7 +307,6 @@ export default {
     this.myChart = null;
   },
   async mounted() {
-    // 进入页面一律回到初始状态：清掉历史解析倒计时与上次选择，等待用户重新选择数据
     this.clearTimerState();
     try {
       sessionStorage.removeItem('pcjc_analysis_nav');
@@ -312,12 +314,16 @@ export default {
     } catch (e) { /* ignore */ }
     this.initChart();
     await this.fetchVideoList();
+    this.$nextTick(() => {
+      this._bindCarouselHover();
+    });
   },
   beforeDestroy() {
     if (this.revealContentTimer) clearTimeout(this.revealContentTimer);
     if (this.metricsDisplayTimer) clearTimeout(this.metricsDisplayTimer);
     if (this.carouselResumeTimer) clearTimeout(this.carouselResumeTimer);
     if (this.myChart) { this.myChart.dispose(); this.myChart = null; }
+    this._unbindCarouselHover();
   },
   watch: {
     carouselSlide() {
@@ -328,6 +334,7 @@ export default {
     carouselItems() {
       this.$nextTick(() => {
         this.syncCarouselStageHighlight();
+        if (!this._carouselEl) this._bindCarouselHover();
       });
     }
   },
@@ -869,7 +876,7 @@ export default {
       this.carouselResumeTimer = setTimeout(() => {
         this.carouselResumeTimer = null;
         this.suppressCarouselSync = false;
-        this.carouselInterval = CAROUSEL_DEFAULT_INTERVAL;
+        this.carouselInterval = this.carouselHovered ? 0 : CAROUSEL_DEFAULT_INTERVAL;
         this.$nextTick(() => {
           this.syncCarouselStageHighlight();
         });
@@ -1442,6 +1449,33 @@ export default {
       if (!path) return require('@/assets/images/step1/-s-弹框-选择数据.png');
       if (/^https?:\/\//i.test(path)) return path;
       return `${API_BASE_URL}${path}`;
+    },
+    _bindCarouselHover() {
+      const el = document.getElementById('analysis-preview-carousel');
+      if (!el) return;
+      this._carouselEl = el;
+      this._onCarouselEnter = () => {
+        this.carouselHovered = true;
+        this.carouselInterval = 0;
+        const c = this.$refs.previewCarousel;
+        if (c && typeof c.pause === 'function') c.pause();
+      };
+      this._onCarouselLeave = () => {
+        this.carouselHovered = false;
+        if (!this.suppressCarouselSync) {
+          this.carouselInterval = CAROUSEL_DEFAULT_INTERVAL;
+          const c = this.$refs.previewCarousel;
+          if (c && typeof c.start === 'function') c.start();
+        }
+      };
+      el.addEventListener('mouseenter', this._onCarouselEnter);
+      el.addEventListener('mouseleave', this._onCarouselLeave);
+    },
+    _unbindCarouselHover() {
+      if (!this._carouselEl) return;
+      if (this._onCarouselEnter) this._carouselEl.removeEventListener('mouseenter', this._onCarouselEnter);
+      if (this._onCarouselLeave) this._carouselEl.removeEventListener('mouseleave', this._onCarouselLeave);
+      this._carouselEl = null;
     }
   }
 };
