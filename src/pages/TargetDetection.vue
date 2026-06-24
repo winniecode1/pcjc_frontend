@@ -177,25 +177,21 @@
         <!-- 下：多模态信息认知偏差检测结果（其余四条） -->
         <div class="panel-header header-results clean-header">多模态信息认知偏差检测结果</div>
 
-        <div class="panel-right-top biascheck-box" :class="{ 'loading-overlay': isBiasTyping }">
+        <div class="panel-right-top biascheck-box" :class="{ 'loading-overlay': isBiasTyping && !showBiasDetails }">
           <div class="panel-content">
-            <div class="description-box biascheck-text"
-              :class="{ 'loading-text': isBiasTyping }">
+            <div class="description-box biascheck-text">
 
               <div v-if="isLoading">检测中……</div>
-              <div v-else-if="isBiasTyping" class="text-left small-text">
-                计算中…
-              </div>
               <div v-else-if="!hasStartedBiasDetection" class="text-left small-text hint-text">
                 请点击"多模态信息偏差检测"按钮
               </div>
 
-              <div v-if="hasStartedBiasDetection && !isLoading && showBiasDetails && !isBiasTyping">
+              <div v-if="hasStartedBiasDetection && !isLoading && showBiasDetails">
                 <div v-for="(entry, index) in biasCheckEntries" :key="'bias-' + entry.label + '-' + index"
                   class="typing-text text-left small-text"
                   :class="{
-                    'text-highlight': (entry.label === '偏差结果' || entry.label === '判定正确性') && !entry.isConsistent && !isBiasTyping,
-                    'text-green': (entry.label === '偏差结果' || entry.label === '判定正确性') && entry.isConsistent && !isBiasTyping
+                    'text-highlight': entry.label === '偏差结果' && !entry.isConsistent,
+                    'text-green': entry.label === '偏差结果' && entry.isConsistent
                   }">
                   {{ biasCheckDisplayTexts[index] }}
                 </div>
@@ -346,13 +342,13 @@ export default {
     cognitionEntries() {
       return (this.biasDetailEntries || []).filter(entry => {
         const label = entry.label || '';
-        return label === '信息类别' || label.startsWith('信息类别') || label === '战场环境';
+        return label.startsWith('类别') || label === '战场环境';
       });
     },
     biasCheckEntries() {
       return (this.biasDetailEntries || []).filter(entry => {
         const label = entry.label || '';
-        return !(label === '信息类别' || label.startsWith('信息类别') || label === '战场环境');
+        return !(label.startsWith('类别') || label === '战场环境');
       });
     },
     canStartBiasDetection() {
@@ -1368,67 +1364,62 @@ export default {
         });
       }
 
-      // 4. 信息类别（使用 target_details 数组）
-      if (biasResult.target_details && biasResult.target_details.length > 0) {
-        const targetList = biasResult.target_details;
-        for (let i = 0; i < targetList.length; i++) {
-          const target = targetList[i];
-          const targetId = target.target_id || (i + 1);
-          const targetName = target.class_name || '未知目标';
-          const confidence = target.confidence_percent || 
-            (target.confidence ? `${(target.confidence * 100).toFixed(0)}%` : '未知');
-          
-          if (i === 0) {
-            entries.push({
-              label: '信息类别',
-              text: `信息类别：\n${targetId}号目标：${targetName}；置信度：${confidence}`,
-              highlight: false
-            });
-          } else {
-            entries.push({
-              label: '信息类别' + i,
-              text: `${targetId}号目标：${targetName}；置信度：${confidence}`,
-              highlight: false
-            });
+      // 4. 信息类别（按类别分组）
+      const buildGroupedEntries = (targetCount, getTargetName, getConfidence) => {
+        // 按类别分组
+        const groups = {};
+        for (let i = 0; i < targetCount; i++) {
+          const targetName = getTargetName(i);
+          if (!groups[targetName]) {
+            groups[targetName] = [];
           }
+          groups[targetName].push({
+            index: i + 1,
+            name: targetName,
+            confidence: getConfidence(i)
+          });
         }
-      } else if (biasResult.detected_targets && biasResult.detected_targets.length > 0) {
-        // 备用：如果没有 target_details，使用 detected_targets
-        const targetCount = biasResult.detected_targets.length;
-        for (let i = 0; i < Math.min(targetCount, 10); i++) {
-          const targetName = biasResult.detected_targets[i] || '未知目标';
-          const confidence = biasResult.detected_targets_confidence 
-            ? biasResult.detected_targets_confidence[i] 
-            : (70 + Math.random() * 25).toFixed(0) + '%';
-          if (i === 0) {
-            entries.push({
-              label: '信息类别',
-              text: `信息类别：\n${i + 1}号目标：${targetName}；置信度：${confidence}`,
-              highlight: false
-            });
-          } else {
-            entries.push({
-              label: '信息类别' + i,
-              text: `${i + 1}号目标：${targetName}；置信度：${confidence}`,
-              highlight: false
-            });
-          }
-        }
-      }
 
-      // 5. 偏差检测结果是否正确
-      if (biasResult.bias_detection_correct_text) {
-        entries.push({
-          label: '判定正确性',
-          text: `偏差检测结果是否正确：${biasResult.bias_detection_correct_text}`,
-          highlight: true,
-          isConsistent: biasResult.bias_detection_correct_text === '正确'
+        const groupNames = Object.keys(groups);
+        const groupEntries = [];
+
+        groupNames.forEach((className, groupIdx) => {
+          const targets = groups[className];
+          const groupLabel = `类别${groupIdx + 1}`;
+          const items = targets.map(t => `${t.index}号${className}目标，置信度：${t.confidence}`).join('\n');
+          groupEntries.push({
+            label: groupLabel,
+            text: `类别${groupIdx + 1}：${className}，包含：\n${items}`,
+            highlight: false
+          });
         });
+
+        return groupEntries;
+      };
+
+      if (biasResult.target_details && biasResult.target_details.length > 0) {
+        entries.push(...buildGroupedEntries(
+          biasResult.target_details.length,
+          i => biasResult.target_details[i].class_name || '未知目标',
+          i => biasResult.target_details[i].confidence_percent ||
+               (biasResult.target_details[i].confidence
+                 ? `${(biasResult.target_details[i].confidence * 100).toFixed(0)}%`
+                 : '未知')
+        ));
+      } else if (biasResult.detected_targets && biasResult.detected_targets.length > 0) {
+        const targetCount = biasResult.detected_targets.length;
+        entries.push(...buildGroupedEntries(
+          Math.min(targetCount, 10),
+          i => biasResult.detected_targets[i] || '未知目标',
+          i => biasResult.detected_targets_confidence
+            ? biasResult.detected_targets_confidence[i]
+            : (70 + Math.random() * 25).toFixed(0) + '%'
+        ));
       }
 
-      // 6. 战场环境简要描述
+      // 5. 战场环境简要描述（放在最前面）
       if (biasResult.battlefield_description) {
-        entries.push({
+        entries.unshift({
           label: '战场环境',
           text: `战场环境简要描述：${biasResult.battlefield_description}`,
           highlight: false
