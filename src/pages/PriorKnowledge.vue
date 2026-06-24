@@ -170,7 +170,7 @@
         <!-- 第一个方框：小类信息 + 属性信息 -->
         <div class="panel-right-basic">
           <div class="panel-header">
-            <span>先验知识认知偏差检测结果</span>
+            <span>先验知识认知结果</span>
           </div>
           <div class="panel-content panel-content-right">
             <div v-if="isQueryingPriorKnowledge" class="description-box basic-content">计算中...</div>
@@ -193,10 +193,10 @@
           </div>
         </div>
 
-        <!-- 第二个方框：重要信息 -->
+        <!-- 第二个方框：先验知识认知偏差检测结果 -->
         <div class="panel-right-importance">
           <div class="panel-header">
-            <span>重要信息</span>
+            <span>先验知识认知偏差检测结果</span>
           </div>
           <div class="panel-content panel-content-right">
             <div v-if="isQueryingPriorKnowledge" class="description-box importance-content">计算中...</div>
