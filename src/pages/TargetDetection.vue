@@ -2009,6 +2009,16 @@ export default {
       console.log(`正在请求导出任务: ${this.taskId}`);
       this.isExporting = true;
       try {
+        // 生成文件名：pcjc_results_年月日_时分秒.zip
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const fileName = `pcjc_results_${year}${month}${day}_${hours}${minutes}${seconds}.zip`;
+
         // 导出接口已改为 /export_results，兼容旧前端调用 /export_results/{任意值}
         const response = await axios.get(`${IMAGE_API_URL}/export_results/${this.taskId}`, {
           responseType: 'blob',
@@ -2017,7 +2027,7 @@ export default {
         const downloadUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = downloadUrl;
-        link.download = `${this.taskId}_results.zip`;
+        link.download = fileName;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
