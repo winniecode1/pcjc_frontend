@@ -768,8 +768,8 @@ export default {
     },
     /** 下方面板：点击偏差检测后从 priority_categories_new.json 展示 */
     staticBiasDetectionDisplayText() {
-      if (this.staticBiasDetectionResult === true) return '偏差检测结果:正确';
-      if (this.staticBiasDetectionResult === false) return '偏差检测结果:错误';
+      if (this.staticBiasDetectionResult === true) return '偏差检测结果:无偏差';
+      if (this.staticBiasDetectionResult === false) return '偏差检测结果:有偏差';
       return '偏差检测结果:***';
     },
     /** 图片模式偏差检测：final_priority_ordering → 名称(分数%)>… */
