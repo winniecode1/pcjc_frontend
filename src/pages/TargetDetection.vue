@@ -337,18 +337,22 @@ export default {
   },
   computed: {
     // 把偏差检测条目按 label 拆分为两部分：
-    // 上框（多模态信息认知结果）：信息类别 + 战场环境简要描述
-    // 下框（多模态信息认知偏差检测结果）：其余四条
+    // 上框（多模态信息认知结果）：信息类别 + 战场环境 + 场景 + 行为 + 总结
+    // 下框（多模态信息认知偏差检测结果）：其余条目
     cognitionEntries() {
       return (this.biasDetailEntries || []).filter(entry => {
         const label = entry.label || '';
-        return label.startsWith('类别') || label === '战场环境';
+        return label.startsWith('类别') || label === '战场环境' || label === '信息类别标题'
+            || label === '场景' || label === '行为' || label === '总结';
       });
     },
     biasCheckEntries() {
       return (this.biasDetailEntries || []).filter(entry => {
         const label = entry.label || '';
-        return !(label.startsWith('类别') || label === '战场环境');
+        return !(label.startsWith('类别') || label === '战场环境' || label === '信息类别标题'
+            || label === '场景' || label === '行为' || label === '总结'
+            || label === '检测准确率' || label === '描述相似度' || label === '当前准确率'
+            || label === '目标' || label === '目标类别');
       });
     },
     canStartBiasDetection() {
@@ -1269,18 +1273,40 @@ export default {
     },
     buildVideoBiasDetailEntries(data) {
       const entries = [];
-      
-      // 根据接口文档，视频检测返回结构：
-      // {
-      //   detection: { accuracy: 1.0 },
-      //   description: { similarity, aspect_similarities, low_similarity_aspects, predicted, ground_truth },
-      //   current_accuracy: 0.8935
-      // }
-
+      const biasResult = data.bias_result || {};
       const descriptionObj = data.description || {};
       const detection = data.detection || {};
 
-      // 描述信息 - description.predicted 是预测描述，ground_truth 是真实描述
+      // 1. 指令中的侦察目标 - 下框显示
+      if (data.instruction_target) {
+        entries.push({
+          label: '指令侦察目标',
+          text: `指令中的侦察目标：${data.instruction_target}`,
+          highlight: false
+        });
+      }
+
+      // 2. 无人机已侦察到的目标 - 下框显示
+      if (data.detected_targets && data.detected_targets.length > 0) {
+        entries.push({
+          label: '已侦察目标',
+          text: `无人机已侦察到的目标：${data.detected_targets.join('；')}`,
+          highlight: false
+        });
+      }
+
+      // 3. 偏差检测结果 - 下框显示
+      if (data.bias_result) {
+        entries.push({
+          label: '偏差结果',
+          text: `偏差检测结果：${data.bias_result}`,
+          highlight: true,
+          isConsistent: data.bias_detection_success === true
+        });
+      }
+
+      // 4. 描述信息 - description.predicted 是预测描述，ground_truth 是真实描述
+      // 场景、目标、行为、总结 上框显示
       if (descriptionObj.predicted) {
         const descLines = descriptionObj.predicted.split(/\r?\n/).filter(line => line.trim() !== '');
         descLines.forEach(line => {
@@ -1302,7 +1328,7 @@ export default {
         });
       }
 
-      // 检测准确率 - detection.accuracy
+      // 5. 检测准确率 - detection.accuracy
       if (detection.accuracy !== undefined) {
         entries.push({
           label: '检测准确率',
@@ -1311,7 +1337,7 @@ export default {
         });
       }
 
-      // 描述相似度 - description.similarity
+      // 6. 描述相似度 - description.similarity
       if (descriptionObj.similarity !== undefined) {
         entries.push({
           label: '描述相似度',
@@ -1320,7 +1346,7 @@ export default {
         });
       }
 
-      // 当前视频准确率 - 顶层 current_accuracy 字段
+      // 7. 当前视频准确率 - 顶层 current_accuracy 字段
       if (data.current_accuracy !== undefined) {
         entries.push({
           label: '当前准确率',
@@ -1374,7 +1400,6 @@ export default {
             groups[targetName] = [];
           }
           groups[targetName].push({
-            index: i + 1,
             name: targetName,
             confidence: getConfidence(i)
           });
@@ -1386,7 +1411,8 @@ export default {
         groupNames.forEach((className, groupIdx) => {
           const targets = groups[className];
           const groupLabel = `类别${groupIdx + 1}`;
-          const items = targets.map(t => `${t.index}号${className}目标，置信度：${t.confidence}`).join('\n');
+          // 每个类别内部从1开始编号
+          const items = targets.map((t, idx) => `${idx + 1}号${className}目标，置信度：${t.confidence}`).join('\n');
           groupEntries.push({
             label: groupLabel,
             text: `类别${groupIdx + 1}：${className}，包含：\n${items}`,
@@ -1398,6 +1424,12 @@ export default {
       };
 
       if (biasResult.target_details && biasResult.target_details.length > 0) {
+        // 先加标题
+        entries.push({
+          label: '信息类别标题',
+          text: '信息类别：',
+          highlight: false
+        });
         entries.push(...buildGroupedEntries(
           biasResult.target_details.length,
           i => biasResult.target_details[i].class_name || '未知目标',
@@ -1407,6 +1439,12 @@ export default {
                  : '未知')
         ));
       } else if (biasResult.detected_targets && biasResult.detected_targets.length > 0) {
+        // 先加标题
+        entries.push({
+          label: '信息类别标题',
+          text: '信息类别：',
+          highlight: false
+        });
         const targetCount = biasResult.detected_targets.length;
         entries.push(...buildGroupedEntries(
           Math.min(targetCount, 10),
@@ -1417,9 +1455,9 @@ export default {
         ));
       }
 
-      // 5. 战场环境简要描述（放在最前面）
+      // 5. 战场环境简要描述（放在最后）
       if (biasResult.battlefield_description) {
-        entries.unshift({
+        entries.push({
           label: '战场环境',
           text: `战场环境简要描述：${biasResult.battlefield_description}`,
           highlight: false
