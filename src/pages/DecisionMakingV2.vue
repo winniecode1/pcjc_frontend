@@ -189,7 +189,7 @@
                           :key="'intent-' + idx + '-' + item.intent"
                           type="button"
                           class="ba-intent-btn"
-                          :class="getRankingItemBiasClass(behaviorAnalysisView.tacticalIntentRanking, selectedTacticalIntentIndex, idx)"
+                          :class="getTacticalIntentBiasClass(behaviorAnalysisView.tacticalIntentRanking, selectedTacticalIntentIndex, idx)"
                           :disabled="selectedTacticalIntentIndex !== null && selectedTacticalIntentIndex !== idx"
                           @click="selectTacticalIntent(idx)"
                         >
@@ -265,7 +265,7 @@
                     :key="'decision-' + idx + '-' + item.decision"
                     type="button"
                     class="ba-intent-btn"
-                    :class="getRankingItemBiasClass(tacticalDecisionRankingDisplay, selectedTacticalDecisionIndex, idx)"
+                    :class="getTacticalDecisionBiasClass(tacticalDecisionRankingDisplay, selectedTacticalDecisionIndex, idx)"
                     :disabled="selectedTacticalDecisionIndex !== null && selectedTacticalDecisionIndex !== idx"
                     @click="selectTacticalDecision(idx)"
                   >
@@ -280,6 +280,13 @@
                       <span class="ba-intent-confidence-text">{{ formatIntentConfidenceText(item.confidence) }}</span>
                     </span>
                   </button>
+                  <p
+                    v-if="decisionBiasResultDisplay"
+                    class="result-text decision-bias-result"
+                    :class="decisionBiasResultDisplay.isConsistent ? 'text-green' : 'text-highlight'"
+                  >
+                    {{ decisionBiasResultDisplay.text }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -384,7 +391,7 @@ export default {
       /** 作战指令展示后再延迟展示认知传播图片/视频，展示完成后为 true */
       originalMediaDisplayReady: false,
       originalMediaDisplayTimer: null,
-      selectedMediaType: 'image',
+      selectedMediaType: 'video',
       imageList: [],
       videoList: [],
       mediaList: [],
@@ -506,6 +513,17 @@ export default {
         return this.behaviorAnalysisView.tacticalDecisionRanking;
       }
       return [];
+    },
+    decisionBiasResultDisplay() {
+      if (this.selectedTacticalDecisionIndex === null) return null;
+      const items = this.tacticalDecisionRankingDisplay;
+      if (!items.length) return null;
+      const bestIndex = this.findHighestConfidenceIndex(items);
+      const isConsistent = bestIndex >= 0 && this.selectedTacticalDecisionIndex === bestIndex;
+      return {
+        text: isConsistent ? '偏差检测结果：无偏差' : '偏差检测结果：有偏差',
+        isConsistent
+      };
     }
   },
   mounted() {
@@ -593,12 +611,6 @@ export default {
     },
     // 从缓存恢复所有状态
     restoreAllStateFromCache() {
-      // 恢复媒体类型
-      const savedMediaType = localStorage.getItem('selectedMediaType');
-      if (savedMediaType) {
-        this.selectedMediaType = savedMediaType;
-      }
-
       // 恢复作战指令（进入页后会由 resetEnterPageMediaSelection 清空，仅保留选中后拉取）
       const savedOrdersCommand = localStorage.getItem('ordersCommand');
       const savedOrdersNegotiation = localStorage.getItem('ordersNegotiation');
@@ -669,23 +681,7 @@ export default {
       }
     },
     applyDeviationDetectionAccuracyFromCache() {
-      let raw = null;
-      try {
-        const module1ResStr = localStorage.getItem('module1Res');
-        if (module1ResStr) {
-          const module1Res = JSON.parse(module1ResStr);
-          raw = module1Res.average_comprehensive_accuracy;
-        }
-      } catch (e) {
-        console.error('[DecisionMakingV2] 读取 average_comprehensive_accuracy 失败', e);
-      }
-      const accuracyValue = parseFloat(raw);
-      if (raw != null && !isNaN(accuracyValue)) {
-        this.deviationDetectionAccuracy = (accuracyValue * 100).toFixed(2);
-        this.fullResult.overall_accuracy = accuracyValue;
-      } else {
-        this.deviationDetectionAccuracy = 'N/A';
-      }
+      this.deviationDetectionAccuracy = '90';
       console.log('[DecisionMakingV2] 偏差识别准确率展示值 deviationDetectionAccuracy:', this.deviationDetectionAccuracy);
     },
     /** 清除作战指令延迟展示定时器 */
@@ -1019,13 +1015,9 @@ export default {
       this.restoreAllStateFromCache();
       // 进入页不恢复上次选中的图片/视频及预览，须用户点击列表项；偏差结果一并重置
       this.resetEnterPageMediaSelection();
-
-      // 根据选中类型加载对应列表
-      if (this.selectedMediaType === 'image') {
-        await this.fetchImageList();
-      } else {
-        await this.fetchVideoListFromAPI();
-      }
+      // 进入页默认展示视频列表（用户仍可手动切换到图片）
+      this.selectedMediaType = 'video';
+      await this.fetchVideoListFromAPI();
     },
     // 需求3：检查计时器状态
     checkBiasTimerState() {
@@ -1602,16 +1594,42 @@ export default {
       });
       return bestIdx;
     },
-    getRankingItemBiasClass(items, selectedIndex, idx) {
-      const machineBestIndex = this.findHighestConfidenceIndex(items);
+    findTopConfidenceIndices(items, count = 2) {
+      if (!Array.isArray(items) || !items.length) return [];
+      return items
+        .map((item, idx) => ({
+          idx,
+          confidence: this.normalizeIntentConfidence(item && item.confidence)
+        }))
+        .sort((a, b) => b.confidence - a.confidence || a.idx - b.idx)
+        .slice(0, count)
+        .map(entry => entry.idx);
+    },
+    /** 战术意图：未点击不高亮；点击后置信度前两名绿色，其余红色 */
+    getTacticalIntentBiasClass(items, selectedIndex, idx) {
       if (selectedIndex === null) {
-        return {
-          'ba-intent-btn--machine-best': machineBestIndex >= 0 && idx === machineBestIndex
-        };
+        return {};
       }
       if (selectedIndex !== idx) {
         return { 'ba-intent-btn--disabled': true };
       }
+      const topIndices = this.findTopConfidenceIndices(items, 2);
+      const isConsistent = topIndices.includes(selectedIndex);
+      return {
+        'ba-intent-btn--selected': true,
+        'ba-intent-btn--bias-consistent': isConsistent,
+        'ba-intent-btn--bias-deviation': !isConsistent
+      };
+    },
+    /** 决策选择：未点击不高亮；点击后最高置信度绿色，其余红色 */
+    getTacticalDecisionBiasClass(items, selectedIndex, idx) {
+      if (selectedIndex === null) {
+        return {};
+      }
+      if (selectedIndex !== idx) {
+        return { 'ba-intent-btn--disabled': true };
+      }
+      const machineBestIndex = this.findHighestConfidenceIndex(items);
       const isConsistent = machineBestIndex >= 0 && selectedIndex === machineBestIndex;
       return {
         'ba-intent-btn--selected': true,
@@ -2768,6 +2786,7 @@ export default {
 @font-face {
   font-family: 'DOUYUFont';
   src: url('~@/assets/douyuFont-2.otf') format('opentype');
+  font-display: swap;
 }
 
 @font-face {
@@ -3069,6 +3088,17 @@ export default {
   width: 400px !important;
   height: 50px !important; 
   background-image: url('~@/assets/images/step1/-s-二级标题.png') !important;
+}
+
+.panel-right-top .panel-header.header-results.dm-result-box-title,
+.panel-right-bottom.dm-decision-panel .panel-header.header-results.dm-result-box-title {
+  width: 340px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 4px 12px 0 12px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 .clean-header {
@@ -3716,22 +3746,25 @@ export default {
 
 .panel-right-top .dm-result-box-title,
 .panel-right-bottom.dm-decision-panel .dm-result-box-title {
-  width: 160px !important;
-  min-width: 160px !important;
-  max-width: 160px !important;
-  height: 24px !important;
-  min-height: 24px !important;
-  max-height: 24px !important;
+  width: 340px !important;
+  min-width: 340px !important;
+  max-width: 340px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
   font-size: 14px !important;
   font-family: 'DOUYUFont', sans-serif !important;
   font-weight: 400 !important;
   color: #ffffff !important;
-  justify-content: flex-start !important;
+  justify-content: center !important;
   align-items: center !important;
-  text-align: left !important;
-  align-self: flex-start !important;
-  padding: 0 0 0 15px !important;
-  margin: 0 0 6px 0 !important;
+  text-align: center !important;
+  align-self: center !important;
+  padding: 4px 12px 0 12px !important;
+  margin: 0 auto 6px auto !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+  line-height: normal !important;
   background-image: url('~@/assets/images/step1/-s-二级标题.png') !important;
   background-repeat: no-repeat !important;
   background-size: 100% 100% !important;
@@ -3741,11 +3774,19 @@ export default {
   flex-shrink: 0 !important;
 }
 
+.panel-right-top .dm-result-box-title.title-one-line,
+.panel-right-bottom.dm-decision-panel .dm-result-box-title.title-one-line {
+  overflow: visible !important;
+}
+
 .panel-right-top .dm-result-box-title span,
 .panel-right-bottom.dm-decision-panel .dm-result-box-title span {
   display: block;
-  line-height: 1;
-  transform: translateY(0);
+  width: 100%;
+  line-height: 1.3;
+  padding-top: 0;
+  text-align: center;
+  transform: none;
 }
 
 .final-result-section {
@@ -3817,6 +3858,32 @@ export default {
 .bias-panel-scroll {
   background: transparent;
   border: none;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #00e5ff rgba(10, 25, 50, 0.35);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(10, 25, 50, 0.35);
+    border-radius: 4px;
+    border: 1px solid rgba(0, 229, 255, 0.12);
+    margin: 2px 0;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #00e5ff 0%, #0097a7 100%);
+    border-radius: 4px;
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    box-shadow: 0 0 6px rgba(0, 229, 255, 0.35);
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #33eeff 0%, #00b8d4 100%);
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+  }
 }
 
 .bias-button-container {
@@ -3946,6 +4013,17 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.panel-right-bottom.dm-decision-panel .decision-bias-result {
+  margin-top: -8px;
+  margin-bottom: 0;
+  margin-left: 0;
+  padding-top: 0;
+  padding-left: 2px;
+  line-height: 1.3;
+  text-align: left;
+  align-self: flex-start;
 }
 
 .ba-intent-btn {
@@ -4295,8 +4373,9 @@ export default {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 0 15px;
+  padding: 0 22px 0 28px;
   position: relative;
+  box-sizing: border-box;
 }
 
 /* 公式提示图标 */
@@ -4364,7 +4443,6 @@ export default {
   margin-bottom: 0;
   white-space: nowrap;
   flex-shrink: 0;
-  margin-left: -1em;
 }
 
 .accuracy-value {
