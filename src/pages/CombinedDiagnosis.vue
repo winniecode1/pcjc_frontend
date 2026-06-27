@@ -287,8 +287,8 @@ const FIELD_LABEL_MAP = {
 };
 
 const COMBINED_TIMER_KEY = 'pcjc_combined_timers_v2';
-// 老板要求：不一致根因召回率前端写死为 82%，在四个诊断框展示后一并显示
-const COMBINED_RECALL_DONE_VALUE = 0.82;
+// 老板要求：不一致根因召回率前端写死为 89%，在四个诊断框展示后一并显示
+const COMBINED_RECALL_DONE_VALUE = 0.89;
 const STAGE_LABEL_MAP = {
   Stage1: '多模态信息认知阶段',
   Stage2: '先验知识认知阶段',

@@ -966,6 +966,31 @@ export default {
       result.splice(insertAt, 0, ...agentItems);
       return result;
     },
+    buildGlobalInstructionCarouselItem(res = {}) {
+      const globalInstruction = this.asDict(this.safeGet(res, 'sample_data.global_instruction', null));
+      const instructionId = String(globalInstruction.instruction_id || '').trim();
+      const fullText = String(globalInstruction.full_text || '').trim();
+      if (!instructionId && !fullText) return null;
+      const parts = [];
+      if (instructionId) parts.push(`【指令编号】\n${instructionId}`);
+      if (fullText) parts.push(`【完整指令】\n${fullText}`);
+      return this.normalizeCarouselItems([{
+        type: 'text',
+        stage: 'Stage1',
+        stage_index: 1,
+        title: '全局命令',
+        content: parts.join('\n\n')
+      }])[0];
+    },
+    ensureGlobalInstructionFirst(carouselItems, globalInstructionItem) {
+      if (!globalInstructionItem) return carouselItems;
+      const filtered = carouselItems.filter((item) => {
+        const title = String((item || {}).title || '').trim();
+        const stage = String((item || {}).stage || '').trim();
+        return !(/全局(指令|命令)/.test(title) || /全局(指令|命令)/.test(stage));
+      });
+      return [globalInstructionItem, ...filtered];
+    },
     applyFileSelectionResult(response, video) {
       const res = response || {};
       let carouselItems = this.normalizeCarouselItems(res.carouselItems);
@@ -984,6 +1009,8 @@ export default {
           content: `source_id=${video.source_id || video.name} 未返回可渲染数据。`
         }];
       }
+      const globalInstructionItem = this.buildGlobalInstructionCarouselItem(res);
+      carouselItems = this.ensureGlobalInstructionFirst(carouselItems, globalInstructionItem);
 
       this.selectedFileContext = res.stage1 || { source_id: video.source_id || video.name, path: video.path };
       this.selectedInstructionText = String(res.instruction_text || '').trim();
@@ -1023,6 +1050,7 @@ export default {
         carouselItems = dedupItems.length
           ? [dedupItems[0], imageItem, ...dedupItems.slice(1)]
           : [imageItem];
+        carouselItems = this.ensureGlobalInstructionFirst(carouselItems, globalInstructionItem);
       }
 
       this.carouselSlide = 0;
