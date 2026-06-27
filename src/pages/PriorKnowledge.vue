@@ -202,8 +202,11 @@
             <div v-if="isQueryingPriorKnowledge" class="description-box importance-content">计算中...</div>
             <div v-else-if="isLoading" class="description-box importance-content">加载中...</div>
             <div v-else class="description-box importance-content">
-              <div v-if="importanceInfo" class="importance-info">
-                <span class="info-value">{{ importanceInfo }}</span>
+              <div v-if="importanceInfo || deviation" class="importance-info">
+                <div v-if="deviation" class="deviation-result" :style="{ color: deviationColor }">
+                  偏差检测结果：{{ deviation }}
+                </div>
+                <span v-if="importanceInfo" class="info-value">{{ importanceInfo }}</span>
               </div>
               <div v-else class="hint-text">暂无重要信息</div>
             </div>
@@ -339,7 +342,10 @@ export default {
           // 图片放大预览 URL
           lightboxImageUrl: null,
           // 重要信息
-          importanceInfo: ''
+          importanceInfo: '',
+          // 偏差检测结果
+          deviation: '',
+          deviationColor: ''
         };
       },
   computed: {
@@ -408,6 +414,8 @@ export default {
       // 重置预测信息为默认状态
       this.predictInfoList = ["小类信息", "火力信息", "颜色信息", "形状信息", "尺寸信息", "动力信息", "轮廓信息"];
       this.importanceInfo = '';
+      this.deviation = '';
+      this.deviationColor = '';
       
       // 重置属性颜色
       this.propertyColors = {};
@@ -1261,6 +1269,21 @@ export default {
           if (predictData.importance) {
             this.importanceInfo = predictData.importance;
           }
+          // 偏差检测结果（从 result 中获取）
+          if (predictData.deviation) {
+            this.deviation = predictData.deviation;
+            if (predictData.deviation_color && predictData.deviation_color[0]) {
+              this.deviationColor = predictData.deviation_color[0];
+            }
+          }
+        }
+        // 偏差检测结果（从顶层 data 中获取，防止后端放在此处）
+        if (data.deviation) {
+          // 处理数组格式，如 ["无偏差"]
+          this.deviation = Array.isArray(data.deviation) ? data.deviation[0] : data.deviation;
+          if (data.deviation_color && data.deviation_color[0]) {
+            this.deviationColor = data.deviation_color[0];
+          }
         }
         // 准确率：缓存准确率值，但显示取决于计时状态
         if (data.accuracy !== undefined) {
@@ -1463,10 +1486,25 @@ export default {
           if (predictData.importance) {
             this.importanceInfo = predictData.importance;
           }
+          // 偏差检测结果（从 result 中获取）
+          if (predictData.deviation) {
+            this.deviation = predictData.deviation;
+            if (predictData.deviation_color && predictData.deviation_color[0]) {
+              this.deviationColor = predictData.deviation_color[0];
+            }
+          }
           // 将预测信息存入localStorage，供群体协商界面使用
           localStorage.setItem('predictInfoList', JSON.stringify(this.predictInfoList));
           localStorage.setItem('module2Res', JSON.stringify(data));
           console.log('预测信息、模块2返回值已存入localStorage');
+        }
+        // 偏差检测结果（从顶层 data 中获取，防止后端放在此处）
+        if (data.deviation) {
+          // 处理数组格式，如 ["无偏差"]
+          this.deviation = Array.isArray(data.deviation) ? data.deviation[0] : data.deviation;
+          if (data.deviation_color && data.deviation_color[0]) {
+            this.deviationColor = data.deviation_color[0];
+          }
         }
         
         // 缓存准确率（但不显示，等待点击偏差检测按钮）
@@ -2692,6 +2730,11 @@ text-decoration: none;
 .importance-info .info-value {
   color: #ffffff;
   margin-left: 5px;
+}
+
+.importance-info .deviation-result {
+  font-weight: bold;
+  margin-bottom: 10px;
 }
 
 /* 第一个方框：小类信息 + 属性信息，最大高度 + 滚动条 */
