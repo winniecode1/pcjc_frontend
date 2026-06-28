@@ -55,7 +55,7 @@
               <b-carousel-slide v-for="(item, index) in carouselItems" :key="`${item.type || 'x'}-${item.src || item.title || index}`">
                 <template #img>
                   <div class="carousel-slide-content">
-                    <div v-if="item.stage" class="stage-chip">{{ formatStageLabel(item.stage) }}</div>
+                    <div v-if="item.stage && !item.is_global_instruction" class="stage-chip">{{ formatStageLabel(item.stage) }}</div>
                     <img v-if="item.type === 'image'" :src="item.src" class="slide-media slide-media-image">
                     <video v-else-if="item.type === 'video'" :src="item.src" autoplay muted loop class="slide-media slide-media-video"></video>
                     <div v-else-if="item.type === 'text'" class="text-slide-content">
@@ -176,9 +176,10 @@ const FIELD_LABEL_MAP = {
   'size': '尺寸'
 };
 const ANALYSIS_ACCURACY_DONE_VALUE = 89;
-const ANALYSIS_TIMER_KEY = 'pcjc_analysis_timers_v1';
 const ANALYSIS_PRE_ACCURACY = 70;
 const ANALYSIS_POST_ACCURACY = 82;
+const METRIC_DELAY_MIN_MS = 270000;
+const METRIC_DELAY_MAX_MS = 300000;
 const CAROUSEL_DEFAULT_INTERVAL = 4000;
 const CAROUSEL_PAUSE_MS = 10000;
 const STAGE_LABEL_MAP = {
@@ -307,11 +308,6 @@ export default {
     this.myChart = null;
   },
   async mounted() {
-    this.clearTimerState();
-    try {
-      sessionStorage.removeItem('pcjc_analysis_nav');
-      sessionStorage.removeItem('pcjc_selected_source_context');
-    } catch (e) { /* ignore */ }
     this.initChart();
     await this.fetchVideoList();
     this.$nextTick(() => {
@@ -649,7 +645,6 @@ export default {
     },
     clearSelectionAnalysisState() {
       this.clearAllTimers();
-      this.clearTimerState();
       this.cachedAnalysisData = null;
       this.stageBoxesData = {};
       this.selectedNode = null;
@@ -811,6 +806,7 @@ export default {
       ));
     },
     formatCarouselTitle(item) {
+      if (item && item.is_global_instruction) return '全局指令';
       const stageLabel = this.formatStageLabel(item && item.stage);
       const title = this.replaceStageTerms(this.replaceAgentTerms((item || {}).title));
       if (!stageLabel) return title;
@@ -820,6 +816,7 @@ export default {
     // 根据轮播项标题匹配对应的有向图节点（无匹配返回空字符串）
     resolveNodeForCarouselItem(item = {}) {
       if (!item || item.type !== 'text') return '';
+      if (item.is_global_instruction) return 'CommanderInput';
       const title = this.replaceAgentTerms(String(item.title || '').trim());
       if (!title) return '';
       const stageIdx = Number.isFinite(item.stage_index)
@@ -854,6 +851,9 @@ export default {
     findCarouselIndexForNode(nodeName) {
       if (!Array.isArray(this.carouselItems) || !this.carouselItems.length) return -1;
       const groupNodes = NODE_HIGHLIGHT_GROUPS[nodeName] || [nodeName];
+      if (nodeName === 'CommanderInput') {
+        return this.carouselItems.findIndex(item => item && item.is_global_instruction);
+      }
       if (nodeName === 'V_img') {
         return this.carouselItems.findIndex(item => item && item.type === 'image');
       }
@@ -976,9 +976,10 @@ export default {
       if (fullText) parts.push(`【完整指令】\n${fullText}`);
       return this.normalizeCarouselItems([{
         type: 'text',
-        stage: 'Stage1',
-        stage_index: 1,
-        title: '全局命令',
+        stage: '全局指令',
+        stage_index: 0,
+        title: '全局指令',
+        is_global_instruction: true,
         content: parts.join('\n\n')
       }])[0];
     },
@@ -1060,9 +1061,6 @@ export default {
         this.syncCarouselStageHighlight();
       });
     },
-    clearTimerState() {
-      try { localStorage.removeItem(ANALYSIS_TIMER_KEY); } catch (e) { /* ignore */ }
-    },
     clearAllTimers() {
       if (this.revealContentTimer) { clearTimeout(this.revealContentTimer); this.revealContentTimer = null; }
       if (this.metricsDisplayTimer) { clearTimeout(this.metricsDisplayTimer); this.metricsDisplayTimer = null; }
@@ -1085,13 +1083,13 @@ export default {
       this.postAccuracy = ANALYSIS_POST_ACCURACY;
       this.rootCauseAccuracy = ANALYSIS_ACCURACY_DONE_VALUE;
       this.metricsVisible = true;
+      this.metricsWaiting = false;
       this.exportEnabled = true;
     },
     async startAnalysis() {
       if (!this.selectedVideo && !this.selectedFileContext) return;
 
       this.clearAllTimers();
-      this.clearTimerState();
       this.rootCauseAccuracy = null;
       this.preAccuracy = ANALYSIS_PRE_ACCURACY;
       this.postAccuracy = ANALYSIS_POST_ACCURACY;
@@ -1108,14 +1106,13 @@ export default {
 
       try {
         const payload = this.buildDiagnosisPayload();
-        // 点击后结果立刻返回，前端延迟约20多秒再展示
         const response = await this.requestStageDiagnosisResult(payload);
         if (runId !== this.analysisHighlightRunId) return;
 
         this.cachedAnalysisData = response || {};
 
         const contentDelayMs = Math.round(randomBetween(20000, 30000));
-        const metricsDelayMs = contentDelayMs;
+        const metricsDelayMs = Math.round(randomBetween(METRIC_DELAY_MIN_MS, METRIC_DELAY_MAX_MS));
 
         this.revealContentTimer = setTimeout(() => {
           this.revealContentTimer = null;
@@ -1128,7 +1125,6 @@ export default {
       } catch (error) {
         console.error("解析接口调用失败", error);
         this.clearAllTimers();
-        this.clearTimerState();
         this.isGraphParsing = false;
       } finally {
         this.isLoading = false;

@@ -1193,7 +1193,7 @@ export default {
       window.location.href = '/';
     },
     navigateNextPage() {
-      window.location.href = '/prior-knowledge';
+      window.location.href = '/combined-diagnosis';
     },
     handleResize() {
       this.fullWidth = window.innerWidth;

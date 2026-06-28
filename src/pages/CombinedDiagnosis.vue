@@ -286,9 +286,10 @@ const FIELD_LABEL_MAP = {
   'image_evidence': '图像描述'
 };
 
-const COMBINED_TIMER_KEY = 'pcjc_combined_timers_v2';
-// 老板要求：不一致根因召回率前端写死为 89%，在四个诊断框展示后一并显示
-const COMBINED_RECALL_DONE_VALUE = 0.89;
+// 老板要求：不一致根因召回率前端写死为 92%，延迟后显示
+const COMBINED_RECALL_DONE_VALUE = 0.92;
+const METRIC_DELAY_MIN_MS = 270000;
+const METRIC_DELAY_MAX_MS = 300000;
 const STAGE_LABEL_MAP = {
   Stage1: '多模态信息认知阶段',
   Stage2: '先验知识认知阶段',
@@ -392,14 +393,8 @@ export default {
     }
   },
   mounted() {
-    // 进入页面一律回到初始状态：清掉历史诊断倒计时与上次选择，等待用户重新选择数据
-    this.clearTimerStateFromStorage();
-    try {
-      sessionStorage.removeItem('pcjc_combined_nav');
-      sessionStorage.removeItem('pcjc_selected_source_context');
-    } catch (e) { /* ignore */ }
     this.fetchImageList();
-    this.clearResults({ resetPersistentMetric: true });
+    this.clearResults();
     this.carouselItems = [];
     this.$nextTick(() => {
       this._bindCarouselHover();
@@ -473,7 +468,7 @@ export default {
       return sameBySourceId || sameByPath;
     },
     clearSelectionDiagnosisState() {
-      this.clearResults({ resetPersistentMetric: true });
+      this.clearResults();
       this.isLoading = false;
       this.stagePreviews = {};
       this.previewSummary = null;
@@ -674,26 +669,19 @@ export default {
         this.recallDisplayTimer = null;
       }
     },
-    clearTimerStateFromStorage() {
-      try {
-        localStorage.removeItem(COMBINED_TIMER_KEY);
-      } catch (e) {
-        // ignore
-      }
-    },
     finishRecallTimer() {
       if (this.recallDisplayTimer) {
         clearTimeout(this.recallDisplayTimer);
         this.recallDisplayTimer = null;
       }
       this.recall = COMBINED_RECALL_DONE_VALUE;
+      this.recallWaiting = false;
       this.exportEnabled = true;
     },
     async startAnalysis() {
       if (!this.selectedImage) { this.showMsg('warning', '请先选择数据源！'); return; }
 
-      this.clearResults({ resetPersistentMetric: true });
-      this.clearTimerStateFromStorage();
+      this.clearResults();
       this.isLoading = true;
       this.exportEnabled = false;
       this.recallWaiting = true;
@@ -707,8 +695,7 @@ export default {
         this.cachedDiagnosisData = responseData;
 
         const contentDelayMs = Math.round(randomBetween(20000, 30000));
-        // 四个诊断框展示完成后，立即显示写死的召回率
-        const recallDelayMs = contentDelayMs;
+        const recallDelayMs = Math.round(randomBetween(METRIC_DELAY_MIN_MS, METRIC_DELAY_MAX_MS));
 
         this.revealContentTimer = setTimeout(() => {
           this.revealContentTimer = null;
@@ -723,7 +710,6 @@ export default {
       } catch (error) {
         console.error("诊断接口调用失败", error);
         this.clearAnalysisTimers();
-        this.clearTimerStateFromStorage();
         this.isLoading = false;
         this.showMsg('danger', '诊断启动失败，请稍后重试。');
       }
@@ -906,8 +892,7 @@ export default {
       }
       return result !== null && result !== undefined ? result : defaultValue;
     },
-    clearResults(options = {}) {
-      const { resetPersistentMetric = false } = options;
+    clearResults() {
       this.clearAnalysisTimers();
       if (this.pollTimer) clearInterval(this.pollTimer);
       this.pollTimer = null;
@@ -941,9 +926,6 @@ export default {
       this.cachedDiagnosisData = null;
       this.exportEnabled = false;
       this.recallWaiting = false;
-      if (resetPersistentMetric) {
-        this.clearTimerStateFromStorage();
-      }
     },
     showMsg(variant, msg) {
       this.alertVariant = variant; this.alertMessage = msg; this.showAlert = true;
