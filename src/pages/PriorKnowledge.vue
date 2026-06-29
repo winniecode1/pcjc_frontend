@@ -1287,8 +1287,7 @@ export default {
         }
         // 准确率：缓存准确率值，但显示取决于计时状态
         if (data.accuracy !== undefined) {
-          // this.accuracyRate = (data.accuracy * 100) + '%';
-          this.cachedAccuracy = String(data.accuracy * 100).padEnd(5, '0').slice(0, 5) + '%';
+          this.cachedAccuracy = (Math.round(data.accuracy * 10000) / 100).toFixed(2) + '%';
         } else {
           this.cachedAccuracy = '—';
         }
@@ -1356,7 +1355,7 @@ export default {
               if (module2ResStr) {
                 const module2Res = JSON.parse(module2ResStr);
                 if (module2Res.accuracy !== undefined) {
-                  this.cachedAccuracy = String(module2Res.accuracy * 100).padEnd(5, '0').slice(0, 5) + '%';
+                  this.cachedAccuracy = (Math.round(module2Res.accuracy * 10000) / 100).toFixed(2) + '%';
                 }
               }
             } catch (e) {
