@@ -852,8 +852,8 @@ export default {
         }
       });
       return [
-        { key: 'noBias', label: '无偏差数据', items: noBias },
-        { key: 'hasBias', label: '有偏差数据', items: hasBias }
+        { key: 'noBias', label: `无偏差数据`, items: noBias },
+        { key: 'hasBias', label: `有偏差数据`, items: hasBias }
       ];
     }
   },
