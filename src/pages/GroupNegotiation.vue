@@ -41,7 +41,7 @@
               >
                 <div v-if="orderCategories.length > 0" class="source-list-section order-instruction-section">
                   <div
-                    class="source-list-heading-toggle"
+                    class="source-list-heading-toggle order-level-toggle order-level-0"
                     :class="{ 'is-collapsed': !instructionSetExpanded }"
                     role="button"
                     tabindex="0"
@@ -55,37 +55,58 @@
                   </div>
                   <div v-show="instructionSetExpanded" class="source-list-items order-category-list">
                     <div
-                      v-for="(cat, catIdx) in orderCategories"
-                      :key="'order-cat-' + catIdx"
-                      class="order-category-block"
+                      v-for="biasSection in orderBiasSections"
+                      :key="'order-bias-' + biasSection.key"
+                      class="order-bias-section"
                     >
                       <div
-                        class="source-list-heading-toggle order-category-toggle"
-                        :class="{ 'is-collapsed': !isOrderCategoryExpanded(catIdx) }"
+                        class="source-list-heading-toggle order-level-toggle order-level-1"
+                        :class="{ 'is-collapsed': !isOrderBiasSectionExpanded(biasSection.key) }"
                         role="button"
                         tabindex="0"
-                        :aria-expanded="isOrderCategoryExpanded(catIdx) ? 'true' : 'false'"
-                        @click.stop="toggleOrderCategory(catIdx)"
-                        @keydown.enter.prevent.stop="toggleOrderCategory(catIdx)"
-                        @keydown.space.prevent.stop="toggleOrderCategory(catIdx)"
+                        :aria-expanded="isOrderBiasSectionExpanded(biasSection.key) ? 'true' : 'false'"
+                        @click.stop="toggleOrderBiasSection(biasSection.key)"
+                        @keydown.enter.prevent.stop="toggleOrderBiasSection(biasSection.key)"
+                        @keydown.space.prevent.stop="toggleOrderBiasSection(biasSection.key)"
                       >
-                        <span class="source-list-heading-label">{{ cat.category }}</span>
+                        <span class="source-list-heading-label">{{ biasSection.label }}</span>
                         <span class="source-list-heading-chevron" aria-hidden="true">▼</span>
                       </div>
-                      <div v-show="isOrderCategoryExpanded(catIdx)" class="source-list-items order-group-list">
+                      <div v-show="isOrderBiasSectionExpanded(biasSection.key)" class="order-bias-section-items">
                         <div
-                          v-for="(grp, gIdx) in cat.groups"
-                          :key="'order-grp-' + catIdx + '-' + gIdx"
-                          class="order-group-item"
-                          role="button"
-                          tabindex="0"
-                          :class="{ selected: selectedSourceKey === ('order:' + grp) }"
-                          @click="openOrderGroupItem(catIdx, grp)"
-                          @keydown.enter.prevent="openOrderGroupItem(catIdx, grp)"
-                          @keydown.space.prevent="openOrderGroupItem(catIdx, grp)"
+                          v-for="item in biasSection.items"
+                          :key="'order-cat-' + item.catIdx"
+                          class="order-category-block"
                         >
-                          <span>{{ grp }}</span>
-                          <span class="selector-circle"></span>
+                          <div
+                            class="source-list-heading-toggle order-level-toggle order-level-2"
+                            :class="{ 'is-collapsed': !isOrderCategoryExpanded(item.catIdx) }"
+                            role="button"
+                            tabindex="0"
+                            :aria-expanded="isOrderCategoryExpanded(item.catIdx) ? 'true' : 'false'"
+                            @click.stop="toggleOrderCategory(item.catIdx)"
+                            @keydown.enter.prevent.stop="toggleOrderCategory(item.catIdx)"
+                            @keydown.space.prevent.stop="toggleOrderCategory(item.catIdx)"
+                          >
+                            <span class="source-list-heading-label">{{ item.cat.category }}</span>
+                            <span class="source-list-heading-chevron" aria-hidden="true">▼</span>
+                          </div>
+                          <div v-show="isOrderCategoryExpanded(item.catIdx)" class="source-list-items order-group-list">
+                            <div
+                              v-for="(grp, gIdx) in item.cat.groups"
+                              :key="'order-grp-' + item.catIdx + '-' + gIdx"
+                              class="order-group-item"
+                              role="button"
+                              tabindex="0"
+                              :class="{ selected: selectedSourceKey === ('order:' + grp) }"
+                              @click="openOrderGroupItem(item.catIdx, grp)"
+                              @keydown.enter.prevent="openOrderGroupItem(item.catIdx, grp)"
+                              @keydown.space.prevent="openOrderGroupItem(item.catIdx, grp)"
+                            >
+                              <span>{{ grp }}</span>
+                              <span class="selector-circle"></span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -606,6 +627,11 @@ export default {
       orderCategories: [],
       instructionSetExpanded: false,
       expandedOrderCategoryIndices: {},
+      /** 指令集合：无偏差 / 有偏差 分区展开状态（进入页面默认收起） */
+      expandedOrderBiasSections: {
+        noBias: false,
+        hasBias: false
+      },
       /** 指令集合选中时，在「先验知识传播结果」详情区展示的 instruction 文案 */
       orderInstructionText: '',
       /** 视频：从 /static/video_results 对应 JSON 解析出、用于 module3 请求的字段 */
@@ -812,6 +838,23 @@ export default {
     caBfTriple() {
       if (this.selectedDetailType !== 'compare') return null;
       return this.round2BattlefieldTriple(this.agentCANegotiation);
+    },
+    /** 指令集合：按群体协商偏差检测结果分组（true=无偏差，false=有偏差） */
+    orderBiasSections() {
+      const noBias = [];
+      const hasBias = [];
+      (this.orderCategories || []).forEach((cat, catIdx) => {
+        const item = { catIdx, cat };
+        if (cat.biasDetectionResult === true) {
+          noBias.push(item);
+        } else if (cat.biasDetectionResult === false) {
+          hasBias.push(item);
+        }
+      });
+      return [
+        { key: 'noBias', label: '无偏差数据', items: noBias },
+        { key: 'hasBias', label: '有偏差数据', items: hasBias }
+      ];
     }
   },
   mounted() {
@@ -1378,7 +1421,11 @@ export default {
               groups: Array.isArray(item.groups)
                 ? item.groups.map(g => String(g))
                 : [],
-              instruction: item.instruction != null ? String(item.instruction) : ''
+              instruction: item.instruction != null ? String(item.instruction) : '',
+              biasDetectionResult:
+                item['群体协商偏差检测结果'] !== undefined
+                  ? !!item['群体协商偏差检测结果']
+                  : null
             }));
           return;
         } catch (e) {
@@ -1413,6 +1460,15 @@ export default {
     },
     toggleInstructionSet() {
       this.instructionSetExpanded = !this.instructionSetExpanded;
+    },
+    isOrderBiasSectionExpanded(sectionKey) {
+      return !!this.expandedOrderBiasSections[sectionKey];
+    },
+    toggleOrderBiasSection(sectionKey) {
+      this.expandedOrderBiasSections = {
+        ...this.expandedOrderBiasSections,
+        [sectionKey]: !this.expandedOrderBiasSections[sectionKey]
+      };
     },
     isOrderCategoryExpanded(catIdx) {
       return !!this.expandedOrderCategoryIndices[catIdx];
@@ -2687,6 +2743,23 @@ export default {
   margin-top: 12px;
 }
 
+/* 指令集合：按层级统一 toggle 样式，同层一致，层间仅缩进区分 */
+.order-instruction-section .order-category-list {
+  padding-left: 8px;
+}
+
+.order-instruction-section .order-bias-section {
+  margin-bottom: 8px;
+}
+
+.order-instruction-section .order-bias-section:last-child {
+  margin-bottom: 0;
+}
+
+.order-instruction-section .order-bias-section-items {
+  padding-left: 8px;
+}
+
 .order-instruction-section .order-category-block {
   margin-bottom: 8px;
 }
@@ -2695,16 +2768,75 @@ export default {
   margin-bottom: 0;
 }
 
-.compare-list-wrapper .order-category-toggle {
-  margin-bottom: 6px;
-  padding: 8px 10px;
-  font-size: 12px;
+/* 一级：指令集合（与图片分组/视频列表顶层标题一致，使用基础 toggle 样式） */
+.order-instruction-section .order-level-0 {
+  margin-bottom: 8px;
 }
 
-.compare-list-wrapper .order-category-toggle .source-list-heading-label {
+/* 二级：无偏差 / 有偏差（同层样式完全一致） */
+.compare-list-wrapper .order-instruction-section .order-level-1 {
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 229, 255, 0.28);
+  border-radius: 4px;
+  background: rgba(0, 42, 65, 0.5);
+  box-shadow: none;
+}
+
+.compare-list-wrapper .order-instruction-section .order-level-1:hover {
+  border-color: rgba(0, 229, 255, 0.42);
+  background: rgba(0, 55, 82, 0.58);
+  box-shadow: none;
+}
+
+.compare-list-wrapper .order-instruction-section .order-level-1:focus-visible {
+  box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.3);
+}
+
+.compare-list-wrapper .order-instruction-section .order-level-1 .source-list-heading-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e8fdff;
+  letter-spacing: 0.05em;
+}
+
+.compare-list-wrapper .order-instruction-section .order-level-1 .source-list-heading-chevron {
+  font-size: 9px;
+  color: rgba(0, 229, 255, 0.85);
+}
+
+/* 三级：场景分类（同层样式完全一致） */
+.compare-list-wrapper .order-instruction-section .order-level-2 {
+  margin-bottom: 6px;
+  padding: 7px 10px;
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  border-radius: 4px;
+  background: rgba(0, 48, 72, 0.35);
+  box-shadow: none;
+}
+
+.compare-list-wrapper .order-instruction-section .order-level-2:hover {
+  border-color: rgba(0, 229, 255, 0.36);
+  background: rgba(0, 60, 90, 0.45);
+  box-shadow: none;
+}
+
+.compare-list-wrapper .order-instruction-section .order-level-2:focus-visible {
+  box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.28);
+}
+
+.compare-list-wrapper .order-instruction-section .order-level-2 .source-list-heading-label {
   font-size: 12px;
-  white-space: normal;
+  font-weight: 400;
+  color: rgba(200, 246, 255, 0.92);
+  letter-spacing: 0.04em;
   line-height: 1.35;
+  white-space: normal;
+}
+
+.compare-list-wrapper .order-instruction-section .order-level-2 .source-list-heading-chevron {
+  font-size: 8px;
+  color: rgba(0, 229, 255, 0.7);
 }
 
 .order-group-list {
