@@ -347,6 +347,7 @@ const REFINE_COMMAND_API_URL = `${SOURCE_API_BASE_URL}/machine-refine-command`;
 const TRACK_ARTIFACT_API_URL = `${SOURCE_API_BASE_URL}/load-track-artifact`;
 const ANALYZE_VIDEO_BEHAVIOR_API_URL = `${SOURCE_API_BASE_URL}/analyze-video-behavior`;
 const BEHAVIOR_REASON_API_URL = `${SOURCE_API_BASE_URL}/behavior-reason`;
+const EXPECTED_DECISION_API_URL = `${SOURCE_API_BASE_URL}/expected-decision`;
 const FRONTEND_BASE_URL = 'http://10.109.253.71:8889';
 const IMAGE_API_URL = 'http://10.109.253.71:5237';
 const BASE_DIR = "/home/wuzhixuan/Project/PCJC/1";
@@ -416,6 +417,12 @@ export default {
       selectedTacticalIntentIndex: null,
       /** 决策选择区当前选中的决策按钮索引（单选，选中后不可再改） */
       selectedTacticalDecisionIndex: null,
+      /** /expected-decision 返回的期望决策 */
+      expectedDecisionFromApi: '',
+      /** 用户选择与期望决策是否一致；null 表示尚未完成接口比对 */
+      decisionBiasIsConsistent: null,
+      isExpectedDecisionLoading: false,
+      expectedDecisionError: '',
       /** /behavior-reason 返回的指挥员意图分析文本 */
       commanderIntentAnalysis: '',
       commanderIntentAnalysisError: '',
@@ -516,13 +523,10 @@ export default {
     },
     decisionBiasResultDisplay() {
       if (this.selectedTacticalDecisionIndex === null) return null;
-      const items = this.tacticalDecisionRankingDisplay;
-      if (!items.length) return null;
-      const bestIndex = this.findHighestConfidenceIndex(items);
-      const isConsistent = bestIndex >= 0 && this.selectedTacticalDecisionIndex === bestIndex;
+      if (this.decisionBiasIsConsistent === null) return null;
       return {
-        text: isConsistent ? '偏差检测结果：无偏差' : '偏差检测结果：有偏差',
-        isConsistent
+        text: this.decisionBiasIsConsistent ? '偏差检测结果：无偏差' : '偏差检测结果：有偏差',
+        isConsistent: this.decisionBiasIsConsistent
       };
     }
   },
@@ -1321,6 +1325,7 @@ export default {
       this.behaviorAnalysisView = null;
       this.selectedTacticalIntentIndex = null;
       this.selectedTacticalDecisionIndex = null;
+      this.resetExpectedDecisionResult();
       this.commanderIntentAnalysis = '';
       this.commanderIntentAnalysisError = '';
       this.isCommanderIntentLoading = false;
@@ -1637,6 +1642,87 @@ export default {
         'ba-intent-btn--bias-deviation': !isConsistent
       };
     },
+    resetExpectedDecisionResult() {
+      this.expectedDecisionFromApi = '';
+      this.decisionBiasIsConsistent = null;
+      this.isExpectedDecisionLoading = false;
+      this.expectedDecisionError = '';
+    },
+    parseExpectedDecisionResponse(payload) {
+      if (payload == null) return '';
+      if (typeof payload === 'string') return payload.trim();
+      const envelope = payload && typeof payload === 'object' ? payload : {};
+      const root =
+        envelope.status === 'success' && envelope.data != null
+          ? envelope.data
+          : envelope.data != null
+            ? envelope.data
+            : envelope;
+      if (typeof root === 'string') return root.trim();
+      if (!root || typeof root !== 'object') return '';
+      const decision = this.pickBehaviorField(root, [
+        'expected_decision',
+        'expectedDecision',
+        'decision',
+        'result'
+      ]);
+      return decision ? String(decision).trim() : '';
+    },
+    async fetchExpectedDecision(selectedDecisionName) {
+      const mediaName =
+        this.selectedVideo && this.selectedVideo.name
+          ? this.stripFileExtension(this.selectedVideo.name)
+          : '';
+      if (!mediaName) {
+        this.expectedDecisionError = '未选择媒体，无法获取期望决策';
+        return;
+      }
+
+      this.isExpectedDecisionLoading = true;
+      this.expectedDecisionError = '';
+      this.expectedDecisionFromApi = '';
+      this.decisionBiasIsConsistent = null;
+
+      const logTag = '[DecisionMakingV2][expected-decision]';
+      try {
+        console.log(`${logTag} GET`, { url: EXPECTED_DECISION_API_URL, params: { name: mediaName } });
+        const response = await axios.get(EXPECTED_DECISION_API_URL, {
+          params: { name: mediaName },
+          timeout: 600000
+        });
+        const data = response.data;
+        console.log(`${logTag} 响应`, data);
+
+        if (response.status >= 400) {
+          throw new Error((data && data.detail) || `HTTP ${response.status}`);
+        }
+        if (data && data.status && data.status !== 'success') {
+          const errMsg = (data && data.message) || (data && data.detail) || `接口状态: ${data.status}`;
+          throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
+        }
+        if (data && data.detail && typeof data.detail === 'string' && !data.expected_decision && !data.data) {
+          throw new Error(data.detail);
+        }
+
+        const expectedDecision = this.parseExpectedDecisionResponse(data);
+        if (!expectedDecision) {
+          throw new Error('未获取到期望决策');
+        }
+
+        this.expectedDecisionFromApi = expectedDecision;
+        this.decisionBiasIsConsistent = expectedDecision === selectedDecisionName;
+        console.log(`${logTag} 比对`, {
+          selectedDecision: selectedDecisionName,
+          expectedDecision,
+          isConsistent: this.decisionBiasIsConsistent
+        });
+      } catch (error) {
+        console.error(`${logTag} 请求失败`, error);
+        this.expectedDecisionError = this.extractAnalyzeVideoBehaviorError(error);
+      } finally {
+        this.isExpectedDecisionLoading = false;
+      }
+    },
     resetCommanderIntentAnalysis() {
       this.commanderIntentAnalysis = '';
       this.commanderIntentAnalysisError = '';
@@ -1677,6 +1763,7 @@ export default {
 
       this.selectedTacticalIntentIndex = index;
       this.selectedTacticalDecisionIndex = null;
+      this.resetExpectedDecisionResult();
       this.resetDeviationAccuracyDisplay();
       this.resetCommanderIntentAnalysis();
       this.isCommanderIntentLoading = true;
@@ -1765,7 +1852,7 @@ export default {
         })
         .filter(Boolean);
     },
-    selectTacticalDecision(index) {
+    async selectTacticalDecision(index) {
       if (this.selectedTacticalDecisionIndex !== null) return;
       if (!this.tacticalDecisionRankingDisplay.length) return;
       if (index < 0 || index >= this.tacticalDecisionRankingDisplay.length) return;
@@ -1774,6 +1861,7 @@ export default {
       if (!decisionName) return;
       this.selectedTacticalDecisionIndex = index;
       this.startDeviationAccuracyCountdown();
+      await this.fetchExpectedDecision(decisionName);
     },
     resetDeviationAccuracyDisplay() {
       if (this.accuracyTimeout) {
@@ -1940,12 +2028,14 @@ export default {
         this.behaviorAnalysisView = structured;
         this.selectedTacticalIntentIndex = null;
         this.selectedTacticalDecisionIndex = null;
+        this.resetExpectedDecisionResult();
         this.resetCommanderIntentAnalysis();
         return [];
       }
       this.behaviorAnalysisView = null;
       this.selectedTacticalIntentIndex = null;
       this.selectedTacticalDecisionIndex = null;
+      this.resetExpectedDecisionResult();
       this.resetCommanderIntentAnalysis();
       const view = this.buildBehaviorAnalysisView(payload);
       const entries = [];
@@ -2109,6 +2199,7 @@ export default {
         this.behaviorAnalysisView = null;
         this.selectedTacticalIntentIndex = null;
         this.selectedTacticalDecisionIndex = null;
+        this.resetExpectedDecisionResult();
         this.resetCommanderIntentAnalysis();
         localStorage.removeItem('behaviorAnalysisView');
         const errText = this.extractAnalyzeVideoBehaviorError(error);
