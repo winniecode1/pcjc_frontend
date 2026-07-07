@@ -25,17 +25,48 @@
           <div class="design-module-content video-content-wrapper">
             <!-- 数据选择列表状态 -->
             <div v-if="!isVideoSelected" class="video-select-list">
-              <div class="video-list-container">
-                <div v-for="video in videoList" :key="video.id" class="video-select-item"
-                  @click="selectVideo(video)">
-                  <div class="video-info">
-                    <span class="video-name">{{ video.name }}</span>
-                    <span class="video-type">{{ video.type === 'image' ? '图片' : (video.type === 'video' ? '视频' : (video.type || '未知')) }}</span>
+              <div class="sidebar-scroll-area">
+                <!-- 无偏差数据分组 -->
+                <div class="folder-group">
+                  <div class="video-item folder-header-item" @click="isNoDeviationOpen = !isNoDeviationOpen">
+                    <span class="folder-name-container">
+                      <span class="fold-arrow" :class="{ rotated: isNoDeviationOpen }">▶</span>
+                      <span class="folder-label">无偏差数据</span>
+                      <span class="folder-count">({{ noDeviationVideos.length }})</span>
+                    </span>
                   </div>
-                  <span class="selector-circle"></span>
+                  <div v-show="isNoDeviationOpen" class="items-container">
+                    <div v-for="video in noDeviationVideos" :key="video.id" class="video-select-item"
+                      @click="selectVideo(video)">
+                      <div class="video-info">
+                        <span class="video-name">{{ video.name }}</span>
+                        <span class="video-type">{{ video.type === 'image' ? '图片' : (video.type === 'video' ? '视频' : (video.type || '未知')) }}</span>
+                      </div>
+                      <span class="selector-circle"></span>
+                    </div>
+                    <div v-if="noDeviationVideos.length === 0" class="empty-list-hint">暂无数据</div>
+                  </div>
                 </div>
-                <div v-if="videoList.length === 0" class="empty-list-hint">
-                  暂无数据
+                <!-- 有偏差数据分组 -->
+                <div class="folder-group">
+                  <div class="video-item folder-header-item" @click="isHasDeviationOpen = !isHasDeviationOpen">
+                    <span class="folder-name-container">
+                      <span class="fold-arrow" :class="{ rotated: isHasDeviationOpen }">▶</span>
+                      <span class="folder-label">有偏差数据</span>
+                      <span class="folder-count">({{ hasDeviationVideos.length }})</span>
+                    </span>
+                  </div>
+                  <div v-show="isHasDeviationOpen" class="items-container">
+                    <div v-for="video in hasDeviationVideos" :key="video.id" class="video-select-item"
+                      @click="selectVideo(video)">
+                      <div class="video-info">
+                        <span class="video-name">{{ video.name }}</span>
+                        <span class="video-type">{{ video.type === 'image' ? '图片' : (video.type === 'video' ? '视频' : (video.type || '未知')) }}</span>
+                      </div>
+                      <span class="selector-circle"></span>
+                    </div>
+                    <div v-if="hasDeviationVideos.length === 0" class="empty-list-hint">暂无数据</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -76,8 +107,8 @@
             <!-- 可滚动的信息区域 -->
             <div class="text-scrollable">
               <!-- 细粒度检测后的信息（颜色、形状、轮廓） -->
-              <div v-if="multimodalDetectionInfo && (multimodalDetectionInfo.color || multimodalDetectionInfo.shape || multimodalDetectionInfo.outline)">
-                <div v-if="multimodalDetectionInfo.color" class="multimodal-info-item">
+              <div v-if="multimodalDetectionInfo && ((multimodalDetectionInfo.color && !isSARData) || multimodalDetectionInfo.shape || multimodalDetectionInfo.outline)">
+                <div v-if="multimodalDetectionInfo.color && !isSARData" class="multimodal-info-item">
                   <span class="info-label">颜色：</span>
                   <span>{{ multimodalDetectionInfo.color }}</span>
                 </div>
@@ -175,6 +206,9 @@
           <div class="panel-content panel-content-right">
             <div v-if="isQueryingPriorKnowledge" class="description-box basic-content">计算中...</div>
             <div v-else-if="isLoading" class="description-box basic-content">加载中...</div>
+            <div v-else-if="!hasStartedBiasDetection" class="description-box basic-content">
+              <div class="text-left small-text hint-text">请点击"先验知识偏差检测"按钮</div>
+            </div>
             <div v-else class="description-box basic-content">
               <ul class="info-list">
                 <li
@@ -201,6 +235,9 @@
           <div class="panel-content panel-content-right">
             <div v-if="isQueryingPriorKnowledge" class="description-box importance-content">计算中...</div>
             <div v-else-if="isLoading" class="description-box importance-content">加载中...</div>
+            <div v-else-if="!hasStartedBiasDetection" class="description-box importance-content">
+              <div class="text-left small-text hint-text">请点击"先验知识偏差检测"按钮</div>
+            </div>
             <div v-else class="description-box importance-content">
               <div v-if="importanceInfo || deviation" class="importance-info">
                 <div v-if="deviation" class="deviation-result" :style="{ color: deviationColor }">
@@ -345,14 +382,46 @@ export default {
           importanceInfo: '',
           // 偏差检测结果
           deviation: '',
-          deviationColor: ''
+          deviationColor: '',
+          // 偏差检测状态
+          hasStartedBiasDetection: false,
+          // 偏差分组折叠状态
+          isNoDeviationOpen: true,
+          isHasDeviationOpen: false
         };
       },
   computed: {
+    // 判断当前数据是否为SAR类型
+    isSARData() {
+      try {
+        const saved = localStorage.getItem('selectedImageData');
+        if (!saved) return false;
+        const data = JSON.parse(saved);
+        return (data.dataType || '').toLowerCase() === 'sar';
+      } catch (e) {
+        return false;
+      }
+    },
+    // 无偏差数据列表
+    noDeviationVideos() {
+      return (this.videoList || []).filter(v => {
+        const type = this.resolveDeviationType(v);
+        return type === 'no_deviation';
+      });
+    },
+    // 有偏差数据列表
+    hasDeviationVideos() {
+      return (this.videoList || []).filter(v => {
+        const type = this.resolveDeviationType(v);
+        return type === 'has_deviation';
+      });
+    },
     // 第一个方框：小类信息 + 属性信息（火力/颜色/形状/尺寸/动力/轮廓）
     basicInfoList() {
       return (this.predictInfoList || []).filter(item => {
         const label = typeof item === 'object' ? item.label : item;
+        // SAR数据不显示颜色信息
+        if (this.isSARData && label.includes('颜色信息')) return false;
         return label.includes('小类信息') || label.includes('火力信息') ||
                label.includes('颜色信息') || label.includes('形状信息') ||
                label.includes('尺寸信息') || label.includes('动力信息') ||
@@ -395,6 +464,13 @@ export default {
     // 只有在计时完成时才清除localStorage
   },
   methods: {
+    // 根据 deviation_status 解析偏差类型
+    resolveDeviationType(video = {}) {
+      const status = String(video.deviation_status || '').toLowerCase();
+      if (status === 'has_deviation') return 'has_deviation';
+      if (status === 'no_deviation') return 'no_deviation';
+      return 'no_deviation';
+    },
     // 重置所有模块数据（当更换图片时调用）
     resetModuleData() {
       console.log('更换图片，重置所有模块数据');
@@ -428,6 +504,7 @@ export default {
         this.accuracyTimer = null;
       }
       this.isWaitingForAccuracy = false;
+      this.hasStartedBiasDetection = false;
       
       // 清除 imageBase64（以便重新加载新图片的 base64）
       this.imageBase64 = '';
@@ -438,6 +515,7 @@ export default {
       localStorage.removeItem('listResultData');
       localStorage.removeItem('module2AccuracyTimerStart');
       localStorage.removeItem('module2CachedAccuracy');
+      localStorage.removeItem('hasStartedBiasDetection');
       localStorage.removeItem('imageBase64');
       
       // 重新渲染图谱（使用默认节点）
@@ -543,7 +621,8 @@ export default {
             // 媒体类型：后端 type 字段为数据类别（如 sar / visible / infrared），与媒体种类不同
             // 这里将后端 type 存为 dataType，便于后续接口作为参数透传
             dataType: item.type || '',
-            type: 'image'
+            type: 'image',
+            deviation_status: item.deviation_status || 'no_deviation'
           }));
           console.log('图片列表处理后:', this.videoList);
         }
@@ -578,7 +657,8 @@ export default {
               path: item.path || '',
               // 后端 type 字段（如 sar / visible / infrared）作为数据类别保存
               dataType: item.type || '',
-              type: 'image'
+              type: 'image',
+              deviation_status: item.deviation_status || 'no_deviation'
             });
           });
         }
@@ -1303,6 +1383,7 @@ export default {
     // 偏差检测按钮：显示计算中，3min后显示准确率
     onBiasDetectClick() {
       this.isColorized = true;
+      this.hasStartedBiasDetection = true;
       
       // 如果有缓存的数据，使用缓存的准确率
       if (this.listResultData && this.listResultData.accuracy !== undefined) {
@@ -1315,6 +1396,7 @@ export default {
       const startTime = Date.now();
       localStorage.setItem('module2AccuracyTimerStart', startTime.toString());
       localStorage.setItem('module2CachedAccuracy', this.cachedAccuracy);
+      localStorage.setItem('hasStartedBiasDetection', 'true');
       
       // 显示计算中
       this.accuracyRate = '—';
@@ -2242,6 +2324,112 @@ text-decoration: none;
   display: flex;
   flex-direction: column;
   padding: 5px;
+}
+
+/* 分组折叠滚动区域 */
+.sidebar-scroll-area {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin !important;
+  scrollbar-color: #00e5ff rgba(0, 0, 0, 0.3) !important;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+}
+.sidebar-scroll-area::-webkit-scrollbar-button {
+  display: none !important;
+}
+.sidebar-scroll-area::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-radius: 3px !important;
+}
+.sidebar-scroll-area::-webkit-scrollbar-thumb {
+  background: #00e5ff !important;
+  border-radius: 3px !important;
+}
+.sidebar-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: #00b8cc !important;
+}
+
+/* 文件夹分组 */
+.folder-group {
+  margin-bottom: 6px;
+}
+
+.folder-header-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: rgba(0, 100, 150, 0.3);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  color: #00e5ff;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.folder-header-item:hover {
+  background-color: rgba(0, 229, 255, 0.2);
+  border-color: #00e5ff;
+}
+
+.folder-name-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.fold-arrow {
+  display: inline-block;
+  font-size: 10px;
+  color: #00e5ff;
+  transition: transform 0.3s;
+  flex-shrink: 0;
+}
+
+.fold-arrow.rotated {
+  transform: rotate(90deg);
+}
+
+.folder-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-count {
+  color: #88aabb;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* 文件夹内项容器 */
+.items-container {
+  max-height: 200px;
+  overflow-y: auto;
+  scrollbar-width: thin !important;
+  scrollbar-color: #00e5ff rgba(0, 0, 0, 0.3) !important;
+}
+
+.items-container::-webkit-scrollbar {
+  width: 4px !important;
+  height: 4px !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+}
+.items-container::-webkit-scrollbar-thumb {
+  background: #00e5ff !important;
+  border-radius: 3px !important;
 }
 
 .video-list-header {
