@@ -1626,7 +1626,7 @@ export default {
         'ba-intent-btn--bias-deviation': !isConsistent
       };
     },
-    /** 决策选择：未点击不高亮；点击后最高置信度绿色，其余红色 */
+    /** 决策选择：未点击不高亮；点击后与 /expected-decision 比对一致为绿色，不一致为红色 */
     getTacticalDecisionBiasClass(items, selectedIndex, idx) {
       if (selectedIndex === null) {
         return {};
@@ -1634,12 +1634,14 @@ export default {
       if (selectedIndex !== idx) {
         return { 'ba-intent-btn--disabled': true };
       }
-      const machineBestIndex = this.findHighestConfidenceIndex(items);
-      const isConsistent = machineBestIndex >= 0 && selectedIndex === machineBestIndex;
+      const result = { 'ba-intent-btn--selected': true };
+      if (this.decisionBiasIsConsistent === null) {
+        return result;
+      }
       return {
-        'ba-intent-btn--selected': true,
-        'ba-intent-btn--bias-consistent': isConsistent,
-        'ba-intent-btn--bias-deviation': !isConsistent
+        ...result,
+        'ba-intent-btn--bias-consistent': this.decisionBiasIsConsistent,
+        'ba-intent-btn--bias-deviation': !this.decisionBiasIsConsistent
       };
     },
     resetExpectedDecisionResult() {
