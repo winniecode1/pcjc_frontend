@@ -251,13 +251,20 @@
           </div>
           <div class="bottom-actions">
             <button
-              class="btn-start-detect random-test-btn"
               @click="startRandomTest"
-              :disabled="!randomTestEnabled"
+              class="btn-random-select"
+              :class="{ 'btn-random-select--progress': isRandomTesting && !randomTestDone }"
+              :disabled="isRandomTesting"
             >
-              <span class="btn-text-pos">{{ isRandomTesting ? '测试中...' : '随机100条测试' }}</span>
+              {{ randomTestButtonText }}
             </button>
-            <button class="export-btn" @click="exportResult" :disabled="!exportEnabled">结果导出</button>
+            <button
+              class="btn-export-result"
+              @click="exportResult"
+              :disabled="!exportEnabled || isExporting"
+            >
+              {{ isExporting ? '导出中...' : '结果导出' }}
+            </button>
           </div>
         </div>
       </b-col>
@@ -296,8 +303,7 @@ const FIELD_LABEL_MAP = {
 };
 
 const DATASET_ARCHIVE_PATH = '/module5/api/dataset/archive';
-const METRIC_DELAY_MIN_MS = 270000;
-const METRIC_DELAY_MAX_MS = 300000;
+const RANDOM_TEST_TOTAL = 100;
 const STAGE_LABEL_MAP = {
   Stage1: '多模态信息认知阶段',
   Stage2: '先验知识认知阶段',
@@ -375,17 +381,26 @@ export default {
       diagnosisConsistencyType: null,
       analysisStartedAt: null,
       revealContentTimer: null,
-      recallDisplayTimer: null,
+      randomTestTimer: null,
       cachedDiagnosisData: null,
       exportEnabled: false,
       recallWaiting: false,
       isRandomTesting: false,
+      randomTestProgress: 0,
+      randomTestDone: false,
+      pendingArchiveData: null,
+      archiveRequestFailed: false,
+      isExporting: false,
       cachedArchiveData: null
     };
   },
   computed: {
-    randomTestEnabled() {
-      return !this.isRandomTesting && !this.recallWaiting;
+    randomTestButtonText() {
+      if (this.randomTestDone) return '测试完毕';
+      if (this.isRandomTesting && this.randomTestProgress > 0) {
+        return `检测中：${this.randomTestProgress}/${RANDOM_TEST_TOTAL}`;
+      }
+      return '根因诊断';
     },
     // 后端基础地址
     baseUrl() { return 'http://localhost:5237'; },
@@ -418,7 +433,7 @@ export default {
     if (this.module1DelayTimer && this.module1DelayTimer !== 'done') clearTimeout(this.module1DelayTimer);
     if (this.module4DelayTimer && this.module4DelayTimer !== 'done') clearTimeout(this.module4DelayTimer);
     if (this.revealContentTimer) clearTimeout(this.revealContentTimer);
-    if (this.recallDisplayTimer) clearTimeout(this.recallDisplayTimer);
+    if (this.randomTestTimer) clearTimeout(this.randomTestTimer);
     this._unbindCarouselHover();
   },
   methods: {
@@ -678,17 +693,21 @@ export default {
         this.revealContentTimer = null;
       }
     },
-    clearRecallTimer() {
-      if (this.recallDisplayTimer) {
-        clearTimeout(this.recallDisplayTimer);
-        this.recallDisplayTimer = null;
+    clearRandomTestTimer() {
+      if (this.randomTestTimer) {
+        clearTimeout(this.randomTestTimer);
+        this.randomTestTimer = null;
       }
     },
     clearRandomTestState() {
-      this.clearRecallTimer();
+      this.clearRandomTestTimer();
       this.recall = null;
       this.recallWaiting = false;
       this.isRandomTesting = false;
+      this.randomTestProgress = 0;
+      this.randomTestDone = false;
+      this.pendingArchiveData = null;
+      this.archiveRequestFailed = false;
       this.exportEnabled = false;
       this.cachedArchiveData = null;
     },
@@ -722,38 +741,67 @@ export default {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     },
-    async finishRecallTimer() {
-      this.clearRecallTimer();
+    tryApplyRandomTestResult() {
+      if (!this.randomTestDone) return;
+      if (this.pendingArchiveData) {
+        this.cachedArchiveData = this.pendingArchiveData;
+        this.applyArchiveAverageToRecall(this.pendingArchiveData);
+        this.recallWaiting = false;
+        this.exportEnabled = true;
+        this.showMsg('success', '根因诊断完成，可导出结果文件。');
+        return;
+      }
+      if (this.archiveRequestFailed) {
+        this.recallWaiting = false;
+        this.exportEnabled = false;
+        this.showMsg('danger', '根因诊断失败，请稍后重试。');
+      }
+    },
+    async fetchRandomTestArchive() {
+      this.pendingArchiveData = null;
+      this.archiveRequestFailed = false;
       try {
         const data = await this.fetchDatasetArchive();
         if (!data.success) throw new Error('archive request failed');
-        this.cachedArchiveData = data;
-        this.applyArchiveAverageToRecall(data);
-        this.recallWaiting = false;
-        this.isRandomTesting = false;
-        this.exportEnabled = true;
-        this.showMsg('success', '随机100条测试完成，可导出结果文件。');
+        this.pendingArchiveData = data;
+        this.tryApplyRandomTestResult();
       } catch (error) {
-        console.error('随机100条测试接口调用失败', error);
-        this.recallWaiting = false;
-        this.isRandomTesting = false;
-        this.exportEnabled = false;
-        this.showMsg('danger', '随机100条测试失败，请稍后重试。');
+        console.error('根因诊断接口调用失败', error);
+        this.pendingArchiveData = null;
+        this.archiveRequestFailed = true;
+        this.tryApplyRandomTestResult();
       }
     },
+    scheduleRandomTestStep() {
+      this.clearRandomTestTimer();
+      const delayMs = 500 + Math.floor(Math.random() * 1501);
+      this.randomTestTimer = setTimeout(() => {
+        this.randomTestTimer = null;
+        if (this.randomTestProgress >= RANDOM_TEST_TOTAL) {
+          this.isRandomTesting = false;
+          this.randomTestDone = true;
+          this.tryApplyRandomTestResult();
+          return;
+        }
+        this.randomTestProgress += 1;
+        this.scheduleRandomTestStep();
+      }, delayMs);
+    },
     startRandomTest() {
-      if (!this.randomTestEnabled) return;
+      if (this.isRandomTesting) return;
 
-      this.clearRecallTimer();
+      this.clearRandomTestTimer();
+      this.randomTestDone = false;
+      this.isRandomTesting = true;
+      this.randomTestProgress = 1;
+      this.pendingArchiveData = null;
+      this.archiveRequestFailed = false;
       this.exportEnabled = false;
       this.recall = null;
       this.recallWaiting = true;
-      this.isRandomTesting = true;
-
-      const recallDelayMs = Math.round(randomBetween(METRIC_DELAY_MIN_MS, METRIC_DELAY_MAX_MS));
-      this.recallDisplayTimer = setTimeout(() => {
-        this.finishRecallTimer();
-      }, recallDelayMs);
+      this.cachedArchiveData = null;
+      this.scheduleRandomTestStep();
+      this.fetchRandomTestArchive();
     },
     async startAnalysis() {
       if (!this.selectedImage) { this.showMsg('warning', '请先选择数据源！'); return; }
@@ -1018,6 +1066,8 @@ export default {
       return (this.diagnosisConsistencyType === 'inconsistent' && v === true) ? 'bias-yes-red' : '';
     },
     async exportResult() {
+      if (this.isExporting || !this.exportEnabled) return;
+      this.isExporting = true;
       try {
         let data = this.cachedArchiveData;
         if (!data || !data.file_base64) {
@@ -1031,6 +1081,8 @@ export default {
       } catch (error) {
         console.error('结果导出失败', error);
         this.showMsg('danger', '结果导出失败，请稍后重试。');
+      } finally {
+        this.isExporting = false;
       }
     },
     originalImageUrl() {
@@ -1420,25 +1472,52 @@ export default {
   align-items: center;
   gap: 12px;
 }
-.random-test-btn {
-  width: 210px;
-}
-.random-test-btn .btn-text-pos {
-  left: 52px;
-  right: 12px;
-  width: auto;
-  transform: translateY(-50%);
-  text-align: center;
-  font-size: 13px;
-  letter-spacing: 0.5px;
-}
-.export-btn {
-  background-image: url('~@/assets/images/step5/按钮-结果导出.png'); background-size: 100% 100%;
-  width: 150px; height: 45px; background-color: transparent; border: none; cursor: pointer; color: #333; font-weight: bold; font-size: 1rem;
-  padding-right: 20px; text-align: right; font-family: 'DingTalk-JinBuTi', sans-serif !important;
+.btn-random-select,
+.btn-export-result {
+  background-repeat: no-repeat;
+  background-color: transparent;
+  background-size: 100% 100%;
+  background-position: center;
+  border: none;
+  cursor: pointer;
+  width: 180px;
+  height: 60px;
+  flex: 0 0 180px;
+  position: relative;
+  font-family: DOUYUFont, 'DOUYUFont', sans-serif;
+  color: #FFFFFF;
+  font-weight: 400;
+  font-size: 14px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 14px 0 48px;
+  box-sizing: border-box;
+  transition: filter 0.3s;
   white-space: nowrap;
 }
-.export-btn:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
+.btn-random-select {
+  background-image: url('~@/assets/images/step3/greenbutton.png');
+}
+.btn-random-select--progress {
+  font-size: 12px;
+  padding: 0 10px 0 44px;
+}
+.btn-export-result {
+  background-image: url('~@/assets/images/step5/按钮-结果导出.png');
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 18px 0 0;
+}
+.btn-random-select:hover:not(:disabled),
+.btn-export-result:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.btn-random-select:disabled,
+.btn-export-result:disabled {
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
 
 .metric-spinner {
   display: inline-block; width: 22px; height: 22px;
