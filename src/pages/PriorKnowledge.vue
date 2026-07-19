@@ -107,8 +107,8 @@
             <!-- 可滚动的信息区域 -->
             <div class="text-scrollable">
               <!-- 细粒度检测后的信息（颜色、形状、轮廓） -->
-              <div v-if="multimodalDetectionInfo && ((multimodalDetectionInfo.color && !isSARData) || multimodalDetectionInfo.shape || multimodalDetectionInfo.outline)">
-                <div v-if="multimodalDetectionInfo.color && !isSARData" class="multimodal-info-item">
+              <div v-if="multimodalDetectionInfo && (multimodalDetectionInfo.color || multimodalDetectionInfo.shape || multimodalDetectionInfo.outline)">
+                <div v-if="multimodalDetectionInfo.color" class="multimodal-info-item">
                   <span class="info-label">颜色：</span>
                   <span>{{ multimodalDetectionInfo.color }}</span>
                 </div>
@@ -420,8 +420,6 @@ export default {
     basicInfoList() {
       return (this.predictInfoList || []).filter(item => {
         const label = typeof item === 'object' ? item.label : item;
-        // SAR数据不显示颜色信息
-        if (this.isSARData && label.includes('颜色信息')) return false;
         return label.includes('小类信息') || label.includes('火力信息') ||
                label.includes('颜色信息') || label.includes('形状信息') ||
                label.includes('尺寸信息') || label.includes('动力信息') ||
@@ -1336,15 +1334,29 @@ export default {
         // 预测（默认白色显示）
         if (data.result && data.result.length > 0 && data.result[0].length > 0) {
           const predictData = data.result[0][0];
-          this.predictInfoList = [
-            { label: '小类信息：', value: predictData.kind || '未知', color: this.propertyColors.kind || '#000' },
-            { label: '火力信息：', value: predictData.firepower || '未知', color: this.propertyColors.firepower || '#000' },
-            { label: '颜色信息：', value: predictData.color || '未知', color: this.propertyColors.color || '#000' },
-            { label: '形状信息：', value: predictData.shape || '未知', color: this.propertyColors.shape || '#000' },
-            { label: '尺寸信息：', value: predictData.size || '未知', color: this.propertyColors.size || '#000' },
-            { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
-            { label: '轮廓信息：', value: predictData.outline || '未知', color: this.propertyColors.outline || '#000' },
-          ];
+          const predictInfoList = [];
+          if (predictData.kind) {
+            predictInfoList.push({ label: '小类信息：', value: predictData.kind, color: this.propertyColors.kind || '#000' });
+          }
+          if (predictData.firepower) {
+            predictInfoList.push({ label: '火力信息：', value: predictData.firepower, color: this.propertyColors.firepower || '#000' });
+          }
+          if (predictData.color) {
+            predictInfoList.push({ label: '颜色信息：', value: predictData.color, color: this.propertyColors.color || '#000' });
+          }
+          if (predictData.shape) {
+            predictInfoList.push({ label: '形状信息：', value: predictData.shape, color: this.propertyColors.shape || '#000' });
+          }
+          if (predictData.size) {
+            predictInfoList.push({ label: '尺寸信息：', value: predictData.size, color: this.propertyColors.size || '#000' });
+          }
+          if (predictData.power) {
+            predictInfoList.push({ label: '动力信息：', value: predictData.power, color: this.propertyColors.power || '#000' });
+          }
+          if (predictData.outline) {
+            predictInfoList.push({ label: '轮廓信息：', value: predictData.outline, color: this.propertyColors.outline || '#000' });
+          }
+          this.predictInfoList = predictInfoList;
           // 重要信息
           if (predictData.importance) {
             this.importanceInfo = predictData.importance;
@@ -1554,15 +1566,29 @@ export default {
         // 处理预测信息
         if (data.result && data.result.length > 0 && data.result[0].length > 0) {
           const predictData = data.result[0][0];
-          this.predictInfoList = [
-            { label: '小类信息：', value: predictData.kind || '未知', color: this.propertyColors.kind || '#000' },
-            { label: '火力信息：', value: predictData.firepower || '未知', color: this.propertyColors.firepower || '#000' },
-            { label: '颜色信息：', value: predictData.color || '未知', color: this.propertyColors.color || '#000' },
-            { label: '形状信息：', value: predictData.shape || '未知', color: this.propertyColors.shape || '#000' },
-            { label: '尺寸信息：', value: predictData.size || '未知', color: this.propertyColors.size || '#000' },
-            { label: '动力信息：', value: predictData.power || '未知', color: this.propertyColors.power || '#000' },
-            { label: '轮廓信息：', value: predictData.outline || '未知', color: this.propertyColors.outline || '#000' },
-          ];
+          const predictInfoList = [];
+          if (predictData.kind) {
+            predictInfoList.push({ label: '小类信息：', value: predictData.kind, color: this.propertyColors.kind || '#000' });
+          }
+          if (predictData.firepower) {
+            predictInfoList.push({ label: '火力信息：', value: predictData.firepower, color: this.propertyColors.firepower || '#000' });
+          }
+          if (predictData.color) {
+            predictInfoList.push({ label: '颜色信息：', value: predictData.color, color: this.propertyColors.color || '#000' });
+          }
+          if (predictData.shape) {
+            predictInfoList.push({ label: '形状信息：', value: predictData.shape, color: this.propertyColors.shape || '#000' });
+          }
+          if (predictData.size) {
+            predictInfoList.push({ label: '尺寸信息：', value: predictData.size, color: this.propertyColors.size || '#000' });
+          }
+          if (predictData.power) {
+            predictInfoList.push({ label: '动力信息：', value: predictData.power, color: this.propertyColors.power || '#000' });
+          }
+          if (predictData.outline) {
+            predictInfoList.push({ label: '轮廓信息：', value: predictData.outline, color: this.propertyColors.outline || '#000' });
+          }
+          this.predictInfoList = predictInfoList;
           // 重要信息
           if (predictData.importance) {
             this.importanceInfo = predictData.importance;

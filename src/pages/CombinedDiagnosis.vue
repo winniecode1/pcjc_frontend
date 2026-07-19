@@ -242,14 +242,23 @@
               <div class="metric-card recall-card centered-metric">
                 <div class="metric-title">不一致根因召回率</div>
                 <div class="metric-value">
-                  <span v-if="recall !== null && recall !== undefined">{{ formatPercent(recall, 0) }}</span>
+                  <span v-if="recall !== null && recall !== undefined">{{ formatPercent(recall, 1) }}</span>
                   <span v-else-if="recallWaiting" class="metric-spinner"></span>
                   <span v-else>-</span>
                 </div>
               </div>
             </div>
           </div>
-          <button class="export-btn" @click="exportResult" :disabled="!exportEnabled">结果导出</button>
+          <div class="bottom-actions">
+            <button
+              class="btn-start-detect random-test-btn"
+              @click="startRandomTest"
+              :disabled="!randomTestEnabled"
+            >
+              <span class="btn-text-pos">{{ isRandomTesting ? '测试中...' : '随机100条测试' }}</span>
+            </button>
+            <button class="export-btn" @click="exportResult" :disabled="!exportEnabled">结果导出</button>
+          </div>
         </div>
       </b-col>
     </b-row>
@@ -286,8 +295,7 @@ const FIELD_LABEL_MAP = {
   'image_evidence': '图像描述'
 };
 
-// 老板要求：不一致根因召回率前端写死为 92%，延迟后显示
-const COMBINED_RECALL_DONE_VALUE = 0.92;
+const DATASET_ARCHIVE_PATH = '/module5/api/dataset/archive';
 const METRIC_DELAY_MIN_MS = 270000;
 const METRIC_DELAY_MAX_MS = 300000;
 const STAGE_LABEL_MAP = {
@@ -370,10 +378,15 @@ export default {
       recallDisplayTimer: null,
       cachedDiagnosisData: null,
       exportEnabled: false,
-      recallWaiting: false
+      recallWaiting: false,
+      isRandomTesting: false,
+      cachedArchiveData: null
     };
   },
   computed: {
+    randomTestEnabled() {
+      return !this.isRandomTesting && !this.recallWaiting;
+    },
     // 后端基础地址
     baseUrl() { return 'http://localhost:5237'; },
     liveImages() {
@@ -468,7 +481,7 @@ export default {
       return sameBySourceId || sameByPath;
     },
     clearSelectionDiagnosisState() {
-      this.clearResults();
+      this.clearDiagnosisResults();
       this.isLoading = false;
       this.stagePreviews = {};
       this.previewSummary = null;
@@ -659,32 +672,94 @@ export default {
       const cleanedTitle = String(title || '').replace(new RegExp(`^${stageLabel}\\s*[·•\\-—:]?\\s*`), '');
       return cleanedTitle ? `${stageLabel} ${cleanedTitle}` : stageLabel;
     },
-    clearAnalysisTimers() {
+    clearDiagnosisTimers() {
       if (this.revealContentTimer) {
         clearTimeout(this.revealContentTimer);
         this.revealContentTimer = null;
       }
+    },
+    clearRecallTimer() {
       if (this.recallDisplayTimer) {
         clearTimeout(this.recallDisplayTimer);
         this.recallDisplayTimer = null;
       }
     },
-    finishRecallTimer() {
-      if (this.recallDisplayTimer) {
-        clearTimeout(this.recallDisplayTimer);
-        this.recallDisplayTimer = null;
-      }
-      this.recall = COMBINED_RECALL_DONE_VALUE;
+    clearRandomTestState() {
+      this.clearRecallTimer();
+      this.recall = null;
       this.recallWaiting = false;
-      this.exportEnabled = true;
+      this.isRandomTesting = false;
+      this.exportEnabled = false;
+      this.cachedArchiveData = null;
+    },
+    normalizeArchiveAverage(average) {
+      const value = Number(average);
+      return Number.isFinite(value) ? value : null;
+    },
+    applyArchiveAverageToRecall(data = {}) {
+      const average = this.normalizeArchiveAverage(data.average);
+      this.recall = average !== null ? average / 100 : null;
+    },
+    async fetchDatasetArchive(path = DATASET_ARCHIVE_PATH) {
+      const res = await this.$ajax.get(`${API_BASE_URL}${path}`);
+      return res.data || {};
+    },
+    downloadArchiveFile(data = {}) {
+      const fileBase64 = String(data.file_base64 || '').trim();
+      if (!fileBase64) throw new Error('missing file_base64');
+      const binary = atob(fileBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = String(data.download_name || 'Result.zip').trim() || 'Result.zip';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    },
+    async finishRecallTimer() {
+      this.clearRecallTimer();
+      try {
+        const data = await this.fetchDatasetArchive();
+        if (!data.success) throw new Error('archive request failed');
+        this.cachedArchiveData = data;
+        this.applyArchiveAverageToRecall(data);
+        this.recallWaiting = false;
+        this.isRandomTesting = false;
+        this.exportEnabled = true;
+        this.showMsg('success', '随机100条测试完成，可导出结果文件。');
+      } catch (error) {
+        console.error('随机100条测试接口调用失败', error);
+        this.recallWaiting = false;
+        this.isRandomTesting = false;
+        this.exportEnabled = false;
+        this.showMsg('danger', '随机100条测试失败，请稍后重试。');
+      }
+    },
+    startRandomTest() {
+      if (!this.randomTestEnabled) return;
+
+      this.clearRecallTimer();
+      this.exportEnabled = false;
+      this.recall = null;
+      this.recallWaiting = true;
+      this.isRandomTesting = true;
+
+      const recallDelayMs = Math.round(randomBetween(METRIC_DELAY_MIN_MS, METRIC_DELAY_MAX_MS));
+      this.recallDisplayTimer = setTimeout(() => {
+        this.finishRecallTimer();
+      }, recallDelayMs);
     },
     async startAnalysis() {
       if (!this.selectedImage) { this.showMsg('warning', '请先选择数据源！'); return; }
 
-      this.clearResults();
+      this.clearDiagnosisResults();
       this.isLoading = true;
-      this.exportEnabled = false;
-      this.recallWaiting = true;
       this.taskId = 'comb_' + Date.now();
       this.analysisStartedAt = Date.now();
 
@@ -695,7 +770,6 @@ export default {
         this.cachedDiagnosisData = responseData;
 
         const contentDelayMs = Math.round(randomBetween(20000, 30000));
-        const recallDelayMs = Math.round(randomBetween(METRIC_DELAY_MIN_MS, METRIC_DELAY_MAX_MS));
 
         this.revealContentTimer = setTimeout(() => {
           this.revealContentTimer = null;
@@ -703,13 +777,9 @@ export default {
           this.isLoading = false;
           this.showMsg('success', '诊断完成！');
         }, contentDelayMs);
-
-        this.recallDisplayTimer = setTimeout(() => {
-          this.finishRecallTimer();
-        }, recallDelayMs);
       } catch (error) {
         console.error("诊断接口调用失败", error);
-        this.clearAnalysisTimers();
+        this.clearDiagnosisTimers();
         this.isLoading = false;
         this.showMsg('danger', '诊断启动失败，请稍后重试。');
       }
@@ -892,8 +962,8 @@ export default {
       }
       return result !== null && result !== undefined ? result : defaultValue;
     },
-    clearResults() {
-      this.clearAnalysisTimers();
+    clearDiagnosisResults() {
+      this.clearDiagnosisTimers();
       if (this.pollTimer) clearInterval(this.pollTimer);
       this.pollTimer = null;
       if (this.module1DelayTimer && this.module1DelayTimer !== 'done') clearTimeout(this.module1DelayTimer);
@@ -921,11 +991,13 @@ export default {
       this.module3ErrorType = ''; this.module3ErrorJudgement = '';
       this.module4ErrorType = ''; this.module4ErrorJudgement = '';
       this.diagnosisConsistencyType = null;
-      this.accuracy = null; this.recall = null;
+      this.accuracy = null;
       this.analysisStartedAt = null;
       this.cachedDiagnosisData = null;
-      this.exportEnabled = false;
-      this.recallWaiting = false;
+    },
+    clearResults() {
+      this.clearDiagnosisResults();
+      this.clearRandomTestState();
     },
     showMsg(variant, msg) {
       this.alertVariant = variant; this.alertMessage = msg; this.showAlert = true;
@@ -945,15 +1017,21 @@ export default {
     biasYesClass(v) {
       return (this.diagnosisConsistencyType === 'inconsistent' && v === true) ? 'bias-yes-red' : '';
     },
-    exportResult() {
-      const url = `${API_BASE_URL}/module5/api/dataset/archive`;
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', '');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      this.showMsg('success', '正在下载结果文件...');
+    async exportResult() {
+      try {
+        let data = this.cachedArchiveData;
+        if (!data || !data.file_base64) {
+          data = await this.fetchDatasetArchive();
+        }
+        if (!data.success || !data.file_base64) throw new Error('archive export failed');
+        this.cachedArchiveData = data;
+        this.applyArchiveAverageToRecall(data);
+        this.downloadArchiveFile(data);
+        this.showMsg('success', '正在下载结果文件...');
+      } catch (error) {
+        console.error('结果导出失败', error);
+        this.showMsg('danger', '结果导出失败，请稍后重试。');
+      }
     },
     originalImageUrl() {
       if (!this.selectedImage) return '';
@@ -1315,7 +1393,7 @@ export default {
   position: relative;
 }
 .metric-pair {
-  width: calc(100% - 180px);
+  width: calc(100% - 390px);
   height: 100%;
   display: flex;
   align-items: center;
@@ -1335,10 +1413,30 @@ export default {
 }
 .metric-title { font-family: 'DOUYUFont'; font-size: 10px; padding-left: 40px; text-align: left; width: 100%; }
 .metric-value { font-size: 1.8rem; font-weight: bold; font-family: 'DingTalk-JinBuTi', sans-serif !important; }
+.bottom-actions {
+  position: absolute;
+  right: 1vw;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.random-test-btn {
+  width: 210px;
+}
+.random-test-btn .btn-text-pos {
+  left: 52px;
+  right: 12px;
+  width: auto;
+  transform: translateY(-50%);
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
 .export-btn {
-  position: absolute; right: 1vw; background-image: url('~@/assets/images/step5/按钮-结果导出.png'); background-size: 100% 100%;
+  background-image: url('~@/assets/images/step5/按钮-结果导出.png'); background-size: 100% 100%;
   width: 150px; height: 45px; background-color: transparent; border: none; cursor: pointer; color: #333; font-weight: bold; font-size: 1rem;
   padding-right: 20px; text-align: right; font-family: 'DingTalk-JinBuTi', sans-serif !important;
+  white-space: nowrap;
 }
 .export-btn:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
 

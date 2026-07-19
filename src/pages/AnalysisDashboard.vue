@@ -132,12 +132,21 @@
           <div class="metric-card-custom">
             <div class="m-title">根因诊断后 多主体解析准确率</div>
             <div class="m-value">
-              <template v-if="rootCauseAccuracy !== null">{{ Math.round(rootCauseAccuracy) }}<span>%</span></template>
+              <template v-if="rootCauseAccuracy !== null">{{ formatAverageDisplay(rootCauseAccuracy) }}<span>%</span></template>
               <span v-else-if="metricsWaiting" class="metric-spinner"></span>
               <template v-else>--</template>
             </div>
           </div>
-          <button class="export-btn-custom" @click="exportResult" :disabled="!exportEnabled">结果导出</button>
+          <div class="bottom-actions">
+            <button
+              class="btn-start-detect random-test-btn"
+              @click="startRandomTest"
+              :disabled="!randomTestEnabled"
+            >
+              <span class="btn-text-pos">{{ isRandomTesting ? '测试中...' : '随机100条测试' }}</span>
+            </button>
+            <button class="export-btn-custom" @click="exportResult" :disabled="!exportEnabled">结果导出</button>
+          </div>
         </div>
       </b-col>
     </b-row>
@@ -175,9 +184,9 @@ const FIELD_LABEL_MAP = {
   'power': '动力',
   'size': '尺寸'
 };
-const ANALYSIS_ACCURACY_DONE_VALUE = 89;
 const ANALYSIS_PRE_ACCURACY = 70;
 const ANALYSIS_POST_ACCURACY = 82;
+const INSTR_DATASET_ARCHIVE_PATH = '/module5/api/dataset/instr/archive';
 const METRIC_DELAY_MIN_MS = 270000;
 const METRIC_DELAY_MAX_MS = 300000;
 const CAROUSEL_DEFAULT_INTERVAL = 4000;
@@ -292,12 +301,17 @@ export default {
       metricsVisible: false,
       exportEnabled: false,
       metricsWaiting: false,
+      isRandomTesting: false,
+      cachedArchiveData: null,
       preAccuracy: ANALYSIS_PRE_ACCURACY,
       postAccuracy: ANALYSIS_POST_ACCURACY,
       carouselHovered: false
     };
   },
   computed: {
+    randomTestEnabled() {
+      return !this.isRandomTesting && !this.metricsWaiting;
+    },
     datasetVideos() {
       const list = Array.isArray(this.videoList) ? this.videoList : [];
       return list.filter(Boolean);
@@ -644,18 +658,12 @@ export default {
       return sameBySourceId || sameByPath;
     },
     clearSelectionAnalysisState() {
-      this.clearAllTimers();
+      this.clearDiagnosisTimers();
       this.cachedAnalysisData = null;
       this.stageBoxesData = {};
       this.selectedNode = null;
       this.isLoading = false;
       this.isGraphParsing = false;
-      this.metricsVisible = false;
-      this.metricsWaiting = false;
-      this.exportEnabled = false;
-      this.rootCauseAccuracy = null;
-      this.preAccuracy = ANALYSIS_PRE_ACCURACY;
-      this.postAccuracy = ANALYSIS_POST_ACCURACY;
       this.resetGraphToInitial();
     },
     resolveConsistencyFolderType(source = {}) {
@@ -1061,9 +1069,8 @@ export default {
         this.syncCarouselStageHighlight();
       });
     },
-    clearAllTimers() {
+    clearDiagnosisTimers() {
       if (this.revealContentTimer) { clearTimeout(this.revealContentTimer); this.revealContentTimer = null; }
-      if (this.metricsDisplayTimer) { clearTimeout(this.metricsDisplayTimer); this.metricsDisplayTimer = null; }
       if (this.carouselResumeTimer) {
         clearTimeout(this.carouselResumeTimer);
         this.carouselResumeTimer = null;
@@ -1071,31 +1078,101 @@ export default {
         this.carouselInterval = CAROUSEL_DEFAULT_INTERVAL;
       }
     },
+    clearMetricsTimer() {
+      if (this.metricsDisplayTimer) { clearTimeout(this.metricsDisplayTimer); this.metricsDisplayTimer = null; }
+    },
+    clearRandomTestState() {
+      this.clearMetricsTimer();
+      this.metricsWaiting = false;
+      this.isRandomTesting = false;
+      this.exportEnabled = false;
+      this.rootCauseAccuracy = null;
+      this.metricsVisible = false;
+      this.cachedArchiveData = null;
+    },
+    clearAllTimers() {
+      this.clearDiagnosisTimers();
+      this.clearMetricsTimer();
+    },
     revealGraphResults() {
       if (this.cachedAnalysisData) {
         this.applyDiagnosisToGraph(this.cachedAnalysisData);
       }
       this.isGraphParsing = false;
     },
-    showMetricsDone() {
-      if (this.metricsDisplayTimer) { clearTimeout(this.metricsDisplayTimer); this.metricsDisplayTimer = null; }
+    normalizeArchiveAverage(average) {
+      const value = Number(average);
+      return Number.isFinite(value) ? value : null;
+    },
+    applyArchiveAverageToRootCause(data = {}) {
+      this.rootCauseAccuracy = this.normalizeArchiveAverage(data.average);
+    },
+    formatAverageDisplay(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '--';
+      return Number.isInteger(num) ? String(num) : num.toFixed(1);
+    },
+    async fetchDatasetArchive(path = INSTR_DATASET_ARCHIVE_PATH) {
+      const res = await this.$ajax.get(`${API_BASE_URL}${path}`);
+      return res.data || {};
+    },
+    downloadArchiveFile(data = {}) {
+      const fileBase64 = String(data.file_base64 || '').trim();
+      if (!fileBase64) throw new Error('missing file_base64');
+      const binary = atob(fileBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = String(data.download_name || 'NewInstrDataSet.zip').trim() || 'NewInstrDataSet.zip';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    },
+    async showMetricsDone() {
+      this.clearMetricsTimer();
       this.preAccuracy = ANALYSIS_PRE_ACCURACY;
       this.postAccuracy = ANALYSIS_POST_ACCURACY;
-      this.rootCauseAccuracy = ANALYSIS_ACCURACY_DONE_VALUE;
-      this.metricsVisible = true;
-      this.metricsWaiting = false;
-      this.exportEnabled = true;
+      try {
+        const data = await this.fetchDatasetArchive();
+        if (!data.success) throw new Error('archive request failed');
+        this.cachedArchiveData = data;
+        this.applyArchiveAverageToRootCause(data);
+        this.metricsVisible = true;
+        this.metricsWaiting = false;
+        this.isRandomTesting = false;
+        this.exportEnabled = true;
+      } catch (error) {
+        console.error('随机100条测试接口调用失败', error);
+        this.metricsWaiting = false;
+        this.isRandomTesting = false;
+        this.exportEnabled = false;
+      }
+    },
+    startRandomTest() {
+      if (!this.randomTestEnabled) return;
+
+      this.clearMetricsTimer();
+      this.exportEnabled = false;
+      this.rootCauseAccuracy = null;
+      this.metricsVisible = false;
+      this.metricsWaiting = true;
+      this.isRandomTesting = true;
+
+      const metricsDelayMs = Math.round(randomBetween(METRIC_DELAY_MIN_MS, METRIC_DELAY_MAX_MS));
+      this.metricsDisplayTimer = setTimeout(() => {
+        this.showMetricsDone();
+      }, metricsDelayMs);
     },
     async startAnalysis() {
       if (!this.selectedVideo && !this.selectedFileContext) return;
 
-      this.clearAllTimers();
-      this.rootCauseAccuracy = null;
-      this.preAccuracy = ANALYSIS_PRE_ACCURACY;
-      this.postAccuracy = ANALYSIS_POST_ACCURACY;
-      this.metricsVisible = false;
-      this.exportEnabled = false;
-      this.metricsWaiting = true;
+      this.clearDiagnosisTimers();
       this.cachedAnalysisData = null;
       this.selectedNode = null;
 
@@ -1112,19 +1189,14 @@ export default {
         this.cachedAnalysisData = response || {};
 
         const contentDelayMs = Math.round(randomBetween(20000, 30000));
-        const metricsDelayMs = Math.round(randomBetween(METRIC_DELAY_MIN_MS, METRIC_DELAY_MAX_MS));
 
         this.revealContentTimer = setTimeout(() => {
           this.revealContentTimer = null;
           this.revealGraphResults();
         }, contentDelayMs);
-
-        this.metricsDisplayTimer = setTimeout(() => {
-          this.showMetricsDone();
-        }, metricsDelayMs);
       } catch (error) {
         console.error("解析接口调用失败", error);
-        this.clearAllTimers();
+        this.clearDiagnosisTimers();
         this.isGraphParsing = false;
       } finally {
         this.isLoading = false;
@@ -1446,14 +1518,19 @@ export default {
       }
       return result !== null && result !== undefined ? result : defaultValue;
     },
-    exportResult() {
-      const url = `${API_BASE_URL}/module5/api/dataset/instr/archive`;
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', '');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    async exportResult() {
+      try {
+        let data = this.cachedArchiveData;
+        if (!data || !data.file_base64) {
+          data = await this.fetchDatasetArchive();
+        }
+        if (!data.success || !data.file_base64) throw new Error('archive export failed');
+        this.cachedArchiveData = data;
+        this.applyArchiveAverageToRootCause(data);
+        this.downloadArchiveFile(data);
+      } catch (error) {
+        console.error('结果导出失败', error);
+      }
     },
     translateTextContent(text) {
       if (!text || typeof text !== 'string') return text || '';
@@ -1708,7 +1785,7 @@ export default {
 }
 
 /* ================= 底部指标 ================= */
-.analysis-bottom-section { height: 10vh; display: flex; justify-content: flex-start; gap: 1vw; align-items: center; margin-top: 10px; position: relative; padding-left: 10px; }
+.analysis-bottom-section { height: 10vh; display: flex; justify-content: flex-start; gap: 1vw; align-items: center; margin-top: 10px; position: relative; padding-left: 10px; padding-right: 390px; }
 .metric-card-custom {
   background-image: url('~@/assets/images/step5/底部多主体和不一致的背景.png'); background-size: 100% 100%; width: 13vw; height: 7vh;
   display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 5px;
@@ -1723,10 +1800,33 @@ export default {
 
 .formula-text-custom { font-size: 0.95rem !important; color: #FFFFFF !important; letter-spacing: 1px; }
 
+.bottom-actions {
+  position: absolute;
+  right: 1vw;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.random-test-btn {
+  width: 210px;
+  height: 60px;
+}
+.random-test-btn .btn-text-pos {
+  top: 50%;
+  left: 52px;
+  right: 12px;
+  width: auto;
+  transform: translateY(-50%);
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
 .export-btn-custom {
-  position: absolute; right: 1vw; background-image: url('~@/assets/images/step5/按钮-结果导出.png'); background-size: 100% 100%;
+  background-image: url('~@/assets/images/step5/按钮-结果导出.png'); background-size: 100% 100%;
   width: 150px; height: 45px; background-color: transparent; border: none; cursor: pointer; color: #333; font-weight: bold; font-size: 1rem;
   padding-right: 20px; text-align: right; font-family: 'DingTalk-JinBuTi', sans-serif !important;
+  white-space: nowrap;
 }
 .export-btn-custom:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
 
