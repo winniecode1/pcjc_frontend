@@ -398,7 +398,7 @@
           <button
             class="btn-bias-detect"
             @click="handleBiasDetect"
-            :disabled="!pendingNegotiationResult || isRightLoadingAccuracy || isLoadingRound1 || isLoadingRound2"
+            :disabled="!pendingNegotiationResult || isLoadingRound1 || isLoadingRound2"
           >
             群体协商偏差检测
           </button>
@@ -485,10 +485,22 @@
           </template>
         </div>
 
-        <!-- 结果导出按钮 -->
+        <!-- 偏差测试 / 结果导出按钮 -->
         <div class="panel-right-button">
-          <button @click="exportResults" class="btn-export-result" :disabled="isLoading">
-            结果导出
+          <button
+            @click="startBiasTest"
+            class="btn-random-select"
+            :class="{ 'btn-random-select--progress': isBiasTesting && !biasTestDone }"
+            :disabled="isBiasTesting"
+          >
+            {{ biasTestButtonText }}
+          </button>
+          <button
+            @click="exportResults"
+            class="btn-export-result"
+            :disabled="isExporting"
+          >
+            {{ isExporting ? '导出中...' : '结果导出' }}
           </button>
         </div>
       </div>
@@ -529,9 +541,9 @@ const MODULE3_REFINE_URL = MODULE3_BASE
 const MODULE3_EXPORT_URL = MODULE3_BASE
   ? `${MODULE3_BASE}/export`
   : '/module3/export';
-/** 图片分组偏差检测：偏差识别准确率固定值及延迟展示时长 */
-const MODULE3_IMAGE_FIXED_ACCURACY = 90;
-const MODULE3_BIAS_ACCURACY_DELAY = 2 * 60 * 1000;
+const MODULE3_EVALUATE_GENERATE_URL = MODULE3_BASE
+  ? `${MODULE3_BASE}/evaluate/generate`
+  : '/module3/evaluate/generate';
 /** 图片分组一轮/二轮结果分步展示：随机 3–5 秒 */
 function randomRoundDisplayDelayMs() {
   return 3000 + Math.floor(Math.random() * 2001);
@@ -662,16 +674,33 @@ export default {
       /** static/priority_categories_new.json 解析结果 */
       priorityCategoriesNewData: [],
       /** 图片模式：点击偏差检测后从 JSON 读取的群体协商偏差检测结果 */
-      staticBiasDetectionResult: null
+      staticBiasDetectionResult: null,
+      /** 偏差测试按钮进度：0=未开始，1–80=检测中，完成后文案为「测试完毕」 */
+      biasTestProgress: 0,
+      isBiasTesting: false,
+      biasTestDone: false,
+      biasTestTimer: null,
+      /** /evaluate/generate 返回的 stats.ratio，等按钮「测试完毕」后再写入准确率 */
+      pendingBiasEvaluateRatio: null,
+      biasEvaluateRequestFailed: false,
+      isExporting: false
     };
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
     document.removeEventListener('keydown', this.handleGroupImageLightboxKeydown);
+    this.clearBiasTestTimer();
     // 注意：不在这里清除定时器，让计时在页面切换后继续
     // 只有在计时完成时才清除localStorage
   },
   computed: {
+    biasTestButtonText() {
+      if (this.biasTestDone) return '测试完毕';
+      if (this.isBiasTesting && this.biasTestProgress > 0) {
+        return `检测中：${this.biasTestProgress}/80`;
+      }
+      return '偏差测试';
+    },
     imageSourceItems() {
       return (this.compareFiles || []).map((name, idx) => ({
         key: `compare:${name || idx}`,
@@ -903,17 +932,13 @@ export default {
         this.round2DisplayTimer = null;
       }
     },
-    /** 清空中间/右侧协商展示（不清理 localStorage；切换图片或发起新请求前调用） */
+    /** 清空中间/右侧协商展示（不清理 localStorage；切换图片或发起新请求前调用）
+     * 注意：不重置偏差识别准确率相关状态，准确率仅由「偏差测试」控制 */
     clearNegotiationDisplay() {
       this.clearRoundDisplayTimers();
-      if (this.accuracyTimer) {
-        clearTimeout(this.accuracyTimer);
-        this.accuracyTimer = null;
-      }
       this.isLoading = false;
       this.isLoadingRound1 = false;
       this.isLoadingRound2 = false;
-      this.isRightLoadingAccuracy = false;
       this.agentARound1Result = '';
       this.agentBRound1Result = '';
       this.agentCRound1Result = '';
@@ -932,7 +957,6 @@ export default {
       this.isRound2Displayed = false;
       this.isRightLoadingResults = false;
       this.isRightResultsDisplayed = false;
-      this.accuracyRate = '—';
       this.imageModeRound1FromStatic = null;
       this.finalBattlefieldTriple = null;
       this.finalPriorityAssessment = '';
@@ -1084,11 +1108,10 @@ export default {
      * @param {boolean} [opts.round2] 二轮智能体
      * @param {boolean} [opts.review] final_review + 分歧子段
      * @param {boolean} [opts.finalBlock] 协商结果（final_battlefield_analysis 优先）
-     * @param {boolean} [opts.accuracy] 是否写入 accuracy_metrics.accuracy → 偏差识别准确率
      */
     applyModule3Fields(data, opts) {
       const o = Object.assign(
-        { round1: true, round2: true, review: true, finalBlock: true, accuracy: true },
+        { round1: true, round2: true, review: true, finalBlock: true, accuracy: false },
         opts || {}
       );
       if (!data || typeof data !== 'object') return;
@@ -1179,12 +1202,7 @@ export default {
           this.finalResult = this.toDisplayString(data.final_model_name);
         }
       }
-      if (o.accuracy) {
-        const acc = this.getAccuracyFromModule3Data(data);
-        if (acc !== null) {
-          this.accuracyRate = acc;
-        }
-      }
+      // 偏差识别准确率仅由「偏差测试」→ /evaluate/generate 的 stats.ratio 更新，此处不写入
     },
     // 导航到首页
     navigateHome() {
@@ -1883,23 +1901,140 @@ export default {
       }
       this.startInfer();
     },
-    exportResults() {
-      // 结果导出功能
-      console.log('导出结果');
+    clearBiasTestTimer() {
+      if (this.biasTestTimer) {
+        clearTimeout(this.biasTestTimer);
+        this.biasTestTimer = null;
+      }
+    },
+    startBiasTest() {
+      // 偏差识别准确率仅由此按钮驱动：点击后显示计算中，测试完毕后显示 ratio
+      if (this.isBiasTesting) return;
+      this.clearBiasTestTimer();
+      this.biasTestDone = false;
+      this.isBiasTesting = true;
+      this.biasTestProgress = 1;
+      this.pendingBiasEvaluateRatio = null;
+      this.biasEvaluateRequestFailed = false;
+      this.isRightLoadingAccuracy = true;
+      this.accuracyRate = '—';
+      this.scheduleBiasTestStep();
+      this.fetchBiasEvaluateAccuracy();
+    },
+    scheduleBiasTestStep() {
+      this.clearBiasTestTimer();
+      const delayMs = 500 + Math.floor(Math.random() * 1501);
+      this.biasTestTimer = setTimeout(() => {
+        this.biasTestTimer = null;
+        if (this.biasTestProgress >= 80) {
+          this.isBiasTesting = false;
+          this.biasTestDone = true;
+          this.tryApplyBiasEvaluateAccuracy();
+          return;
+        }
+        this.biasTestProgress += 1;
+        this.scheduleBiasTestStep();
+      }, delayMs);
+    },
+    /** 仅在按钮「测试完毕」后，把 pending 的 stats.ratio 写入偏差识别准确率 */
+    tryApplyBiasEvaluateAccuracy() {
+      if (!this.biasTestDone) return;
+      if (this.pendingBiasEvaluateRatio !== null && this.pendingBiasEvaluateRatio !== undefined && this.pendingBiasEvaluateRatio !== '') {
+        this.accuracyRate = this.pendingBiasEvaluateRatio;
+        this.isRightLoadingAccuracy = false;
+        console.log('[GroupNegotiation] 测试完毕，更新偏差识别准确率:', this.accuracyRate);
+        return;
+      }
+      if (this.biasEvaluateRequestFailed) {
+        this.accuracyRate = '—';
+        this.isRightLoadingAccuracy = false;
+        alert('偏差识别准确率获取失败，请稍后重试');
+      }
+      // 接口尚未返回：保持「计算中...」，等 fetch 结束后再试
+    },
+    /** 偏差测试：POST /evaluate/generate，结果暂存，等测试完毕再显示 */
+    async fetchBiasEvaluateAccuracy() {
+      this.pendingBiasEvaluateRatio = null;
+      this.biasEvaluateRequestFailed = false;
+      // 计算中状态已在 startBiasTest 打开，此处不因其它逻辑关闭
+      console.log('[GroupNegotiation] 偏差测试评估:', MODULE3_EVALUATE_GENERATE_URL);
       try {
-        // 创建隐藏的下载链接
+        const response = await axios.post(
+          MODULE3_EVALUATE_GENERATE_URL,
+          {},
+          {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 120000
+          }
+        );
+        const stats = response && response.data && response.data.stats;
+        const ratio = stats && stats.ratio;
+        if (ratio === undefined || ratio === null || ratio === '') {
+          throw new Error('响应缺少 stats.ratio');
+        }
+        this.pendingBiasEvaluateRatio = ratio;
+        this.biasEvaluateRequestFailed = false;
+        console.log('[GroupNegotiation] 已拿到 stats.ratio，等待测试完毕后显示:', ratio);
+        this.tryApplyBiasEvaluateAccuracy();
+      } catch (error) {
+        console.error('[GroupNegotiation] /evaluate/generate 失败:', error);
+        this.pendingBiasEvaluateRatio = null;
+        this.biasEvaluateRequestFailed = true;
+        this.tryApplyBiasEvaluateAccuracy();
+      }
+    },
+    async exportResults() {
+      if (this.isExporting) return;
+      this.isExporting = true;
+      console.log('[GroupNegotiation] 结果导出:', MODULE3_EXPORT_URL);
+      try {
+        const response = await axios.get(MODULE3_EXPORT_URL, {
+          responseType: 'blob',
+          timeout: 120000,
+          headers: {
+            Accept: 'application/zip'
+          }
+        });
+        if (response.status !== 200) {
+          throw new Error(`服务器返回异常状态码: ${response.status}`);
+        }
+
+        let fileName = 'batch_result.zip';
+        const contentDisposition =
+          response.headers &&
+          (response.headers['content-disposition'] || response.headers['Content-Disposition']);
+        if (contentDisposition && contentDisposition.includes('filename=')) {
+          const matches = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (matches && matches[1]) {
+            fileName = matches[1].replace(/['"]/g, '');
+            if (fileName.startsWith("UTF-8''")) {
+              fileName = decodeURIComponent(fileName.replace(/^UTF-8''/, ''));
+            } else {
+              try {
+                fileName = decodeURIComponent(fileName);
+              } catch (e) {
+                /* keep raw */
+              }
+            }
+          }
+        }
+
+        const blob = new Blob([response.data], { type: 'application/zip' });
         const link = document.createElement('a');
-        link.href = '/static/batch_result.zip';
-        link.download = 'batch_result.zip';
+        const objectUrl = URL.createObjectURL(blob);
+        link.href = objectUrl;
+        link.download = fileName;
         link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
-        // 清理DOM
         document.body.removeChild(link);
-        console.log('导出请求已发送');
+        URL.revokeObjectURL(objectUrl);
+        console.log('[GroupNegotiation] 导出成功:', fileName);
       } catch (error) {
-        console.error('导出失败:', error);
+        console.error('[GroupNegotiation] 导出失败:', error);
         alert('导出失败，请稍后重试');
+      } finally {
+        this.isExporting = false;
       }
     },
     
@@ -2068,7 +2203,7 @@ export default {
       }
     },
 
-    // 右侧偏差检测按钮：不再请求后端，分步显示
+    // 右侧偏差检测按钮：不再请求后端，分步显示；不再更新偏差识别准确率
     handleBiasDetect() {
       // 优先使用本次“开始群体协商”返回数据，其次回退 localStorage
       let data = this.pendingNegotiationResult;
@@ -2093,7 +2228,7 @@ export default {
         round2: true,
         review: true,
         finalBlock: true,
-        accuracy: !isImageMode
+        accuracy: false
       });
       // 与开始群体协商后一致：数据来自当次 module3Res，不依赖历史计时
       this.isRightResultsDisplayed = true;
@@ -2103,44 +2238,14 @@ export default {
         this.staticBiasDetectionResult = null;
       }
       this.isRightLoadingResults = true;
-      this.isRightLoadingAccuracy = true;
-      if (this.accuracyTimer) {
-        clearTimeout(this.accuracyTimer);
-        this.accuracyTimer = null;
-      }
-      localStorage.removeItem('module3AccuracyTimerStart');
-      localStorage.removeItem('module3CachedAccuracy');
       setTimeout(() => {
         this.isRightLoadingResults = false;
       }, 2000);
-      if (isImageMode) {
-        this.accuracyRate = '—';
-        this.accuracyTimer = setTimeout(() => {
-          this.accuracyRate = MODULE3_IMAGE_FIXED_ACCURACY;
-          this.isRightLoadingAccuracy = false;
-          this.accuracyTimer = null;
-        }, MODULE3_BIAS_ACCURACY_DELAY);
-      } else {
-        setTimeout(() => {
-          this.isRightLoadingAccuracy = false;
-        }, 2000);
-      }
     },
     
-    // 进页不根据旧 module3Res 预填准确率；须「选图 → 开始群体协商」接口成功（或点偏差检测用当前 module3Res）后才有数
+    // 偏差识别准确率仅由「偏差测试」控制：进页保持 N/A，此处不做任何重置
     checkAccuracyTimer() {
-      try {
-        this.accuracyRate = '—';
-        this.isRightLoadingAccuracy = false;
-        if (this.accuracyTimer) {
-          clearTimeout(this.accuracyTimer);
-          this.accuracyTimer = null;
-        }
-      } catch (e) {
-        console.error('检查准确率状态失败:', e);
-        this.accuracyRate = '—';
-        this.isRightLoadingAccuracy = false;
-      }
+      // no-op：避免其它初始化/回显逻辑改写准确率状态
     }
   }
 };
@@ -3610,17 +3715,19 @@ export default {
   justify-content: center;
 }
 
-/* 结果导出按钮区域 */
+/* 随机选择 / 结果导出按钮区域 */
 .panel-right-button {
   flex-shrink: 0;
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 6px;
   padding: 0;
   min-height: 70px;
   background: none;
   margin-top: auto;
+  box-sizing: border-box;
 }
 
 /* 新增：右侧偏差检测按钮区域与样式（与左下角按钮尺寸风格一致） */
@@ -3694,8 +3801,8 @@ export default {
   white-space: nowrap;
 }
 
+.btn-random-select,
 .btn-export-result {
-  background-image: url('~@/assets/images/step5/按钮-结果导出.png');
   background-repeat: no-repeat;
   background-color: transparent;
   background-size: 100% 100%;
@@ -3704,6 +3811,7 @@ export default {
   cursor: pointer;
   width: 250px;
   height: 100px;
+  flex: 0 0 250px;
   font-family: DOUYUFont;
   color: #FFFFFF;
   font-weight: 400;
@@ -3717,13 +3825,45 @@ export default {
   transition: all 0.3s ease;
   position: relative;
   padding-right: 20px;
+  box-sizing: border-box;
 }
 
+/* 底图与「群体协商偏差检测」同色（greenbutton）；盒尺寸与结果导出完全一致 */
+.btn-random-select {
+  background-image: url('~@/assets/images/step3/greenbutton.png');
+  width: 250px;
+  height: 100px;
+  flex: 0 0 250px;
+  min-width: 250px;
+  max-width: 250px;
+  min-height: 100px;
+  max-height: 100px;
+}
+
+.btn-export-result {
+  background-image: url('~@/assets/images/step5/按钮-结果导出.png');
+  width: 250px;
+  height: 100px;
+  flex: 0 0 250px;
+  min-width: 250px;
+  max-width: 250px;
+  min-height: 100px;
+  max-height: 100px;
+}
+
+/* 进度文案「检测中：x/80」保持现有较小字号 */
+.btn-random-select--progress {
+  font-size: 16px;
+  padding-right: 14px;
+}
+
+.btn-random-select:hover:not(:disabled),
 .btn-export-result:hover:not(:disabled) {
   transform: translateY(-2px);
   filter: brightness(1.1);
 }
 
+.btn-random-select:disabled,
 .btn-export-result:disabled {
   filter: grayscale(80%);
   cursor: not-allowed;
