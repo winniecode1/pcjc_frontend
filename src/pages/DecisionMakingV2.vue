@@ -323,7 +323,26 @@
         </div>
 
         <div class="action-buttons-right">
-          <button class="btn-export-result" @click="exportData" :disabled="!hasStartedBiasDetection || isBiasDetecting || isExporting">
+          <button
+            class="btn-export-result btn-policy-bias-test"
+            :class="{ 'btn-policy-bias-test--progress': isPolicyBiasTesting && !policyBiasTestDone }"
+            @click="startPolicyBiasTest"
+            :disabled="isPolicyBiasTesting"
+          >
+            <span class="btn-text-pos">{{ policyBiasTestButtonText }}</span>
+          </button>
+          <button
+            class="btn-export-result btn-calc-accuracy"
+            @click="startCalculateAccuracy"
+            :disabled="isCalculatingAccuracy"
+          >
+            <span class="btn-text-pos">{{ isCalculatingAccuracy ? '计算中...' : '计算准确率' }}</span>
+          </button>
+          <button
+            class="btn-export-result"
+            @click="exportData"
+            :disabled="isExporting"
+          >
             <b-spinner small v-if="isExporting" class="btn-spinner-pos"></b-spinner>
             <span class="btn-text-pos">{{ isExporting ? '导出中...' : '结果导出' }}</span>
           </button>
@@ -356,6 +375,11 @@ const VIDEO_DIR = "/home/wuzhixuan/Project/PCJC/datasets/Vedio"
 const BIAS_DETECTION_DELAY = 30 * 1000;
 const STATISTICS_ACCURACY_API_URL = `${SOURCE_API_BASE_URL}/statistics/accuracy`;
 const EXPORT_OUTPUT_API_URL = `${SOURCE_API_BASE_URL}/export/output`;
+const POLICY_DECISION_TEST_DATA_URL = `${SOURCE_API_BASE_URL}/export/policy-decision-test-data`;
+/** 计算准确率：点击后延迟展示时长（ms） */
+const CALCULATE_ACCURACY_DELAY_MS = 5000;
+/** 偏差测试进度步进间隔（ms） */
+const POLICY_BIAS_TEST_STEP_MS = 30 * 1000;
 /** 作战指令：选中媒体后至少延迟展示时长（ms） */
 const ORDERS_DISPLAY_DELAY_MS = 5000;
 /** 作战指令展示完成后，再延迟展示认知传播图片/视频（ms，3–5 秒） */
@@ -447,6 +471,15 @@ export default {
       summaryTypingSpeed: 200,
       isBiasDetecting: false,
       isExporting: false,
+      /** 偏差测试按钮：1/80 → 测试完毕 */
+      policyBiasTestProgress: 0,
+      isPolicyBiasTesting: false,
+      policyBiasTestDone: false,
+      policyBiasTestTimer: null,
+      /** 计算准确率按钮：5s 后写入偏差识别准确率 */
+      isCalculatingAccuracy: false,
+      calculateAccuracyTimer: null,
+      pendingCalculateAccuracyRatio: null,
       hasStartedDetection: false,
       /** 点击「目标与轨迹识别」且多模态检测结果区已展示完成后为 true */
       trackResultDisplayReady: false,
@@ -463,6 +496,13 @@ export default {
     };
   },
   computed: {
+    policyBiasTestButtonText() {
+      if (this.policyBiasTestDone) return '测试完毕';
+      if (this.isPolicyBiasTesting && this.policyBiasTestProgress > 0) {
+        return `检测中：${this.policyBiasTestProgress}/80`;
+      }
+      return '偏差测试';
+    },
     canStartBiasDetection() {
       return (
         this.trackResultDisplayReady &&
@@ -543,6 +583,8 @@ export default {
     this.clearOrdersRefineDisplayTimer();
     this.clearOriginalMediaDisplayTimer();
     this.clearTrackDisplayTimer();
+    this.clearPolicyBiasTestTimer();
+    this.clearCalculateAccuracyTimer();
     this.revokeOriginalMediaBlob();
     this.revokeProcessedMediaBlob();
     // 页面销毁前保存所有状态到 localStorage
@@ -685,8 +727,7 @@ export default {
       }
     },
     applyDeviationDetectionAccuracyFromCache() {
-      this.deviationDetectionAccuracy = '90';
-      console.log('[DecisionMakingV2] 偏差识别准确率展示值 deviationDetectionAccuracy:', this.deviationDetectionAccuracy);
+      // 偏差识别准确率仅由「计算准确率」按钮控制，不再使用固定缓存值
     },
     /** 清除作战指令延迟展示定时器 */
     clearOrdersRefineDisplayTimer() {
@@ -1037,7 +1078,7 @@ export default {
           this.biasDetailEntries = JSON.parse(savedEntries);
         }
         this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
-        this.applyDeviationDetectionAccuracyFromCache();
+        // 偏差识别准确率仅由「计算准确率」控制，完成恢复时不写入固定准确率
         return;
       }
 
@@ -1062,7 +1103,7 @@ export default {
           this.isBiasDetecting = true;
           this.hasStartedBiasDetection = true;
           this.showAccuracy = false;
-          this.deviationDetectionAccuracy = '计算中...';
+          // 偏差识别准确率仅由「计算准确率」控制，恢复计时时不改写
           this.showBiasDetails = true;
           this.biasDisplayTexts = this.biasDetailEntries.map(e => e.text);
           this.startAccuracyTimer(remaining);
@@ -1287,7 +1328,7 @@ export default {
       this.processedVideoCodecWarning = null;
       this.processedVideoDownloadName = '';
       this.trackRecognitionContext = null;
-      this.deviationDetectionAccuracy = 'N/A';
+      // 偏差识别准确率仅由「计算准确率」控制，切换媒体不重置
       this.taskId = null;
       this.fullResult = {
         video_description: null,
@@ -1336,7 +1377,7 @@ export default {
       this.isBiasDetecting = false;
       this.isBiasTyping = false;
       this.hasStartedBiasDetection = false;
-      this.deviationDetectionAccuracy = 'N/A';
+      // 偏差识别准确率仅由「计算准确率」控制，此处不重置
       localStorage.removeItem('biasStartTime');
       localStorage.removeItem('biasDetectionStarted');
       localStorage.removeItem('biasDetectionCompleted');
@@ -1871,14 +1912,14 @@ export default {
         this.accuracyTimeout = null;
       }
       this.showAccuracy = false;
-      this.deviationDetectionAccuracy = 'N/A';
+      // 偏差识别准确率仅由「计算准确率」控制，不在此重置为 N/A
       localStorage.removeItem('biasStartTime');
       localStorage.removeItem('biasDetectionCompleted');
     },
     startDeviationAccuracyCountdown() {
       this.clearBiasTimeouts();
       this.showAccuracy = false;
-      this.deviationDetectionAccuracy = '计算中...';
+      // 偏差识别准确率仅由「计算准确率」控制，选决策倒计时不再改写准确率面板
       localStorage.setItem('biasStartTime', Date.now().toString());
       localStorage.setItem('biasDetectionStarted', 'true');
       localStorage.removeItem('biasDetectionCompleted');
@@ -2213,7 +2254,6 @@ export default {
         }];
         this.biasDisplayTexts = [this.biasDetailEntries[0].text];
         this.isBiasTyping = false;
-        this.deviationDetectionAccuracy = 'N/A';
         localStorage.setItem('biasDetailEntries', JSON.stringify(this.biasDetailEntries));
         this.resultMessage = '决策认知偏差检测失败';
       }
@@ -2350,7 +2390,7 @@ export default {
       this.showAccuracy = true;
       localStorage.setItem('biasDetectionCompleted', 'true');
       localStorage.removeItem('biasStartTime');
-      this.applyDeviationDetectionAccuracyFromCache();
+      // 偏差识别准确率仅由「计算准确率」控制，此处不再写入固定准确率
       if (this.fullResult) {
         localStorage.setItem('fullResult', JSON.stringify(this.fullResult));
       }
@@ -2831,10 +2871,7 @@ export default {
     },
     /** 与 DecisionMaking.vue exportData：GET /export/output */
     async exportData() {
-      if (!this.hasStartedBiasDetection) {
-        alert('请先点击「决策认知偏差检测」后再导出结果。');
-        return;
-      }
+      if (this.isExporting) return;
       const logTag = '[DecisionMakingV2][export/output]';
       this.isExporting = true;
       try {
@@ -2869,6 +2906,115 @@ export default {
       } finally {
         this.isExporting = false;
       }
+    },
+    clearPolicyBiasTestTimer() {
+      if (this.policyBiasTestTimer) {
+        clearTimeout(this.policyBiasTestTimer);
+        this.policyBiasTestTimer = null;
+      }
+    },
+    clearCalculateAccuracyTimer() {
+      if (this.calculateAccuracyTimer) {
+        clearTimeout(this.calculateAccuracyTimer);
+        this.calculateAccuracyTimer = null;
+      }
+    },
+    /** 偏差测试：调用 /export/policy-decision-test-data，并按 0.1s 步进显示 1/80→测试完毕 */
+    startPolicyBiasTest() {
+      if (this.isPolicyBiasTesting) return;
+      this.clearPolicyBiasTestTimer();
+      this.policyBiasTestDone = false;
+      this.isPolicyBiasTesting = true;
+      this.policyBiasTestProgress = 1;
+      this.schedulePolicyBiasTestStep();
+      this.fetchPolicyDecisionTestData();
+    },
+    schedulePolicyBiasTestStep() {
+      this.clearPolicyBiasTestTimer();
+      this.policyBiasTestTimer = setTimeout(() => {
+        this.policyBiasTestTimer = null;
+        if (this.policyBiasTestProgress >= 80) {
+          this.isPolicyBiasTesting = false;
+          this.policyBiasTestDone = true;
+          return;
+        }
+        this.policyBiasTestProgress += 1;
+        this.schedulePolicyBiasTestStep();
+      }, POLICY_BIAS_TEST_STEP_MS);
+    },
+    async fetchPolicyDecisionTestData() {
+      const logTag = '[DecisionMakingV2][policy-decision-test-data]';
+      try {
+        console.log(`${logTag} GET`, POLICY_DECISION_TEST_DATA_URL);
+        // 仅调用接口，不触发下载
+        const response = await axios.get(POLICY_DECISION_TEST_DATA_URL, {
+          responseType: 'blob',
+          timeout: 120000
+        });
+        console.log(`${logTag} 成功`, response.status);
+      } catch (error) {
+        console.error(`${logTag} 失败`, error);
+        alert('偏差测试接口调用失败，请稍后重试');
+      }
+    },
+    /**
+     * 计算准确率：调用 /statistics/accuracy，面板显示计算中...，
+     * 5s 后写入 ratio / average_comprehensive_accuracy 百分比。
+     * 仅此按钮改写偏差识别准确率；与偏差测试无先后依赖。
+     */
+    async startCalculateAccuracy() {
+      if (this.isCalculatingAccuracy) return;
+      this.clearCalculateAccuracyTimer();
+      this.isCalculatingAccuracy = true;
+      this.pendingCalculateAccuracyRatio = null;
+      this.deviationDetectionAccuracy = '计算中...';
+      const logTag = '[DecisionMakingV2][calculate-accuracy]';
+      try {
+        console.log(`${logTag} GET`, STATISTICS_ACCURACY_API_URL);
+        const response = await axios.get(STATISTICS_ACCURACY_API_URL, { timeout: 60000 });
+        const data = response && response.data;
+        const ratio =
+          data &&
+          (data.ratio != null
+            ? data.ratio
+            : data.stats && data.stats.ratio != null
+              ? data.stats.ratio
+              : data.average_comprehensive_accuracy);
+        if (ratio === undefined || ratio === null || ratio === '') {
+          throw new Error('响应缺少 ratio / average_comprehensive_accuracy');
+        }
+        this.pendingCalculateAccuracyRatio = ratio;
+        console.log(`${logTag} 已拿到准确率字段，5s 后展示:`, ratio);
+      } catch (error) {
+        console.error(`${logTag} 失败`, error);
+        this.pendingCalculateAccuracyRatio = null;
+        this.isCalculatingAccuracy = false;
+        this.deviationDetectionAccuracy = 'N/A';
+        alert('计算准确率失败，请稍后重试');
+        return;
+      }
+      this.calculateAccuracyTimer = setTimeout(() => {
+        this.calculateAccuracyTimer = null;
+        this.isCalculatingAccuracy = false;
+        if (
+          this.pendingCalculateAccuracyRatio !== null &&
+          this.pendingCalculateAccuracyRatio !== undefined &&
+          this.pendingCalculateAccuracyRatio !== ''
+        ) {
+          const raw = this.pendingCalculateAccuracyRatio;
+          const num = typeof raw === 'number' ? raw : parseFloat(String(raw).replace(/%$/, ''));
+          if (!isNaN(num)) {
+            const pct = num <= 1 && num >= 0 ? num * 100 : num;
+            this.deviationDetectionAccuracy = pct.toFixed(2);
+          } else {
+            this.deviationDetectionAccuracy = String(raw);
+          }
+          console.log(`${logTag} 展示偏差识别准确率:`, this.deviationDetectionAccuracy);
+          localStorage.setItem('deviationDetectionAccuracy', this.deviationDetectionAccuracy);
+        } else {
+          this.deviationDetectionAccuracy = 'N/A';
+        }
+      }, CALCULATE_ACCURACY_DELAY_MS);
     }
   }
 };
@@ -4555,25 +4701,65 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 6px;
   margin-top: 0 !important;
   padding-top: 0 !important;
   padding-bottom: 0;
+  padding-left: 6px;
+  padding-right: 6px;
   width: 100%;
+  min-height: 100px;
+  max-height: 100px;
+  box-sizing: border-box;
 }
 
 .btn-export-result {
-  width: 250px;
+  width: auto;
   height: 100px;
+  flex: 1 1 0;
+  max-width: 150px;
+  min-width: 0;
   background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
   background-repeat: no-repeat;
   background-size: 100% 100%;
   font-family: 'DOUYUFont', sans-serif;
-  font-size: 23px;
+  font-size: 14px;
   display: block;
-  margin: 0 auto;
+  margin: 0;
+  position: relative;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  color: #fff;
+  box-sizing: border-box;
+}
+
+.btn-policy-bias-test {
+  background-image: url('~@/assets/images/step3/greenbutton.png');
+  font-size: 14px;
+}
+
+.btn-policy-bias-test--progress {
+  font-size: 11px;
+}
+
+.btn-calc-accuracy {
+  /* 与模块三「开始群体协商」同底图 */
+  background-image: url('~@/assets/images/step1/-s-按钮-开始测试.png');
+  filter: none;
+  font-size: 13px;
 }
 
 .btn-export-result:disabled {
+  filter: grayscale(80%);
+  cursor: not-allowed;
+}
+
+.btn-calc-accuracy:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.btn-calc-accuracy:disabled {
   filter: grayscale(80%);
   cursor: not-allowed;
 }
