@@ -231,7 +231,10 @@
         </div>
 
         <div class="action-buttons-right">
-          <button class="btn-export-result" @click="exportResults" :disabled="!taskId || isLoading || isExporting">
+          <button class="btn-random-select" @click="onRandomSelectClick" :disabled="isRandomSelecting">
+            {{ randomSelectButtonText }}
+          </button>
+          <button class="btn-export-result" @click="downloadRandomDataset" :disabled="!canExport">
             <b-spinner small v-if="isExporting" class="btn-spinner-pos"></b-spinner>
             <span class="btn-text-pos">{{ isExporting ? '导出中...' : '结果导出' }}</span>
           </button>
@@ -249,7 +252,7 @@ import { BIcon, BIconPlayCircleFill, BIconPlayFill, BSpinner } from 'bootstrap-v
 // API 基础地址
 const API_BASE_URL = 'http://10.109.253.71:5236';
 const FRONTEND_BASE_URL = 'http://10.109.253.71:8889';
-const IMAGE_API_URL = 'http://10.109.253.71:5238';
+const IMAGE_API_URL = 'http://10.109.253.71:5230';
 const BASE_DIR = "/home/wuzhixixin/Project/PCJC/1";
 const VIDEO_DIR = "/home/wuzhixixin/Project/PCJC/datasets/Vedio"
 // 定义偏差检测等待时长 (ms) - 2分钟
@@ -327,6 +330,10 @@ export default {
       summaryTypingSpeed: 200,
       isBiasDetecting: false,
       isExporting: false,
+      isRandomSelecting: false,
+      randomSelectProgress: 0,
+      randomSelectTimer: null,
+      hasRandomSelectionDone: false,
       hasStartedDetection: false,
       hasStartedBiasDetection: false,
       showFormulaTooltip: false,
@@ -336,6 +343,17 @@ export default {
   watch: {
   },
   computed: {
+    // 随机选取数据按钮文案
+    randomSelectButtonText() {
+      if (this.isRandomSelecting && this.randomSelectProgress > 0) {
+        return `测试中：${this.randomSelectProgress}/100`;
+      }
+      return '随机选取数据';
+    },
+    // 随机选取数据是否完成
+    canExport() {
+      return this.hasRandomSelectionDone && !this.isRandomSelecting;
+    },
     // 把偏差检测条目按 label 拆分为两部分：
     // 上框（多模态信息认知结果）：信息类别 + 战场环境 + 场景 + 行为 + 总结
     // 下框（多模态信息认知偏差检测结果）：其余条目
@@ -2086,6 +2104,96 @@ export default {
       } finally {
         this.isExporting = false;
       }
+    },
+    // 随机选取数据
+    onRandomSelectClick() {
+      console.log('onRandomSelectClick called');
+      console.log('isRandomSelecting:', this.isRandomSelecting);
+      if (this.isRandomSelecting) return;
+      this.isRandomSelecting = true;
+      this.hasRandomSelectionDone = false;
+      this.randomSelectProgress = 1;
+      console.log('Starting animation, progress:', this.randomSelectProgress);
+      this.scheduleRandomSelectStep();
+      // 发送请求
+      axios.post(`${IMAGE_API_URL}/api/dataset/random-selection`, null, {
+        headers: { Accept: 'application/json' }
+      })
+        .then(response => {
+          console.log('Request success:', response.data);
+          const payload = response.data;
+          if (!payload.success) {
+            throw new Error(payload.error || '测试结果生成失败');
+          }
+          // 数据已保存到服务器
+        })
+        .catch(error => {
+          console.error('随机选取数据失败:', error);
+          alert(error.message || '随机选取数据失败，请稍后重试');
+        });
+    },
+    // 随机选取进度动画
+    scheduleRandomSelectStep() {
+      // 1~2秒随机延迟
+      const delayMs = 1000 + Math.floor(Math.random() * 1001);
+      console.log('Scheduling next step, delay:', delayMs, 'current progress:', this.randomSelectProgress);
+      this.randomSelectTimer = setTimeout(() => {
+        this.randomSelectTimer = null;
+        if (this.randomSelectProgress >= 100) {
+          console.log('Animation complete');
+          this.isRandomSelecting = false;
+          this.hasRandomSelectionDone = true;
+          this.randomSelectProgress = 0;
+          return;
+        }
+        this.randomSelectProgress += 1;
+        console.log('Progress:', this.randomSelectProgress);
+        this.scheduleRandomSelectStep();
+      }, delayMs);
+    },
+    // 清除随机选取定时器
+    clearRandomSelectTimer() {
+      if (this.randomSelectTimer) {
+        clearTimeout(this.randomSelectTimer);
+        this.randomSelectTimer = null;
+      }
+      this.isRandomSelecting = false;
+      this.randomSelectProgress = 0;
+    },
+    // 下载随机选取的数据
+    async downloadRandomDataset() {
+      if (this.isExporting) return;
+      this.isExporting = true;
+      try {
+        const response = await axios.get(
+          `${IMAGE_API_URL}/api/dataset/random-selection/download`,
+          { responseType: 'blob' }
+        );
+        const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8' });
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = 'test_result_dataset.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+      } catch (error) {
+        console.error('下载随机数据失败:', error);
+        let message = '下载失败';
+        if (error.response && error.response.status === 404) {
+          try {
+            const errorText = await error.response.data.text();
+            const errorJson = JSON.parse(errorText);
+            message = errorJson.error || '尚未生成测试结果，请先点击随机选取数据';
+          } catch (e) {
+            message = '尚未生成测试结果，请先点击随机选取数据';
+          }
+        }
+        alert(message);
+      } finally {
+        this.isExporting = false;
+      }
     }
   }
 };
@@ -2970,13 +3078,40 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 10px;
   margin-top: 5px !important;
   padding-top: 0 !important;
   padding-bottom: 10px;
 }
 
+.btn-random-select {
+  width: 180px;
+  height: 100px;
+  background-image: url('~@/assets/images/step3/greenbutton.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  font-family: 'DOUYUFont', sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  font-style: normal;
+  text-decoration: none;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+/* 进度文案保持较小字号 */
+.btn-random-select[disabled] {
+  cursor: default;
+}
+
 .btn-export-result {
-  width: 250px;
+  width: 180px;
   height: 100px;
   background-image: url('~@/assets/images/step1/-s-按钮-结果导出.png');
   background-repeat: no-repeat;

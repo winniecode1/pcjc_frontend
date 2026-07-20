@@ -268,8 +268,16 @@
           </div>
         </div>
 
-        <!-- 结果导出按钮 -->
-        <div class="panel-right-button">
+        <!-- 结果导出和偏差测试按钮 -->
+        <div class="panel-right-buttons">
+          <button
+            @click="startBiasTest"
+            class="btn-bias-test"
+            :class="{ 'btn-bias-test--progress': isBiasTesting && !biasTestDone }"
+            :disabled="isBiasTesting"
+          >
+            {{ biasTestButtonText }}
+          </button>
           <button @click="downloadJsonData" class="btn-export-result" :disabled="isLoading">
             结果导出
           </button>
@@ -304,6 +312,12 @@
 </template>
 
 <script>
+// 先验知识模块基础URL
+const MODULE2_BASE = (process.env.VUE_APP_MODULE2_BASE || '').replace(/\/$/, '');
+const MODULE2_EVALUATE_GENERATE_URL = MODULE2_BASE
+  ? `${MODULE2_BASE}/evaluate/generate`
+  : '/module2/evaluate/generate';
+
 // 导入 axios 用于 HTTP 请求
 import axios from 'axios';
   // 从localStorage获取module1Res对象并解析所需属性
@@ -387,10 +401,25 @@ export default {
           hasStartedBiasDetection: false,
           // 偏差分组折叠状态
           isNoDeviationOpen: true,
-          isHasDeviationOpen: false
+          isHasDeviationOpen: false,
+          // 偏差测试相关状态
+          biasTestProgress: 0,
+          isBiasTesting: false,
+          biasTestDone: false,
+          biasTestTimer: null,
+          pendingBiasEvaluateRatio: null,
+          biasEvaluateRequestFailed: false
         };
       },
   computed: {
+    // 偏差测试按钮文案
+    biasTestButtonText() {
+      if (this.biasTestDone) return '测试完毕';
+      if (this.isBiasTesting && this.biasTestProgress > 0) {
+        return `检测中：${this.biasTestProgress}/80`;
+      }
+      return '偏差测试';
+    },
     // 判断当前数据是否为SAR类型
     isSARData() {
       try {
@@ -458,8 +487,7 @@ export default {
   },
   beforeDestroy() {
     window.removeEventListener('resize', this.handleResize);
-    // 注意：不在这里清除定时器，让计时在页面切换后继续
-    // 只有在计时完成时才清除localStorage
+    this.clearBiasTestTimer();
   },
   methods: {
     // 根据 deviation_status 解析偏差类型
@@ -1892,6 +1920,88 @@ export default {
       } catch (error) {
         console.error('获取并下载JSON失败:', error);
       }
+    },
+    // 清空偏差测试定时器
+    clearBiasTestTimer() {
+      if (this.biasTestTimer) {
+        clearTimeout(this.biasTestTimer);
+        this.biasTestTimer = null;
+      }
+    },
+    // 偏差测试：POST /evaluate/generate，结果暂存，等测试完毕再显示
+    startBiasTest() {
+      if (this.isBiasTesting) return;
+      this.clearBiasTestTimer();
+      this.biasTestDone = false;
+      this.isBiasTesting = true;
+      this.biasTestProgress = 1;
+      this.pendingBiasEvaluateRatio = null;
+      this.biasEvaluateRequestFailed = false;
+      this.isWaitingForAccuracy = true;
+      this.accuracyRate = '—';
+      this.scheduleBiasTestStep();
+      this.fetchBiasEvaluateAccuracy();
+    },
+    // 偏差测试进度调度
+    scheduleBiasTestStep() {
+      this.clearBiasTestTimer();
+      const delayMs = 500 + Math.floor(Math.random() * 1501);
+      this.biasTestTimer = setTimeout(() => {
+        this.biasTestTimer = null;
+        if (this.biasTestProgress >= 80) {
+          this.isBiasTesting = false;
+          this.biasTestDone = true;
+          this.tryApplyBiasEvaluateAccuracy();
+          return;
+        }
+        this.biasTestProgress += 1;
+        this.scheduleBiasTestStep();
+      }, delayMs);
+    },
+    // 仅在按钮「测试完毕」后，把 pending 的 stats.ratio 写入偏差识别准确率
+    tryApplyBiasEvaluateAccuracy() {
+      if (!this.biasTestDone) return;
+      if (this.pendingBiasEvaluateRatio !== null && this.pendingBiasEvaluateRatio !== undefined && this.pendingBiasEvaluateRatio !== '') {
+        this.accuracyRate = this.pendingBiasEvaluateRatio;
+        this.isWaitingForAccuracy = false;
+        console.log('[PriorKnowledge] 测试完毕，更新偏差识别准确率:', this.accuracyRate);
+        return;
+      }
+      if (this.biasEvaluateRequestFailed) {
+        this.accuracyRate = '—';
+        this.isWaitingForAccuracy = false;
+        alert('偏差识别准确率获取失败，请稍后重试');
+      }
+    },
+    // 偏差测试：POST /evaluate/generate，结果暂存，等测试完毕再显示
+    async fetchBiasEvaluateAccuracy() {
+      this.pendingBiasEvaluateRatio = null;
+      this.biasEvaluateRequestFailed = false;
+      console.log('[PriorKnowledge] 偏差测试评估:', MODULE2_EVALUATE_GENERATE_URL);
+      try {
+        const response = await axios.post(
+          MODULE2_EVALUATE_GENERATE_URL,
+          {},
+          {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 120000
+          }
+        );
+        const stats = response && response.data && response.data.stats;
+        const ratio = stats && stats.ratio;
+        if (ratio === undefined || ratio === null || ratio === '') {
+          throw new Error('响应缺少 stats.ratio');
+        }
+        this.pendingBiasEvaluateRatio = ratio;
+        this.biasEvaluateRequestFailed = false;
+        console.log('[PriorKnowledge] 已拿到 stats.ratio，等待测试完毕后显示:', ratio);
+        this.tryApplyBiasEvaluateAccuracy();
+      } catch (error) {
+        console.error('[PriorKnowledge] /evaluate/generate 失败:', error);
+        this.pendingBiasEvaluateRatio = null;
+        this.biasEvaluateRequestFailed = true;
+        this.tryApplyBiasEvaluateAccuracy();
+      }
     }
   }
 };
@@ -2046,7 +2156,7 @@ text-decoration: none;
 }
 
 /* 面板通用样式 */
-[class^="panel-"]:not(.panel-right-button):not(.panel-right-accuracy), .design-module {
+[class^="panel-"]:not(.panel-right-buttons):not(.panel-right-accuracy), .design-module {
   width: 100%;
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -2119,16 +2229,49 @@ text-decoration: none;
 }
 
 /* 结果导出按钮区域 */
-.panel-right-button {
+.panel-right-buttons {
   flex-shrink: 0;
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 10px;
   padding: 5px 0;
   min-height: 70px;
   background: none;
   margin-top: 8px;
+}
+
+.btn-bias-test {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 180px;
+  height: 100px;
+  background-image: url('~@/assets/images/step3/greenbutton.png');
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-color: transparent;
+  color: #fff;
+  font-family: 'DOUYUFont';
+  font-weight: 400;
+  font-size: 23px;
+  font-style: normal;
+  text-decoration: none;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 进度文案「检测中：x/80」保持现有较小字号 */
+.btn-bias-test--progress {
+  font-size: 16px;
+  padding-right: 14px;
+}
+
+.panel-right-buttons .btn-export-result {
+  width: 180px;
+  height: 100px;
 }
 
 /* 兼容旧样式 */
