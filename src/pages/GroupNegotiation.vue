@@ -486,7 +486,7 @@
         </div>
 
         <!-- 偏差测试 / 结果导出按钮 -->
-        <div class="panel-right-button">
+        <div class="right-export-actions">
           <button
             @click="startBiasTest"
             class="btn-random-select"
@@ -2440,7 +2440,7 @@ export default {
 }
 
 /* 面板通用样式 */
-[class^="panel-"]:not(.panel-right-top):not(.panel-right-bottom):not(.panel-header):not(.panel-right-button):not(.panel-right-accuracy), .design-module {
+[class^="panel-"]:not(.panel-right-top):not(.panel-right-bottom):not(.panel-header):not(.panel-right-button):not(.panel-right-accuracy):not(.right-export-actions), .design-module {
   width: 100%;
   background-repeat: no-repeat;
   background-size: 100% 100%;
@@ -3715,15 +3715,35 @@ export default {
   justify-content: center;
 }
 
-/* 随机选择 / 结果导出按钮区域 */
+/* 偏差测试 / 结果导出：横排并列（不用 panel- 前缀，避免被 [class^=panel-] 设成纵向） */
+.right-export-actions {
+  flex-shrink: 0;
+  width: 100%;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  min-height: 100px;
+  max-height: 100px;
+  background: none;
+  margin-top: auto;
+  box-sizing: border-box;
+}
+
+/* 随机选择 / 结果导出按钮区域（旧类名保留兼容） */
 .panel-right-button {
   flex-shrink: 0;
   width: 100%;
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   justify-content: center;
   align-items: center;
   gap: 6px;
-  padding: 0;
+  padding: 0 4px;
   min-height: 70px;
   background: none;
   margin-top: auto;
@@ -3809,52 +3829,40 @@ export default {
   background-position: center;
   border: none;
   cursor: pointer;
-  width: 250px;
-  height: 100px;
-  flex: 0 0 250px;
+  width: calc(50% - 4px) !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  height: 90px !important;
+  flex: 1 1 0 !important;
   font-family: DOUYUFont;
   color: #FFFFFF;
   font-weight: 400;
-  font-size: 23px;
+  font-size: 18px;
   font-style: normal;
   text-decoration: none;
-  display: inline-flex;
+  display: inline-flex !important;
   justify-content: flex-end;
   align-items: flex-end;
-  padding-bottom: 28px;
+  padding-bottom: 24px;
   transition: all 0.3s ease;
   position: relative;
-  padding-right: 20px;
+  padding-right: 14px;
   box-sizing: border-box;
 }
 
-/* 底图与「群体协商偏差检测」同色（greenbutton）；盒尺寸与结果导出完全一致 */
+/* 底图与「群体协商偏差检测」同色（greenbutton） */
 .btn-random-select {
   background-image: url('~@/assets/images/step3/greenbutton.png');
-  width: 250px;
-  height: 100px;
-  flex: 0 0 250px;
-  min-width: 250px;
-  max-width: 250px;
-  min-height: 100px;
-  max-height: 100px;
 }
 
 .btn-export-result {
   background-image: url('~@/assets/images/step5/按钮-结果导出.png');
-  width: 250px;
-  height: 100px;
-  flex: 0 0 250px;
-  min-width: 250px;
-  max-width: 250px;
-  min-height: 100px;
-  max-height: 100px;
 }
 
 /* 进度文案「检测中：x/80」保持现有较小字号 */
 .btn-random-select--progress {
-  font-size: 16px;
-  padding-right: 14px;
+  font-size: 13px;
+  padding-right: 10px;
 }
 
 .btn-random-select:hover:not(:disabled),
