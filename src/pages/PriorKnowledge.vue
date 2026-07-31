@@ -1865,60 +1865,43 @@ export default {
     async downloadJsonData() {
       try {
         const response = await axios.get('http://10.109.253.71:8001/module2/export', {
-          responseType: 'blob', // 关键：告诉 axios 期望一个 Blob
+          responseType: 'blob',
           headers: {
-            'Accept': 'application/zip' // 明确声明接受的MIME类型
+            'Accept': 'text/csv'
           }
         });
 
         console.log("文件导出：", response)
 
-        // 验证响应状态码
         if (response.status !== 200) {
           throw new Error(`服务器返回异常状态码: ${response.status}`);
         }
 
-        // 解析文件名（优先从Content-Disposition获取）
-        let fileName = 'results.zip';
+        // 解析文件名
+        let fileName = 'results.csv';
         const contentDisposition = response.headers['content-disposition'];
         console.log("contentDisposition=", contentDisposition)
         if (contentDisposition && contentDisposition.includes('filename=')) {
           const matches = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
           if (matches && matches[1]) {
             fileName = matches[1].replace(/['"]/g, '');
-            // 处理URL编码的文件名
             fileName = decodeURIComponent(fileName);
           }
         }
 
-        // 验证文件类型
-        const contentType = response.headers['content-type'];
-        if (!contentType || !contentType.includes('application/zip')) {
-          throw new Error('服务器返回非ZIP文件格式');
-        }
+        // 创建 Blob
+        const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8' });
 
-        // 从 response 中创建 Blob
-        const blob = new Blob([response.data], { type: 'application/zip' });
-
-        // 创建一个临时的 URL
         const downloadUrl = window.URL.createObjectURL(blob);
-
-        // 创建一个 <a> 标签来触发下载
         const link = document.createElement('a');
         link.href = downloadUrl;
         link.setAttribute('download', fileName);
-
-        // 将 <a> 标签添加到 DOM 中 (在某些浏览器中是必需的)
         document.body.appendChild(link);
-
-        // 触发点击
         link.click();
-
-        // 清理
         document.body.removeChild(link);
         window.URL.revokeObjectURL(downloadUrl);
       } catch (error) {
-        console.error('获取并下载JSON失败:', error);
+        console.error('下载失败:', error);
       }
     },
     // 清空偏差测试定时器
