@@ -16,7 +16,7 @@
     <b-row class="content-row no-gutters">
       <!-- 左侧栏：数据集与交互 -->
       <b-col cols="3" class="left-column px-2">
-        <div class="panel-header header-select-data clean-header">指挥官作战指令数据集</div>
+        <div class="panel-header header-select-data clean-header">指挥官作战指令传播数据集</div>
 
         <div class="sidebar-scroll-area">
           <div class="folder-group">
@@ -711,7 +711,8 @@ export default {
           this.videoList = sources.map((src, idx) => ({
             id: idx + 1,
             source_id: src.source_id,
-            name: src.source_id,
+            display_name: String(src.display_name || '').trim(),
+            name: String(src.display_name || src.source_id || '').trim(),
             path: src.path,
             type: this.resolveConsistencyFolderType(src),
             type_key: src.type_key || '',
